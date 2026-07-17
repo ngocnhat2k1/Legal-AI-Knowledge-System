@@ -23,9 +23,9 @@ thực sự đã xảy ra**, thường khác đi.
 | | |
 |---|---|
 | **Giai đoạn hiện tại** | Giai đoạn 0 — Nền móng |
-| **Công việc tiếp theo** | [TASK-001 — Xây golden set](01-task-list.md) |
-| **Đang bị chặn bởi** | TASK-001 cần **chủ sở hữu**, không phải một agent (xem bên dưới) |
-| **Code đã viết** | Chưa có. Điều này là cố ý — xem [Kế hoạch khởi động](00-bootstrap.md). |
+| **Công việc tiếp theo** | [TASK-001 — Xây golden set](01-task-list.md) (chờ chủ sở hữu). Trong lúc chờ, đã có bộ đánh giá neo-Nghị-định ở `eval/` cho kiểm chứng cấu trúc Giai đoạn 1 |
+| **Đang bị chặn bởi** | TASK-001 cần **chủ sở hữu**, không phải một agent (xem bên dưới). Các điều tra TASK-002/003/004/008 cần network tới site gov VN — **bị chặn ở môi trường remote hiện tại** (congbao/customs/vbpl trả 403 CONNECT) |
+| **Code đã viết** | Chưa có code ứng dụng (cố ý — xem [Kế hoạch khởi động](00-bootstrap.md)). Đã thêm `eval/phase1-decree-anchored.jsonl` — 10 ca hồi quy neo vào Nghị định. |
 | **Phiên gần nhất** | 2026-07-17 (xem nhật ký bên dưới) |
 
 ### ⚠️ Công việc tiếp theo không thể do một agent làm
@@ -49,7 +49,7 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 
 | Công việc | Trạng thái | Ghi chú |
 |---|---|---|
-| TASK-001 — Golden set | ⛔ bị chặn (chủ sở hữu) | Phải có trước bất kỳ code truy xuất nào |
+| TASK-001 — Golden set | ⛔ bị chặn (chủ sở hữu) | Phải có trước bất kỳ code truy xuất nào. Thay thế tạm cho kiểm chứng Giai đoạn 1: bộ neo-Nghị-định ở `eval/` — **không thay thế** TASK-001 |
 | TASK-002 — Giải quyết xung đột API customs.gov.vn | 🔲 chưa làm | Research 10 và 12 mâu thuẫn; chưa giải quyết |
 | TASK-003 — Chứng minh phân tích DOCX nhận biết bảng | 🔲 chưa làm | Research 12 để lại khoảng trống này một cách tường minh |
 | TASK-004 — Kiểm tra provisionTree của vbpl có được điền không | 🔲 chưa làm | Câu hỏi mở giá trị cao nhất cho giai đoạn RAG |
@@ -99,6 +99,25 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-07-17 (phiên 2) — Dịch tài liệu sang tiếng Việt; bộ đánh giá neo-Nghị-định thay cho golden set
+
+**Đã làm**
+- Dịch toàn bộ 30 file Markdown (README, bridge, toàn bộ `.agent/`) sang tiếng Việt theo yêu cầu chủ sở hữu. Remap 64 anchor nội bộ theo slug tiếng Việt mới (0 link hỏng, kiểm bằng thuật toán slug khớp GitHub). PR #1.
+- Đổi quy tắc ngôn ngữ trong `AGENTS.md`: tài liệu dự án nay viết bằng **tiếng Việt**; mã nguồn, chú thích, định danh, thông điệp commit, tên file và tên API vẫn **tiếng Anh**.
+- Chủ sở hữu cho biết có thể **không có tờ khai thật** cho TASK-001. Đã seed bộ đánh giá neo-Nghị-định (`eval/phase1-decree-anchored.jsonl`, 10 ca) + `eval/README.md`.
+
+**Quyết định**
+- Khi chưa có golden set từ tờ khai: dùng bộ đánh giá **neo vào văn bản Nghị định (Công báo)** để chạy các cổng §3.2 (cạm bẫy phụ lục), §5.2 (hoàn nguyên), §5.3 (độ trễ công báo). Nó **bổ sung, không thay thế** TASK-001 (golden set tờ khai) và TASK-012 (đối chiếu ECUS), cả hai vẫn owner-blocked. Ground truth neo vào luật sơ cấp; ca chưa có số cụ thể đánh dấu `structural-invariant` thay vì bịa số.
+
+**Đã học / lưu ý**
+- **Môi trường remote chặn network ra site gov VN.** `congbao.chinhphu.vn`, `customs.gov.vn`, `vbpl.vn` đều trả `403 CONNECT` qua proxy → TASK-002/003/004/008 không chạy được ở đây dù LibreOffice có sẵn. Cần mở network policy trước khi nạp Công báo.
+- Fixture hiện nằm chung nhánh dịch (PR #1) vì cấu hình session chỉ cho phép nhánh `claude/markdown-vietnamese-translation-sijvvn`; có thể tách sang PR riêng nếu được cấp phép.
+
+**Tiếp theo**
+- TASK-001 vẫn chờ chủ sở hữu (tờ khai thật). Song song: mở rộng bộ neo-Nghị-định bằng ~20 ca lấy mẫu ngẫu nhiên khi network cho phép nạp Công báo (TASK-008).
 
 ---
 

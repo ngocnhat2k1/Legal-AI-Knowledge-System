@@ -52,6 +52,10 @@ Dữ liệu chuẩn (ground truth) trong lĩnh vực này bản thân nó cũng 
 
 Điều này không làm suy yếu golden set — nó làm rõ golden set đo cái gì. **Sự khớp với những gì hải quan đã chấp nhận là mục tiêu đúng về mặt thương mại, và nó không giống với việc thực sự đúng.** Hãy ghi lại sự phân biệt đó thay vì cố giải quyết nó.
 
+### Khi chưa có tờ khai — bộ thay thế neo vào Nghị định
+
+Nếu chủ sở hữu chưa có tờ khai thật, **đừng bịa golden set** — một bộ bịa chỉ kiểm tra câu hỏi, không kiểm tra công cụ. Với Giai đoạn 1 (tra cứu tất định), thẩm quyền là **văn bản Nghị định**, nên có thể neo ground truth vào Công báo thay vì vào tờ khai. Bộ khởi đầu ở `eval/phase1-decree-anchored.jsonl` hiện thực hóa các cổng §3.2, §5.2, và §5.3 từ các ca đã xác minh trong KB (cạm bẫy phụ lục `0301.11.10`, hoàn nguyên `2710.12.21`, các bất biến cấu trúc). Nó **bổ sung, không thay thế** golden set từ tờ khai (§1 này) hay đối chiếu ECUS (cổng §3.1 / TASK-012) — hai thứ đó đo sự khớp với thực tiễn công ty và vẫn cần chủ sở hữu. Rủi ro cần nhớ: bất kỳ bộ nào không đến từ tờ khai đã được chấp nhận đều có nguy cơ đo "sự đồng thuận với chính suy luận của ta"; giảm thiểu bằng cách neo mọi ground truth vào luật sơ cấp và đánh dấu độ tin cậy trung thực.
+
 ---
 
 ## 2. Đánh giá truy xuất tách biệt với sinh câu trả lời

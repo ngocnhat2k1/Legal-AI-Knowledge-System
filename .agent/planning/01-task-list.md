@@ -55,6 +55,7 @@ Ghi chú:
 
 - Cờ "tự tin / không chắc chắn" không phải là thủ tục quan liêu. Research 09 ghi nhận rằng ground truth của HS thực sự có thể tranh cãi: một cuộc rà soát 226 bất đồng cho thấy **~42,5% các dự đoán "sai" của mô hình thực ra được các quy tắc HS hỗ trợ tốt hơn so với ground truth đã công bố**, và **76% doanh nghiệp Việt Nam báo cáo gặp trở ngại trong việc xác nhận mã HS**, tăng từ 66,3% năm 2018 (đã xác minh 2026-07-17, nguồn: research 09). Nếu bộ phận khai báo không chắc chắn, "độ chính xác" của ta so với mục đó nghĩa là sự đồng thuận với thực tiễn quá khứ, không phải tính đúng đắn. Hãy nói rõ điều đó thay vì giả vờ.
 - Hỏi trực tiếp chủ sở hữu. Không suy ra điều này từ bất cứ thứ gì khác.
+- **Nếu không có tờ khai thật:** dùng bộ đánh giá **neo vào Nghị định** ở `eval/phase1-decree-anchored.jsonl` để kiểm chứng đúng đắn Giai đoạn 1 (ground truth = văn bản Công báo, không phải tờ khai). Nó **bổ sung, không thay thế** golden set này — golden set tờ khai vẫn là thứ duy nhất đo được sự khớp với thực tiễn công ty. Xem `eval/README.md`.
 
 ---
 
