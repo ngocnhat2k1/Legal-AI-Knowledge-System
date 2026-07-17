@@ -23,9 +23,40 @@ For every software task, follow this order:
 9. Fix Feedback
 10. Update Documentation
 11. Update Agent Knowledge
-12. Commit only when requested
+12. Update `planning/02-progress.md` — resume point, task status, session log
+13. Commit only when requested
 
 Never start implementation before planning and design are reviewed.
+
+## Session Continuity — Read First, Update Last
+
+**`.agent/planning/02-progress.md` is the resume point. Read it before doing anything else in a new session.**
+
+It states the current phase, the next task, what is blocked, and what previous sessions learned the
+hard way. `00-bootstrap.md` is the plan and `01-task-list.md` is the work; **02-progress.md is what
+actually happened**, which is usually different.
+
+**At the end of every working session, before the final commit, you MUST:**
+
+1. Update **Resume Here** in `02-progress.md` — phase, next task, blockers.
+2. Update the **Task Status** table there **and** `01-task-list.md` in the same commit. If they
+   disagree, the progress table is a lie and the next agent will act on it.
+3. Add a **Session Log** entry at the top of the log: what changed, what was learned, what surprised
+   you. Dead ends and wrong turns are the most valuable entries — a plan records intent, only the log
+   records what the territory actually did.
+
+This is not ceremony. This project's failure mode is silent and delayed, so an agent that rediscovers
+a known trap from scratch will usually rediscover it *wrong* and confidently. The log is what stops
+that.
+
+**Routing discipline:** `02-progress.md` is a pointer and a diary, not a knowledge store. Anything
+that outlives the session goes to `concepts/`, `business-rules.md`, or an ADR — never buried in the
+log. Follow the Question Answer Routing rules below.
+
+**`.agent/` must stay at the repository root.** The root `AGENTS.md` and `CLAUDE.md` bridge files
+hardcode `.agent/AGENTS.md`. Moving or nesting `.agent/` silently orphans the entire knowledge base
+from every agent — the bridge resolves to nothing and no error is raised. This has already happened
+once; see the 2026-07-17 session log.
 
 ## Project Orientation
 

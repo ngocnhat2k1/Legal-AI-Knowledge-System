@@ -12,6 +12,10 @@ related:
 
 This file is the navigation map for durable agent memory in **Customs Assistant**. Start here, then follow the linked source-of-truth notes needed for the current task.
 
+## Resuming Work?
+
+**→ [Progress Log](planning/02-progress.md)** — current phase, next task, blockers, and what previous sessions learned the hard way. Read it before anything else, and update it before your final commit.
+
 ## Read This First
 
 Customs Assistant is an internal tool for customs declaration work at a Vietnamese logistics company. Two rules govern almost every decision in this repository:
@@ -45,8 +49,9 @@ Domain knowledge an agent cannot infer from the code or from training data. Ever
 
 ## Planning
 
+- [Progress Log](planning/02-progress.md) — **the resume point**; what actually happened
 - [Bootstrap Plan](planning/00-bootstrap.md) — phases and gates
-- [Task List](planning/01-task-list.md)
+- [Task List](planning/01-task-list.md) — task detail and acceptance criteria
 
 ## Documentation
 
