@@ -1,9 +1,9 @@
-# Codex Entry Point
+# Điểm khởi đầu cho Codex
 
-Read and follow the shared project rules in:
+Đọc và tuân theo các quy tắc dự án dùng chung trong:
 
 ```text
 .agent/AGENTS.md
 ```
 
-If this file conflicts with `.agent/AGENTS.md`, `.agent/AGENTS.md` is the source of truth unless the user explicitly says otherwise.
+Nếu file này mâu thuẫn với `.agent/AGENTS.md`, thì `.agent/AGENTS.md` là nguồn chuẩn, trừ khi người dùng nói rõ điều ngược lại.

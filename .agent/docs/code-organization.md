@@ -1,24 +1,24 @@
-# Code Organization
+# Tổ chức Mã nguồn
 
-This document defines the default code organization guidance for this project.
+Tài liệu này định nghĩa hướng dẫn tổ chức mã nguồn mặc định cho dự án này.
 
-Use it to keep implementation work predictable across different agents and threads.
+Hãy dùng nó để giữ cho công việc triển khai có thể dự đoán được giữa các agent và các luồng khác nhau.
 
-## Framework First
+## Framework Trước Tiên
 
-If this project already uses a framework, platform, or established repository convention, follow that convention first.
+Nếu dự án này đã sử dụng một framework, nền tảng, hoặc quy ước kho mã đã được thiết lập, hãy tuân theo quy ước đó trước.
 
-Examples:
+Ví dụ:
 
-- Next.js, Remix, or similar projects may use their existing `app/`, `pages/`, `components/`, `lib/`, or route conventions.
-- NestJS, Rails, Laravel, Django, Spring, or similar projects may use their established module, controller, service, model, migration, or package conventions.
-- Monorepos may use their existing `apps/`, `packages/`, `services/`, or workspace layout.
+- Các dự án Next.js, Remix, hoặc tương tự có thể dùng các quy ước `app/`, `pages/`, `components/`, `lib/`, hoặc quy ước route sẵn có của chúng.
+- Các dự án NestJS, Rails, Laravel, Django, Spring, hoặc tương tự có thể dùng các quy ước module, controller, service, model, migration, hoặc package đã được thiết lập của chúng.
+- Các monorepo có thể dùng bố cục `apps/`, `packages/`, `services/`, hoặc workspace sẵn có của chúng.
 
-When a framework convention is used, document the project-specific mapping in this file instead of forcing the APB baseline structure.
+Khi một quy ước framework được sử dụng, hãy ghi lại ánh xạ đặc thù cho dự án trong file này thay vì ép buộc cấu trúc baseline APB.
 
-## Recommended Baseline
+## Baseline Được Khuyến Nghị
 
-Use this baseline when the project does not already have a clear framework or repository structure:
+Dùng baseline này khi dự án chưa có một framework hoặc cấu trúc kho mã rõ ràng:
 
 ```text
 src/
@@ -33,62 +33,62 @@ src/
     helpers/
 ```
 
-## Directory Responsibilities
+## Trách nhiệm của các Thư mục
 
-These responsibilities apply when the recommended baseline is used. For framework-based projects, map the same responsibilities to the framework's native directories.
+Các trách nhiệm này áp dụng khi baseline được khuyến nghị được sử dụng. Đối với các dự án dựa trên framework, hãy ánh xạ cùng các trách nhiệm đó sang các thư mục native của framework.
 
-| Directory | Responsibility |
+| Thư mục | Trách nhiệm |
 |---|---|
-| `src/app/` | Application entry points, routing, dependency composition, and top-level wiring. |
-| `src/modules/<module-name>/` | Feature-specific business logic, services, rules, types, and tests. |
-| `src/shared/kernel/` | Small domain-neutral primitives used across modules. |
-| `src/shared/adapters/` | Shared infrastructure adapters such as logging, configuration, or environment access. |
-| `src/integrations/<integration-name>/` | External system clients, mappers, and integration-specific helpers. |
-| `tests/helpers/` | Test-only helpers that must not be imported by production code. |
+| `src/app/` | Điểm vào ứng dụng, định tuyến, kết hợp phụ thuộc, và đấu nối ở tầng cao nhất. |
+| `src/modules/<module-name>/` | Logic nghiệp vụ đặc thù cho tính năng, service, quy tắc, kiểu, và test. |
+| `src/shared/kernel/` | Các primitive nhỏ trung lập về lĩnh vực được dùng chung giữa các module. |
+| `src/shared/adapters/` | Các adapter hạ tầng dùng chung như logging, cấu hình, hoặc truy cập môi trường. |
+| `src/integrations/<integration-name>/` | Client hệ thống bên ngoài, mapper, và các helper đặc thù cho tích hợp. |
+| `tests/helpers/` | Các helper chỉ dùng cho test và không được import bởi code production. |
 
-## Module Boundaries
+## Ranh giới Module
 
-- Feature-specific logic should live inside the framework's feature/module boundary, or inside `src/modules/<module-name>/` when the recommended baseline is used.
-- Each module should expose its public API through `index` when the project language and tooling support it.
-- Other modules should import from a module public API instead of private implementation files.
-- Business rules belong in feature/module-level files, not in generic shared code.
-- Integration-specific mapping or normalization belongs under the framework's integration boundary, or under `src/integrations/<integration-name>/` when the recommended baseline is used.
+- Logic đặc thù cho tính năng nên nằm bên trong ranh giới feature/module của framework, hoặc bên trong `src/modules/<module-name>/` khi baseline được khuyến nghị được sử dụng.
+- Mỗi module nên phơi bày API công khai của nó qua `index` khi ngôn ngữ và công cụ của dự án hỗ trợ điều đó.
+- Các module khác nên import từ một API công khai của module thay vì các file triển khai riêng tư.
+- Quy tắc nghiệp vụ thuộc về các file ở cấp feature/module, không phải trong code dùng chung chung chung.
+- Việc ánh xạ hoặc chuẩn hóa đặc thù cho tích hợp thuộc về ranh giới tích hợp của framework, hoặc dưới `src/integrations/<integration-name>/` khi baseline được khuyến nghị được sử dụng.
 
-## Shared Code Rules
+## Quy tắc Code Dùng Chung
 
-- Add reusable code to the project's shared-code location only when at least two modules need it, or when the owner approves it as shared infrastructure.
-- Keep shared kernel code domain-neutral.
-- Do not create generic catch-all files or directories such as `utils`, `helpers`, `common`, `misc`, `shared.ts`, or `helpers.ts`.
-- Prefer module-local helpers until reuse is proven.
-- Before adding a helper, utility, abstraction, or shared module, search the existing codebase for equivalent behavior.
+- Chỉ thêm code có thể tái sử dụng vào vị trí code-dùng-chung của dự án khi có ít nhất hai module cần nó, hoặc khi chủ dự án phê duyệt nó là hạ tầng dùng chung.
+- Giữ code shared kernel trung lập về lĩnh vực.
+- Đừng tạo các file hoặc thư mục hứng đủ thứ chung chung như `utils`, `helpers`, `common`, `misc`, `shared.ts`, hay `helpers.ts`.
+- Ưu tiên các helper cục bộ trong module cho đến khi việc tái sử dụng được chứng minh.
+- Trước khi thêm một helper, tiện ích, trừu tượng, hay module dùng chung, hãy tìm trong codebase hiện có hành vi tương đương.
 
-## Project Mapping
+## Ánh xạ Dự án
 
-Record the structure this project actually uses:
+Ghi lại cấu trúc mà dự án này thực sự sử dụng:
 
-| Responsibility | Project Location | Notes |
+| Trách nhiệm | Vị trí trong Dự án | Ghi chú |
 |---|---|---|
-| Application entry and composition | To be defined | Use framework convention when available. |
-| Feature/module logic | To be defined | Use framework convention when available. |
-| Shared domain-neutral primitives | To be defined | Keep small and reusable. |
-| External integrations | To be defined | Keep integration-specific mapping out of feature logic. |
-| Test helpers | To be defined | Keep test-only code out of production imports. |
+| Điểm vào và kết hợp ứng dụng | Chưa xác định | Dùng quy ước framework khi có sẵn. |
+| Logic feature/module | Chưa xác định | Dùng quy ước framework khi có sẵn. |
+| Primitive trung lập về lĩnh vực dùng chung | Chưa xác định | Giữ nhỏ và có thể tái sử dụng. |
+| Tích hợp bên ngoài | Chưa xác định | Giữ việc ánh xạ đặc thù cho tích hợp ra khỏi logic tính năng. |
+| Test helper | Chưa xác định | Giữ code chỉ-dùng-cho-test ra khỏi các import production. |
 
-## Reuse Check
+## Kiểm tra Tái sử dụng
 
-Before creating new reusable code, record the answer to these questions in the task plan or review summary:
+Trước khi tạo code có thể tái sử dụng mới, hãy ghi lại câu trả lời cho các câu hỏi này trong kế hoạch tác vụ hoặc bản tóm tắt rà soát:
 
-- What existing files, helpers, modules, or patterns were searched?
-- Why is the existing code insufficient?
-- Should the new code stay module-local or become shared?
-- Which documentation or code organization note must be updated?
+- Những file, helper, module, hay khuôn mẫu hiện có nào đã được tìm kiếm?
+- Vì sao code hiện có không đủ?
+- Code mới nên ở lại cục bộ trong module hay trở thành dùng chung?
+- Tài liệu hoặc ghi chú tổ chức mã nguồn nào phải được cập nhật?
 
-## Review Checklist
+## Danh sách Kiểm tra Rà soát
 
-Code review must check for:
+Rà soát code phải kiểm tra:
 
-- Duplicate helpers or duplicate business logic.
-- New generic utility files.
-- Cross-module imports from private implementation files.
-- Business rules placed in `src/shared/`.
-- Shared code introduced before reuse is proven.
+- Các helper trùng lặp hoặc logic nghiệp vụ trùng lặp.
+- Các file tiện ích chung chung mới.
+- Các import chéo module từ các file triển khai riêng tư.
+- Các quy tắc nghiệp vụ được đặt trong `src/shared/`.
+- Code dùng chung được đưa vào trước khi việc tái sử dụng được chứng minh.

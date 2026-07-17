@@ -14,89 +14,89 @@ related:
   - ../business-rules.md
 ---
 
-# Evaluation Contract
+# Hợp đồng đánh giá
 
-This note defines how Customs Assistant proves it works. It is a contract, not a suggestion: the gates below are ship/no-ship conditions.
+Ghi chú này định nghĩa cách Customs Assistant chứng minh nó hoạt động. Đây là một hợp đồng, không phải một gợi ý: các cổng kiểm soát bên dưới là điều kiện ship/không-ship.
 
-The whole document exists because of one property of this domain, established by independent benchmark: **the errors are silent.** A wrong HS code is a real, correctly-formatted, legitimate-looking code. A wrong tariff rate is a real rate from a real annex of a real decree. Neither throws an exception, fails a schema check, or looks wrong to a reviewer. There is no syntactic signal of failure, so **you cannot eyeball correctness** — you can only measure it against known-correct answers you wrote down in advance.
-
----
-
-## 1. The golden set comes first, before any retrieval code
-
-**Rule: no retrieval, ranking, or generation code is written until a golden set of 30-50 questions exists, drawn from the owner's own past declarations, each with a known-correct answer.**
-
-### Why this ordering is non-negotiable
-
-Legal RAG without an eval set is faith-based. Every knob in the system — chunk unit, BM25/dense weighting, top-k, rerank model, prompt — changes the answer, and none of them announce whether the change was an improvement. Without a golden set you are not tuning, you are wandering. Worse, you will feel productive the entire time, because the output always looks plausible.
-
-Two measured findings make this concrete rather than philosophical:
-
-1. **HS errors are "Error but Valid."** On HSCodeComp (632 expert-annotated real e-commerce products, 27 HS chapters, 10-digit target, double-annotated), errors are overwhelmingly cases where the model outputs a *real, legitimate-looking* HS code that is wrong. There is no parse failure, no red flag, no low-confidence marker correlated with the legal outcome. It flows into VNACCS, is accepted, and surfaces years later as a post-clearance audit. (verified 2026-07-17, source: https://arxiv.org/html/2510.19631)
-
-2. **The naive tariff parser reported 94% success while being confidently wrong.** See §3 — this is the same failure shape on the deterministic half of the product, where people assume it cannot happen.
-
-A golden set built from the owner's own declarations has a property no public benchmark has: the answers were already accepted by Hải quan for this company's actual goods. That is the target the product is commercially optimizing for.
-
-### Composition
-
-- **30-50 questions.** Small enough that the owner can actually produce them; large enough that a 10-point accuracy difference is visible.
-- **From real past declarations**, not invented. Invented questions test the questions, not the tool.
-- **Each carries a known-correct answer** plus the evidence that made it correct (the annex, the decree, the chapter note, the ruling).
-- **Weighted toward the company's real goods mix**, not toward the interesting edge cases. Edge cases go in a separate stress set.
-- **Written down before the code exists.** A golden set assembled after seeing the system's output is a record of the system's opinions.
-
-### Honest limit on "known-correct"
-
-The ground truth in this domain is itself contestable. An audit of 226 disagreements in one HS study found **~42.5% of "wrong" model predictions were actually better supported by HS rules than the published ground truth** (verified 2026-07-17, source: https://arxiv.org/html/2605.14857). Two experts constructing HSCodeComp disagreed enough to need a senior tiebreaker (verified 2026-07-17, source: https://arxiv.org/html/2510.19631).
-
-This does not weaken the golden set — it clarifies what it measures. **Agreement with what customs accepted is the commercially correct target, and it is not the same thing as being right.** Record that distinction rather than resolving it.
+Toàn bộ tài liệu này tồn tại vì một đặc tính của lĩnh vực này, đã được thiết lập bởi benchmark độc lập: **lỗi ở đây là lỗi âm thầm.** Một mã HS sai là một mã thật, định dạng đúng, trông hợp pháp. Một mức thuế sai là một mức thật lấy từ một phụ lục thật của một nghị định thật. Cả hai đều không ném ra exception, không làm hỏng kiểm tra schema, và không trông có vẻ sai với người rà soát. Không có tín hiệu cú pháp nào của thất bại, vì vậy **bạn không thể nhìn bằng mắt mà biết đúng hay sai** — bạn chỉ có thể đo nó dựa trên các câu trả lời đã biết là đúng mà bạn ghi lại trước.
 
 ---
 
-## 2. Evaluate retrieval separately from generation
+## 1. Golden set phải có trước, trước bất kỳ đoạn code truy xuất nào
 
-**Rule: retrieval and generation get separate scores. Never a single end-to-end number.**
+**Quy tắc: không viết bất kỳ đoạn code truy xuất, xếp hạng hay sinh câu trả lời nào cho đến khi có một golden set gồm 30-50 câu hỏi, lấy từ chính các tờ khai trong quá khứ của chủ sở hữu, mỗi câu kèm một đáp án đã biết là đúng.**
 
-A single end-to-end number cannot tell you whether the system failed because the right Điều was never retrieved (a retrieval fix) or because the model ignored a correctly retrieved Điều (a generation fix). These have opposite remedies, and a blended score will send you to the wrong one.
+### Vì sao thứ tự này là bất khả thương lượng
 
-LegalBench-RAG (6,858 QA pairs / 79M chars) is the discipline to copy: it scores **exact file plus character indices**, forcing minimal-span precision rather than "the right document appeared somewhere in the top 10." That is the standard legal citation actually demands. (verified 2026-07-17, source: https://arxiv.org/html/2408.10343v1)
+RAG pháp lý mà không có tập đánh giá là dựa vào niềm tin. Mọi nút vặn trong hệ thống — đơn vị chunk, trọng số BM25/dense, top-k, mô hình rerank, prompt — đều thay đổi câu trả lời, và không nút nào tự báo cho bạn biết thay đổi đó là cải thiện hay không. Không có golden set thì bạn không phải đang tinh chỉnh, bạn đang lang thang. Tệ hơn, bạn sẽ cảm thấy làm việc năng suất suốt cả quãng đó, vì đầu ra luôn trông có vẻ hợp lý.
 
-Caveat carried forward honestly: LegalBench-RAG's corpus is contracts/privacy policies (CUAD/MAUD/ContractNLI/PrivacyQA), **not statute**. Its methodology transfers; its findings may not.
+Hai phát hiện đã được đo lường biến điều này thành cụ thể chứ không phải triết lý:
+
+1. **Lỗi HS là "Sai nhưng Hợp lệ."** Trên HSCodeComp (632 sản phẩm thương mại điện tử thật được chuyên gia chú thích, 27 chương HS, mục tiêu 10 chữ số, chú thích kép), lỗi phần lớn là các trường hợp mô hình xuất ra một mã HS *thật, trông hợp pháp* nhưng sai. Không có lỗi phân tích cú pháp, không có cờ đỏ, không có dấu hiệu độ tin cậy thấp tương quan với kết quả pháp lý. Nó chảy vào VNACCS, được chấp nhận, và nhiều năm sau nổi lên như một cuộc kiểm tra sau thông quan. (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2510.19631)
+
+2. **Bộ phân tích thuế ngây thơ báo cáo thành công 94% trong khi sai một cách tự tin.** Xem §3 — đây là cùng một dạng thất bại ở nửa mang tính tất định của sản phẩm, nơi người ta cho rằng nó không thể xảy ra.
+
+Một golden set xây từ chính các tờ khai của chủ sở hữu có một đặc tính mà không benchmark công khai nào có: các đáp án đã được Hải quan chấp nhận cho hàng hóa thực tế của công ty này. Đó là mục tiêu mà sản phẩm đang tối ưu về mặt thương mại.
+
+### Cấu thành
+
+- **30-50 câu hỏi.** Đủ nhỏ để chủ sở hữu thực sự có thể tạo ra; đủ lớn để thấy được chênh lệch độ chính xác 10 điểm.
+- **Từ các tờ khai thật trong quá khứ**, không phải câu bịa ra. Câu hỏi bịa ra thì kiểm tra câu hỏi, không kiểm tra công cụ.
+- **Mỗi câu mang một đáp án đã biết là đúng** cùng bằng chứng khiến nó đúng (phụ lục, nghị định, chú giải chương, phán quyết).
+- **Có trọng số nghiêng về cơ cấu hàng hóa thực của công ty**, không nghiêng về các ca biên thú vị. Các ca biên đưa vào một tập stress riêng.
+- **Được ghi lại trước khi có code.** Một golden set lắp ráp sau khi đã xem đầu ra của hệ thống là một bản ghi các ý kiến của chính hệ thống.
+
+### Giới hạn trung thực về "đã biết là đúng"
+
+Dữ liệu chuẩn (ground truth) trong lĩnh vực này bản thân nó cũng có thể bị tranh cãi. Một cuộc kiểm toán 226 bất đồng trong một nghiên cứu HS phát hiện **~42,5% các dự đoán "sai" của mô hình thực ra được các quy tắc HS ủng hộ tốt hơn so với ground truth đã công bố** (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2605.14857). Hai chuyên gia xây dựng HSCodeComp bất đồng đủ nhiều đến mức cần một chuyên gia cấp cao phân xử (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2510.19631).
+
+Điều này không làm suy yếu golden set — nó làm rõ golden set đo cái gì. **Sự khớp với những gì hải quan đã chấp nhận là mục tiêu đúng về mặt thương mại, và nó không giống với việc thực sự đúng.** Hãy ghi lại sự phân biệt đó thay vì cố giải quyết nó.
 
 ---
 
-## 3. Phase 1 gate — the tariff lookup
+## 2. Đánh giá truy xuất tách biệt với sinh câu trả lời
 
-Phase 1 is deterministic: exact tariff lookup keyed by HS + schedule + date. No AI touches the numbers. That does not make it safe — it makes it silently wrong instead of loudly wrong.
+**Quy tắc: truy xuất và sinh câu trả lời có điểm số riêng biệt. Không bao giờ dùng một con số end-to-end duy nhất.**
 
-### Gate 3.1 — Manual reconciliation. One wrong row = stop.
+Một con số end-to-end duy nhất không thể cho bạn biết hệ thống thất bại vì đúng Điều không bao giờ được truy xuất (một sửa chữa ở khâu truy xuất) hay vì mô hình bỏ qua một Điều đã được truy xuất đúng (một sửa chữa ở khâu sinh). Hai cái này có phương thuốc trái ngược nhau, và một điểm số pha trộn sẽ đẩy bạn đến sai chỗ.
 
-**Randomly sample 20 HS codes from the database and reconcile every one by hand against ECUS and/or customs.gov.vn. If a single row disagrees, the phase does not ship.**
+LegalBench-RAG (6.858 cặp QA / 79M ký tự) là kỷ luật cần sao chép: nó chấm điểm **chính xác file cộng với chỉ số ký tự**, buộc phải có precision theo khoảng tối thiểu thay vì "đúng tài liệu xuất hiện đâu đó trong top 10." Đó là chuẩn mà trích dẫn pháp lý thực sự đòi hỏi. (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2408.10343v1)
 
-Not 19 of 20. One wrong row means the parser has a systematic defect, and a systematic defect in an 11,874-row table is not 1 bad row — it is an unknown number of bad rows of which you happened to sample one. A 95% pass rate here is not "good"; it is an unexploded ordnance report.
+Lưu ý cần mang theo một cách trung thực: kho ngữ liệu của LegalBench-RAG là hợp đồng/chính sách bảo mật (CUAD/MAUD/ContractNLI/PrivacyQA), **không phải văn bản luật**. Phương pháp luận của nó chuyển giao được; các phát hiện của nó thì có thể không.
 
-Sample size discipline: 20 hand-checked rows is what a human will actually do carefully. Sampling 200 and checking them sloppily is worse than sampling 20 and checking them properly, because it manufactures confidence.
+---
 
-Reference scale for context: the MFN import annex (Phụ lục II of NĐ 26/2023) contains **11,874 unique 8-digit HS codes**, of which 11,160 (94.0%) carry a rate; the export annex (Phụ lục I) contains 1,520 (verified 2026-07-17, source: https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm, extracted from the 14 gazette `.doc` parts).
+## 3. Cổng Giai đoạn 1 — tra cứu thuế
 
-### Gate 3.2 — The ANNEX TRAP regression test
+Giai đoạn 1 mang tính tất định: tra cứu thuế chính xác theo khóa HS + biểu thuế + ngày. Không có AI chạm vào các con số. Điều đó không làm nó an toàn — nó làm nó sai âm thầm thay vì sai ầm ĩ.
 
-**This is the single most important test in the repository.** It must exist before any tariff data is served, and it must never be deleted.
+### Cổng 3.1 — Đối chiếu thủ công. Một dòng sai = dừng.
 
-**Required assertion:**
+**Lấy mẫu ngẫu nhiên 20 mã HS từ cơ sở dữ liệu và đối chiếu từng mã bằng tay dựa trên ECUS và/hoặc customs.gov.vn. Nếu chỉ một dòng không khớp, giai đoạn không được ship.**
+
+Không phải 19 trên 20. Một dòng sai nghĩa là bộ phân tích có một khiếm khuyết hệ thống, và một khiếm khuyết hệ thống trong một bảng 11.874 dòng không phải là 1 dòng xấu — nó là một số lượng chưa biết các dòng xấu mà bạn tình cờ lấy trúng một trong số đó. Tỷ lệ đạt 95% ở đây không phải là "tốt"; nó là một báo cáo bom chưa nổ.
+
+Kỷ luật cỡ mẫu: 20 dòng kiểm bằng tay là mức mà một con người sẽ thực sự làm cẩn thận. Lấy mẫu 200 và kiểm chúng cẩu thả còn tệ hơn lấy mẫu 20 và kiểm chúng đúng cách, vì nó chế tạo ra sự tự tin.
+
+Thang đối chiếu để có bối cảnh: phụ lục nhập khẩu MFN (Phụ lục II của NĐ 26/2023) chứa **11.874 mã HS 8 chữ số duy nhất**, trong đó 11.160 (94,0%) có mức thuế; phụ lục xuất khẩu (Phụ lục I) chứa 1.520 (đã xác minh 2026-07-17, nguồn: https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm, trích xuất từ 14 phần `.doc` công báo).
+
+### Cổng 3.2 — Bài kiểm tra hồi quy CẠM BẪY PHỤ LỤC
+
+**Đây là bài kiểm tra quan trọng nhất trong toàn bộ repository.** Nó phải tồn tại trước khi phục vụ bất kỳ dữ liệu thuế nào, và nó không bao giờ được xóa.
+
+**Khẳng định bắt buộc:**
 
 ```
 assert lookup(hs="0301.11.10", schedule="NK_uu_dai", direction="import", date=<in-force date>) == 15
 assert lookup(hs="0301.11.10", schedule="NK_uu_dai", direction="import", date=<in-force date>) != 0
 ```
 
-- `0301.11.10` in **Phụ lục II (Biểu thuế nhập khẩu ưu đãi / MFN import)** = **15**
-- `0301.11.10` in **Phụ lục I (Biểu thuế xuất khẩu / export)** = **0**
+- `0301.11.10` trong **Phụ lục II (Biểu thuế nhập khẩu ưu đãi / MFN import)** = **15**
+- `0301.11.10` trong **Phụ lục I (Biểu thuế xuất khẩu / export)** = **0**
 
-(verified 2026-07-17, source: https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm — annex-aware parse of the gazette Word parts)
+(đã xác minh 2026-07-17, nguồn: https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm — phân tích có nhận biết phụ lục trên các phần Word công báo)
 
-**And the general invariant, which matters more than the single case:**
+**Và bất biến tổng quát, thứ còn quan trọng hơn ca đơn lẻ:**
 
 ```
 # No import query may EVER return a Phụ lục I rate.
@@ -104,300 +104,300 @@ for every import query:
     assert result.source_annex != "Phụ lục I"
 ```
 
-**Why this test exists — the story is the justification.** Research 12's first naive parse of NĐ 26/2023 reported **94% success**. It was confidently wrong. It returned `0301.11.10 → ['0', '15']` because it ignored annex boundaries and swept up both the export rate and the import rate. **1,520 HS codes appear in both annexes; 1,329 of them have different rates.** A parser that ignores annex boundaries returns the **export** duty for an **import** question — silently, with no error, at 94% apparent success. (verified 2026-07-17, source: research/12.md adversarial verification, reproducing from https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm)
+**Vì sao bài kiểm tra này tồn tại — câu chuyện chính là lý do biện minh.** Lần phân tích ngây thơ đầu tiên của Research 12 với NĐ 26/2023 báo cáo **thành công 94%**. Nó sai một cách tự tin. Nó trả về `0301.11.10 → ['0', '15']` vì nó bỏ qua ranh giới phụ lục và vơ vét cả mức thuế xuất khẩu lẫn mức thuế nhập khẩu. **1.520 mã HS xuất hiện ở cả hai phụ lục; 1.329 trong số đó có mức thuế khác nhau.** Một bộ phân tích bỏ qua ranh giới phụ lục sẽ trả về thuế **xuất khẩu** cho một câu hỏi **nhập khẩu** — âm thầm, không lỗi, với vẻ thành công 94%. (đã xác minh 2026-07-17, nguồn: research/12.md xác minh đối kháng, tái lập từ https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm)
 
-That is the failure mode of this entire project category: **not missing data, but plausible-looking wrong data — and it fails while reporting success.** A test suite that asserts "94% of rows parsed" would have passed. A test suite that asserts "import queries never return Phụ lục I" catches it.
+Đó là dạng thất bại của cả loại dự án này: **không phải thiếu dữ liệu, mà là dữ liệu sai trông có vẻ hợp lý — và nó thất bại trong khi báo cáo thành công.** Một bộ test khẳng định "94% dòng đã phân tích" sẽ đạt. Một bộ test khẳng định "truy vấn nhập khẩu không bao giờ trả về Phụ lục I" sẽ bắt được nó.
 
-Extend the same invariant to the other structural states the annexes encode, because each is a distinct silent-wrong-answer generator:
+Mở rộng cùng bất biến đó ra các trạng thái cấu trúc khác mà các phụ lục mã hóa, vì mỗi trạng thái là một cỗ máy sinh câu trả lời sai âm thầm riêng biệt:
 
-| State | Assertion required |
+| Trạng thái | Khẳng định bắt buộc |
 |---|---|
-| **Phụ lục III** — absolute/mixed duty (used cars) | Returns a USD amount, never a `%`. A `%` regex finds **zero** rows here. |
-| **Phụ lục IV** — out-of-quota TRQ rates | Returns TRQ-conditional, never the in-quota rate. TRQ headings verified in ND 129/2022: 04.07, 17.01, 24.01, 25.01. |
-| **`*` in an FTA schedule** | Means **excluded**, not zero. Assert `*` never renders as `0`. |
-| **FTA rate without C/O** | MFN vs FTA is conditional. RCEP Điều 4 requires origin rules **plus a valid certificate of origin**. "The tax is 0%" is wrong; "0% *if* you hold a valid C/O, else 15% MFN" is right. |
+| **Phụ lục III** — thuế tuyệt đối/hỗn hợp (xe đã qua sử dụng) | Trả về một số tiền USD, không bao giờ là `%`. Một regex `%` tìm thấy **không có** dòng nào ở đây. |
+| **Phụ lục IV** — mức thuế TRQ ngoài hạn ngạch | Trả về giá trị phụ thuộc TRQ, không bao giờ là mức thuế trong hạn ngạch. Các nhóm TRQ đã xác minh trong NĐ 129/2022: 04.07, 17.01, 24.01, 25.01. |
+| **`*` trong một biểu thuế FTA** | Có nghĩa là **loại trừ**, không phải bằng không. Khẳng định `*` không bao giờ hiển thị thành `0`. |
+| **Mức thuế FTA không có C/O** | MFN so với FTA là có điều kiện. Điều 4 RCEP yêu cầu quy tắc xuất xứ **cộng với một chứng nhận xuất xứ hợp lệ**. "Thuế là 0%" là sai; "0% *nếu* bạn có C/O hợp lệ, nếu không thì 15% MFN" mới đúng. |
 
-(all verified 2026-07-17, source: https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm and the ND 129/2022 gazette parts)
+(tất cả đã xác minh 2026-07-17, nguồn: https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm và các phần công báo NĐ 129/2022)
 
-### Gate 3.3 — Parser fidelity
+### Cổng 3.3 — Độ trung thực của bộ phân tích
 
-The research's own extraction used `textutil`, which on the EVFTA annex collapsed a six-year rate row into `2925,421,818,114,510,9` — six rates (`29 | 25,4 | 21,8 | 18,1 | 14,5 | 10,9`) concatenated with **no delimiter**, in a decimal-comma locale. Unrecoverable without heuristics.
+Bản trích xuất của chính nghiên cứu dùng `textutil`, cái mà trên phụ lục EVFTA đã gộp một dòng mức thuế sáu năm thành `2925,421,818,114,510,9` — sáu mức thuế (`29 | 25,4 | 21,8 | 18,1 | 14,5 | 10,9`) nối liền **không có dấu phân cách**, trong một locale dùng dấu phẩy thập phân. Không thể khôi phục nếu không có heuristic.
 
-**Flagged as inference, not fact:** research 12 believed this to be a tooling artifact — RCEP has the identical 6-year structure and extracted perfectly, suggesting a real table-aware parser (LibreOffice → docx → `w:tbl/w:tr/w:tc`) fixes it — **but could not prove it**; no `soffice`/`antiword`/`python-docx` was available. **This is the one gap a builder must close before trusting anything.** (verified 2026-07-17, source: research/12.md)
+**Được đánh dấu là suy luận, không phải sự thật:** research 12 tin rằng đây là một hiện tượng do công cụ — RCEP có cấu trúc 6 năm giống hệt và trích xuất hoàn hảo, gợi ý rằng một bộ phân tích thực sự nhận biết bảng (LibreOffice → docx → `w:tbl/w:tr/w:tc`) sẽ khắc phục được — **nhưng không thể chứng minh**; không có `soffice`/`antiword`/`python-docx` khả dụng. **Đây là khoảng trống duy nhất mà một người xây dựng phải khép lại trước khi tin bất cứ thứ gì.** (đã xác minh 2026-07-17, nguồn: research/12.md)
 
-**Gate: a rate-concatenation regression test must exist** — assert that a known multi-column FTA row parses into the correct *count* of separate rate cells, not a single fused number.
+**Cổng: phải tồn tại một bài kiểm tra hồi quy nối-liền-mức-thuế** — khẳng định rằng một dòng FTA đa cột đã biết được phân tích thành đúng *số lượng* các ô mức thuế riêng biệt, không phải một con số duy nhất bị hợp nhất.
 
 ---
 
-## 4. Phase 2 gate — HS candidate suggestion
+## 4. Cổng Giai đoạn 2 — gợi ý mã HS ứng viên
 
-Phase 2 ships top-3 HS candidates with verbatim legal-note evidence. A human decides.
+Giai đoạn 2 ship top-3 mã HS ứng viên kèm bằng chứng chú giải pháp lý nguyên văn. Một con người quyết định.
 
-### The numbers to beat, and the numbers that prove the shape of the product
+### Các con số cần vượt qua, và các con số chứng minh hình dạng của sản phẩm
 
-| System | Accuracy | Source |
+| Hệ thống | Độ chính xác | Nguồn |
 |---|---|---|
-| **Human experts** (HSCodeComp, 10-digit) | **95.0%** | https://arxiv.org/html/2510.19631 |
-| Best agent (SmolAgent + GPT-5 VLM), 10-digit | 46.8% | same |
-| Gemini Deep Research, 10-digit | 40.8% | same |
-| GPT-5, LLM only, no tools, 10-digit | 29.0% | same |
-| Deterministic pipeline, 6-digit **top-3** | 78.3% | https://arxiv.org/html/2605.14857 |
-| Deterministic pipeline, 4-digit **top-3** | 91.5% | same |
-| **KCS explainable candidates + evidence, 6-digit top-3** | **93.9%** | https://arxiv.org/abs/2311.10922 |
+| **Chuyên gia con người** (HSCodeComp, 10 chữ số) | **95,0%** | https://arxiv.org/html/2510.19631 |
+| Agent tốt nhất (SmolAgent + GPT-5 VLM), 10 chữ số | 46,8% | như trên |
+| Gemini Deep Research, 10 chữ số | 40,8% | như trên |
+| GPT-5, chỉ LLM, không công cụ, 10 chữ số | 29,0% | như trên |
+| Pipeline tất định, **top-3** 6 chữ số | 78,3% | https://arxiv.org/html/2605.14857 |
+| Pipeline tất định, **top-3** 4 chữ số | 91,5% | như trên |
+| **KCS phương án ứng viên có giải thích + bằng chứng, top-3 6 chữ số** | **93,9%** | https://arxiv.org/abs/2311.10922 |
 
-(all verified 2026-07-17)
+(tất cả đã xác minh 2026-07-17)
 
-Accuracy collapses down the hierarchy: **~82% at 2-digit → 29-47% at 10-digit.** Report accuracy *per digit depth*. A single headline number hides where the money is — practitioners note most errors happen *after* the correct heading is found, in the subheading split that drives duty rate, AD/CVD exposure, and FTA eligibility.
+Độ chính xác sụp đổ khi đi xuống hệ thống phân cấp: **~82% ở 2 chữ số → 29-47% ở 10 chữ số.** Báo cáo độ chính xác *theo từng độ sâu chữ số*. Một con số tiêu đề duy nhất che giấu chỗ tiền nằm — người hành nghề lưu ý rằng đa số lỗi xảy ra *sau khi* đã tìm đúng nhóm, ở bước tách phân nhóm vốn quyết định mức thuế, mức độ rủi ro AD/CVD, và điều kiện hưởng FTA.
 
-**The gap between 47% and 93.9% is not model capability — it is the output contract.** Top-3 + evidence + human-decides is a different product than top-1 + autonomy, and only one of them works. The evaluation must therefore score the product we are actually shipping.
+**Khoảng cách giữa 47% và 93,9% không phải là năng lực mô hình — nó là hợp đồng đầu ra.** Top-3 + bằng chứng + con người quyết định là một sản phẩm khác với top-1 + tự chủ, và chỉ một trong hai thứ đó hoạt động. Việc đánh giá do đó phải chấm điểm sản phẩm mà ta thực sự đang ship.
 
-### Gate 4.1 — Ship threshold
+### Cổng 4.1 — Ngưỡng ship
 
-**Measure top-1 and top-3 on the golden set. Compare against the human baseline of 95% at 10-digit.**
+**Đo top-1 và top-3 trên golden set. So với baseline con người 95% ở 10 chữ số.**
 
-- **Ship threshold: top-3 ≥ 80%.**
-- **Below 80%: do not ship.** Not "ship with a warning label." Do not ship.
+- **Ngưỡng ship: top-3 ≥ 80%.**
+- **Dưới 80%: không ship.** Không phải "ship kèm nhãn cảnh báo." Không ship.
 
-This threshold is a project decision, not a research finding. It is set where it is because it sits between the deterministic pipeline's measured 78.3% (6-digit top-3) and KCS's 93.9% — i.e. it is demonstrably achievable by a well-built retrieve-and-cite system, and a system below it is underperforming published prior art rather than hitting a domain ceiling.
+Ngưỡng này là một quyết định dự án, không phải một phát hiện nghiên cứu. Nó được đặt ở chỗ hiện tại vì nó nằm giữa mức 78,3% đã đo của pipeline tất định (top-3 6 chữ số) và 93,9% của KCS — tức là nó rõ ràng khả thi với một hệ thống retrieve-and-cite được xây tốt, và một hệ thống dưới ngưỡng đó là đang thua kém prior art đã công bố chứ không phải chạm trần của lĩnh vực.
 
-**Report top-1 too, and never ship on it.** Top-1 is a diagnostic for ranking quality. It is not the contract. Publishing a top-1 number to users would invite exactly the autonomous use the product refuses.
+**Cũng báo cáo top-1, và không bao giờ ship dựa trên nó.** Top-1 là một chỉ báo chẩn đoán cho chất lượng xếp hạng. Nó không phải hợp đồng. Công bố một con số top-1 cho người dùng sẽ mời gọi đúng kiểu sử dụng tự chủ mà sản phẩm từ chối.
 
-### Gate 4.2 — Findings that must not be optimized away
+### Cổng 4.2 — Những phát hiện không được tối ưu bỏ đi
 
-Two HSCodeComp results should stop a specific class of wasted effort before it starts (verified 2026-07-17, source: https://arxiv.org/html/2510.19631):
+Hai kết quả HSCodeComp nên chặn một loại công sức lãng phí cụ thể trước khi nó bắt đầu (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2510.19631):
 
-- **Test-time scaling does not help.** Majority voting and self-reflection gave negligible gains — unlike other reasoning domains. Do not build them and do not evaluate them as if they were free upside.
-- **Giving the model explicit human-written decision rules *decreased* performance for most systems.** More prompt-stuffed rules ≠ better. If an eval run shows a rule-stuffed prompt winning, suspect the eval before believing the result.
+- **Mở rộng tại thời điểm test không giúp ích.** Bỏ phiếu đa số và tự phản chiếu cho lợi ích không đáng kể — khác với các lĩnh vực suy luận khác. Đừng xây chúng và đừng đánh giá chúng như thể chúng là lợi ích miễn phí.
+- **Cấp cho mô hình các quy tắc quyết định do con người viết một cách tường minh *làm giảm* hiệu năng của hầu hết các hệ thống.** Nhồi thêm quy tắc vào prompt ≠ tốt hơn. Nếu một lần chạy đánh giá cho thấy một prompt nhồi đầy quy tắc thắng, hãy nghi ngờ chính bản đánh giá trước khi tin kết quả.
 
 ---
 
-## 5. Temporal evaluation — a separate suite
+## 5. Đánh giá theo thời gian — một bộ riêng
 
-**Rule: 10 questions whose correct answer depends on knowing that a law is dead. Citing dead law is a failure regardless of prose quality.**
+**Quy tắc: 10 câu hỏi mà đáp án đúng phụ thuộc vào việc biết rằng một điều luật đã chết. Trích dẫn luật đã chết là một thất bại bất kể chất lượng văn xuôi.**
 
-This is scored separately because it is a different failure mechanism. The prose will be excellent. The citation will resolve. The law will be repealed.
+Đây được chấm điểm riêng vì nó là một cơ chế thất bại khác. Văn xuôi sẽ xuất sắc. Trích dẫn sẽ giải quyết được. Điều luật đã bị bãi bỏ.
 
-Temporal failure is measured, not theoretical. On 312 validated statutory QA pairs across five major LLMs, two distinct failure modes appeared: models applying **outdated rules** after legislation changes, and models **preferring newer provisions even when the older version applies** — a recency bias that **RAG alone does not fix**. The actionable finding: approaches treating temporal validity as a **hard constraint (filter, not ranking signal)** substantially improve performance. (verified 2026-07-17, source: https://arxiv.org/abs/2605.23497)
+Thất bại theo thời gian đã được đo lường, không phải lý thuyết. Trên 312 cặp QA luật định đã được xác thực trên năm LLM lớn, hai dạng thất bại riêng biệt xuất hiện: mô hình áp dụng **quy tắc lỗi thời** sau khi luật thay đổi, và mô hình **thiên vị điều khoản mới hơn ngay cả khi phiên bản cũ mới là áp dụng được** — một thiên lệch mới đây mà **chỉ RAG không sửa được**. Phát hiện có tính hành động: các cách tiếp cận coi hiệu lực theo thời gian là một **ràng buộc cứng (bộ lọc, không phải tín hiệu xếp hạng)** cải thiện hiệu năng đáng kể. (đã xác minh 2026-07-17, nguồn: https://arxiv.org/abs/2605.23497)
 
-Scale of the problem in a real Vietnamese corpus: of 1,703 SBV documents, **863 fully repealed, 191 partially repealed, 639 effective** — **~62% of the corpus is dead or partly dead law** (verified 2026-07-17, source: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf).
+Quy mô của vấn đề trong một kho ngữ liệu Việt Nam thực: trong 1.703 văn bản của SBV, **863 bị bãi bỏ toàn bộ, 191 bãi bỏ một phần, 639 còn hiệu lực** — **~62% kho ngữ liệu là luật chết hoặc chết một phần** (đã xác minh 2026-07-17, nguồn: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf).
 
-### Gate 5.1 — Dead-law suite (10 questions minimum)
+### Cổng 5.1 — Bộ luật chết (tối thiểu 10 câu hỏi)
 
-Each question must be answerable *only* if the system knows the governing text is repealed. Citing the dead instrument = automatic fail.
+Mỗi câu hỏi phải chỉ có thể trả lời được *nếu* hệ thống biết văn bản điều chỉnh đã bị bãi bỏ. Trích dẫn công cụ đã chết = tự động trượt.
 
-| Dead instrument | Died | Replaced by | Source (verified 2026-07-17) |
+| Văn bản đã chết | Chết | Được thay bởi | Nguồn (đã xác minh 2026-07-17) |
 |---|---|---|---|
-| **Luật Giao thông đường bộ 2008** (23/2008/QH12) | **01/01/2025** | Split into **Luật Đường bộ 35/2024/QH15** + **Luật TTATGTĐB 36/2024/QH15**, both passed 27/06/2024 | Điều 88 khoản 3 Luật 36/2024; Điều 85 khoản 3 Luật 35/2024 — https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf |
-| **Nghị định 10/2020/NĐ-CP** | **01/01/2025** | **NĐ 158/2024/NĐ-CP** (18/12/2024) — itself already amended by **NĐ 218/2026/NĐ-CP** (19/06/2026, eff. **10/08/2026**) | https://vanban.chinhphu.vn/?pageid=27160&docid=212082 · https://vanban.chinhphu.vn/?classid=1&docid=218537&orggroupid=2&pageid=27160 |
+| **Luật Giao thông đường bộ 2008** (23/2008/QH12) | **01/01/2025** | Tách thành **Luật Đường bộ 35/2024/QH15** + **Luật TTATGTĐB 36/2024/QH15**, cả hai thông qua 27/06/2024 | Điều 88 khoản 3 Luật 36/2024; Điều 85 khoản 3 Luật 35/2024 — https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf |
+| **Nghị định 10/2020/NĐ-CP** | **01/01/2025** | **NĐ 158/2024/NĐ-CP** (18/12/2024) — bản thân đã bị sửa đổi bởi **NĐ 218/2026/NĐ-CP** (19/06/2026, hiệu lực **10/08/2026**) | https://vanban.chinhphu.vn/?pageid=27160&docid=212082 · https://vanban.chinhphu.vn/?classid=1&docid=218537&orggroupid=2&pageid=27160 |
 | **Luật Đường sắt 2017** (06/2017/QH14) | **01/01/2026** | **Luật Đường sắt 2025 (95/2025/QH15)** | https://moc.gov.vn/pl/pages/ChiTietVanBan.aspx?vID=460&TypeVB=1 |
 | **Luật HKDD 2006/2014** (66/2006/QH11 + 61/2014/QH13) | **01/07/2026** | **Luật HKDD 2025 (130/2025/QH15)** | https://caa.gov.vn/van-ban/130-2025-qh15-30644.htm |
 
-Note the **NĐ 218/2026 case is the inverse test**: effective 10/08/2026, i.e. **not yet in force on 2026-07-17**. A system must date-gate it, not serve it as current law today. Include at least one question that fails if the system serves a not-yet-effective instrument.
+Lưu ý **ca NĐ 218/2026 là bài kiểm tra đảo ngược**: hiệu lực 10/08/2026, tức là **chưa có hiệu lực vào ngày 2026-07-17**. Một hệ thống phải kiểm soát theo ngày với nó, không phục vụ nó như luật hiện hành hôm nay. Bao gồm ít nhất một câu hỏi sẽ trượt nếu hệ thống phục vụ một văn bản chưa có hiệu lực.
 
-Include at least one question exercising the harder layer: **a law's headline effective date is not enough.** Luật TTATGTĐB 36/2024 demonstrates all three complications at once — (a) per-clause delayed effect, (b) later amendments to the effective-date article *itself*, (c) amending laws whose own clauses have split effective dates. The child-restraint rule (khoản 3 Điều 10) was widely cited as effective 01/01/2026; it was moved to **01/7/2026** by Luật 118/2025/QH15, whose relevant clause took effect 01/01/2026 — one day before the original deadline would have bitten. (verified 2026-07-17, source: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf)
+Bao gồm ít nhất một câu hỏi luyện tầng khó hơn: **ngày hiệu lực tiêu đề của một điều luật là chưa đủ.** Luật TTATGTĐB 36/2024 thể hiện cả ba biến chứng cùng lúc — (a) hiệu lực chậm theo từng khoản, (b) các sửa đổi sau này với chính điều về ngày hiệu lực, (c) các luật sửa đổi mà bản thân các khoản của chúng cũng có ngày hiệu lực chia tách. Quy tắc thiết bị an toàn cho trẻ em (khoản 3 Điều 10) được nhiều nơi trích dẫn là có hiệu lực 01/01/2026; nó đã bị dời sang **01/7/2026** bởi Luật 118/2025/QH15, mà khoản liên quan của luật này có hiệu lực 01/01/2026 — một ngày trước khi hạn chót ban đầu cắn vào. (đã xác minh 2026-07-17, nguồn: https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/55-vbhn-vpqh.pdf)
 
-### Gate 5.2 — The reversion test
+### Cổng 5.2 — Bài kiểm tra hoàn nguyên
 
-**Required: a paired query, identical except for the as-of date, straddling NĐ 72/2026's expiry.**
+**Bắt buộc: một cặp truy vấn, giống hệt nhau ngoại trừ ngày as-of, bắc ngang qua ngày hết hiệu lực của NĐ 72/2026.**
 
-NĐ 72/2026/NĐ-CP was **signed 09/03/2026 and effective the same day** ("kể từ ngày ký"), cutting petrol/naphtha/reformate MFN from 10% → **0%**. It was valid **only until 30/04/2026** — a **52-day window** — after which rates **revert to NĐ 26/2023**. (verified 2026-07-17, source: https://vanban.chinhphu.vn/?amp=&docid=217144&pageid=27160; the 10% baseline for 2710.12.21/.22/.24/.25/.80 extracted from NĐ 26/2023 and independently corroborated by press reporting of the cut "từ 10% xuống 0%")
+NĐ 72/2026/NĐ-CP được **ký 09/03/2026 và có hiệu lực cùng ngày** ("kể từ ngày ký"), cắt thuế MFN xăng/naphtha/reformate từ 10% → **0%**. Nó chỉ có hiệu lực **đến 30/04/2026** — một **cửa sổ 52 ngày** — sau đó mức thuế **hoàn nguyên về NĐ 26/2023**. (đã xác minh 2026-07-17, nguồn: https://vanban.chinhphu.vn/?amp=&docid=217144&pageid=27160; mức nền 10% cho 2710.12.21/.22/.24/.25/.80 được trích xuất từ NĐ 26/2023 và được xác nhận độc lập bởi đưa tin báo chí về việc cắt "từ 10% xuống 0%")
 
 ```
 assert lookup(hs="2710.12.21", schedule="NK_uu_dai", date="2026-04-01") == 0    # inside the window
 assert lookup(hs="2710.12.21", schedule="NK_uu_dai", date="2026-05-01") == 10   # reverted
 ```
 
-**Why this specific test:** a "scrape the latest version" design has no concept of expiry. It would serve 0% petrol forever. This test is the one that fails on the architecture, not on a row of data — which is exactly why it must be in the suite from day one.
+**Vì sao chính bài kiểm tra này:** một thiết kế "scrape phiên bản mới nhất" không có khái niệm về hết hiệu lực. Nó sẽ phục vụ xăng 0% mãi mãi. Đây là bài kiểm tra thất bại ở kiến trúc, không phải ở một dòng dữ liệu — chính xác vì thế nó phải có trong bộ ngay từ ngày đầu.
 
-### Gate 5.3 — The gazette-lag honesty test
+### Cổng 5.3 — Bài kiểm tra trung thực về độ trễ công báo
 
-There is a **multi-week window in which the legally-in-force rate exists in machine-readable form nowhere** — only as a 200-DPI scan.
+Có một **cửa sổ nhiều tuần mà mức thuế đang có hiệu lực pháp lý không tồn tại ở dạng máy đọc được ở bất cứ đâu** — chỉ tồn tại dưới dạng bản quét 200-DPI.
 
-- **NĐ 72/2026:** binding 09/03/2026; published in **Công báo số 157 on 24/03/2026 — 15 days *after* it was already law.**
-- **NĐ 26/2023:** signed 31/05/2023, gazetted 19/06/2023 (~19 days).
-- **EVFTA NĐ 116/2022:** signed 30/12/2022, gazetted from 16/02/2023 (~48 days).
+- **NĐ 72/2026:** ràng buộc 09/03/2026; đăng trên **Công báo số 157 ngày 24/03/2026 — 15 ngày *sau* khi nó đã là luật.**
+- **NĐ 26/2023:** ký 31/05/2023, đăng công báo 19/06/2023 (~19 ngày).
+- **EVFTA NĐ 116/2022:** ký 30/12/2022, đăng công báo từ 16/02/2023 (~48 ngày).
 
-(all verified 2026-07-17, source: https://congbao.chinhphu.vn/)
+(tất cả đã xác minh 2026-07-17, nguồn: https://congbao.chinhphu.vn/)
 
-**No crawl schedule can close this gap.** The gate is therefore not "be current" — that is unachievable. The gate is: **the system must know its snapshot date and refuse, or visibly flag staleness, rather than answer confidently from a snapshot that may predate a binding amendment.** Test that the refusal/flag actually fires.
+**Không lịch crawl nào có thể khép lại khoảng trống này.** Vì vậy cổng không phải là "luôn cập nhật" — điều đó bất khả thi. Cổng là: **hệ thống phải biết ngày snapshot của mình và từ chối, hoặc cảnh báo độ cũ một cách nhìn thấy được, thay vì trả lời tự tin từ một snapshot có thể có trước một sửa đổi ràng buộc.** Kiểm tra rằng việc từ chối/cảnh báo thực sự kích hoạt.
 
-This is why the output contract is "a research aid that shows its sources and its as-of date," never "an answer engine that states a rate." Customs declarations are legally binding; a wrong rate means underpayment → back-assessment, penalties, and **the declarant — not the tool — carries the liability.**
+Đây là lý do hợp đồng đầu ra là "một công cụ hỗ trợ nghiên cứu cho thấy nguồn và ngày as-of của nó," không bao giờ là "một cỗ máy trả lời phát biểu một mức thuế." Tờ khai hải quan có tính ràng buộc pháp lý; một mức thuế sai nghĩa là nộp thiếu → truy thu, phạt, và **người khai — không phải công cụ — gánh trách nhiệm pháp lý.**
 
 ---
 
-## 6. Citation grounding verifies SUPPORT, not EXISTENCE
+## 6. Việc bám trích dẫn xác minh SỰ ỦNG HỘ, không phải SỰ TỒN TẠI
 
-**This is the most misunderstood requirement in the document. Read the Wilgarten case before writing any grounding check.**
+**Đây là yêu cầu bị hiểu lầm nhiều nhất trong tài liệu. Đọc ca Wilgarten trước khi viết bất kỳ kiểm tra bám nào.**
 
-The definitive source is **Magesh, Surani, Dahl, Suzgun, Manning & Ho, "Hallucination-Free? Assessing the Reliability of Leading AI Legal Research Tools," Journal of Empirical Legal Studies 2025** — the **first preregistered** evaluation of these tools, 202 queries, expert-scored. (verified 2026-07-17, source: https://doi.org/10.1111/jels.12413 · PDF: https://dho.stanford.edu/wp-content/uploads/Legal_RAG_Hallucinations.pdf)
+Nguồn chuẩn mực là **Magesh, Surani, Dahl, Suzgun, Manning & Ho, "Hallucination-Free? Assessing the Reliability of Leading AI Legal Research Tools," Journal of Empirical Legal Studies 2025** — đánh giá **được đăng ký trước đầu tiên** của các công cụ này, 202 truy vấn, chấm điểm bởi chuyên gia. (đã xác minh 2026-07-17, nguồn: https://doi.org/10.1111/jels.12413 · PDF: https://dho.stanford.edu/wp-content/uploads/Legal_RAG_Hallucinations.pdf)
 
-| System | Result |
+| Hệ thống | Kết quả |
 |---|---|
-| **Lexis+ AI** | 65% accurate; **hallucinates >17%** |
-| **Westlaw AI-Assisted Research** | 42% accurate; **hallucinates >34%** |
-| Ask Practical Law AI | 17-33% hallucination band |
-| GPT-4 (no RAG) | ~43% hallucination |
+| **Lexis+ AI** | chính xác 65%; **ảo giác >17%** |
+| **Westlaw AI-Assisted Research** | chính xác 42%; **ảo giác >34%** |
+| Ask Practical Law AI | dải ảo giác 17-33% |
+| GPT-4 (không RAG) | ~43% ảo giác |
 
-These are commercial legal-research products from LexisNexis and Thomson Reuters, marketed against claims of "hallucination-free linked legal citations" and RAG that "dramatically reduces hallucinations to nearly zero." **This is the number to anchor stakeholder expectations with.** RAG reduces legal hallucination; it does not eliminate it.
+Đây là các sản phẩm nghiên cứu pháp lý thương mại của LexisNexis và Thomson Reuters, được tiếp thị dựa trên các tuyên bố "trích dẫn pháp lý được liên kết không ảo giác" và RAG "giảm ảo giác một cách mạnh mẽ xuống gần như bằng không." **Đây là con số để neo kỳ vọng của các bên liên quan.** RAG giảm ảo giác pháp lý; nó không loại bỏ ảo giác.
 
-### The Wilgarten case — why an existence check is worthless
+### Ca Wilgarten — vì sao kiểm tra sự tồn tại là vô giá trị
 
-Asked for opinions by **"Luther A. Wilgarten," a fictitious judge**, Lexis+ AI returned **a real case with a real, correctly-formatted citation** — simply not written by that (nonexistent) judge. The authors' phrase: *"hallucination-free in a narrow sense."*
+Khi được hỏi các ý kiến của **"Luther A. Wilgarten," một thẩm phán hư cấu**, Lexis+ AI trả về **một vụ án thật với một trích dẫn thật, định dạng đúng** — chỉ đơn giản là không phải do vị (không hề tồn tại) thẩm phán đó viết. Cụm từ của các tác giả: *"không ảo giác theo một nghĩa hẹp."*
 
-**The implication, stated as bluntly as the research states it: "every citation resolves to a real document" is a worthless guarantee. It is exactly the guarantee vendors market and exactly the one that fails.**
+**Hàm ý, được phát biểu thẳng thừng như nghiên cứu phát biểu: "mọi trích dẫn đều giải quyết về một tài liệu thật" là một sự bảo đảm vô giá trị. Nó chính xác là sự bảo đảm mà các nhà cung cấp tiếp thị và chính xác là sự bảo đảm thất bại.**
 
-**Therefore: a Điều-number validator gives false comfort.** A check that "Điều 12 Nghị định 26/2023/NĐ-CP" parses, exists, and is in force will pass on an answer where Điều 12 says nothing whatsoever about the proposition asserted. The check must verify **that the cited provision supports the proposition** — not that it exists.
+**Do đó: một bộ xác thực số Điều mang lại sự an tâm giả.** Một kiểm tra rằng "Điều 12 Nghị định 26/2023/NĐ-CP" phân tích được, tồn tại, và còn hiệu lực sẽ đạt trên một câu trả lời mà Điều 12 chẳng nói gì về mệnh đề được khẳng định. Kiểm tra phải xác minh **rằng điều khoản được trích dẫn ủng hộ mệnh đề** — không phải rằng nó tồn tại.
 
-This is not a hypothetical for Vietnamese law. It is the near-certain failure mode, because legal text here is lexically redundant across documents ("Điều 5. Giải thích từ ngữ" exists in hundreds of văn bản and is near-textually-identical), which is the same property that produces **Document-Level Retrieval Mismatch — observed at rates exceeding 95% on some datasets** (verified 2026-07-17, source: https://arxiv.org/html/2510.06999v1).
+Đây không phải là giả định với luật Việt Nam. Nó là dạng thất bại gần như chắc chắn, vì văn bản pháp lý ở đây dư thừa về từ vựng xuyên các tài liệu ("Điều 5. Giải thích từ ngữ" tồn tại trong hàng trăm văn bản và gần như giống hệt về mặt văn tự), chính là đặc tính sinh ra **Sai lệch Truy xuất Cấp Tài liệu (Document-Level Retrieval Mismatch) — quan sát được ở mức vượt 95% trên một số tập dữ liệu** (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2510.06999v1).
 
-### Gate 6.1 — Grounding checks that count
+### Cổng 6.1 — Các kiểm tra bám thực sự tính
 
-- **Support, not existence.** Score whether the cited Điều/Khoản/chapter note entails the claim. An entailment/cross-encoder check, or human scoring on the golden set. Existence checks may run *in addition*, never *instead*.
-- **Verbatim evidence.** Every HS candidate must quote its authority verbatim — the specific Chapter Note, Section Note, EN paragraph, SEN entry, or công văn. Quote, do not paraphrase. This is what the KCS study proved delivers the value: **not the prediction — the evidence retrieval**. A user study with **32 customs experts** confirmed candidates + explanations substantially reduced review time and effort. (verified 2026-07-17, source: https://arxiv.org/abs/2311.10922)
-- **Refusal is a first-class output and must be scored as one.** A pre-generation gate (no chunk clears the similarity threshold → refuse before generating) plus a post-generation evidence check (`if ¬HasCitations(a) or EvidenceMismatch(a, D, G) → return Unknown Answer`) is a usable blueprint. An eval that penalizes refusal equally with a wrong answer will train the system into confident wrongness. **Score refusal separately from error.** (verified 2026-07-17, source: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf)
-- **Never let the user's preferred code into the prompt as a premise.** Practitioner warning worth quoting: *"if you want your HTS to be X (even if the correct HTS is Y), AI will give you an argument (or three) to support your preferred HTS."* The model is a sycophantic advocate, not a judge. **This failure manufactures the paper trail for a trốn thuế characterization** — the worst legal outcome available. Include an adversarial eval case: submit a query containing a wrong preferred code and assert the system does not ratify it. (verified 2026-07-17, source: https://aomeara.com/why-ai-tools-for-tariff-classification-may-lead-you-down-the-wrong-road/)
+- **Sự ủng hộ, không phải sự tồn tại.** Chấm điểm liệu Điều/Khoản/chú giải chương được trích dẫn có kéo theo khẳng định hay không. Một kiểm tra entailment/cross-encoder, hoặc chấm điểm bởi con người trên golden set. Kiểm tra sự tồn tại có thể chạy *bổ sung*, không bao giờ *thay thế*.
+- **Bằng chứng nguyên văn.** Mỗi mã HS ứng viên phải trích dẫn nguyên văn thẩm quyền của nó — Chú giải Chương, Chú giải Phần, đoạn EN, mục SEN, hay công văn cụ thể. Trích dẫn, không diễn giải. Đây là điều nghiên cứu KCS chứng minh mang lại giá trị: **không phải dự đoán — mà là việc truy xuất bằng chứng**. Một nghiên cứu người dùng với **32 chuyên gia hải quan** xác nhận phương án ứng viên + giải thích làm giảm đáng kể thời gian và công sức rà soát. (đã xác minh 2026-07-17, nguồn: https://arxiv.org/abs/2311.10922)
+- **Từ chối trả lời (abstention) là một đầu ra hạng nhất và phải được chấm điểm như vậy.** Một cổng trước-sinh (không chunk nào vượt ngưỡng tương đồng → từ chối trước khi sinh) cộng với một kiểm tra bằng chứng sau-sinh (`if ¬HasCitations(a) or EvidenceMismatch(a, D, G) → return Unknown Answer`) là một khuôn mẫu dùng được. Một bản đánh giá phạt việc từ chối ngang với một câu trả lời sai sẽ huấn luyện hệ thống thành sai một cách tự tin. **Chấm điểm việc từ chối tách biệt với lỗi.** (đã xác minh 2026-07-17, nguồn: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf)
+- **Không bao giờ để mã ưa thích của người dùng vào prompt như một tiền đề.** Lời cảnh báo của người hành nghề đáng trích: *"nếu bạn muốn HTS của mình là X (dù HTS đúng là Y), AI sẽ cho bạn một lập luận (hoặc ba) để ủng hộ HTS ưa thích của bạn."* Mô hình là một luật sư biện hộ nịnh hót, không phải một quan tòa. **Thất bại này chế tạo ra dấu vết giấy tờ cho một đặc trưng hóa trốn thuế** — kết cục pháp lý tệ nhất có thể có. Bao gồm một ca đánh giá đối kháng: gửi một truy vấn chứa một mã ưa thích sai và khẳng định hệ thống không phê chuẩn nó. (đã xác minh 2026-07-17, nguồn: https://aomeara.com/why-ai-tools-for-tariff-classification-may-lead-you-down-the-wrong-road/)
 
 ---
 
-## 7. Metrics
+## 7. Các chỉ số đo
 
-### Retrieval
+### Truy xuất
 
 - **Recall@k**
 - **Precision@k**
 - **MRR**
-- **F2@k** — the primary metric.
+- **F2@k** — chỉ số chính.
 
-**Why F2 and not F1:** F2 weights recall over precision. **Missing an applicable provision is worse than surfacing an extra one.** A missed exclusion note is a wrong classification; an extra retrieved note costs the reviewer thirty seconds. The asymmetry is real, so the metric must encode it rather than averaging it away. (F2 usage verified 2026-07-17, source: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf)
+**Vì sao F2 chứ không phải F1:** F2 đặt trọng số recall cao hơn precision. **Bỏ sót một điều khoản áp dụng được thì tệ hơn là hiển thị thừa một điều khoản.** Một chú giải loại trừ bị bỏ sót là một phân loại sai; một chú giải truy xuất thừa tốn của người rà soát ba mươi giây. Sự bất đối xứng là có thật, nên chỉ số phải mã hóa nó thay vì lấy trung bình nó đi. (Việc dùng F2 đã xác minh 2026-07-17, nguồn: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf)
 
-**Counter-pressure that stops F2 from being gamed:** you cannot fix recall by raising k. Legal RAG is vulnerable to **"lost in the middle"** — dumping 20 Điều into context actively degrades faithfulness. This argues for aggressive reranking + low top-k (SBV-LawGraph uses k=5), not "retrieve more to be safe." **Report F2@k at a fixed, low k** so recall gains must come from ranking, not from flooding the context. (verified 2026-07-17, sources: https://arxiv.org/pdf/2605.19806 · https://lexuanbach.github.io/publication/ACIIDS2026a.pdf)
+**Áp lực đối trọng ngăn F2 bị chơi gian:** bạn không thể sửa recall bằng cách tăng k. RAG pháp lý dễ tổn thương với hiện tượng **"lạc giữa dòng" (lost in the middle)** — nhồi 20 Điều vào ngữ cảnh làm suy giảm chủ động độ trung thực. Điều này ủng hộ rerank quyết liệt + top-k thấp (SBV-LawGraph dùng k=5), không phải "truy xuất nhiều hơn cho chắc." **Báo cáo F2@k ở một k cố định, thấp** để lợi ích recall phải đến từ xếp hạng, không từ việc ngập ngữ cảnh. (đã xác minh 2026-07-17, nguồn: https://arxiv.org/pdf/2605.19806 · https://lexuanbach.github.io/publication/ACIIDS2026a.pdf)
 
-### Generation — conjunctive correctness
+### Sinh — tính đúng theo phép hội
 
-An answer counts correct **only if all three hold**:
+Một câu trả lời được tính là đúng **chỉ khi cả ba điều đều đúng**:
 
-1. **Semantically equivalent** to the known-correct answer, **AND**
-2. **Contains ≥1 legal citation**, **AND**
-3. **Citations are valid AND relevant.**
+1. **Tương đương về ngữ nghĩa** với đáp án đã biết là đúng, **VÀ**
+2. **Chứa ≥1 trích dẫn pháp lý**, **VÀ**
+3. **Trích dẫn hợp lệ VÀ liên quan.**
 
-Conjunctive, not weighted. A fluent answer with no citation scores zero. A well-cited answer whose citation does not support the claim scores zero — that is condition (iii), and it is the operationalization of the Wilgarten lesson. (verified 2026-07-17, source: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf, which uses two annotators)
+Theo phép hội, không phải có trọng số. Một câu trả lời trôi chảy nhưng không trích dẫn thì được điểm không. Một câu trả lời trích dẫn tốt nhưng trích dẫn không ủng hộ khẳng định thì được điểm không — đó là điều kiện (iii), và nó là sự vận hành hóa bài học Wilgarten. (đã xác minh 2026-07-17, nguồn: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf, dùng hai người chú thích)
 
-### Reference numbers for calibration
+### Các con số tham chiếu để hiệu chuẩn
 
-Vietnamese statutory retrieval, SBV-LawGraph (verified 2026-07-17, source: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf):
+Truy xuất luật định Việt Nam, SBV-LawGraph (đã xác minh 2026-07-17, nguồn: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf):
 
-| Method | ALQAC R@1 | ALQAC R@10 | SBV R@1 | SBV R@10 |
+| Phương pháp | ALQAC R@1 | ALQAC R@10 | SBV R@1 | SBV R@10 |
 |---|---|---|---|---|
 | BM25 | 0.57 | 0.74 | 0.38 | 0.65 |
-| Naive RAG (dense, no rerank) | 0.36 | 0.58 | 0.32 | 0.61 |
-| Advanced RAG (75/25 hybrid) | 0.57 | 0.74 | 0.40 | 0.67 |
+| Naive RAG (dense, không rerank) | 0.36 | 0.58 | 0.32 | 0.61 |
+| Advanced RAG (hybrid 75/25) | 0.57 | 0.74 | 0.40 | 0.67 |
 | SBV-LawGraph (hybrid+rerank+KG) | **0.69** | **0.77** | **0.49** | **0.76** |
 
-**Caveats the authors themselves list, reproduced rather than laundered:** small SBV eval set (100 QA pairs); **no ablation isolating the KG's independent contribution**; no KG quality audit; binary correctness with only 2 annotators and **no inter-annotator agreement reported**. Treat as directional, not definitive.
+**Các lưu ý mà chính các tác giả liệt kê, tái lập chứ không tẩy trắng:** tập đánh giá SBV nhỏ (100 cặp QA); **không có ablation cô lập đóng góp độc lập của KG**; không có kiểm toán chất lượng KG; đúng/sai nhị phân với chỉ 2 người chú thích và **không báo cáo độ đồng thuận giữa các người chú thích**. Coi là mang tính định hướng, không phải dứt khoát.
 
-Note the shape: **out-of-the-box dense embeddings LOSE to BM25 on Vietnamese legal text** (0.36 vs 0.57 R@1) and win decisively only after in-domain fine-tuning (TVPL: BM25 MRR@10 21.60 → fine-tuned ColBERT 74.61) (verified 2026-07-17, source: https://arxiv.org/html/2412.00657v1). Any eval comparing hybrid weightings must report which embedding model was used, because the correct BM25:dense ratio is a function of how well-adapted the embedding is — not a constant to copy from a paper.
-
----
-
-## 8. Preregister the protocol
-
-**Rule: write down the metric definitions, the golden set, the thresholds, and the analysis plan BEFORE running the evaluation. Commit them. Do not edit them after seeing results.**
-
-Preregistration was **the core methodological contribution of Magesh et al.**, and the reason their numbers contradict vendor marketing so cleanly. **The field is full of vendor claims that do not survive contact with a preregistered protocol.** (verified 2026-07-17, source: https://doi.org/10.1111/jels.12413)
-
-The independently-measured gap between marketing and reality is roughly 2×, and it is documented on named products:
-
-- **Zonos claims "90%+ accuracy out of the box"**, backed by 500k+ manually classified labels. Independent testing on 103 randomized CBP rulings put it at **44.1% at 10-digit**.
-- **Avalara's 80.0%** comes from a product that explicitly includes **human expert review in the loop**.
-- **Tarifflo: 89.2%** at 10-digit.
-- **WCO BACUDA: 12.75%** (at 6-digit, its ceiling).
-
-(verified 2026-07-17, sources: https://arxiv.org/html/2412.14179v1 · https://zonos.com/classify · https://www.avalara.com/us/en/products/global-commerce-offerings/item-classification.html)
-
-**Treat every vendor number — including our own — as marketing until independently reproduced.** Note the benchmark that produced these is itself small (n=103) and US-HTS-specific.
-
-The preregistration discipline applies internally. The failure it prevents is specific and likely: running the eval, seeing 74% top-3, and deciding that top-3 ≥80% was always a bit arbitrary anyway. **That decision must be impossible to make after seeing the number.**
+Lưu ý hình dạng: **embedding dense dùng ngay không tinh chỉnh THUA BM25 trên văn bản pháp lý Việt Nam** (0.36 so với 0.57 R@1) và chỉ thắng dứt khoát sau khi fine-tune trong lĩnh vực (TVPL: BM25 MRR@10 21.60 → ColBERT fine-tune 74.61) (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2412.00657v1). Bất kỳ đánh giá nào so sánh các trọng số hybrid đều phải báo cáo dùng mô hình embedding nào, vì tỷ lệ BM25:dense đúng là một hàm của mức độ thích ứng tốt của embedding — không phải một hằng số để chép từ một bài báo.
 
 ---
 
-## 9. Vietnamese benchmarks available for reference
+## 8. Đăng ký trước giao thức
 
-Use these for calibration and for embedding-model selection work — **not** as a substitute for the golden set. They measure Vietnamese legal retrieval in general; the golden set measures this company's declarations.
+**Quy tắc: ghi lại các định nghĩa chỉ số, golden set, các ngưỡng, và kế hoạch phân tích TRƯỚC KHI chạy đánh giá. Commit chúng. Không sửa chúng sau khi đã xem kết quả.**
 
-| Benchmark | Scale | Note |
+Đăng ký trước là **đóng góp phương pháp luận cốt lõi của Magesh và cộng sự**, và là lý do các con số của họ mâu thuẫn với marketing của nhà cung cấp một cách sạch sẽ đến vậy. **Lĩnh vực này đầy các tuyên bố của nhà cung cấp không sống sót khi va chạm với một giao thức đăng ký trước.** (đã xác minh 2026-07-17, nguồn: https://doi.org/10.1111/jels.12413)
+
+Khoảng cách được đo lường độc lập giữa marketing và thực tế là khoảng 2×, và nó được ghi chép trên các sản phẩm có tên:
+
+- **Zonos tuyên bố "độ chính xác 90%+ ngay khi dùng"**, hậu thuẫn bởi 500k+ nhãn được phân loại thủ công. Kiểm thử độc lập trên 103 phán quyết CBP ngẫu nhiên đặt nó ở **44,1% ở 10 chữ số**.
+- **80,0% của Avalara** đến từ một sản phẩm bao gồm tường minh **việc rà soát của chuyên gia con người trong vòng lặp**.
+- **Tarifflo: 89,2%** ở 10 chữ số.
+- **WCO BACUDA: 12,75%** (ở 6 chữ số, trần của nó).
+
+(đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2412.14179v1 · https://zonos.com/classify · https://www.avalara.com/us/en/products/global-commerce-offerings/item-classification.html)
+
+**Coi mọi con số của nhà cung cấp — bao gồm của chính chúng ta — là marketing cho đến khi được tái lập độc lập.** Lưu ý benchmark sinh ra các con số này bản thân nó nhỏ (n=103) và đặc thù US-HTS.
+
+Kỷ luật đăng ký trước áp dụng nội bộ. Thất bại nó ngăn ngừa là cụ thể và có khả năng xảy ra: chạy đánh giá, thấy top-3 74%, và quyết định rằng ngưỡng top-3 ≥80% dù sao cũng luôn có phần tùy tiện. **Quyết định đó phải là không thể đưa ra sau khi đã thấy con số.**
+
+---
+
+## 9. Các benchmark Việt Nam có sẵn để tham chiếu
+
+Dùng chúng để hiệu chuẩn và cho công việc chọn mô hình embedding — **không phải** như một thứ thay thế cho golden set. Chúng đo truy xuất pháp lý Việt Nam nói chung; golden set đo các tờ khai của công ty này.
+
+| Benchmark | Quy mô | Ghi chú |
 |---|---|---|
-| **ALQAC 2025** | — | Automated Legal Question Answering Competition; the main Vietnamese legal venue |
-| **TVPL** | **224,006 passages**; 165,334 train / 10,000 test queries | The largest public Vietnamese legal retrieval benchmark. Sourced from thuvienphapluat.vn — **see the licensing flag in §10** |
-| **Zalo Legal Text Retrieval 2021** | **61,425 passages** | — |
-| VLegal-Bench | — | Vietnamese legal *reasoning* benchmark (Dec 2025) — **snippet-only, unverified** |
+| **ALQAC 2025** | — | Automated Legal Question Answering Competition; sân chơi pháp lý Việt Nam chính |
+| **TVPL** | **224.006 đoạn văn**; 165.334 truy vấn train / 10.000 test | Benchmark truy xuất pháp lý Việt Nam công khai lớn nhất. Lấy nguồn từ thuvienphapluat.vn — **xem cờ cấp phép ở §10** |
+| **Zalo Legal Text Retrieval 2021** | **61.425 đoạn văn** | — |
+| VLegal-Bench | — | Benchmark *suy luận* pháp lý Việt Nam (Tháng 12/2025) — **chỉ có snippet, chưa xác minh** |
 
-(verified 2026-07-17, sources: https://arxiv.org/html/2412.00657v1 · https://arxiv.org/html/2409.13699v1)
-
----
-
-## 10. Open benchmark gap — the eval we may have to run ourselves
-
-**There is no published head-to-head comparison of OpenAI (`text-embedding-3-large`) or Voyage against Vietnamese-specific embedding models on Vietnamese legal text. The benchmark does not exist in the literature.** (verified 2026-07-17)
-
-What was found instead:
-
-- Every Vietnamese legal paper located benchmarks **only open-source/Vietnamese models and explicitly omits OpenAI** (verified 2026-07-17, source: https://arxiv.org/pdf/2507.14619).
-- The one benchmark that *does* compare OpenAI to open-source on Vietnamese retrieval — MTEB over VieQuAD/WebFAQ/**Zalo Legal Text** — is **paywalled**: methodology visible, results not (verified 2026-07-17, source: https://nqbao.medium.com/benchmarking-text-embedding-models-for-vietnamese-retrieval-tasks-3c4342e0ff9d).
-
-**If that architecture choice matters, run it: TVPL + MTEB is the ready-made harness.** Do not resolve it by assumption, and do not cite a leaderboard from a different task — retrieval and reranking rank models differently, sometimes inversely. Measured example: `sup-SimCSE-VietNamese-phobert-base` is **best at reranking (mAP 69.46) and catastrophically worst at retrieval (acc 0.12 vs 0.73 for the bi-encoder)** (verified 2026-07-17, source: https://arxiv.org/pdf/2503.07470).
-
-**Licensing flag before using TVPL:** thuvienphapluat.vn's `robots.txt` carries an explicit `Content-Signal: search=yes, **ai-train=no**, use=reference`, framed as an express reservation of rights under EU DSM Art. 4, and blocks Amazonbot/Applebot-Extended/Bytespider by name. The site returns **403 Forbidden** (Cloudflare) to automated fetch, and its Excel biểu thuế are a **commercial product**. TVPL-the-benchmark is derived from that corpus. **Resolve the licensing question before building on it** — this is the worst-liability source in the inventory, not the shortcut it appears to be. (verified 2026-07-17, source: research/12.md live fetch of https://thuvienphapluat.vn/robots.txt)
+(đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2412.00657v1 · https://arxiv.org/html/2409.13699v1)
 
 ---
 
-## Unverified / Do Not Rely On
+## 10. Khoảng trống benchmark còn mở — bản đánh giá ta có thể phải tự chạy
 
-Reproduced from the research with their original flags. **Do not promote any of these into a confident claim without independent verification.**
+**Không có so sánh đối đầu đã công bố nào giữa OpenAI (`text-embedding-3-large`) hoặc Voyage so với các mô hình embedding chuyên biệt Việt Nam trên văn bản pháp lý Việt Nam. Benchmark đó không tồn tại trong tài liệu học thuật.** (đã xác minh 2026-07-17)
 
-### Contested — two research agents directly contradict each other
+Thay vào đó, đã tìm thấy:
 
-**The customs.gov.vn tariff API. The conflict is UNRESOLVED.** This matters to evaluation specifically because customs.gov.vn is one of the two proposed reconciliation sources for the §3.1 Phase 1 gate. If the API is not reachable, the gate must run against ECUS alone or against the decree text.
+- Mọi bài báo pháp lý Việt Nam được tìm thấy đều benchmark **chỉ các mô hình mã nguồn mở/Việt Nam và bỏ qua OpenAI một cách tường minh** (đã xác minh 2026-07-17, nguồn: https://arxiv.org/pdf/2507.14619).
+- Benchmark duy nhất *có* so sánh OpenAI với mã nguồn mở trên truy xuất tiếng Việt — MTEB trên VieQuAD/WebFAQ/**Zalo Legal Text** — **bị tường phí**: phương pháp luận thì thấy được, kết quả thì không (đã xác minh 2026-07-17, nguồn: https://nqbao.medium.com/benchmarking-text-embedding-models-for-vietnamese-retrieval-tasks-3c4342e0ff9d).
 
-| Research 10 claims | Research 12 claims |
+**Nếu lựa chọn kiến trúc đó quan trọng, hãy chạy nó: TVPL + MTEB là bộ harness làm sẵn.** Đừng giải quyết nó bằng giả định, và đừng trích dẫn một bảng xếp hạng từ một tác vụ khác — truy xuất và rerank xếp hạng các mô hình khác nhau, đôi khi ngược nhau. Ví dụ đo được: `sup-SimCSE-VietNamese-phobert-base` **tốt nhất ở rerank (mAP 69.46) và tệ nhất một cách thảm họa ở truy xuất (acc 0.12 so với 0.73 của bi-encoder)** (đã xác minh 2026-07-17, nguồn: https://arxiv.org/pdf/2503.07470).
+
+**Cờ cấp phép trước khi dùng TVPL:** `robots.txt` của thuvienphapluat.vn mang một `Content-Signal: search=yes, **ai-train=no**, use=reference` tường minh, được đóng khung như một sự bảo lưu quyền rõ ràng theo Điều 4 EU DSM, và chặn Amazonbot/Applebot-Extended/Bytespider theo tên. Trang trả về **403 Forbidden** (Cloudflare) cho fetch tự động, và các file Excel biểu thuế của nó là một **sản phẩm thương mại**. TVPL-benchmark được dẫn xuất từ kho ngữ liệu đó. **Giải quyết câu hỏi cấp phép trước khi xây dựng trên nó** — đây là nguồn có rủi ro pháp lý tệ nhất trong danh mục, không phải lối tắt như nó trông có vẻ. (đã xác minh 2026-07-17, nguồn: research/12.md fetch trực tiếp https://thuvienphapluat.vn/robots.txt)
+
+---
+
+## Chưa xác minh / Không được dựa vào
+
+Tái lập từ nghiên cứu với các cờ gốc của chúng. **Đừng nâng bất kỳ cái nào trong số này thành một tuyên bố tự tin mà không có xác minh độc lập.**
+
+### Còn tranh cãi — hai agent nghiên cứu trực tiếp mâu thuẫn nhau
+
+**API biểu thuế customs.gov.vn. Xung đột CHƯA ĐƯỢC GIẢI QUYẾT.** Điều này quan trọng với việc đánh giá một cách cụ thể vì customs.gov.vn là một trong hai nguồn đối chiếu được đề xuất cho cổng Giai đoạn 1 §3.1. Nếu API không tiếp cận được, cổng phải chạy dựa trên riêng ECUS hoặc dựa trên văn bản nghị định.
+
+| Research 10 khẳng định | Research 12 khẳng định |
 |---|---|
-| **"There IS an undocumented, unauthenticated, captcha-free JSON API on customs.gov.vn that returns MFN + all 22 FTA rates per HS line in a single call."** Verified with plain `curl` — no session, no cookie, no captcha, no Referer/Origin check. Endpoint: `POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`. `l_param` = HS prefix, min 4 digits; `"8703"` returned 510 rows. Example `87031010` → `{'NK_uu_dai':'70','ATIGA':'0','EVFTA_NK':'28.3','NK_TT':'105'}`. Claims the data is live and current for 2026. Bulk extraction ≈ 1,228 POSTs. | **Could not reach it.** Found `/scripts/main.js` hardcoding a *different* base — `http://123.30.210.236:8080/hqcustomsapi/`, a raw IP on plain HTTP port 8080 — **including `.../hqcustomsapi/captcha/CheckCaptcha`, i.e. at least part of the portal is CAPTCHA-gated.** That IP **timed out**; could not distinguish geo-fencing from a sandbox egress block, so explicitly **did not claim it is unreachable**. Judges enumeration through a CAPTCHA-fronted undocumented endpoint on a raw IP as "fragile and adversarial." |
+| **"CÓ một JSON API không tài liệu, không xác thực, không captcha trên customs.gov.vn trả về MFN + tất cả 22 mức FTA cho mỗi dòng HS trong một lệnh gọi duy nhất."** Đã xác minh bằng `curl` thuần — không session, không cookie, không captcha, không kiểm tra Referer/Origin. Endpoint: `POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`. `l_param` = tiền tố HS, tối thiểu 4 chữ số; `"8703"` trả về 510 dòng. Ví dụ `87031010` → `{'NK_uu_dai':'70','ATIGA':'0','EVFTA_NK':'28.3','NK_TT':'105'}`. Khẳng định dữ liệu là trực tiếp và cập nhật cho 2026. Trích xuất hàng loạt ≈ 1.228 POST. | **Không thể tiếp cận được nó.** Tìm thấy `/scripts/main.js` hardcode một base *khác* — `http://123.30.210.236:8080/hqcustomsapi/`, một IP thô trên HTTP thuần cổng 8080 — **bao gồm `.../hqcustomsapi/captcha/CheckCaptcha`, tức là ít nhất một phần của cổng thông tin bị chặn bằng CAPTCHA.** IP đó **hết thời gian chờ**; không thể phân biệt chặn địa lý với chặn egress sandbox, nên tường minh **không khẳng định là không tiếp cận được**. Đánh giá việc liệt kê qua một endpoint không tài liệu đứng sau CAPTCHA trên một IP thô là "mong manh và đối kháng." |
 
-Both agents agree on two points: `www.customs.gov.vn/robots.txt` returns `User-agent: *` with **no `Disallow` lines**; and **customs.gov.vn is not the legal source of truth — the Nghị định is.** Research 10 adds its own caveats: the schedule list has **no VIFTA and no CEPA (UAE)** entries and `THOI_GIAN_CAP_NHAT` values are 2019-2020; it returns **current-year rates only**, no forward-year series; and it is undocumented, unversioned, with no SLA and no ToS grant — it can vanish or start enforcing captcha at any time.
+Cả hai agent đồng ý ở hai điểm: `www.customs.gov.vn/robots.txt` trả về `User-agent: *` với **không dòng `Disallow` nào**; và **customs.gov.vn không phải nguồn chân lý pháp lý — Nghị định mới là.** Research 10 thêm các lưu ý của riêng nó: danh sách biểu thuế **không có VIFTA và không có CEPA (UAE)** và các giá trị `THOI_GIAN_CAP_NHAT` là 2019-2020; nó trả về **chỉ mức thuế năm hiện tại**, không có chuỗi năm tương lai; và nó không tài liệu, không phiên bản, không SLA và không cấp phép ToS — nó có thể biến mất hoặc bắt đầu áp captcha bất cứ lúc nào.
 
-**Do not design the Phase 1 gate to depend on the API being available. Verify reachability yourself before relying on either account.**
+**Đừng thiết kế cổng Giai đoạn 1 phụ thuộc vào việc API có sẵn. Tự xác minh khả năng tiếp cận trước khi dựa vào bất kỳ tường thuật nào.**
 
-### Unverified claims reproduced with their flags
+### Các tuyên bố chưa xác minh tái lập kèm cờ của chúng
 
-- **`textutil` rate-concatenation is "a tooling artifact fixable with a real Word parser"** — **inferred, not proven** (research 12 could not test: no `soffice`/`antiword`/`python-docx` available). §3.3 exists because of this.
-- **"The 2022-2027 FTA decrees hit a cliff on 31/12/2027"** — research 12 flags this as **inferred, not verified**. Research 10 independently reports the same expiry from the decree list. Directionally corroborated; the simultaneous collision with the AHTN/HS 2028 nomenclature switch (HS 2028 in force **01/01/2028**, verified: https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2028-edition/amendments-effective-from-1-january-2028.aspx) is a design constraint, not an eval gate — yet.
-- **"Claude 3.5 Sonnet and GPT-4 achieve ~80% at 6-digit and >90% at 2-digit."** Surfaced in a search snippet with **no traceable primary source**, and it **contradicts HSCodeComp** (GPT-5 LLM-only: 29% at 10-digit, ~82% at 2-digit). **Do not rely on it. Do not use it to set a threshold.**
-- **"1 in 3 customs entries is misclassified; tens of billions in duties incorrectly paid."** Vendor blogs, **no primary citation**. Directionally plausible, unsourced.
-- **"Faithful Passage Grounding" eliminating 63% of hallucinated citations** — from **search snippets only**; primary source not verified. Do not cite as a design justification.
-- **arXiv:2606.00898 "Citation Grounding via Legal Citation Graphs"** and **arXiv:2606.21155 "Who Checks the Citations?"** — **snippet-only, not fetched.**
-- **VLegal-Bench** — snippet-only, unverified.
-- **Quyết định 117/QĐ-CHQ (2026)** internal classification-database detail — full text could not be fetched (paywall/403). **Medium confidence.** Its "unified sector-wide classification database" is an *internal* system; **do not assume it will be exposed.**
-- **SAT-Graph RAG (arXiv:2505.00039)** — the temporal architecture reference — **reports no quantitative evaluation.** It is an architecture proposal, not an empirical result. Adopt the data model; **do not cite it as proof of performance.**
+- **Việc nối liền mức thuế của `textutil` là "một hiện tượng do công cụ có thể sửa được bằng một bộ phân tích Word thực sự"** — **suy luận, không được chứng minh** (research 12 không thể kiểm tra: không có `soffice`/`antiword`/`python-docx` khả dụng). §3.3 tồn tại vì điều này.
+- **"Các nghị định FTA 2022-2027 gặp vách đứng vào 31/12/2027"** — research 12 đánh dấu đây là **suy luận, không được xác minh**. Research 10 độc lập báo cáo cùng ngày hết hiệu lực từ danh sách nghị định. Được xác nhận theo hướng; sự va chạm đồng thời với chuyển đổi danh pháp AHTN/HS 2028 (HS 2028 có hiệu lực **01/01/2028**, đã xác minh: https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2028-edition/amendments-effective-from-1-january-2028.aspx) là một ràng buộc thiết kế, chưa phải một cổng đánh giá.
+- **"Claude 3.5 Sonnet và GPT-4 đạt ~80% ở 6 chữ số và >90% ở 2 chữ số."** Nổi lên trong một snippet tìm kiếm với **không nguồn gốc chính có thể truy vết**, và nó **mâu thuẫn với HSCodeComp** (GPT-5 chỉ-LLM: 29% ở 10 chữ số, ~82% ở 2 chữ số). **Đừng dựa vào nó. Đừng dùng nó để đặt ngưỡng.**
+- **"1 trên 3 tờ khai hải quan bị phân loại sai; hàng chục tỷ tiền thuế nộp sai."** Blog nhà cung cấp, **không trích dẫn gốc**. Hợp lý theo hướng, không nguồn.
+- **"Faithful Passage Grounding" loại bỏ 63% trích dẫn ảo giác** — **chỉ từ snippet tìm kiếm**; nguồn gốc chính chưa được xác minh. Đừng trích dẫn như một biện minh thiết kế.
+- **arXiv:2606.00898 "Citation Grounding via Legal Citation Graphs"** và **arXiv:2606.21155 "Who Checks the Citations?"** — **chỉ có snippet, chưa fetch.**
+- **VLegal-Bench** — chỉ có snippet, chưa xác minh.
+- **Quyết định 117/QĐ-CHQ (2026)** chi tiết cơ sở dữ liệu phân loại nội bộ — không thể fetch toàn văn (tường phí/403). **Độ tin cậy trung bình.** "Cơ sở dữ liệu phân loại thống nhất toàn ngành" của nó là một hệ thống *nội bộ*; **đừng cho rằng nó sẽ được phơi bày ra ngoài.**
+- **SAT-Graph RAG (arXiv:2505.00039)** — tham chiếu kiến trúc theo thời gian — **không báo cáo đánh giá định lượng nào.** Nó là một đề xuất kiến trúc, không phải một kết quả thực nghiệm. Áp dụng mô hình dữ liệu; **đừng trích dẫn nó như bằng chứng về hiệu năng.**
 
-### Structural limits that no eval score can paper over
+### Các giới hạn cấu trúc mà không điểm đánh giá nào có thể che lấp
 
-- **Vietnam has no CROSS/EBTI equivalent.** No clean, complete, machine-readable, publicly-queryable corpus of classification rulings. **Retrieval quality is capped by data access, not by the model** — a low F2 may be an honest reflection of the corpus, not a tuning failure. (verified 2026-07-17, source: research/09.md; VNTR at https://vntr.moit.gov.vn/administrative_rulings is HTML links only, sample set ~Sept 2021-Jan 2022, "for consultation purpose only")
-- **TTĐB and BVMT are not HS-keyed in law.** Verified via the customs API itself: TTĐB queries return `"1. Thuốc lá điếu…"` with **`MA_HS: None`**. Any per-HS mapping is **our own editorial inference and a liability surface** — it must be evaluated as a product of ours, never presented as law. (verified 2026-07-17, source: research/10.md)
-- **Anti-dumping/safeguard duties live in individual MOIT quyết định, with no consolidated register.** For the archetypal query — "steel from China" — **the tariff table is the least important number.** Out of v1 scope; an eval that scores "correct rate" without stating this is measuring the wrong thing. (verified 2026-07-17, source: research/10.md, research/12.md)
-- **`(HS, country) → rate` is not even a function.** RCEP Điều 6.2 contains a highest-rate rule across annexes for certain multi-origin goods (verified in text: *"Mức thuế suất cao nhất tại các Phụ lục Biểu thuế áp dụng cho cùng hàng hóa có xuất xứ từ các nước thành viên..."*). Any eval assuming a single correct rate per (HS, country) pair has a bug in the eval. (verified 2026-07-17, source: ND 129/2022 gazette text via https://congbao.chinhphu.vn/)
+- **Việt Nam không có thứ tương đương CROSS/EBTI.** Không có kho ngữ liệu phán quyết phân loại sạch, đầy đủ, máy đọc được, truy vấn công khai được. **Chất lượng truy xuất bị giới hạn bởi khả năng tiếp cận dữ liệu, không phải bởi mô hình** — một F2 thấp có thể là một phản ánh trung thực của kho ngữ liệu, không phải một thất bại tinh chỉnh. (đã xác minh 2026-07-17, nguồn: research/09.md; VNTR tại https://vntr.moit.gov.vn/administrative_rulings chỉ là các liên kết HTML, tập mẫu ~Tháng 9/2021-Tháng 1/2022, "chỉ dùng cho mục đích tham khảo")
+- **TTĐB và BVMT không được khóa theo HS trong luật.** Đã xác minh qua chính API hải quan: các truy vấn TTĐB trả về `"1. Thuốc lá điếu…"` với **`MA_HS: None`**. Bất kỳ ánh xạ theo-HS nào cũng là **suy luận biên tập của chính chúng ta và một bề mặt rủi ro pháp lý** — nó phải được đánh giá như một sản phẩm của chúng ta, không bao giờ trình bày như luật. (đã xác minh 2026-07-17, nguồn: research/10.md)
+- **Thuế chống bán phá giá/tự vệ nằm trong từng quyết định của Bộ Công Thương, không có sổ đăng ký hợp nhất.** Với truy vấn nguyên mẫu — "thép từ Trung Quốc" — **bảng biểu thuế là con số ít quan trọng nhất.** Ngoài phạm vi v1; một bản đánh giá chấm "mức thuế đúng" mà không nêu điều này là đang đo sai thứ. (đã xác minh 2026-07-17, nguồn: research/10.md, research/12.md)
+- **`(HS, country) → rate` thậm chí không phải là một hàm.** Điều 6.2 RCEP chứa một quy tắc mức-thuế-cao-nhất xuyên các phụ lục cho một số hàng hóa đa xuất xứ (đã xác minh trong văn bản: *"Mức thuế suất cao nhất tại các Phụ lục Biểu thuế áp dụng cho cùng hàng hóa có xuất xứ từ các nước thành viên..."*). Bất kỳ bản đánh giá nào giả định một mức thuế đúng duy nhất cho mỗi cặp (HS, country) đều có một bug trong bản đánh giá. (đã xác minh 2026-07-17, nguồn: văn bản công báo NĐ 129/2022 qua https://congbao.chinhphu.vn/)
 
 ---
 
-## Related Knowledge
+## Kiến thức liên quan
 
-- [HS Classification](../concepts/hs-classification.md) — GRI machinery, the accuracy benchmarks behind §4, penalties, advance rulings
-- [Tariff System](../concepts/tariff-system.md) — schedule structure, the annexes behind the §3.2 trap, amendment chain
-- [Legal RAG Retrieval](../concepts/legal-rag-retrieval.md) — chunking, hybrid search, and the retrieval design these metrics score
-- [Data Sources](../concepts/data-sources.md) — Công báo, the customs.gov.vn conflict, robots/licensing posture
-- [Vietnamese Legal Documents](../concepts/vietnamese-legal-documents.md) — hiệu lực, VBHN, the temporal model behind §5
-- [ADR: No LLM on tariff numbers](../architecture-decisions/2026-07-17-no-llm-on-tariff-numbers.md) — why Phase 1 is a reconciliation gate, not an accuracy score
-- [ADR: HS candidates, not answers](../architecture-decisions/2026-07-17-hs-candidates-not-answers.md) — the output contract §4 scores
-- [ADR: Bitemporal validity from day one](../architecture-decisions/2026-07-17-bitemporal-validity-from-day-one.md) — the model §5 tests
-- [ADR: Use published VBHN, not computed consolidation](../architecture-decisions/2026-07-17-use-published-vbhn-not-computed-consolidation.md)
-- [Business Rules](../business-rules.md) — declarant liability, refusal policy
-- [Customs Declaration Workflow](../workflows/customs-declaration.md) — where the golden set questions come from
-- [Agent Documentation Index](README.md)
+- [Phân loại HS](../concepts/hs-classification.md) — bộ máy GRI, các benchmark độ chính xác đằng sau §4, hình phạt, phán quyết trước
+- [Hệ thống biểu thuế](../concepts/tariff-system.md) — cấu trúc biểu thuế, các phụ lục đằng sau cạm bẫy §3.2, chuỗi sửa đổi
+- [Truy xuất RAG pháp lý](../concepts/legal-rag-retrieval.md) — chia chunk, tìm kiếm hybrid, và thiết kế truy xuất mà các chỉ số này chấm điểm
+- [Nguồn dữ liệu](../concepts/data-sources.md) — Công báo, xung đột customs.gov.vn, tư thế robots/cấp phép
+- [Văn bản pháp luật Việt Nam](../concepts/vietnamese-legal-documents.md) — hiệu lực, VBHN, mô hình thời gian đằng sau §5
+- [ADR: Không dùng LLM cho các con số thuế](../architecture-decisions/2026-07-17-no-llm-on-tariff-numbers.md) — vì sao Giai đoạn 1 là một cổng đối chiếu, không phải một điểm độ chính xác
+- [ADR: Phương án ứng viên HS, không phải câu trả lời](../architecture-decisions/2026-07-17-hs-candidates-not-answers.md) — hợp đồng đầu ra mà §4 chấm điểm
+- [ADR: Hiệu lực song thời gian từ ngày đầu](../architecture-decisions/2026-07-17-bitemporal-validity-from-day-one.md) — mô hình mà §5 kiểm tra
+- [ADR: Dùng VBHN đã công bố, không phải hợp nhất tính toán](../architecture-decisions/2026-07-17-use-published-vbhn-not-computed-consolidation.md)
+- [Quy tắc nghiệp vụ](../business-rules.md) — trách nhiệm pháp lý của người khai, chính sách từ chối
+- [Quy trình khai báo hải quan](../workflows/customs-declaration.md) — nơi các câu hỏi golden set đến từ
+- [Chỉ mục tài liệu Agent](README.md)

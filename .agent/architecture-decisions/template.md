@@ -1,24 +1,24 @@
-# Architecture Decision: <Decision Title>
+# Quyết định Kiến trúc: <Decision Title>
 
-Date: <YYYY-MM-DD>
+Ngày: <YYYY-MM-DD>
 
-Status: Proposed
+Trạng thái: Proposed
 
-## Context
+## Bối cảnh
 
-Describe the problem, constraints, and forces that led to this decision.
+Mô tả vấn đề, các ràng buộc, và các lực đẩy dẫn đến quyết định này.
 
-## Decision
+## Quyết định
 
-Describe the chosen approach.
+Mô tả phương án được lựa chọn.
 
-## Alternatives Considered
+## Các phương án đã cân nhắc
 
 - <Alternative>: <Reason accepted or rejected>
 
-## Consequences
+## Hệ quả
 
-Describe tradeoffs, risks, and follow-up work.
+Mô tả các đánh đổi, rủi ro, và công việc cần theo dõi tiếp.
 
 ## Links
 

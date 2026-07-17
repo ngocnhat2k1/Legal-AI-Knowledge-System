@@ -1,7 +1,7 @@
-# Naming Conventions
+# Quy ước đặt tên (Naming Conventions)
 
-This file stores project-specific naming conventions.
+File này lưu trữ các quy ước đặt tên riêng của dự án.
 
-## Conventions
+## Quy ước
 
-- No conventions recorded yet.
+- Chưa có quy ước nào được ghi lại.

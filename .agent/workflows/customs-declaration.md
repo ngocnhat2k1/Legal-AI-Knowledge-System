@@ -8,151 +8,151 @@ related:
   - ../index.md
 ---
 
-# Customs Declaration Workflow (what our users actually do all day)
+# Quy trình khai báo hải quan (những việc người dùng của chúng ta thực sự làm cả ngày)
 
-This note describes the real day-to-day loop of a Vietnamese customs declarant, so that features are designed around the actual job rather than an imagined one. Read it before proposing any feature that claims to "automate declaration".
+Ghi chú này mô tả vòng lặp công việc hằng ngày thực tế của một người khai báo hải quan Việt Nam, để các tính năng được thiết kế xoay quanh công việc thật sự thay vì một công việc tưởng tượng. Hãy đọc nó trước khi đề xuất bất kỳ tính năng nào tuyên bố sẽ "tự động hóa việc khai báo".
 
-Every factual claim below carries a verification date and a source. Claims the research could not verify are quarantined in [Unverified / Do Not Rely On](#unverified--do-not-rely-on) — do not promote them into the body.
+Mỗi khẳng định thực tế bên dưới đều kèm theo ngày xác minh và một nguồn. Những khẳng định mà nghiên cứu không thể xác minh được cách ly trong [Chưa xác minh / Không được dựa vào](#chưa-xác-minh--không-được-dựa-vào) — không được nâng chúng lên phần nội dung chính.
 
-## The day-to-day loop
+## Vòng lặp công việc hằng ngày
 
-The declarant's job is a pipeline. Each step can block the next, and the expensive failures are discovered at the end (or years later, in a post-clearance audit).
+Công việc của người khai báo là một chuỗi xử lý (pipeline). Mỗi bước có thể chặn bước tiếp theo, và những thất bại tốn kém lại được phát hiện ở cuối chuỗi (hoặc nhiều năm sau, trong một cuộc kiểm tra sau thông quan).
 
-1. **Classify HS** — decide the 8-digit code under Danh mục hàng hóa XNK Việt Nam.
-2. **Check policy for that HS** — is the good `cấm` (prohibited), `theo giấy phép` (licensed), `có điều kiện` (conditional), or subject to `kiểm tra chuyên ngành` (specialized inspection)?
-3. **Obtain licences & register inspection on VNSW** (Cơ chế một cửa quốc gia) — plus C/O if claiming an FTA rate.
-4. **Declare in ECUS** (vendor middleware, not VNACCS directly).
-5. **Receive phân luồng** — the risk-management system returns a channel: **green** (accepted), **yellow** (document check), **red** (physical inspection).
-6. **Pay duty.**
-7. **Thông quan** (clearance).
+1. **Phân loại HS** — quyết định mã 8 chữ số theo Danh mục hàng hóa XNK Việt Nam.
+2. **Kiểm tra chính sách cho mã HS đó** — hàng hóa thuộc diện `cấm`, `theo giấy phép`, `có điều kiện`, hay chịu `kiểm tra chuyên ngành`?
+3. **Xin giấy phép & đăng ký kiểm tra trên VNSW** (Cơ chế một cửa quốc gia) — cùng với C/O nếu muốn hưởng thuế suất FTA.
+4. **Khai báo trong ECUS** (phần mềm trung gian của nhà cung cấp, không phải khai trực tiếp trên VNACCS).
+5. **Nhận phân luồng** — hệ thống quản lý rủi ro trả về một luồng: **xanh** (được chấp nhận), **vàng** (kiểm tra hồ sơ), **đỏ** (kiểm tra thực tế hàng hóa).
+6. **Nộp thuế.**
+7. **Thông quan.**
 
-(verified 2026-07-17, source: research 08 §7, summarising practitioner workflow across ECUS/VNACCS material — see the ECUS and TT 121 sources cited below)
+(đã xác minh 2026-07-17, nguồn: research 08 §7, tóm tắt quy trình thực hành của người hành nghề xuyên suốt tài liệu ECUS/VNACCS — xem các nguồn ECUS và TT 121 được trích dẫn bên dưới)
 
-### Why the loop matters for design
+### Vì sao vòng lặp này quan trọng đối với thiết kế
 
-Step 1 determines steps 2, 3 and 6. A wrong HS code does not fail loudly at step 4 — it is accepted by the system and surfaces later as truy thu + penalty + lost FTA preference. This is the "Error but Valid" property: a wrong 8-digit code is syntactically indistinguishable from a right one (verified 2026-07-17, source: https://arxiv.org/html/2510.19631). The declarant carries the liability regardless of what tool produced the number.
+Bước 1 quyết định các bước 2, 3 và 6. Một mã HS sai không thất bại ầm ĩ ở bước 4 — nó được hệ thống chấp nhận và nổi lên sau đó dưới dạng truy thu + phạt + mất ưu đãi FTA. Đây là đặc tính "Error but Valid" (Sai nhưng Hợp lệ): một mã 8 chữ số sai về mặt cú pháp không thể phân biệt được với một mã đúng (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2510.19631). Người khai báo gánh trách nhiệm pháp lý bất kể công cụ nào tạo ra con số đó.
 
-### What Customs Assistant v1 does and does not touch
+### Những gì Customs Assistant v1 có và không đụng tới
 
-| Step | v1 involvement |
+| Bước | Mức độ tham gia của v1 |
 |---|---|
-| 1. Classify HS | **Yes** — top-3 **candidates** + verbatim legal-note evidence. Human decides. Never a bare 8-digit answer. |
-| 2. Check policy | **No in v1.** Out of scope; see the quản lý chuyên ngành section for why this is much harder than it looks. |
-| 3. VNSW licences / inspection | **No.** No public API; requires chữ ký số. We do not touch it. |
-| 4. Declare in ECUS | **No.** No integration. The user copies the code into ECUS themselves. |
-| 5. Phân luồng | **No.** Determined by VCIS risk management, not by us. |
-| 6. Pay duty | **No payment.** v1 provides **tariff lookup** only — deterministic, keyed by HS + schedule + date, no AI on the numbers. |
-| 7. Thông quan | **No.** |
+| 1. Phân loại HS | **Có** — top-3 **ứng viên** + bằng chứng chú giải pháp lý nguyên văn. Con người quyết định. Không bao giờ đưa ra một câu trả lời 8 chữ số trần trụi. |
+| 2. Kiểm tra chính sách | **Không có trong v1.** Ngoài phạm vi; xem phần quản lý chuyên ngành để hiểu vì sao việc này khó hơn nhiều so với vẻ ngoài. |
+| 3. Giấy phép / kiểm tra VNSW | **Không.** Không có API công khai; yêu cầu chữ ký số. Chúng ta không đụng tới. |
+| 4. Khai báo trong ECUS | **Không.** Không tích hợp. Người dùng tự sao chép mã vào ECUS. |
+| 5. Phân luồng | **Không.** Do hệ thống quản lý rủi ro VCIS quyết định, không phải chúng ta. |
+| 6. Nộp thuế | **Không có thanh toán.** v1 chỉ cung cấp **tra cứu biểu thuế** — mang tính xác định, khóa theo HS + biểu thuế + ngày, không dùng AI cho các con số. |
+| 7. Thông quan | **Không.** |
 
-The product surface is deliberately steps 1 and 6 only, and in step 1 it is decision support, not decision. The evidence for that contract: autonomous top-1 classification at 10-digit is 29–47% against 95% for human experts, while top-3 + retrieved HS-manual evidence reaches 93.9% and measurably cut expert review time in a 32-expert study at Korea Customs Service (verified 2026-07-17, sources: https://arxiv.org/html/2510.19631 and https://arxiv.org/abs/2311.10922). The gap between 47% and 93.9% is the **output contract**, not model capability. Changing the contract to "the app assigns the code" throws away the entire measured benefit.
+Bề mặt sản phẩm được cố ý giới hạn ở bước 1 và bước 6, và trong bước 1 nó là hỗ trợ ra quyết định, không phải ra quyết định. Bằng chứng cho ràng buộc đó: độ chính xác phân loại top-1 tự động ở mức 10 chữ số là 29–47% so với 95% của chuyên gia con người, trong khi top-3 + bằng chứng truy xuất từ sổ tay HS đạt 93,9% và giảm được đáng kể thời gian rà soát của chuyên gia trong một nghiên cứu với 32 chuyên gia tại Korea Customs Service (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2510.19631 và https://arxiv.org/abs/2311.10922). Khoảng cách giữa 47% và 93,9% là **hợp đồng đầu ra (output contract)**, không phải năng lực mô hình. Thay đổi hợp đồng thành "ứng dụng gán mã" sẽ vứt bỏ toàn bộ lợi ích đã được đo lường.
 
-## Systems the declarant touches
+## Các hệ thống mà người khai báo tương tác
 
-- **VNACCS/VCIS** — built by JICA, live since 2014. VNACCS = clearance processing; VCIS = intelligence/risk (it is what produces phân luồng) (verified 2026-07-17, source: research 08 §7; see https://baophapluat.vn/hai-quan-tang-toc-chuyen-doi-so-thi-diem-mo-hinh-thong-quan-tap-trung-bai-1-tu-nen-tang-vnaccs-vcis-den-buoc-chuyen-moi-cua-hai-quan-so.html).
-- **Declarants do not touch VNACCS directly.** They use vendor middleware. **ECUS5-VNACCS (Thái Sơn)** is dominant; FPT.VNACCS and a free Customs-issued client also exist. Vendors ship message-standard updates as circulars change (verified 2026-07-17, source: https://thaison.vn/san-pham/ecus).
-- **⚠️ VNACCS/VCIS is scheduled for replacement** by the "Hải quan số" system, targeted **31/12/2026**, with full platform + VNSW integration in late 2026 / early 2027. A revised **Luật Hải quan** is expected before the National Assembly around **10/2026** (verified 2026-07-17, sources: https://baophapluat.vn/hai-quan-tang-toc-chuyen-doi-so-thi-diem-mo-hinh-thong-quan-tap-trung-bai-1-tu-nen-tang-vnaccs-vcis-den-buoc-chuyen-moi-cua-hai-quan-so.html and https://baophapluat.vn/sua-doi-luat-hai-quan-hoan-thien-hanh-lang-phap-ly-cho-hai-quan-so-quan-ly-hien-dai.html).
+- **VNACCS/VCIS** — do JICA xây dựng, vận hành từ năm 2014. VNACCS = xử lý thông quan; VCIS = tình báo/rủi ro (nó là hệ thống tạo ra phân luồng) (đã xác minh 2026-07-17, nguồn: research 08 §7; xem https://baophapluat.vn/hai-quan-tang-toc-chuyen-doi-so-thi-diem-mo-hinh-thong-quan-tap-trung-bai-1-tu-nen-tang-vnaccs-vcis-den-buoc-chuyen-moi-cua-hai-quan-so.html).
+- **Người khai báo không tương tác trực tiếp với VNACCS.** Họ dùng phần mềm trung gian của nhà cung cấp. **ECUS5-VNACCS (Thái Sơn)** đang chiếm ưu thế; FPT.VNACCS và một phần mềm miễn phí do Hải quan phát hành cũng tồn tại. Các nhà cung cấp phát hành bản cập nhật chuẩn thông điệp mỗi khi thông tư thay đổi (đã xác minh 2026-07-17, nguồn: https://thaison.vn/san-pham/ecus).
+- **⚠️ VNACCS/VCIS được lên kế hoạch thay thế** bằng hệ thống "Hải quan số", mục tiêu **31/12/2026**, với việc tích hợp đầy đủ nền tảng + VNSW vào cuối 2026 / đầu 2027. Một **Luật Hải quan** sửa đổi dự kiến trình Quốc hội vào khoảng **10/2026** (đã xác minh 2026-07-17, nguồn: https://baophapluat.vn/hai-quan-tang-toc-chuyen-doi-so-thi-diem-mo-hinh-thong-quan-tap-trung-bai-1-tu-nen-tang-vnaccs-vcis-den-buoc-chuyen-moi-cua-hai-quan-so.html và https://baophapluat.vn/sua-doi-luat-hai-quan-hoan-thien-hanh-lang-phap-ly-cho-hai-quan-so-quan-ly-hien-dai.html).
 
-**Design consequence:** anything built against VNACCS message formats has a **~18-month shelf life**. This is a first-order reason v1 does not integrate with ECUS/VNACCS — the integration would be obsolete roughly when it shipped. Staying at the "give the human a code and a duty rate, they type it in" boundary is what makes the product survive the Hải quan số cutover.
+**Hệ quả thiết kế:** bất cứ thứ gì được xây dựng dựa trên định dạng thông điệp của VNACCS đều có **vòng đời khoảng 18 tháng**. Đây là lý do bậc nhất khiến v1 không tích hợp với ECUS/VNACCS — sự tích hợp sẽ lỗi thời gần như ngay khi nó ra mắt. Việc dừng lại ở ranh giới "đưa cho con người một mã và một mức thuế, họ tự gõ vào" chính là điều giúp sản phẩm sống sót qua đợt chuyển đổi Hải quan số.
 
-## ⚠️ The biggest near-term procedural change: TT 121/2025/TT-BTC
+## ⚠️ Thay đổi quy trình lớn nhất trong ngắn hạn: TT 121/2025/TT-BTC
 
-- **Thông tư 121/2025/TT-BTC** — issued **18/12/2025**, **effective 01/02/2026**. Amends **TT 38/2015/TT-BTC** (as already amended by **TT 39/2018/TT-BTC**). Described as the largest customs-procedure update in years: it standardises the customs dossier, cuts documents, and pushes data interchange via VNSW (verified 2026-07-17, sources: https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Thong-tu-121-2025-TT-BTC-sua-doi-cac-Thong-tu-ve-thu-tuc-hai-quan-giam-sat-hai-quan-633118.aspx, https://baochinhphu.vn/thong-tu-121-mo-duong-hai-quan-so-thu-tuc-gon-thong-quan-nhanh-102260114160631601.htm, https://www.pwc.com/vn/vn/publications/news-brief/251223-new-customs-procedures-effective-from-1-february-2026.html).
-- It also touches the advance-ruling path directly: it amends khoản 1 and adds khoản 6 of **Điều 7** (hồ sơ xác định trước mã số) and introduces forms **01a-TB XDTMS / 01b-Thay the XDTMS / 01c-Huy XDTMS** (verified 2026-07-17, same sources).
-- **Nghị định 167/2025/NĐ-CP** (effective **15/8/2025**) amends **NĐ 08/2015/NĐ-CP** (verified 2026-07-17, source: research 08 §7).
+- **Thông tư 121/2025/TT-BTC** — ban hành **18/12/2025**, **có hiệu lực 01/02/2026**. Sửa đổi **TT 38/2015/TT-BTC** (đã được sửa đổi bởi **TT 39/2018/TT-BTC**). Được mô tả là bản cập nhật quy trình hải quan lớn nhất trong nhiều năm: nó chuẩn hóa hồ sơ hải quan, cắt giảm chứng từ, và đẩy mạnh trao đổi dữ liệu qua VNSW (đã xác minh 2026-07-17, nguồn: https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Thong-tu-121-2025-TT-BTC-sua-doi-cac-Thong-tu-ve-thu-tuc-hai-quan-giam-sat-hai-quan-633118.aspx, https://baochinhphu.vn/thong-tu-121-mo-duong-hai-quan-so-thu-tuc-gon-thong-quan-nhanh-102260114160631601.htm, https://www.pwc.com/vn/vn/publications/news-brief/251223-new-customs-procedures-effective-from-1-february-2026.html).
+- Nó cũng tác động trực tiếp đến quy trình xác định trước: sửa đổi khoản 1 và bổ sung khoản 6 của **Điều 7** (hồ sơ xác định trước mã số) và giới thiệu các mẫu **01a-TB XDTMS / 01b-Thay the XDTMS / 01c-Huy XDTMS** (đã xác minh 2026-07-17, cùng nguồn).
+- **Nghị định 167/2025/NĐ-CP** (có hiệu lực **15/8/2025**) sửa đổi **NĐ 08/2015/NĐ-CP** (đã xác minh 2026-07-17, nguồn: research 08 §7).
 
-**Why this is called out so loudly:** almost all pre-2026 training data, blog posts, and practitioner habit describe dossier composition under TT 38/2015 + TT 39/2018. **Any dossier-composition logic must target TT 121, not TT 38/39 as previously known.** An agent that "knows" the TT 38/39 dossier will produce confidently obsolete output.
+**Vì sao điều này được nhấn mạnh dữ dội như vậy:** gần như toàn bộ dữ liệu huấn luyện trước 2026, các bài blog, và thói quen của người hành nghề đều mô tả cách lập hồ sơ theo TT 38/2015 + TT 39/2018. **Bất kỳ logic lập hồ sơ nào cũng phải nhắm tới TT 121, chứ không phải TT 38/39 như đã biết trước đây.** Một tác nhân "biết" hồ sơ TT 38/39 sẽ tạo ra đầu ra lỗi thời một cách đầy tự tin.
 
-Related: **Quyết định 117/QĐ-CHQ (2026)**, the internal Quy trình xác định trước mã số applied from ~01/02/2026, is built on the principle that **each good has exactly one HS code** and on a unified sector-wide classification database — the database is **internal**, do not assume it will ever be exposed (verified 2026-07-17, source: https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Quyet-dinh-117-QD-CHQ-2026-Quy-trinh-Xac-dinh-truoc-ma-so-Kiem-tra-ten-hang-mo-ta-hang-hoa-692998.aspx; research 09 flags the full text as unfetchable/paywalled, so treat the detail as medium confidence).
+Liên quan: **Quyết định 117/QĐ-CHQ (2026)**, Quy trình xác định trước mã số nội bộ áp dụng từ khoảng 01/02/2026, được xây dựng trên nguyên tắc **mỗi hàng hóa có đúng một mã HS** và trên một cơ sở dữ liệu phân loại thống nhất toàn ngành — cơ sở dữ liệu đó là **nội bộ**, đừng cho rằng nó sẽ được công khai (đã xác minh 2026-07-17, nguồn: https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Quyet-dinh-117-QD-CHQ-2026-Quy-trinh-Xac-dinh-truoc-ma-so-Kiem-tra-ten-hang-mo-ta-hang-hoa-692998.aspx; research 09 gắn cờ toàn văn là không tải được/bị chặn phí, nên hãy coi chi tiết là mức độ tin cậy trung bình).
 
-## Quản lý chuyên ngành (specialized management) — step 2
+## Quản lý chuyên ngành (specialized management) — bước 2
 
-**There is no single master list.** Each ministry publishes its own "bảng mã số HS" circular, and **that circular is the join key** between an HS code and a requirement. A feature that promises "tell me what licences I need" is really a promise to assemble and maintain ~6 ministries' separate HS-table circulars, whose ground truth is PDF/Word annexes (verified 2026-07-17, source: research 08 §3 and §8).
+**Không có một danh mục tổng thể duy nhất nào cả.** Mỗi bộ ban hành thông tư "bảng mã số HS" của riêng mình, và **chính thông tư đó là khóa nối (join key)** giữa một mã HS và một yêu cầu. Một tính năng hứa hẹn "cho tôi biết cần những giấy phép gì" thực chất là lời hứa tập hợp và duy trì các thông tư bảng HS riêng biệt của khoảng 6 bộ, mà sự thật gốc nằm ở các phụ lục PDF/Word (đã xác minh 2026-07-17, nguồn: research 08 §3 và §8).
 
-The framework decree is **NĐ 69/2018/NĐ-CP** (hàng cấm, hàng theo giấy phép, hàng có điều kiện, TNTX/chuyển khẩu), still in force; a replacement is in draft and must not be coded against (verified 2026-07-17, source: https://vanban.chinhphu.vn/?pageid=27160&docid=193756).
+Nghị định khung là **NĐ 69/2018/NĐ-CP** (hàng cấm, hàng theo giấy phép, hàng có điều kiện, TNTX/chuyển khẩu), vẫn còn hiệu lực; một bản thay thế đang ở dạng dự thảo và không được lập trình dựa vào nó (đã xác minh 2026-07-17, nguồn: https://vanban.chinhphu.vn/?pageid=27160&docid=193756).
 
 **Bộ Công Thương**
-- Prohibited/conditional goods by HS: **TT 12/2018/TT-BCT** + **TT 08/2023/TT-BCT**, which replaced Phụ lục I of TT 12/2018 (verified 2026-07-17, sources: https://www.vietnamtradeportal.gov.vn/kcfinder/upload/files/12_2018_TT-BCT.pdf, https://vanban.vcci.com.vn/thong-tu-082023tt-bct-sua-doi-quy-dinh-danh-muc-chi-tiet-theo-ma-so-hs-cua-hang-hoa-xuat-khau-nhap-khau-kem-theo-mot-so-thong-tu-cua-bo-truong-bo-cong-thuong).
-- Food safety: **TT 28/2026/TT-BCT — effective 17/7/2026** (đồ uống, rượu, bia, cồn thực phẩm, sữa chế biến, dầu thực vật) (verified 2026-07-17, source: https://government.vn/?docid=218330&pageid=27160).
+- Hàng cấm/có điều kiện theo HS: **TT 12/2018/TT-BCT** + **TT 08/2023/TT-BCT**, thay thế Phụ lục I của TT 12/2018 (đã xác minh 2026-07-17, nguồn: https://www.vietnamtradeportal.gov.vn/kcfinder/upload/files/12_2018_TT-BCT.pdf, https://vanban.vcci.com.vn/thong-tu-082023tt-bct-sua-doi-quy-dinh-danh-muc-chi-tiet-theo-ma-so-hs-cua-hang-hoa-xuat-khau-nhap-khau-kem-theo-mot-so-thong-tu-cua-bo-truong-bo-cong-thuong).
+- An toàn thực phẩm: **TT 28/2026/TT-BCT — có hiệu lực 17/7/2026** (đồ uống, rượu, bia, cồn thực phẩm, sữa chế biến, dầu thực vật) (đã xác minh 2026-07-17, nguồn: https://government.vn/?docid=218330&pageid=27160).
 
 **Bộ Nông nghiệp và Môi trường (BNNMT)**
-- Master HS table: **TT 01/2024/TT-BNNPTNT**, effective **20/3/2024**, succeeded TT 11/2021. ⚠️ Research found **no confirmed BNNMT replacement** — treat as current but **re-verify** (verified 2026-07-17, source: https://chinhphu.vn/?pageid=27160&docid=209723).
-- Kiểm dịch động vật trên cạn: **TT 01/2026/TT-BNNMT** (01/01/2026) (verified 2026-07-17, source: https://luatvietnam.vn/tai-nguyen/thong-tu-01-2026-tt-bnnmt-quy-dinh-kiem-dich-dong-vat-san-pham-dong-vat-tren-can-423507-d1.html).
-- Kiểm dịch động vật thủy sản: **TT 03/2026/TT-BNNMT** (13/01/2026) (verified 2026-07-17, source: https://xuatnhapkhauleanh.edu.vn/thong-tu-03-2026-tt-bnnmt.html).
+- Bảng HS tổng thể: **TT 01/2024/TT-BNNPTNT**, có hiệu lực **20/3/2024**, kế thừa TT 11/2021. ⚠️ Nghiên cứu không tìm thấy **bản thay thế nào của BNNMT được xác nhận** — coi là hiện hành nhưng **cần xác minh lại** (đã xác minh 2026-07-17, nguồn: https://chinhphu.vn/?pageid=27160&docid=209723).
+- Kiểm dịch động vật trên cạn: **TT 01/2026/TT-BNNMT** (01/01/2026) (đã xác minh 2026-07-17, nguồn: https://luatvietnam.vn/tai-nguyen/thong-tu-01-2026-tt-bnnmt-quy-dinh-kiem-dich-dong-vat-san-pham-dong-vat-tren-can-423507-d1.html).
+- Kiểm dịch động vật thủy sản: **TT 03/2026/TT-BNNMT** (13/01/2026) (đã xác minh 2026-07-17, nguồn: https://xuatnhapkhauleanh.edu.vn/thong-tu-03-2026-tt-bnnmt.html).
 
-**Bộ Y tế** — food safety (its share under **NĐ 15/2018/NĐ-CP**), drugs, cosmetics, medical devices (verified 2026-07-17, source: https://vanban.chinhphu.vn/?pageid=27160&docid=192829).
+**Bộ Y tế** — an toàn thực phẩm (phần thuộc trách nhiệm của bộ theo **NĐ 15/2018/NĐ-CP**), dược phẩm, mỹ phẩm, trang thiết bị y tế (đã xác minh 2026-07-17, nguồn: https://vanban.chinhphu.vn/?pageid=27160&docid=192829).
 
-**Bộ Khoa học và Công nghệ** — quality/standards regime; also telecom/IT equipment since absorbing ex-Bộ TT&TT (verified 2026-07-17, source: research 08 §1 and §3).
+**Bộ Khoa học và Công nghệ** — chế độ chất lượng/tiêu chuẩn; và cả thiết bị viễn thông/CNTT kể từ khi tiếp nhận nguyên Bộ TT&TT (đã xác minh 2026-07-17, nguồn: research 08 §1 và §3).
 
-**Bộ Xây dựng** — construction materials; also transport since absorbing ex-Bộ GTVT (verified 2026-07-17, source: research 08 §1 and §3).
+**Bộ Xây dựng** — vật liệu xây dựng; và cả giao thông vận tải kể từ khi tiếp nhận nguyên Bộ GTVT (đã xác minh 2026-07-17, nguồn: research 08 §1 và §3).
 
-## ⚠️ Not everything keys on HS — an HS-only data model is structurally insufficient
+## ⚠️ Không phải mọi thứ đều khóa theo HS — một mô hình dữ liệu chỉ dựa trên HS là thiếu hụt về mặt cấu trúc
 
-This is the single most important modelling warning in this note. If the schema is `hs_code → requirements`, three real regimes cannot be expressed at all:
+Đây là cảnh báo mô hình hóa quan trọng nhất trong ghi chú này. Nếu lược đồ là `hs_code → requirements`, thì có ba chế độ thực tế hoàn toàn không thể biểu diễn được:
 
-- **CITES keys on species, not HS.** **NĐ 06/2019/NĐ-CP** as amended by **NĐ 84/2021/NĐ-CP**. Permit issued by Cơ quan thẩm quyền quản lý CITES Việt Nam in **8 working days**, up to **22** where scientific-authority or exporting-country consultation is needed; **maximum 6 months validity**; the **single original travels with the shipment**. **An HS code alone cannot determine CITES applicability** — two shipments under the same HS differ by species (verified 2026-07-17, sources: https://luatvietnam.vn/hanh-chinh/giay-phep-cites-570-95717-article.html, https://vbpl.ts24.com.vn/support/solutions/articles/16000126973-ngh%E1%BB%8B-%C4%91%E1%BB%8Bnh-84-2021-n%C4%91-cp-s%E1%BB%ADa-%C4%91%E1%BB%95i-ngh%E1%BB%8B-%C4%91%E1%BB%8Bnh-06-2019-n%C4%91-cp-v%E1%BB%81-qu%E1%BA%A3n-l%C3%BD-th%E1%BB%B1c-v%E1%BA%ADt-r%E1%BB%ABng-%C4%91%E1%BB%99ng-v%E1%BA%ADt-r%E1%BB%ABng-nguy-).
-- **Phế liệu keys on HS *plus a firm-level giấy phép môi trường*.** **QĐ 13/2023/QĐ-TTg**, effective **01/6/2023**, replaced QĐ 28/2020, listing phế liệu permitted for import as production material (sắt thép, nhựa, giấy, thủy tinh, kim loại màu); the permit requirement comes from **Luật BVMT 2020**. Legacy permits with old naming but unchanged HS remain valid until expiry. The answer therefore depends on **who the importer is**, not only on what the good is (verified 2026-07-17, source: https://vanban.chinhphu.vn/?pageid=27160&docid=207922).
-- **The quality regime keys on a risk tier.** **Luật 78/2025/QH15**, effective **01/01/2026**, introduces risk-based classification: **thấp** → tự công bố tiêu chuẩn áp dụng; **trung bình** → tự đánh giá or certification by an accredited body; **cao** → certification by a **designated** body (verified 2026-07-17, source: https://vanban.chinhphu.vn/?pageid=27160&docid=214606).
+- **CITES khóa theo loài, không theo HS.** **NĐ 06/2019/NĐ-CP** được sửa đổi bởi **NĐ 84/2021/NĐ-CP**. Giấy phép do Cơ quan thẩm quyền quản lý CITES Việt Nam cấp trong **8 ngày làm việc**, lên đến **22** ngày khi cần tham vấn cơ quan khoa học hoặc nước xuất khẩu; **hiệu lực tối đa 6 tháng**; **bản gốc duy nhất đi kèm lô hàng**. **Một mã HS đơn thuần không thể xác định được khả năng áp dụng CITES** — hai lô hàng cùng một mã HS có thể khác nhau về loài (đã xác minh 2026-07-17, nguồn: https://luatvietnam.vn/hanh-chinh/giay-phep-cites-570-95717-article.html, https://vbpl.ts24.com.vn/support/solutions/articles/16000126973-ngh%E1%BB%8B-%C4%91%E1%BB%8Bnh-84-2021-n%C4%91-cp-s%E1%BB%ADa-%C4%91%E1%BB%95i-ngh%E1%BB%8B-%C4%91%E1%BB%8Bnh-06-2019-n%C4%91-cp-v%E1%BB%81-qu%E1%BA%A3n-l%C3%BD-th%E1%BB%B1c-v%E1%BA%ADt-r%E1%BB%ABng-%C4%91%E1%BB%99ng-v%E1%BA%ADt-r%E1%BB%ABng-nguy-).
+- **Phế liệu khóa theo HS *cộng với một giấy phép môi trường ở cấp doanh nghiệp*.** **QĐ 13/2023/QĐ-TTg**, có hiệu lực **01/6/2023**, thay thế QĐ 28/2020, liệt kê phế liệu được phép nhập khẩu làm nguyên liệu sản xuất (sắt thép, nhựa, giấy, thủy tinh, kim loại màu); yêu cầu giấy phép xuất phát từ **Luật BVMT 2020**. Các giấy phép cũ với tên gọi cũ nhưng HS không đổi vẫn còn hiệu lực đến khi hết hạn. Câu trả lời do đó phụ thuộc vào **ai là người nhập khẩu**, không chỉ vào hàng hóa là gì (đã xác minh 2026-07-17, nguồn: https://vanban.chinhphu.vn/?pageid=27160&docid=207922).
+- **Chế độ chất lượng khóa theo bậc rủi ro.** **Luật 78/2025/QH15**, có hiệu lực **01/01/2026**, giới thiệu phân loại dựa trên rủi ro: **thấp** → tự công bố tiêu chuẩn áp dụng; **trung bình** → tự đánh giá hoặc chứng nhận bởi một tổ chức được công nhận; **cao** → chứng nhận bởi một tổ chức được **chỉ định** (đã xác minh 2026-07-17, nguồn: https://vanban.chinhphu.vn/?pageid=27160&docid=214606).
 
-**Design consequence:** any future policy-check feature needs a rule model whose *key* is polymorphic (HS, species, firm identity, risk tier), not a flat HS join. Ministry identity is also a moving target after the 2025 mergers — model ministries as entities with aliases and validity ranges, because circular prefixes changed (`TT-BNNPTNT` → `TT-BNNMT`) while legacy circulars keep their old designation (verified 2026-07-17, source: research 08 §1).
+**Hệ quả thiết kế:** bất kỳ tính năng kiểm tra chính sách nào trong tương lai đều cần một mô hình quy tắc có *khóa* đa hình (HS, loài, danh tính doanh nghiệp, bậc rủi ro), chứ không phải một phép nối HS phẳng. Danh tính của bộ cũng là mục tiêu di động sau các cuộc sáp nhập năm 2025 — hãy mô hình hóa các bộ như những thực thể có bí danh (alias) và khoảng thời gian hiệu lực, bởi vì tiền tố thông tư đã thay đổi (`TT-BNNPTNT` → `TT-BNNMT`) trong khi các thông tư cũ vẫn giữ nguyên ký hiệu cũ của chúng (đã xác minh 2026-07-17, nguồn: research 08 §1).
 
-## Transitional clauses matter operationally
+## Các điều khoản chuyển tiếp có ý nghĩa về mặt vận hành
 
-Rules are **not a simple date cutover**. **TT 28/2026/TT-BCT**: files submitted before the effective date follow the old rules **unless the trader opts in** (verified 2026-07-17, source: https://government.vn/?docid=218330&pageid=27160).
+Các quy tắc **không phải là một sự chuyển đổi theo ngày đơn giản**. **TT 28/2026/TT-BCT**: hồ sơ nộp trước ngày có hiệu lực áp dụng theo quy tắc cũ **trừ khi thương nhân chủ động lựa chọn áp dụng quy tắc mới** (đã xác minh 2026-07-17, nguồn: https://government.vn/?docid=218330&pageid=27160).
 
-So the correct question is never "what is the rule today" but "what is the rule for *this dossier*, given its submission date and the trader's election". A rule store needs effective-from / effective-to / suspended-by / superseded-by, plus an opt-in flag on the dossier — a single `valid_from` column silently produces wrong answers for in-flight filings.
+Vậy nên câu hỏi đúng không bao giờ là "quy tắc hôm nay là gì" mà là "quy tắc cho *hồ sơ này* là gì, xét theo ngày nộp của nó và sự lựa chọn của thương nhân". Một kho quy tắc cần có effective-from / effective-to / suspended-by / superseded-by, cộng với một cờ opt-in trên hồ sơ — một cột `valid_from` đơn lẻ sẽ âm thầm tạo ra câu trả lời sai cho các hồ sơ đang xử lý dở dang.
 
-The food-safety saga is the proof that status is a field, not a footnote: **NĐ 46/2026/NĐ-CP** (26/01/2026) was issued to replace NĐ 15/2018, then **NQ 09/2026/NQ-CP** (04/02/2026) **suspended** it about a week later, and the suspension was extended until the amended Food Safety Law and its decree take effect — so **NĐ 15/2018 remains operative** (verified 2026-07-17, sources: https://vanban.chinhphu.vn/?docid=216891&pageid=27160, https://baochinhphu.vn/tiep-tuc-ap-dung-nghi-dinh-15-2018-nd-cp-ve-an-toan-thuc-pham-cho-den-khi-co-quy-dinh-moi-102260408123934123.htm).
+Câu chuyện dài về an toàn thực phẩm là bằng chứng cho thấy trạng thái là một trường dữ liệu, không phải một chú thích cuối trang: **NĐ 46/2026/NĐ-CP** (26/01/2026) được ban hành để thay thế NĐ 15/2018, sau đó **NQ 09/2026/NQ-CP** (04/02/2026) đã **tạm hoãn** nó khoảng một tuần sau đó, và việc tạm hoãn được gia hạn cho đến khi Luật An toàn thực phẩm sửa đổi và nghị định của nó có hiệu lực — nên **NĐ 15/2018 vẫn còn hiệu lực** (đã xác minh 2026-07-17, nguồn: https://vanban.chinhphu.vn/?docid=216891&pageid=27160, https://baochinhphu.vn/tiep-tuc-ap-dung-nghi-dinh-15-2018-nd-cp-ve-an-toan-thuc-pham-cho-den-khi-co-quy-dinh-moi-102260408123934123.htm).
 
-## C/O — the major 2025 change
+## C/O — thay đổi lớn năm 2025
 
-- **QĐ 1103/QĐ-BCT (21/4/2025)** revoked **VCCI's** authority to issue **C/O, CNM and REX codes**. Origin certification is centralised under MOIT / Sở Công Thương (verified 2026-07-17, source: https://logistics.gov.vn/tin-hoat-dong/bo-cong-thuong-thu-hoi-quyen-cap-c-o-cnm-va-ma-so-rex-tu-vcci-de-chuan-hoa-he-thong-cap-c-o-trong-boi-canh-moi).
-- **Any pre-2025 knowledge saying "VCCI issues form B" is WRONG.** Say so out loud rather than repeating it.
-- **TT 40/2025/TT-BCT (22/6/2025)** covers C/O issuance and approval of **self-certification** of origin (verified 2026-07-17, source: research 08 §5). **NĐ 146/2025/NĐ-CP** (12/6/2025, eff. 1/7/2025) handles phân quyền/phân cấp in industry & trade (verified 2026-07-17, source: https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-146-2025-nd-cp-45086.htm).
-- **eCoSys migrated to https://co.moit.gov.vn at 12:00 on 22/12/2025** (verified 2026-07-17, source: https://unicustomsconsulting.com/vi/bo-cong-thuong-nang-cap-va-van-hanh-he-thong-ecosys-moi-tu-12h00-ngay-22-12-2025/).
-- **14 preferential forms**: D (ASEAN), E (China), AHK, AJ/VJ (Japan), AK/VK (Korea), AI (India), X (Cambodia), EUR.1 (EVFTA), EUR.1 UKVFTA, plus RCEP and CPTPP forms (verified 2026-07-17, source: research 08 §5).
-- **eCoSys data is not public — no API.** It is a transactional licensing system behind auth (verified 2026-07-17, source: research 08 §5).
+- **QĐ 1103/QĐ-BCT (21/4/2025)** thu hồi thẩm quyền của **VCCI** trong việc cấp **C/O, CNM và mã số REX**. Việc chứng nhận xuất xứ được tập trung về MOIT / Sở Công Thương (đã xác minh 2026-07-17, nguồn: https://logistics.gov.vn/tin-hoat-dong/bo-cong-thuong-thu-hoi-quyen-cap-c-o-cnm-va-ma-so-rex-tu-vcci-de-chuan-hoa-he-thong-cap-c-o-trong-boi-canh-moi).
+- **Bất kỳ kiến thức nào trước 2025 nói rằng "VCCI cấp form B" đều SAI.** Hãy nói rõ điều đó thay vì lặp lại nó.
+- **TT 40/2025/TT-BCT (22/6/2025)** quy định việc cấp C/O và phê duyệt **tự chứng nhận** xuất xứ (đã xác minh 2026-07-17, nguồn: research 08 §5). **NĐ 146/2025/NĐ-CP** (12/6/2025, hiệu lực 1/7/2025) xử lý phân quyền/phân cấp trong lĩnh vực công thương (đã xác minh 2026-07-17, nguồn: https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-146-2025-nd-cp-45086.htm).
+- **eCoSys đã chuyển sang https://co.moit.gov.vn vào lúc 12:00 ngày 22/12/2025** (đã xác minh 2026-07-17, nguồn: https://unicustomsconsulting.com/vi/bo-cong-thuong-nang-cap-va-van-hanh-he-thong-ecosys-moi-tu-12h00-ngay-22-12-2025/).
+- **14 mẫu ưu đãi**: D (ASEAN), E (Trung Quốc), AHK, AJ/VJ (Nhật Bản), AK/VK (Hàn Quốc), AI (Ấn Độ), X (Campuchia), EUR.1 (EVFTA), EUR.1 UKVFTA, cùng các mẫu RCEP và CPTPP (đã xác minh 2026-07-17, nguồn: research 08 §5).
+- **Dữ liệu eCoSys không công khai — không có API.** Nó là một hệ thống cấp phép giao dịch nằm sau lớp xác thực (đã xác minh 2026-07-17, nguồn: research 08 §5).
 
-C/O matters to us indirectly: an HS mismatch between the declaration and the C/O destroys FTA preferential eligibility, which is usually worth far more than the classification penalty itself (verified 2026-07-17, source: https://thuvienphapluat.vn/tintuc/vn/thoi-su-phap-luat/tai-chinh/20921/xu-ly-khi-co-khac-biet-ma-so-hs-tren-c-o).
+C/O quan trọng với chúng ta một cách gián tiếp: sự không khớp mã HS giữa tờ khai và C/O sẽ hủy hoại điều kiện hưởng ưu đãi FTA, mà điều này thường có giá trị lớn hơn nhiều so với chính khoản phạt phân loại (đã xác minh 2026-07-17, nguồn: https://thuvienphapluat.vn/tintuc/vn/thoi-su-phap-luat/tai-chinh/20921/xu-ly-khi-co-khac-biet-ma-so-hs-tren-c-o).
 
 ## VNSW / Cơ chế một cửa quốc gia
 
-- Legal base: **NĐ 85/2019/NĐ-CP**, effective **1/1/2020**, **6 chapters / 43 articles**, covering NSW + ASW + kiểm tra chuyên ngành — it is the decree that ties specialized inspection to the single window (verified 2026-07-17, source: https://chinhphu.vn/default.aspx?pageid=27160&docid=198329).
-- Portal **https://vnsw.gov.vn**; account registration verified within **1 working day**; **requires chữ ký số (USB token)** (verified 2026-07-17, source: https://vnsw.gov.vn/).
-- **No public API.** NĐ 85 anticipates system-to-system connection, but the mechanism for connecting NSW to customs' e-data system and ministries' IT systems **"has not been fully regulated"**. Integration is bilateral, per-ministry, by agreement (verified 2026-07-17, source: research 08 §6).
-- ⚠️ **vnsw.gov.vn failed TLS verification** during research ("unable to verify the first certificate"). Expect cert-chain issues for anyone integrating (verified 2026-07-17, source: research 08 §6).
-- ⚠️ Procedure counts are **stale**: the best figure found is **249/261 procedures as of 30/6/2022** (QĐ 1254/QĐ-TTg, QĐ 1258/QĐ-TTg). No current 2026 count could be verified — **do not quote a current number** (verified 2026-07-17, source: research 08 §6).
+- Cơ sở pháp lý: **NĐ 85/2019/NĐ-CP**, có hiệu lực **1/1/2020**, **6 chương / 43 điều**, bao trùm NSW + ASW + kiểm tra chuyên ngành — đây là nghị định gắn kiểm tra chuyên ngành với cơ chế một cửa (đã xác minh 2026-07-17, nguồn: https://chinhphu.vn/default.aspx?pageid=27160&docid=198329).
+- Cổng **https://vnsw.gov.vn**; đăng ký tài khoản được xác minh trong **1 ngày làm việc**; **yêu cầu chữ ký số (USB token)** (đã xác minh 2026-07-17, nguồn: https://vnsw.gov.vn/).
+- **Không có API công khai.** NĐ 85 dự liệu kết nối hệ thống-tới-hệ thống, nhưng cơ chế kết nối NSW với hệ thống dữ liệu điện tử của hải quan và các hệ thống CNTT của các bộ **"chưa được quy định đầy đủ"**. Việc tích hợp là song phương, theo từng bộ, theo thỏa thuận (đã xác minh 2026-07-17, nguồn: research 08 §6).
+- ⚠️ **vnsw.gov.vn thất bại trong việc xác minh TLS** trong quá trình nghiên cứu ("unable to verify the first certificate"). Hãy lường trước các vấn đề về chuỗi chứng chỉ cho bất kỳ ai tích hợp (đã xác minh 2026-07-17, nguồn: research 08 §6).
+- ⚠️ Số lượng thủ tục đã **lỗi thời**: con số tốt nhất tìm được là **249/261 thủ tục tính đến 30/6/2022** (QĐ 1254/QĐ-TTg, QĐ 1258/QĐ-TTg). Không thể xác minh được con số hiện tại của năm 2026 — **đừng trích dẫn một con số hiện tại** (đã xác minh 2026-07-17, nguồn: research 08 §6).
 
-The digital-signature requirement and the absence of an API together mean VNSW is a **human step, permanently, for our purposes**. Do not design flows that assume we can read licence status.
+Yêu cầu chữ ký số và sự vắng mặt của API cùng nhau có nghĩa là VNSW là một **bước thủ công của con người, vĩnh viễn, đối với mục đích của chúng ta**. Đừng thiết kế các luồng giả định rằng chúng ta có thể đọc được trạng thái giấy phép.
 
-## AEO and xuất nhập khẩu tại chỗ
+## AEO và xuất nhập khẩu tại chỗ
 
-- **Luật 90/2025/QH15**, effective **01/7/2025**, amended Luật Hải quan **Điều 42 and 43**: the AEO compliance period drops from **3 years to 2 years**, and the applicant must have an **IT system able to share data with hải quan**.
-- The same law **added Điều 47a, luật hóa xuất nhập khẩu tại chỗ** — significant for logistics and EPE flows, which is exactly our users' business.
-- **Luật Quản lý thuế 108/2025/QH15**, effective **01/7/2026**, replaces Luật QLT 38/2019.
+- **Luật 90/2025/QH15**, có hiệu lực **01/7/2025**, sửa đổi **Điều 42 và 43** của Luật Hải quan: thời gian tuân thủ để được công nhận AEO giảm từ **3 năm xuống 2 năm**, và người nộp đơn phải có một **hệ thống CNTT có khả năng chia sẻ dữ liệu với hải quan**.
+- Cùng luật đó **bổ sung Điều 47a, luật hóa xuất nhập khẩu tại chỗ** — điều này quan trọng đối với các luồng logistics và EPE, vốn chính là ngành nghề kinh doanh của người dùng chúng ta.
+- **Luật Quản lý thuế 108/2025/QH15**, có hiệu lực **01/7/2026**, thay thế Luật QLT 38/2019.
 
-(verified 2026-07-17, source: research 08, AEO/xuất nhập khẩu tại chỗ findings; primary statute text was not independently fetched during research — re-verify article numbers before citing them to a customer)
+(đã xác minh 2026-07-17, nguồn: research 08, các phát hiện về AEO/xuất nhập khẩu tại chỗ; văn bản luật gốc không được truy xuất độc lập trong quá trình nghiên cứu — hãy xác minh lại số điều khoản trước khi trích dẫn chúng cho khách hàng)
 
-## Institutional naming — a data-engineering trap
+## Đặt tên định chế — một cái bẫy kỹ nghệ dữ liệu
 
-**Tổng cục Hải quan no longer exists.** Since **01/03/2025** (NĐ 29/2025/NĐ-CP, QĐ 382/QĐ-BTC) it is **Cục Hải quan** under Bộ Tài chính, with **20 Chi cục Hải quan khu vực**. Documents are numbered **`-CHQ`**, not `-TCHQ` (verified 2026-07-17, source: https://xaydungchinhsach.chinhphu.vn/quyet-dinh-382-qd-btc-quy-dinh-chuc-nang-nhiem-vu-quyen-han-va-co-cau-to-chuc-cua-cuc-hai-quan-119250228165530471.htm). Any corpus of công văn must reconcile the pre-3/2025 `-TCHQ` and post-3/2025 `-CHQ` numbering, or the same guidance will look like two unrelated documents.
+**Tổng cục Hải quan không còn tồn tại.** Kể từ **01/03/2025** (NĐ 29/2025/NĐ-CP, QĐ 382/QĐ-BTC) nó là **Cục Hải quan** trực thuộc Bộ Tài chính, với **20 Chi cục Hải quan khu vực**. Văn bản được đánh số **`-CHQ`**, không phải `-TCHQ` (đã xác minh 2026-07-17, nguồn: https://xaydungchinhsach.chinhphu.vn/quyet-dinh-382-qd-btc-quy-dinh-chuc-nang-nhiem-vu-quyen-han-va-co-cau-to-chuc-cua-cuc-hai-quan-119250228165530471.htm). Bất kỳ kho công văn nào cũng phải đối chiếu cách đánh số `-TCHQ` trước 3/2025 với `-CHQ` sau 3/2025, nếu không cùng một hướng dẫn sẽ trông như hai văn bản không liên quan.
 
-## Unverified / Do Not Rely On
+## Chưa xác minh / Không được dựa vào
 
-Reproduced verbatim in spirit from research 08's own flags. Do not launder any of these into a confident claim.
+Được tái hiện nguyên vẹn về mặt tinh thần từ chính các cờ cảnh báo của research 08. Đừng "rửa" bất kỳ điều nào trong số này thành một khẳng định đầy tự tin.
 
-- **TT 15/2026/TT-BCT, TT 26/2026/TT-BCT, and VBHN 47/VBHN-BCT (4/6/2026)** — a single low-confidence extraction (luatvietnam) describes VBHN 47 consolidating TT 12/2018 with TT 42/2019, TT 08/2023, TT 38/2025, TT 15/2026 and TT 26/2026. The two 2026 circulars came from that one extraction. **Verify before use.**
-- **NĐ 169/2026/NĐ-CP** (customs penalties, eff. 1/7/2026, said to replace NĐ 128/2020) and **NĐ 153/2026/NĐ-CP** (địa bàn hoạt động hải quan, eff. 5/7/2026) — single search-summary source; **the numbering is suspicious**. Confirm before citing. Until confirmed, the operative penalty decree remains **NĐ 128/2020/NĐ-CP as amended by NĐ 102/2021/NĐ-CP**.
-- **VBHN 67/VBHN-BNNMT (2026)** on terrestrial animal quarantine — single source.
-- **"Danh mục hàng hóa nhóm 2 abolished from 2026"** under Luật 78/2025 — **contested, load-bearing, and resting on a single commercial source** (extendmax), which also asserts that công bố hợp quy is *restructured, not abolished*. This claim would change the shape of any rules engine. **Verify against the statute text and its implementing decree before building anything on it.**
-- **Whether a BNNMT circular has replaced TT 01/2024/TT-BNNPTNT** — no confirmed replacement found.
-- **Current VNSW procedure / ministry count** — best available figure is from 2022.
-- **Whether the ecosys.gov.vn / co.moit.gov.vn split still holds.** ⚠️ Reportedly forms **D, AK, VK** — the ones that must transmit to VNSW — are still declared at **ecosys.gov.vn** while everything else moved to **co.moit.gov.vn**. Two systems, one workflow. This was observed mid-migration and is **unverified**.
-- **Quyết định 117/QĐ-CHQ detail** — full text was paywalled/403 during research; treat specifics as medium confidence.
-- **Luật 90/2025/QH15 and Luật 108/2025/QH15 article-level detail** — reported in research 08 but primary statute text was not independently fetched.
+- **TT 15/2026/TT-BCT, TT 26/2026/TT-BCT, và VBHN 47/VBHN-BCT (4/6/2026)** — một trích xuất đơn lẻ có độ tin cậy thấp (luatvietnam) mô tả VBHN 47 hợp nhất TT 12/2018 với TT 42/2019, TT 08/2023, TT 38/2025, TT 15/2026 và TT 26/2026. Hai thông tư năm 2026 đến từ chính một trích xuất đó. **Hãy xác minh trước khi sử dụng.**
+- **NĐ 169/2026/NĐ-CP** (xử phạt hải quan, hiệu lực 1/7/2026, được cho là thay thế NĐ 128/2020) và **NĐ 153/2026/NĐ-CP** (địa bàn hoạt động hải quan, hiệu lực 5/7/2026) — chỉ một nguồn tóm tắt tìm kiếm; **cách đánh số đáng ngờ**. Hãy xác nhận trước khi trích dẫn. Cho đến khi được xác nhận, nghị định xử phạt còn hiệu lực vẫn là **NĐ 128/2020/NĐ-CP được sửa đổi bởi NĐ 102/2021/NĐ-CP**.
+- **VBHN 67/VBHN-BNNMT (2026)** về kiểm dịch động vật trên cạn — một nguồn duy nhất.
+- **"Danh mục hàng hóa nhóm 2 bị bãi bỏ từ 2026"** theo Luật 78/2025 — **gây tranh cãi, có tính quyết định, và chỉ dựa trên một nguồn thương mại duy nhất** (extendmax), nguồn này cũng khẳng định rằng công bố hợp quy được *tái cấu trúc, chứ không phải bị bãi bỏ*. Khẳng định này sẽ thay đổi hình dạng của bất kỳ bộ máy quy tắc nào. **Hãy xác minh với văn bản luật và nghị định hướng dẫn của nó trước khi xây dựng bất cứ điều gì trên đó.**
+- **Liệu một thông tư của BNNMT đã thay thế TT 01/2024/TT-BNNPTNT hay chưa** — không tìm thấy bản thay thế nào được xác nhận.
+- **Số lượng thủ tục / số bộ hiện tại của VNSW** — con số tốt nhất hiện có là từ năm 2022.
+- **Liệu sự phân tách ecosys.gov.vn / co.moit.gov.vn còn đúng hay không.** ⚠️ Theo báo cáo, các mẫu **D, AK, VK** — những mẫu phải truyền tới VNSW — vẫn được khai tại **ecosys.gov.vn** trong khi mọi thứ khác đã chuyển sang **co.moit.gov.vn**. Hai hệ thống, một quy trình. Điều này được quan sát giữa chừng đợt di chuyển và **chưa được xác minh**.
+- **Chi tiết Quyết định 117/QĐ-CHQ** — toàn văn bị chặn phí/403 trong quá trình nghiên cứu; hãy coi các chi tiết cụ thể là mức tin cậy trung bình.
+- **Chi tiết cấp điều khoản của Luật 90/2025/QH15 và Luật 108/2025/QH15** — được báo cáo trong research 08 nhưng văn bản luật gốc không được truy xuất độc lập.
 
-## Related Knowledge
+## Kiến thức liên quan
 
-- [Project Context](../project-context.md) — what Customs Assistant is, who it serves, and its v1 boundaries.
-- [Business Rules](../business-rules.md) — durable policy, validation, and compliance rules derived from this workflow.
-- [Agent Index](../index.md) — map of durable project memory.
-- [Architecture Decisions](../architecture-decisions/README.md) — record here any decision to integrate (or deliberately not integrate) with VNACCS, VNSW, or eCoSys, given the ~18-month VNACCS shelf life.
+- [Bối cảnh dự án](../project-context.md) — Customs Assistant là gì, phục vụ ai, và các ranh giới v1 của nó.
+- [Quy tắc nghiệp vụ](../business-rules.md) — các quy tắc bền vững về chính sách, kiểm tra hợp lệ và tuân thủ được rút ra từ quy trình này.
+- [Chỉ mục tác nhân](../index.md) — bản đồ của bộ nhớ dự án bền vững.
+- [Chỉ mục quyết định kiến trúc](../architecture-decisions/README.md) — ghi lại tại đây bất kỳ quyết định tích hợp (hoặc cố ý không tích hợp) với VNACCS, VNSW, hoặc eCoSys, xét đến vòng đời khoảng 18 tháng của VNACCS.

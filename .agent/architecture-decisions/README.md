@@ -1,20 +1,20 @@
 # Architecture Decisions
 
-This directory stores Architecture Decision Records.
+Thư mục này lưu trữ các Bản ghi Quyết định Kiến trúc (Architecture Decision Records).
 
-Each durable architecture decision must be recorded as a separate file.
+Mỗi quyết định kiến trúc bền vững phải được ghi lại thành một file riêng biệt.
 
-## Naming
+## Đặt tên
 
-Use this format:
+Sử dụng định dạng này:
 
 ```text
 YYYY-MM-DD-<short-decision-title>.md
 ```
 
-## Rules
+## Quy tắc
 
-- Create one file per decision.
-- Keep decisions concise and traceable.
-- Link related planning, design, review, or implementation notes when relevant.
-- Do not rewrite old decisions silently. Add a new ADR that supersedes the previous one.
+- Tạo một file cho mỗi quyết định.
+- Giữ các quyết định ngắn gọn và có thể truy vết.
+- Liên kết các ghi chú lập kế hoạch, thiết kế, đánh giá, hoặc triển khai liên quan khi thích hợp.
+- Đừng âm thầm viết lại các quyết định cũ. Hãy thêm một ADR mới thay thế ADR trước đó.

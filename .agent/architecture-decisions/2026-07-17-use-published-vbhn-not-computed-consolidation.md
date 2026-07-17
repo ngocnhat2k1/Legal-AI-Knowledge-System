@@ -11,116 +11,116 @@ related:
   - ../project-context.md
 ---
 
-# Use Published Văn Bản Hợp Nhất As The Text Layer; Do Not Compute Consolidation
+# Dùng Văn Bản Hợp Nhất Đã Công Bố Làm Lớp Văn Bản; Không Tự Tính Toán Hợp Nhất
 
-## Status
+## Trạng thái
 
-Approved (owner approved 2026-07-17)
+Đã phê duyệt (chủ dự án phê duyệt 2026-07-17)
 
-## Context
+## Bối cảnh
 
-Vietnamese law is amended in place by other documents: a Nghị định says "sửa đổi Khoản 2 Điều 5", "bổ sung Điều 5a", "bãi bỏ cụm từ X tại Khoản 2". A base text read on its own is therefore actively wrong. The corpus inventory found the base text misleading in at least six logistics sub-domains, and current consolidated texts already exist for the ones we care about: 96/VBHN-VPQH (Luật Thuế XNK, 31/03/2026), 46/VBHN-BTC (NĐ 08/2015 on customs procedure), 24/VBHN-BCT (NĐ 69/2018 on ngoại thương), 52/VBHN-VPQH (Bộ luật Hàng hải), 56/VBHN-VPQH (Luật GTĐTNĐ), 08/VBHN-BGTVT (NĐ 08/2021) (verified 2026-07-17, source: research report 03 — Vietnamese logistics legal corpus inventory).
+Luật Việt Nam được sửa đổi tại chỗ bởi các văn bản khác: một Nghị định nói "sửa đổi Khoản 2 Điều 5", "bổ sung Điều 5a", "bãi bỏ cụm từ X tại Khoản 2". Do đó một văn bản gốc đọc một mình là chủ động sai. Kiểm kê kho corpus phát hiện văn bản gốc gây hiểu lầm ở ít nhất sáu tiểu lĩnh vực logistics, và các văn bản hợp nhất hiện hành đã tồn tại cho những cái mà chúng ta quan tâm: 96/VBHN-VPQH (Luật Thuế XNK, 31/03/2026), 46/VBHN-BTC (NĐ 08/2015 về thủ tục hải quan), 24/VBHN-BCT (NĐ 69/2018 về ngoại thương), 52/VBHN-VPQH (Bộ luật Hàng hải), 56/VBHN-VPQH (Luật GTĐTNĐ), 08/VBHN-BGTVT (NĐ 08/2021) (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 03 — kiểm kê kho corpus pháp lý logistics Việt Nam).
 
-So the question is not "do we need consolidated text" — we do — but **who consolidates: the state, or us?** Building a text-mutation engine that applies amendment instructions to base text was the alternative on the table.
+Vì vậy câu hỏi không phải là "chúng ta có cần văn bản hợp nhất không" — chúng ta cần — mà là **ai hợp nhất: nhà nước, hay chúng ta?** Xây dựng một cỗ máy biến đổi văn bản áp dụng các chỉ dẫn sửa đổi lên văn bản gốc là phương án được đặt lên bàn.
 
-The historical objection to depending on published consolidation was legal, not technical: văn bản hợp nhất (VBHN) used to be a convenience document with no independent authority. You were formally obliged to cite the original plus each amending document, so a VBHN-based citation was not something a declarant could stand behind.
+Sự phản đối lịch sử đối với việc phụ thuộc vào hợp nhất đã công bố là về mặt pháp lý, không phải kỹ thuật: văn bản hợp nhất (VBHN) trước đây từng là một văn bản mang tính tiện lợi không có thẩm quyền độc lập. Về mặt hình thức bạn buộc phải trích dẫn văn bản gốc cộng với từng văn bản sửa đổi, nên một trích dẫn dựa trên VBHN không phải là thứ mà một người khai có thể đứng ra bảo vệ.
 
-**That objection was removed two weeks before this decision.** Pháp lệnh 01/2026/UBTVQH16 (UBTVQH, issued 10/6/2026, effective 01/7/2026) amends the 2012 Pháp lệnh hợp nhất VBQPPL and states:
+**Sự phản đối đó đã bị gỡ bỏ hai tuần trước quyết định này.** Pháp lệnh 01/2026/UBTVQH16 (UBTVQH, ban hành 10/6/2026, hiệu lực 01/7/2026) sửa đổi Pháp lệnh hợp nhất VBQPPL 2012 và quy định:
 
 > "Văn bản hợp nhất được cơ quan, tổ chức, cá nhân sử dụng làm căn cứ chính thức trong viện dẫn và áp dụng pháp luật"
 
-Consolidated texts are now an **official basis for citing and applying law**. The Ordinance also expands VBHN scope to provincial/commune VBQPPL (previously central agencies only), extends it to partial repeal / partial suspension / partial continuation of effect, and — for the first time in Vietnamese law on consolidation — names AI/digital transformation explicitly, with MOJ leading (verified 2026-07-17, sources: https://congbao.chinhphu.vn/van-ban/phap-lenh-so-01-2026-ubtvqh16-469837.htm · https://xaydungchinhsach.chinhphu.vn/van-ban-hop-nhat-duoc-su-dung-lam-can-cu-chinh-thuc-trong-vien-dan-va-ap-dung-phap-luat-119260625165619689.htm).
+Văn bản hợp nhất nay là một **căn cứ chính thức để viện dẫn và áp dụng pháp luật**. Pháp lệnh cũng mở rộng phạm vi VBHN đến VBQPPL cấp tỉnh/xã (trước đây chỉ cơ quan trung ương), mở rộng nó đến bãi bỏ một phần / đình chỉ một phần / tiếp tục hiệu lực một phần, và — lần đầu tiên trong luật Việt Nam về hợp nhất — nêu tên AI/chuyển đổi số một cách tường minh, với Bộ Tư pháp chủ trì (đã xác minh 2026-07-17, nguồn: https://congbao.chinhphu.vn/van-ban/phap-lenh-so-01-2026-ubtvqh16-469837.htm · https://xaydungchinhsach.chinhphu.vn/van-ban-hop-nhat-duoc-su-dung-lam-can-cu-chinh-thuc-trong-vien-dan-va-ap-dung-phap-luat-119260625165619689.htm).
 
-This ADR covers the **legal-text layer** (v1 evidence snippets for HS suggestion; later RAG). It does not cover the tariff numbers — see Scope.
+ADR này bao trùm **lớp văn bản pháp lý** (các đoạn bằng chứng v1 cho gợi ý HS; RAG về sau). Nó không bao trùm các con số biểu thuế — xem Phạm vi.
 
-## Decision
+## Quyết định
 
-1. **Published VBHN is the primary text layer.** Where a current VBHN exists for a document we ingest, index the VBHN, not the base text. Base text is ingested only when no VBHN exists.
-2. **We do not compute consolidation.** No component parses "sửa đổi Khoản 2 Điều 5" into a text mutation. Amendment instructions are stored as *data about* transitions, never executed as edits.
-3. **We keep an amendment graph on top of the text layer**, holding provenance (which document changed which provision, when) and validity intervals per provision version.
-4. **Citations are to a specific VBHN with its number and date** (e.g. "96/VBHN-VPQH, 31/03/2026"), because a VBHN is a snapshot and a citation without its date is unfalsifiable.
-5. **Where no VBHN exists and the base text is known-amended, the system says so** rather than serving the base text as if current.
+1. **VBHN đã công bố là lớp văn bản chính.** Ở nơi nào tồn tại một VBHN hiện hành cho một văn bản mà chúng ta nạp, hãy lập chỉ mục VBHN, không phải văn bản gốc. Văn bản gốc chỉ được nạp khi không có VBHN.
+2. **Chúng ta không tính toán hợp nhất.** Không có thành phần nào phân tích "sửa đổi Khoản 2 Điều 5" thành một phép biến đổi văn bản. Các chỉ dẫn sửa đổi được lưu như *dữ liệu về* các chuyển đổi, không bao giờ được thực thi như các phép chỉnh sửa.
+3. **Chúng ta duy trì một đồ thị sửa đổi phía trên lớp văn bản**, giữ nguồn gốc xuất xứ (văn bản nào đã thay đổi điều khoản nào, khi nào) và các khoảng hiệu lực theo từng phiên bản của điều khoản.
+4. **Trích dẫn là đến một VBHN cụ thể với số hiệu và ngày của nó** (ví dụ "96/VBHN-VPQH, 31/03/2026"), vì một VBHN là một ảnh chụp và một trích dẫn không có ngày của nó là không thể phản chứng.
+5. **Ở nơi không có VBHN và văn bản gốc đã biết là bị sửa đổi, hệ thống nói ra điều đó** thay vì phục vụ văn bản gốc như thể nó là hiện hành.
 
-## Rationale
+## Cơ sở lập luận
 
-**Why published, not computed:**
+**Vì sao là đã công bố, không phải tự tính toán:**
 
-- **Authority.** Citations inherit official standing under Pháp lệnh 01/2026/UBTVQH16 (above). A text we consolidated ourselves has no authority at all — if a declarant is challenged, "our engine merged the amendments" is not a defence. This is the whole point for an internal tool whose output ends up on a legally binding declaration.
-- **The leading academic model also refuses to do it.** SAT-Graph RAG (Hudson de Martim, arXiv:2505.00039, Brazilian Constitution case study) is the most developed public temporal model for legislation — LRMoo-inspired Work/Expression split, Component Temporal Versions with validity intervals, point-in-time query as a deterministic interval predicate `tv.valid_start ≤ t < coalesce(tv.valid_end, +∞)`. It **"assumes the legal text corpus already contains these finalized versions"**; its amendment Action nodes *explain* transitions rather than *execute* them. If the most sophisticated structural approach available declines to parse amendment instructions into text mutations, that is a strong signal about the difficulty, not an oversight (verified 2026-07-17, source: research report 02, citing https://arxiv.org/abs/2505.00039).
-- **The edge cases are unbounded and natural-language.** Vietnamese amendment instructions are irregular prose: "bổ sung Điều 5a", "bãi bỏ cụm từ X tại Khoản 2", "thay thế cụm từ...". A mutation engine has no closed grammar to implement against, no oracle to test against, and no authority to fall back on when it is wrong. Its failure mode is silent: plausible text, wrong law. That is the same failure shape the tariff research found in a 94%-"successful" parser that returned export duty for import questions (verified 2026-07-17, source: research report 12).
+- **Thẩm quyền.** Các trích dẫn thừa hưởng vị thế chính thức theo Pháp lệnh 01/2026/UBTVQH16 (ở trên). Một văn bản mà chúng ta tự hợp nhất hoàn toàn không có thẩm quyền — nếu một người khai bị chất vấn, "cỗ máy của chúng tôi đã gộp các sửa đổi" không phải là một sự biện hộ. Đây là toàn bộ điểm mấu chốt đối với một công cụ nội bộ mà đầu ra của nó nằm trên một tờ khai ràng buộc về mặt pháp lý.
+- **Mô hình học thuật hàng đầu cũng từ chối làm điều đó.** SAT-Graph RAG (Hudson de Martim, arXiv:2505.00039, nghiên cứu trường hợp Hiến pháp Brazil) là mô hình thời gian công khai phát triển nhất cho lập pháp — phân tách Work/Expression lấy cảm hứng từ LRMoo, Component Temporal Versions với các khoảng hiệu lực, truy vấn tại-một-thời-điểm như một vị từ khoảng tất định `tv.valid_start ≤ t < coalesce(tv.valid_end, +∞)`. Nó **"giả định rằng kho corpus văn bản pháp lý đã chứa sẵn các phiên bản đã hoàn thiện này"**; các nút Action sửa đổi của nó *giải thích* các chuyển đổi chứ không *thực thi* chúng. Nếu cách tiếp cận cấu trúc tinh vi nhất hiện có từ chối phân tích các chỉ dẫn sửa đổi thành các phép biến đổi văn bản, thì đó là một tín hiệu mạnh về mức độ khó, không phải một sự sơ suất (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 02, trích dẫn https://arxiv.org/abs/2505.00039).
+- **Các trường hợp biên là vô hạn và bằng ngôn ngữ tự nhiên.** Các chỉ dẫn sửa đổi của Việt Nam là văn xuôi bất quy tắc: "bổ sung Điều 5a", "bãi bỏ cụm từ X tại Khoản 2", "thay thế cụm từ...". Một cỗ máy biến đổi không có văn phạm đóng nào để triển khai theo, không có oracle nào để kiểm thử theo, và không có thẩm quyền nào để lui về khi nó sai. Hình thái thất bại của nó là lặng lẽ: văn bản nghe hợp lý, luật sai. Đó chính là cùng một hình thái thất bại mà nghiên cứu biểu thuế đã tìm thấy ở một trình phân tích "thành công" 94% vốn trả về thuế xuất khẩu cho các câu hỏi nhập khẩu (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 12).
 
-**Why VBHN alone is not enough** — the three gaps that force the amendment graph:
+**Vì sao VBHN đơn thuần là chưa đủ** — ba lỗ hổng buộc phải có đồ thị sửa đổi:
 
-- **Coverage.** Not every văn bản has a current VBHN; publication lags amendment. Report 03's own recommendation is VBHN "wherever one exists" — the qualifier is the problem.
-- **No temporal history.** A VBHN is a snapshot of "now". "Which rule applied on the declaration date in 2023?" cannot be answered from it. Temporal validity must be a **hard filter, not a ranking signal**: LLMs measurably apply outdated rules *and* prefer newer provisions when the older one applies, and RAG alone does not fix that recency bias (verified 2026-07-17, source: research report 02, citing arXiv:2605.23497, 312 validated German statutory QA pairs across five major LLMs). Scale of the problem: of 1,703 SBV documents, 863 fully repealed, 191 partially repealed, 639 effective — **~62% of a real Vietnamese corpus is dead or partly dead law** (source: SBV-LawGraph, ACIIDS 2026, https://lexuanbach.github.io/publication/ACIIDS2026a.pdf).
-- **Provenance.** "Which Nghị định changed this Khoản, and when?" is a question our users will ask, and no snapshot answers it.
+- **Độ phủ.** Không phải mọi văn bản đều có một VBHN hiện hành; việc công bố trễ hơn việc sửa đổi. Chính khuyến nghị của báo cáo 03 là VBHN "ở bất cứ đâu tồn tại một cái" — chính cái điều kiện đó là vấn đề.
+- **Không có lịch sử thời gian.** Một VBHN là một ảnh chụp của "hiện tại". "Quy tắc nào đã áp dụng vào ngày khai báo năm 2023?" không thể trả lời được từ nó. Tính hiệu lực thời gian phải là một **bộ lọc cứng, không phải một tín hiệu xếp hạng**: các LLM một cách đo lường được áp dụng các quy tắc lỗi thời *và* ưu tiên các điều khoản mới hơn khi điều khoản cũ hơn mới là cái áp dụng, và riêng RAG không khắc phục sự thiên lệch về mới đó (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 02, trích dẫn arXiv:2605.23497, 312 cặp hỏi-đáp luật định tiếng Đức đã được kiểm chứng trên năm LLM lớn). Quy mô của vấn đề: trong 1.703 văn bản của Ngân hàng Nhà nước, 863 bị bãi bỏ toàn bộ, 191 bị bãi bỏ một phần, 639 còn hiệu lực — **~62% của một kho corpus Việt Nam thực tế là luật đã chết hoặc chết một phần** (nguồn: SBV-LawGraph, ACIIDS 2026, https://lexuanbach.github.io/publication/ACIIDS2026a.pdf).
+- **Nguồn gốc xuất xứ.** "Nghị định nào đã thay đổi Khoản này, và khi nào?" là một câu hỏi mà người dùng của chúng ta sẽ hỏi, và không ảnh chụp nào trả lời được.
 
-**Why this is cheap to build:** vbpl.vn already exposes 27 typed bidirectional relations including `consolidated/consolidates`, `amended/amends`, `replaced/replaces`, `abrogated/abrogates` — the graph edges are published, not inferred (verified 2026-07-17, source: research report 04). The HF dataset `th1nhng0/vietnamese-legal-documents` carries 897,890 relationship rows and `tinh_trang_hieu_luc`, keyed on vbpl ItemIDs that the April 2026 site rebuild preserved — a graph skeleton for free (verified 2026-07-17, source: research report 04, verified against the HF datasets-server API).
+**Vì sao điều này rẻ để xây dựng:** vbpl.vn đã phơi bày 27 quan hệ song hướng có kiểu bao gồm `consolidated/consolidates`, `amended/amends`, `replaced/replaces`, `abrogated/abrogates` — các cạnh của đồ thị được công bố, không phải suy diễn (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 04). Bộ dữ liệu HF `th1nhng0/vietnamese-legal-documents` mang 897.890 dòng quan hệ và `tinh_trang_hieu_luc`, được gắn khóa theo các vbpl ItemID mà lần tái dựng trang tháng 4 năm 2026 đã bảo toàn — một khung xương đồ thị miễn phí (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 04, đã xác minh đối chiếu với HF datasets-server API).
 
-**Efficiency pattern worth stealing from SAT-Graph:** a new parent version on date Dₙ is an *aggregation* that reuses the existing versions of unchanged children. We do not duplicate a whole Luật per amendment; only changed components get new versions.
+**Mẫu hình hiệu quả đáng học từ SAT-Graph:** một phiên bản cha mới vào ngày Dₙ là một phép *tổng hợp* tái sử dụng các phiên bản hiện có của các con không thay đổi. Chúng ta không nhân bản cả một Luật cho mỗi sửa đổi; chỉ các thành phần đã thay đổi mới nhận được các phiên bản mới.
 
-## Scope
+## Phạm vi
 
-Applies to:
+Áp dụng cho:
 
-- The legal-text ingestion pipeline and its storage schema (text layer + amendment/validity graph).
-- Evidence snippets returned with HS code candidates (v1 feature 2) — the verbatim legal note must come from a dated VBHN or a stated base text.
-- Later RAG over Vietnamese logistics law.
+- Đường ống nạp văn bản pháp lý và lược đồ lưu trữ của nó (lớp văn bản + đồ thị sửa đổi/hiệu lực).
+- Các đoạn bằng chứng được trả về cùng với các mã HS ứng viên (tính năng 2 của v1) — ghi chú pháp lý nguyên văn phải đến từ một VBHN có ngày hoặc một văn bản gốc được nêu rõ.
+- RAG về sau trên luật logistics Việt Nam.
 
-Does **not** apply to:
+**Không** áp dụng cho:
 
-- **Tariff rate numbers.** Those come from the deterministic tariff table keyed by HS + schedule + date, sourced from Công báo `.doc` gazette parts, not from VBHN prose. VBHN of a biểu thuế decree does not solve the annex trap or the gazette-lag gap — see [Tariff System](../concepts/tariff-system.md) and report 12.
-- Any AI generation over the numbers. Unchanged by this ADR.
+- **Các con số thuế suất.** Những con số đó đến từ bảng biểu thuế tất định được gắn khóa theo HS + schedule + date, lấy nguồn từ các phần công báo `.doc` của Công báo, không phải từ văn xuôi VBHN. VBHN của một nghị định biểu thuế không giải quyết cái bẫy phụ lục hay khoảng trống độ-trễ-công-báo — xem [Hệ thống biểu thuế](../concepts/tariff-system.md) và báo cáo 12.
+- Bất kỳ việc sinh nội dung bằng AI nào trên các con số. Không bị thay đổi bởi ADR này.
 
-## Alternatives Considered
+## Các phương án đã cân nhắc
 
-| Alternative | Why rejected |
+| Phương án | Vì sao bị bác |
 |---|---|
-| **Compute consolidation from amendment instructions** | Unbounded natural-language edge cases; no authority to fall back on; silent failure mode; SAT-Graph — the leading model — declines to do it. |
-| **Serve base text + amending documents, let the user merge** | This is what the pre-01/7/2026 legal regime forced, and it is what staff already do by hand. It reproduces the manual work the tool exists to remove, and it is now unnecessary. |
-| **Buy a commercial consolidated corpus (thuvienphapluat.vn)** | Their curated hợp nhất is real editorial work, but their robots.txt names ClaudeBot with `Disallow: /`, carries `Content-Signal: search=yes, ai-train=no, use=reference` as an express Art. 4 EU DSM reservation, and Cloudflare hard-blocks automated fetch anyway (verified 2026-07-17, source: reports 04 and 12). If we want it, we license it. Not a scraping decision. |
-| **VBHN only, no amendment graph** | Fails on coverage gaps, has no temporal history, and cannot answer provenance. |
+| **Tự tính toán hợp nhất từ các chỉ dẫn sửa đổi** | Các trường hợp biên bằng ngôn ngữ tự nhiên là vô hạn; không có thẩm quyền để lui về; hình thái thất bại lặng lẽ; SAT-Graph — mô hình hàng đầu — từ chối làm điều đó. |
+| **Phục vụ văn bản gốc + các văn bản sửa đổi, để người dùng tự gộp** | Đây là thứ mà chế độ pháp lý trước-01/7/2026 đã ép buộc, và là thứ mà nhân viên đã làm bằng tay. Nó tái tạo lại chính công việc thủ công mà công cụ tồn tại để loại bỏ, và giờ đây nó là không cần thiết. |
+| **Mua một kho corpus hợp nhất thương mại (thuvienphapluat.vn)** | Bản hợp nhất được biên tập của họ là công việc biên tập thực sự, nhưng robots.txt của họ nêu tên ClaudeBot với `Disallow: /`, mang `Content-Signal: search=yes, ai-train=no, use=reference` như một tuyên bố bảo lưu theo Điều 4 EU DSM, và dù sao Cloudflare cũng chặn cứng việc lấy dữ liệu tự động (đã xác minh 2026-07-17, nguồn: báo cáo 04 và 12). Nếu chúng ta muốn nó, chúng ta cấp phép nó. Không phải một quyết định về scraping. |
+| **Chỉ VBHN, không có đồ thị sửa đổi** | Thất bại ở các lỗ hổng độ phủ, không có lịch sử thời gian, và không thể trả lời về nguồn gốc xuất xứ. |
 
-## Consequences
+## Hệ quả
 
-- Citations carry official standing (post-01/7/2026) instead of being our own reconstruction.
-- We must track **VBHN freshness**, not just document existence: a stale VBHN is as wrong as a base text, and looks more authoritative.
-- The ingestion pipeline needs a "no current VBHN" branch that degrades honestly rather than silently serving base text.
-- Every provision version needs a validity interval, and retrieval must filter on it as a hard constraint before ranking.
-- The graph loader **must tolerate broken edges**: vbpl reference targets can point at unpublished documents (e.g. Luật Thuế TNCN 2007, id 12898, referenced with `status:"Confirm_Step2"`, absent from the sitemap, page renders "Văn bản không tồn tại") (verified 2026-07-17, source: report 04).
-- This decision does not reduce hallucination risk on its own. Grounding must still verify that the cited provision *supports the proposition*, not merely that it resolves — Lexis+ AI returned a real, correctly-formatted citation for opinions by a fictitious judge, i.e. "hallucination-free in a narrow sense" (verified 2026-07-17, source: Magesh et al., *Hallucination-Free?*, JELS 2025, https://doi.org/10.1111/jels.12413).
+- Các trích dẫn mang vị thế chính thức (hậu-01/7/2026) thay vì là bản tái dựng của chính chúng ta.
+- Chúng ta phải theo dõi **độ tươi mới của VBHN**, không chỉ sự tồn tại của văn bản: một VBHN lỗi thời cũng sai như một văn bản gốc, và trông có thẩm quyền hơn.
+- Đường ống nạp dữ liệu cần một nhánh "không có VBHN hiện hành" vốn hạ cấp một cách trung thực thay vì lặng lẽ phục vụ văn bản gốc.
+- Mỗi phiên bản điều khoản cần một khoảng hiệu lực, và việc truy xuất phải lọc theo nó như một ràng buộc cứng trước khi xếp hạng.
+- Trình nạp đồ thị **phải chịu được các cạnh gãy**: các đích tham chiếu của vbpl có thể trỏ tới các văn bản chưa được công bố (ví dụ Luật Thuế TNCN 2007, id 12898, được tham chiếu với `status:"Confirm_Step2"`, vắng mặt trong sitemap, trang hiển thị "Văn bản không tồn tại") (đã xác minh 2026-07-17, nguồn: báo cáo 04).
+- Quyết định này tự nó không làm giảm rủi ro ảo giác. Việc neo cơ sở vẫn phải xác minh rằng điều khoản được trích dẫn *ủng hộ mệnh đề*, không chỉ là nó giải quyết được — Lexis+ AI đã trả về một trích dẫn thật, được định dạng đúng cho các ý kiến của một thẩm phán hư cấu, tức là "không ảo giác theo một nghĩa hẹp" (đã xác minh 2026-07-17, nguồn: Magesh et al., *Hallucination-Free?*, JELS 2025, https://doi.org/10.1111/jels.12413).
 
-## Risks
+## Rủi ro
 
-- **VBHN publication lag.** Between an amendment taking effect and its VBHN appearing, our text layer is behind the law and we may not know it. Mitigation: the amendment graph gives us the signal (a new amending document with no corresponding VBHN update = a known-stale flag), but the window is real.
-- **Overtrust in the new authority.** Pháp lệnh 01/2026/UBTVQH16 makes VBHN citable; it does not make any particular VBHN correct or current. The date on the citation is doing the work.
-- **Undated VBHN citation.** If we ever emit "theo VBHN Luật Thuế XNK" without the number and date, we have created an unfalsifiable citation. Treat as a defect.
+- **Độ trễ công bố VBHN.** Giữa lúc một sửa đổi có hiệu lực và lúc VBHN của nó xuất hiện, lớp văn bản của chúng ta tụt sau luật và chúng ta có thể không biết. Giảm thiểu: đồ thị sửa đổi cho chúng ta tín hiệu (một văn bản sửa đổi mới không có cập nhật VBHN tương ứng = một cờ đã-biết-là-lỗi-thời), nhưng cửa sổ đó là có thực.
+- **Quá tin vào thẩm quyền mới.** Pháp lệnh 01/2026/UBTVQH16 làm cho VBHN có thể trích dẫn được; nó không làm cho bất kỳ VBHN cụ thể nào đúng hay hiện hành. Ngày trên trích dẫn mới là thứ làm việc.
+- **Trích dẫn VBHN không có ngày.** Nếu chúng ta từng phát ra "theo VBHN Luật Thuế XNK" mà không có số hiệu và ngày, chúng ta đã tạo ra một trích dẫn không thể phản chứng. Hãy coi đó là một khiếm khuyết.
 
-## Unverified / Do Not Rely On
+## Chưa xác minh / Không được dựa vào
 
-- **The synthesis itself is a design inference, not a published result.** Report 02 tags "hợp nhất as the text layer + amendment graph as the provenance/temporal layer" as **[Speculative — my design inference, not a published result]**. The *legal change* (VBHN citable from 01/7/2026) is **[Established]**; the *architecture* is not.
-- **SAT-Graph reports no quantitative evaluation.** It is an architecture proposal, not an empirical result, and despite its framing it implements **valid time only, not true bitemporality**. Adopt the data model; do not cite it as proof of performance (source: report 02).
-- **SBV-LawGraph's numbers are directional, not definitive.** The authors themselves list: 100-QA eval set, **no ablation isolating the KG's contribution**, no KG quality audit, binary correctness with two annotators and no inter-annotator agreement reported.
-- **Provision-level linking on vbpl is unconfirmed.** The Server Action payload exposes `referenceProvisions` and `provisionTree`, but both were `null` on every sampled document. Report 04 calls this "the highest-value open question" — if populated site-wide, it is a provision-level legal graph and changes our schema. **Test 10–20 recent documents before designing the schema.** Also unmapped: `referenceType` is an integer (saw `3`, `12`) and the int→label join was not recovered.
-- **Reports 04 and 12 disagree about vbpl.vn crawlability, and the conflict is not fully resolved.** Report 12 found `Disallow: /Pages/` excluding every document URL (`vbpl.vn/.../Pages/vbpq-toanvan.aspx?ItemID=...`) and 404s on indexed URLs. Report 04, checking after the **2026-04-23 site rebuild**, found the `/Pages/` tree is the *dead legacy* portal and that `/van-ban/` is explicitly `Allow`ed, with ~158,826 sitemap URLs. Report 04 is later and more specific, and the reconciliation (12 tested legacy URLs) is plausible — but it is our inference, not something either report states. **Re-check robots.txt and one live document URL before any crawl.**
-- **Report 03 flags F2:** a replacement decree for NĐ 69/2018 was drafted with a 01/07/2026 liberalisation date; issuance could not be confirmed. The existence of VBHN 24/VBHN-BCT (2026) implies 69/2018 is still live — implies, not proves. Verify directly before relying on that VBHN.
-- **Report 03 flags F7:** the Thông tư layer was never enumerated; the Bộ GTVT→Bộ Xây dựng merger (01/03/2025) reissued an unknown number of `TT-BGTVT` circulars as `TT-BXD`. VBHN coverage over that layer is unknown.
+- **Bản thân sự tổng hợp là một suy diễn thiết kế, không phải một kết quả đã công bố.** Báo cáo 02 gắn thẻ "hợp nhất làm lớp văn bản + đồ thị sửa đổi làm lớp nguồn-gốc/thời-gian" là **[Speculative — my design inference, not a published result]**. *Thay đổi pháp lý* (VBHN có thể trích dẫn từ 01/7/2026) là **[Established]**; *kiến trúc* thì không.
+- **SAT-Graph không báo cáo đánh giá định lượng nào.** Nó là một đề xuất kiến trúc, không phải một kết quả thực nghiệm, và bất chấp cách nó tự định khung, nó triển khai **chỉ valid time, không phải song thời gian thực sự**. Hãy áp dụng mô hình dữ liệu; đừng trích dẫn nó như bằng chứng về hiệu năng (nguồn: báo cáo 02).
+- **Các con số của SBV-LawGraph có tính định hướng, không phải dứt khoát.** Chính các tác giả liệt kê: tập đánh giá 100-QA, **không có ablation cô lập đóng góp của KG**, không có kiểm toán chất lượng KG, tính đúng đắn nhị phân với hai người chú giải và không báo cáo mức đồng thuận giữa các người chú giải.
+- **Liên kết cấp điều khoản trên vbpl chưa được xác nhận.** Payload của Server Action phơi bày `referenceProvisions` và `provisionTree`, nhưng cả hai đều `null` trên mọi văn bản được lấy mẫu. Báo cáo 04 gọi đây là "câu hỏi mở có giá trị cao nhất" — nếu được điền dữ liệu trên toàn trang, đó là một đồ thị pháp lý cấp điều khoản và thay đổi lược đồ của chúng ta. **Hãy kiểm thử 10–20 văn bản gần đây trước khi thiết kế lược đồ.** Cũng chưa được ánh xạ: `referenceType` là một số nguyên (đã thấy `3`, `12`) và phép join số-nguyên→nhãn chưa được khôi phục.
+- **Báo cáo 04 và 12 bất đồng về khả năng crawl của vbpl.vn, và xung đột chưa được giải quyết hoàn toàn.** Báo cáo 12 phát hiện `Disallow: /Pages/` loại trừ mọi URL văn bản (`vbpl.vn/.../Pages/vbpq-toanvan.aspx?ItemID=...`) và các lỗi 404 trên các URL đã được lập chỉ mục. Báo cáo 04, kiểm tra sau lần **tái dựng trang 2026-04-23**, phát hiện cây `/Pages/` là cổng *cũ đã chết* và rằng `/van-ban/` được `Allow` một cách tường minh, với ~158.826 URL trong sitemap. Báo cáo 04 muộn hơn và cụ thể hơn, và sự hòa giải (12 đã kiểm thử các URL cũ) là hợp lý — nhưng đó là suy diễn của chúng ta, không phải điều mà một trong hai báo cáo nêu ra. **Hãy kiểm tra lại robots.txt và một URL văn bản đang hoạt động trước bất kỳ lần crawl nào.**
+- **Báo cáo 03 đánh dấu F2:** một nghị định thay thế cho NĐ 69/2018 được soạn thảo với ngày tự do hóa 01/07/2026; việc ban hành không thể xác nhận được. Sự tồn tại của VBHN 24/VBHN-BCT (2026) hàm ý rằng 69/2018 vẫn còn sống — hàm ý, không phải chứng minh. Hãy xác minh trực tiếp trước khi dựa vào VBHN đó.
+- **Báo cáo 03 đánh dấu F7:** lớp Thông tư chưa bao giờ được liệt kê đầy đủ; việc sáp nhập Bộ GTVT→Bộ Xây dựng (01/03/2025) đã tái ban hành một số lượng không rõ các thông tư `TT-BGTVT` thành `TT-BXD`. Độ phủ VBHN trên lớp đó là chưa rõ.
 
-## Review Requirements
+## Yêu cầu rà soát
 
-- Verify every emitted legal citation carries a document number **and** a date.
-- Verify the ingestion pipeline prefers VBHN and records *why* when it falls back to base text.
-- Verify no component mutates statutory text. Grep for anything that applies "sửa đổi/bổ sung/bãi bỏ" instructions to a stored text body — its existence is a violation of this ADR.
-- Verify temporal validity is applied as a filter before ranking, not as a ranking feature.
-- Verify the graph loader survives dangling edges to unpublished documents.
-- Re-verify the Pháp lệnh 01/2026/UBTVQH16 citation against Công báo before it appears in any user-facing or external material.
+- Xác minh mọi trích dẫn pháp lý được phát ra đều mang một số hiệu văn bản **và** một ngày.
+- Xác minh đường ống nạp dữ liệu ưu tiên VBHN và ghi lại *vì sao* khi nó lui về văn bản gốc.
+- Xác minh không có thành phần nào biến đổi văn bản luật định. Grep bất cứ thứ gì áp dụng các chỉ dẫn "sửa đổi/bổ sung/bãi bỏ" lên một thân văn bản được lưu trữ — sự tồn tại của nó là một vi phạm ADR này.
+- Xác minh tính hiệu lực thời gian được áp dụng như một bộ lọc trước khi xếp hạng, không phải như một đặc trưng xếp hạng.
+- Xác minh trình nạp đồ thị sống sót qua các cạnh treo lơ lửng tới các văn bản chưa được công bố.
+- Xác minh lại trích dẫn Pháp lệnh 01/2026/UBTVQH16 đối chiếu với Công báo trước khi nó xuất hiện trong bất kỳ tài liệu hướng tới người dùng hay đối ngoại nào.
 
-## Related Knowledge
+## Kiến thức liên quan
 
-- [Vietnamese Legal Documents](../concepts/vietnamese-legal-documents.md) — VBHN, hiệu lực, the document hierarchy
-- [Data Sources](../concepts/data-sources.md) — vbpl.vn, Công báo, what is off-limits and why
-- [Legal RAG Retrieval](../concepts/legal-rag-retrieval.md) — structural chunking, hybrid retrieval, temporal filtering, grounding
-- [Tariff System](../concepts/tariff-system.md) — why the numbers do not come from this text layer
-- [HS Classification](../concepts/hs-classification.md) — the evidence snippets this text layer feeds
-- [Business Rules](../business-rules.md)
-- [Project Context](../project-context.md)
+- [Văn bản pháp luật Việt Nam](../concepts/vietnamese-legal-documents.md) — VBHN, hiệu lực, cấu trúc phân cấp văn bản
+- [Nguồn dữ liệu](../concepts/data-sources.md) — vbpl.vn, Công báo, cái gì bị cấm và vì sao
+- [Truy xuất RAG pháp lý](../concepts/legal-rag-retrieval.md) — chia đoạn theo cấu trúc, truy xuất lai, lọc thời gian, neo cơ sở
+- [Hệ thống biểu thuế](../concepts/tariff-system.md) — vì sao các con số không đến từ lớp văn bản này
+- [Phân loại mã HS](../concepts/hs-classification.md) — các đoạn bằng chứng mà lớp văn bản này cấp dữ liệu
+- [Quy tắc nghiệp vụ](../business-rules.md)
+- [Bối cảnh dự án](../project-context.md)

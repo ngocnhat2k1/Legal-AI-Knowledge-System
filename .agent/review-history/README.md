@@ -1,10 +1,10 @@
-# Review History
+# Lịch sử đánh giá (Review History)
 
-This directory stores summaries of planning reviews, design reviews, milestone reviews, and important review decisions.
+Thư mục này lưu trữ các bản tóm tắt của đánh giá lập kế hoạch, đánh giá thiết kế, đánh giá cột mốc, và các quyết định đánh giá quan trọng.
 
-## Naming
+## Đặt tên
 
-Use this format:
+Sử dụng định dạng này:
 
 ```text
 YYYY-MM-DD-<topic>.md
