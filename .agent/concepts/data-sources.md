@@ -9,19 +9,19 @@ related:
   - ../business-rules.md
 ---
 
-# Data Sources
+# Nguồn dữ liệu
 
-Where Customs Assistant's data comes from, and — just as important — where it **must not** come from. Every claim below carries a verification date and a source. Where the research was uncertain or self-contradictory, that is preserved, not smoothed over.
+Dữ liệu của Customs Assistant đến từ đâu, và — quan trọng không kém — nó **không được** đến từ đâu. Mỗi khẳng định bên dưới đều mang theo một ngày xác minh và một nguồn. Ở những chỗ nghiên cứu còn bất định hoặc tự mâu thuẫn, điều đó được giữ lại, không được làm mượt đi.
 
-**The single governing rule:** the legal source of truth is always the **decree text** (Nghị định / Thông tư), never an API, never an aggregator, never a scraped table. Everything else on this page is a convenience layer over that text, and every convenience layer here has a documented way of being silently wrong.
+**Quy tắc chi phối duy nhất:** nguồn chân lý pháp lý luôn là **văn bản nghị định** (Nghị định / Thông tư), không bao giờ là một API, không bao giờ là một trang tổng hợp, không bao giờ là một bảng được scrape. Mọi thứ khác trên trang này là một lớp tiện lợi phủ trên văn bản đó, và mọi lớp tiện lợi ở đây đều có một cách được ghi nhận để bị sai một cách âm thầm.
 
 ---
 
-## ⚠️ OPEN CONFLICT — the customs.gov.vn tariff API
+## ⚠️ XUNG ĐỘT CHƯA GIẢI QUYẾT — API biểu thuế customs.gov.vn
 
-Two research agents investigated the same portal and reached incompatible conclusions. **This conflict is unresolved.** Both accounts are reproduced; do not design around either until Phase 0 tests both.
+Hai agent nghiên cứu điều tra cùng một cổng thông tin và đi đến các kết luận không tương thích. **Xung đột này chưa được giải quyết.** Cả hai bản tường trình đều được tái hiện; đừng thiết kế dựa trên bên nào cho đến khi Phase 0 kiểm thử cả hai.
 
-### Position A — research 10: a working, unauthenticated JSON API (verified with plain curl)
+### Quan điểm A — research 10: một API JSON hoạt động, không cần xác thực (đã xác minh bằng curl thuần)
 
 ```
 POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue
@@ -30,57 +30,57 @@ Body (raw JSON despite the header):
 {"l_class":"TIM_KIEM","l_action":"GET","l_param":"8703","l_bieu_thue":"NK_uu_dai"}
 ```
 
-Verified behaviour (verified 2026-07-17, source: https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue):
+Hành vi đã kiểm chứng (đã xác minh 2026-07-17, nguồn: https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue):
 
-- **No auth, no JSESSIONID, no captcha, no Referer/Origin check.** The captcha shown on the lookup page is **client-side only** — the API does not enforce it.
-- `l_param` = HS prefix, **minimum 4 digits**. `"87"` returns empty; `"8703"` returns **510 rows**. Vietnamese description keywords also accepted.
-- One row per HS line, **one column per tariff regime**. Live sample for `87031010`:
+- **Không auth, không JSESSIONID, không captcha, không kiểm tra Referer/Origin.** Captcha hiển thị trên trang tra cứu là **chỉ ở phía client** — API không thực thi nó.
+- `l_param` = tiền tố HS, **tối thiểu 4 chữ số**. `"87"` trả về rỗng; `"8703"` trả về **510 dòng**. Cũng chấp nhận từ khóa mô tả tiếng Việt.
+- Một dòng cho mỗi dòng HS, **một cột cho mỗi chế độ thuế**. Mẫu trực tiếp cho `87031010`:
   `NK_uu_dai 70 · ATIGA 0 · ACFTA 0 · CPTPP_NK 28 · EVFTA_NK 28.3 · RCEP_JP 38.2 · NK_TT 105`.
-  Why this matters: EVFTA 28.3 matches the 2026 phase-down step and `NK_TT` = 150% × 70 (the MFN rate), so the data is **live and current for 2026**, not a 2019 fossil.
-- `TO_JSON` carries `RATE o flag o flag o flag o flag` per regime (footnote/quota flags) plus unit (`kg/con`).
+  Vì sao điều này quan trọng: EVFTA 28.3 khớp với bước giảm dần theo lộ trình năm 2026 và `NK_TT` = 150% × 70 (mức MFN), nên dữ liệu là **trực tiếp và cập nhật cho 2026**, không phải một hóa thạch 2019.
+- `TO_JSON` mang theo `RATE o flag o flag o flag o flag` cho mỗi chế độ (cờ chú thích/hạn ngạch) cộng đơn vị (`kg/con`).
 
-Discovery calls (all verified working):
+Các lệnh khám phá (tất cả đã xác minh là hoạt động):
 
-- `{"l_class":"BT_SAC_THUE","l_action":"GET","l_param":"All"}` → the 5 tax types: `NHAP_KHAU, XUAT_KHAU, GTGT, TTDB, BVMT`
-- `{"l_class":"BT_LOAI_BIEU_THUE","l_action":"GET","l_param":"NHAP_KHAU"}` → the 26 import schedule codes:
+- `{"l_class":"BT_SAC_THUE","l_action":"GET","l_param":"All"}` → 5 loại thuế: `NHAP_KHAU, XUAT_KHAU, GTGT, TTDB, BVMT`
+- `{"l_class":"BT_LOAI_BIEU_THUE","l_action":"GET","l_param":"NHAP_KHAU"}` → 26 mã biểu thuế nhập khẩu:
   `NK_uu_dai, ATIGA, ACFTA, AJCEP, AKFTA, AHKFTA, AANZFTA, AIFTA, VJEPA, VKFTA, VN-EAEU, EVFTA_NK, UKVFTA_NK, VCFTA, VNL, VNCB, CPTPP_NK, CPTPP_NK_MEX, RCEP_ASEAN, RCEP_AU, RCEP_CN, RCEP_JP, RCEP_KR, RCEP_NZ, NK_TT`
-- Same shape for `XUAT_KHAU` (`XK, EVFTA_XK, …`)
+- Cùng dạng cho `XUAT_KHAU` (`XK, EVFTA_XK, …`)
 
-Bulk extraction ≈ **1,228 POSTs** (one per 4-digit nhóm), i.e. hours of polite crawling rather than a PDF-parsing project.
+Trích xuất hàng loạt ≈ **1.228 lệnh POST** (một cho mỗi nhóm 4 chữ số), tức là vài giờ crawl một cách lịch sự chứ không phải một dự án parse PDF.
 
-### Position B — research 12: could not reach it; found a captcha-gated backend instead
+### Quan điểm B — research 12: không thể truy cập được; thay vào đó tìm thấy một backend bị chặn bởi captcha
 
-(verified 2026-07-17, source: https://www.customs.gov.vn/scripts/main.js)
+(đã xác minh 2026-07-17, nguồn: https://www.customs.gov.vn/scripts/main.js)
 
-- `/scripts/main.js` **hardcodes** `http://123.30.210.236:8080/hqcustomsapi/` — a raw IP, plain HTTP, port 8080 — including `.../hqcustomsapi/captcha/CheckCaptcha`. So **at least part of the portal IS captcha-gated**.
-- **That IP timed out** from the research environment. The agent explicitly **declined to claim it unreachable** — it could not distinguish geo-fencing from a sandbox egress block.
-- `www.customs.gov.vn/robots.txt` returns `User-agent: *` with **no `Disallow` lines at all** (verified 2026-07-17, source: https://www.customs.gov.vn/robots.txt). No sitemap; `/sitemap.xml` → 404.
+- `/scripts/main.js` **hardcode** `http://123.30.210.236:8080/hqcustomsapi/` — một IP thô, HTTP thuần, port 8080 — bao gồm `.../hqcustomsapi/captcha/CheckCaptcha`. Vậy **ít nhất một phần của cổng thông tin CÓ bị chặn bởi captcha**.
+- **IP đó bị timeout** từ môi trường nghiên cứu. Agent đã dứt khoát **từ chối khẳng định là không thể tiếp cận** — nó không thể phân biệt việc chặn theo địa lý với việc chặn egress của sandbox.
+- `www.customs.gov.vn/robots.txt` trả về `User-agent: *` với **không có dòng `Disallow` nào cả** (đã xác minh 2026-07-17, nguồn: https://www.customs.gov.vn/robots.txt). Không có sitemap; `/sitemap.xml` → 404.
 
-### Resolution: unresolved
+### Kết luận: chưa giải quyết
 
-These are **probably different endpoints** — the `/bridge` reverse-proxy path (Position A) vs the raw backend IP hardcoded in the page JS (Position B). That would make both reports true simultaneously. But this is a hypothesis, not a verified fact. **Test both in Phase 0 before designing around either.** Do not let a plan assume the API exists, and do not let a plan assume it doesn't.
+Đây **có lẽ là các endpoint khác nhau** — đường dẫn reverse-proxy `/bridge` (Position A) vs IP backend thô được hardcode trong JS của trang (Position B). Điều đó sẽ khiến cả hai bản tường trình đều đúng cùng lúc. Nhưng đây là một giả thuyết, không phải một sự thật đã xác minh. **Kiểm thử cả hai trong Phase 0 trước khi thiết kế dựa trên bên nào.** Đừng để một kế hoạch giả định rằng API tồn tại, và đừng để một kế hoạch giả định rằng nó không tồn tại.
 
-### Caveats that hold regardless of which position wins
+### Những lưu ý đúng bất kể quan điểm nào thắng
 
-1. **Undocumented, unversioned, no SLA, no ToS grant.** It can vanish or start enforcing captcha on any deploy.
-2. **Stale FTA coverage** — the schedule list has **no VIFTA and no CEPA (UAE)** entries; `THOI_GIAN_CAP_NHAT` values are **2019–2020**. Those two FTAs must come from the decree text.
-3. **Current-year rates only.** Flat columns give today's rate; there is **no forward-year series**. 2027 rates must come from the decree annexes.
-4. `l_bieu_thue` appears **ignored** for import queries — you always get all columns back.
-5. **The legal source of truth remains the decree text, never the API.** The API has no legal authority; the Nghị định does.
+1. **Không có tài liệu, không có phiên bản, không có SLA, không có cấp quyền ToS.** Nó có thể biến mất hoặc bắt đầu thực thi captcha ở bất kỳ lần deploy nào.
+2. **Độ phủ FTA cũ** — danh sách biểu thuế **không có VIFTA và không có CEPA (UAE)**; các giá trị `THOI_GIAN_CAP_NHAT` là **2019–2020**. Hai FTA đó phải lấy từ văn bản nghị định.
+3. **Chỉ có mức thuế của năm hiện tại.** Các cột phẳng cho mức thuế của hôm nay; **không có chuỗi năm về tương lai**. Mức thuế 2027 phải lấy từ các phụ lục nghị định.
+4. `l_bieu_thue` dường như **bị bỏ qua** đối với truy vấn nhập khẩu — bạn luôn nhận lại tất cả các cột.
+5. **Nguồn chân lý pháp lý vẫn là văn bản nghị định, không bao giờ là API.** API không có thẩm quyền pháp lý; Nghị định thì có.
 
 ---
 
-## ⭐ congbao.chinhphu.vn (Công báo) — the recommended primary source
+## ⭐ congbao.chinhphu.vn (Công báo) — nguồn sơ cấp được khuyến nghị
 
-The official gazette. Robots-permissive, authoritative, and — the decisive property — **Word-formatted**.
+Công báo chính thức. Thân thiện với robots, có thẩm quyền, và — thuộc tính quyết định — **được định dạng Word**.
 
-- `robots.txt` = `User-agent: * / Allow: /`. No Cloudflare, no JS required; plain `curl` returns server-rendered HTML, HTTP 200 (verified 2026-07-17, source: https://congbao.chinhphu.vn/robots.txt).
-- URL patterns: issue `/cong-bao/cong-bao-so-406-ngay-17-07-2026-47329.htm`; document `/van-ban/thong-tu-so-33-2026-tt-bct-469965.htm` (verified 2026-07-17, source: https://congbao.chinhphu.vn/).
-- **Each document exposes both signed PDF and DOCX**: `congbaocdn.chinhphu.vn/..._signed.pdf` and DOCX via `g7.cdnchinhphu.vn/api/download/stream?Url=...&file_name=...docx` (tokenized links).
-- The PDFs have a **real text layer** — research 04 verified one at 70 pages / 1.07MB with `/Font` present and **13,919 text-showing operators**. **No OCR needed** (verified 2026-07-17, source: https://congbaocdn.chinhphu.vn/).
-- These are the `_signed`, **legally authoritative** versions. Công báo is the *publication of record*; vbpl is the database. Where authority matters, Công báo is the stronger citation.
+- `robots.txt` = `User-agent: * / Allow: /`. Không Cloudflare, không cần JS; `curl` thuần trả về HTML render phía server, HTTP 200 (đã xác minh 2026-07-17, nguồn: https://congbao.chinhphu.vn/robots.txt).
+- Mẫu URL: số công báo `/cong-bao/cong-bao-so-406-ngay-17-07-2026-47329.htm`; văn bản `/van-ban/thong-tu-so-33-2026-tt-bct-469965.htm` (đã xác minh 2026-07-17, nguồn: https://congbao.chinhphu.vn/).
+- **Mỗi văn bản đều phơi ra cả PDF đã ký lẫn DOCX**: `congbaocdn.chinhphu.vn/..._signed.pdf` và DOCX qua `g7.cdnchinhphu.vn/api/download/stream?Url=...&file_name=...docx` (link có token).
+- Các PDF có một **lớp text thực sự** — nghiên cứu 04 đã xác minh một file 70 trang / 1.07MB có `/Font` hiện diện và **13.919 toán tử hiển thị text**. **Không cần OCR** (đã xác minh 2026-07-17, nguồn: https://congbaocdn.chinhphu.vn/).
+- Đây là các phiên bản `_signed`, **có thẩm quyền pháp lý**. Công báo là *ấn phẩm chính thức để ghi nhận*; vbpl là cơ sở dữ liệu. Ở nơi thẩm quyền quan trọng, Công báo là trích dẫn mạnh hơn.
 
-**Why this source and not the "obvious" ones:** research 12 actually assembled the table from it. It downloaded **all 14 `.doc` parts** of NĐ 26/2023 (gazette issues 743+744 → 769+770) and extracted **11,874 unique 8-digit HS codes** from 14,101 row cells (verified 2026-07-17, source: https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm):
+**Vì sao chọn nguồn này chứ không phải các nguồn "hiển nhiên":** nghiên cứu 12 thực sự đã lắp ráp bảng từ nó. Nó đã tải **cả 14 phần `.doc`** của NĐ 26/2023 (số công báo 743+744 → 769+770) và trích xuất **11.874 mã HS 8 chữ số duy nhất** từ 14.101 ô dòng (đã xác minh 2026-07-17, nguồn: https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm):
 
 | Annex | Content | Unique HS | With rate |
 |---|---|---|---|
@@ -89,80 +89,80 @@ The official gazette. Robots-permissive, authoritative, and — the decisive pro
 | Phụ lục III | Absolute/mixed duty (used cars) | — | 0 (USD amounts, not %) |
 | Phụ lục IV | Out-of-quota TRQ rates | — | 0 (separate structure) |
 
-Annex cells are genuine Word table cells, cleanly recoverable: `0301.11.10 | - - - Cá bột | 15`.
+Các ô phụ lục là ô bảng Word thực sự, khôi phục được sạch sẽ: `0301.11.10 | - - - Cá bột | 15`.
 
-FTA decrees have the same shape:
+Các nghị định FTA có cùng hình dạng:
 
-- **RCEP NĐ 129/2022 = 51 `.doc` parts.** One part alone yielded **1,591 HS codes** with the **six annual rate columns as separate cells** (`0101.21.00 | - - Loại thuần chủng để nhân giống | 0 | 0 | 0 | 0 | 0 | 0`), plus **six country annexes** (A=ASEAN, B=Australia, C=China, D=Japan, E=Korea, F=New Zealand) and **54 `*` cells** in that issue (`*` = good **excluded**, not zero).
-- **EVFTA NĐ 116/2022 = 16 `.doc` parts.** Phụ lục II ("BIỂU THUẾ NHẬP KHẨU ƯU ĐÃI ĐẶC BIỆT … EVFTA GIAI ĐOẠN 2022-2027"), columns `Mã hàng | Mô tả hàng hóa | Thuế suất EVFTA (%)`, **774 HS codes** in a single part.
+- **RCEP NĐ 129/2022 = 51 phần `.doc`.** Chỉ riêng một phần đã cho ra **1.591 mã HS** với **sáu cột mức thuế hằng năm là các ô riêng biệt** (`0101.21.00 | - - Loại thuần chủng để nhân giống | 0 | 0 | 0 | 0 | 0 | 0`), cộng **sáu phụ lục quốc gia** (A=ASEAN, B=Australia, C=China, D=Japan, E=Korea, F=New Zealand) và **54 ô `*`** trong số công báo đó (`*` = hàng hóa **bị loại trừ**, không phải bằng không).
+- **EVFTA NĐ 116/2022 = 16 phần `.doc`.** Phụ lục II ("BIỂU THUẾ NHẬP KHẨU ƯU ĐÃI ĐẶC BIỆT … EVFTA GIAI ĐOẠN 2022-2027"), các cột `Mã hàng | Mô tả hàng hóa | Thuế suất EVFTA (%)`, **774 mã HS** trong một phần duy nhất.
 
-**Weaknesses.** Organised by gazette *issue*, not by document identity. **No hiệu lực status, no relationship metadata** — it is a point-in-time publication by design. **Pair it with vbpl; do not use it alone.** No API or bulk endpoint found. And the fundamental limit is the **gazette lag** — see [Tariff System](tariff-system.md).
+**Điểm yếu.** Được tổ chức theo *số* công báo, không theo định danh văn bản. **Không có trạng thái hiệu lực, không có metadata quan hệ** — theo thiết kế, nó là một ấn phẩm tại một thời điểm. **Hãy ghép nó với vbpl; đừng dùng nó một mình.** Không tìm thấy API hay endpoint hàng loạt. Và giới hạn cơ bản là **độ trễ công báo** — xem [Hệ thống biểu thuế](tariff-system.md).
 
-### ⚠️ Parser warning — the one gap a builder must close first
+### ⚠️ Cảnh báo về parser — khoảng trống đầu tiên mà người xây dựng phải khắc phục
 
-Research 12 flagged this honestly against its own conclusion. `textutil` collapsed the EVFTA table into a single line, producing:
+Nghiên cứu 12 đã đánh dấu điều này một cách trung thực, ngược lại kết luận của chính nó. `textutil` gộp bảng EVFTA thành một dòng duy nhất, tạo ra:
 
 ```
 2101.11.11 | ...không dưới 20kg | 2925,421,818,114,510,9
 ```
 
-That is **six rates** (`29 | 25,4 | 21,8 | 18,1 | 14,5 | 10,9`) concatenated with **no delimiter**, in a **decimal-comma locale**. Unrecoverable without heuristics — you cannot tell where one rate ends and the next begins.
+Đó là **sáu mức thuế** (`29 | 25,4 | 21,8 | 18,1 | 14,5 | 10,9`) nối liền với **không có dấu phân tách**, trong một **locale dấu phẩy thập phân**. Không thể khôi phục nếu không có heuristic — bạn không thể biết một mức thuế kết thúc ở đâu và mức tiếp theo bắt đầu ở đâu.
 
-The agent **INFERRED — and could not prove** (no `soffice` / `antiword` / `python-docx` available in that environment) — that this is a tooling artifact, and that a proper table-aware parser (LibreOffice → `.docx` → walk `w:tbl/w:tr/w:tc`) fixes it. The evidence for the inference: RCEP has the **identical 6-year column structure and extracted perfectly**. **This is the one gap a builder must close before trusting anything downstream.**
+Agent đã **SUY DIỄN — và không thể chứng minh** (không có `soffice` / `antiword` / `python-docx` trong môi trường đó) — rằng đây là một hiện vật (artifact) của công cụ, và rằng một parser hiểu-bảng đúng đắn (LibreOffice → `.docx` → duyệt `w:tbl/w:tr/w:tc`) khắc phục nó. Bằng chứng cho suy diễn: RCEP có **cấu trúc 6 cột theo năm giống hệt và trích xuất hoàn hảo**. **Đây là khoảng trống duy nhất mà người xây dựng phải lấp trước khi tin bất cứ thứ gì ở hạ nguồn.**
 
-**And the reason the parser matters more than it looks:** research 12's first naive parse reported **94% success and was confidently wrong**. `0301.11.10` resolved to `['0', '15']` — `0` from Phụ lục I (export) and `15` from Phụ lục II (import). **1,520 HS codes appear in both annexes; 1,329 have different rates.** An annex-blind parser returns the **export** rate for an **import** question, silently, with no error, at 94% apparent success. That is the failure mode of this whole project category: not missing data — **plausible-looking wrong data**. Any ingestion code must be **annex-aware** and must carry the annex identity into the row.
-
----
-
-## 🚫 chinhphu.vn PDFs are scans — do NOT parse them
-
-NĐ 26/2023 on `datafiles.chinhphu.vn` (verified 2026-07-17, source: https://vanban.chinhphu.vn/?pageid=27160&docid=208020):
-
-- `26-nd.signed.pdf` — 19.0 MB, **560 pages**
-- `26-nd-2.pdf` — 15.5 MB, **456 pages**
-
-Internals inspected: Producer string **`Kodak Alaris Inc.`** (a document-scanner vendor). Exactly **one `/CCITTFaxDecode` bilevel image per page** (560 and 456 respectively). Page images **1666×2329 px ≈ 200 DPI bitonal**. `26-nd-2.pdf` contains **zero `/Font` objects** — literally no text layer at all; the 11 fonts in the signed file are the signature-stamp overlay only.
-
-**1,016 pages of fax-compressed scan, at a DPI below the 300 normally wanted for dense numeric tables with Vietnamese diacritics.** RCEP NĐ 129/2022 is the same story on chinhphu.vn — 16 PDFs, of which 3 were checked (`129-nd.signed.pdf` 196pp, `129-2.pdf` 152pp, `129-5.pdf` 218pp), all Kodak Alaris CCITT scans with zero fonts in the annex files.
-
-**Go to Công báo instead.** The same decrees are there as Word. The scanned-PDF fear is real, but only for chinhphu.vn — it is not a property of the corpus.
+**Và lý do parser quan trọng hơn vẻ ngoài của nó:** lần parse ngây thơ đầu tiên của nghiên cứu 12 báo cáo **thành công 94% và sai một cách tự tin**. `0301.11.10` phân giải thành `['0', '15']` — `0` từ Phụ lục I (xuất khẩu) và `15` từ Phụ lục II (nhập khẩu). **1.520 mã HS xuất hiện trong cả hai phụ lục; 1.329 mã có mức thuế khác nhau.** Một parser mù về phụ lục trả về mức thuế **xuất khẩu** cho một câu hỏi **nhập khẩu**, một cách âm thầm, không có lỗi, ở mức thành công biểu kiến 94%. Đó là chế độ thất bại của cả loại dự án này: không phải thiếu dữ liệu — mà là **dữ liệu sai trông có vẻ hợp lý**. Bất kỳ code nạp dữ liệu nào cũng phải **nhận biết phụ lục** và phải mang định danh phụ lục vào trong dòng.
 
 ---
 
-## vbpl.vn — rebuilt 2026-04-23
+## 🚫 PDF của chinhphu.vn là bản scan — KHÔNG parse chúng
 
-**⚠️ Two research reports disagree here, and the reconciliation below is OUR INFERENCE — neither report states it.**
+NĐ 26/2023 trên `datafiles.chinhphu.vn` (đã xác minh 2026-07-17, nguồn: https://vanban.chinhphu.vn/?pageid=27160&docid=208020):
 
-- **Research 04** fetched the **rebuilt** site: `robots.txt` = `Allow: /` with `Disallow: /api/` and `Disallow: /Pages/`; documents live at `/van-ban/chi-tiet/...`, which is **explicitly allowed**. It read the relaunch as the current state.
-- **Research 12** fetched `robots.txt: Disallow: /Pages/` and concluded **robots excludes exactly the corpus**, because on the site it saw, every document URL *was* `/Pages/vbpq-toanvan.aspx?ItemID=...`. It also got an identical 52,199-byte 404 shell on a Google-indexed ItemID, and called vbpl "not reliably scrapable".
-- **Our reading:** both are internally consistent and describe **different site generations**. `Disallow: /Pages/` is the same line in both; what changed is whether the corpus lives under `/Pages/`. After the 2026-04-23 relaunch it does not, so the same directive now excludes only the dead legacy tree.
+- `26-nd.signed.pdf` — 19.0 MB, **560 trang**
+- `26-nd-2.pdf` — 15.5 MB, **456 trang**
 
-**This reconciliation is plausible but unverified.** It is our inference, not a finding. Neither report says "research 12 is superseded". **Re-check `vbpl.vn/robots.txt` and a live document fetch before the RAG phase depends on it** — and note the stakes are low for v1, which does not touch vbpl at all. The same unresolved status is recorded in [Business Rules](../business-rules.md#unresolved-conflicts), [ADR: Use Published VBHN](../architecture-decisions/2026-07-17-use-published-vbhn-not-computed-consolidation.md), and [Bootstrap Plan](../planning/00-bootstrap.md). Keep them consistent.
+Nội bộ đã kiểm tra: chuỗi Producer **`Kodak Alaris Inc.`** (một nhà cung cấp máy scan tài liệu). Đúng **một ảnh bilevel `/CCITTFaxDecode` mỗi trang** (560 và 456 tương ứng). Ảnh trang **1666×2329 px ≈ 200 DPI đen trắng**. `26-nd-2.pdf` chứa **không có đối tượng `/Font` nào** — đúng nghĩa không có lớp text nào cả; 11 font trong file đã ký chỉ là lớp phủ dấu chữ ký.
 
-The legacy ASP.NET portal is dead (verified 2026-07-17, source: https://vbpl.vn/): `/TW/Pages/vbpq-toanvan.aspx?ItemID=187045` → **404**; `/Pages/portal.aspx` → **308 → https://vbpl.vn/**.
+**1.016 trang scan nén kiểu fax, ở một mức DPI dưới 300 vốn thường cần cho các bảng số liệu dày đặc với dấu thanh tiếng Việt.** RCEP NĐ 129/2022 cũng cùng câu chuyện trên chinhphu.vn — 16 PDF, trong đó 3 file được kiểm tra (`129-nd.signed.pdf` 196tr, `129-2.pdf` 152tr, `129-5.pdf` 218tr), tất cả đều là scan CCITT Kodak Alaris với không có font trong các file phụ lục.
 
-**Every GitHub crawler predates the relaunch** — `duyet/vietnamese-legal-documents-dataset` (last push 2026-04-10, 13 days before), `mlalab/VNLegalText` (2023), `NguyenNamUET/laws_project_crawler` (2022). **Do not start from any of them.**
+**Hãy dùng Công báo thay thế.** Cùng các nghị định đó có sẵn ở đó dưới dạng Word. Nỗi sợ PDF-scan là có thật, nhưng chỉ với chinhphu.vn — nó không phải là thuộc tính của cả corpus.
 
-**URL pattern:** `https://vbpl.vn/van-ban/chi-tiet/{slug}--{ItemID}`
+---
 
-- The `--` separator is **REQUIRED**. `/van-ban/chi-tiet/12898` (slugless) renders "Văn bản không tồn tại" — **despite `<link rel="canonical">` advertising that exact slugless form. It's a bug; don't rely on it.**
-- Tabs are deep-linkable: `?tabs=noi-dung|thuoc-tinh|luoc-do|van-ban-goc|tai-ve`. This is the crawl handle.
+## vbpl.vn — dựng lại 2026-04-23
 
-**⚠️ Fully client-rendered — and the trap.** `curl` returns a 57KB loading shell with **ZERO law text** (0 hits for body text, 10 hits for "Đang tải"). The `Còn hiệu lực` strings present in the static HTML are **i18n labels, not data — a trap that silently poisons a naive scraper** into recording every document as in force. Rendered via JS you get **~32,198 chars** of clean HTML (Luật 109/2025/QH15), and **tables survive as real `<table>` elements** — materially better than PDF for RAG.
+**⚠️ Hai báo cáo nghiên cứu bất đồng ở đây, và sự dung hòa bên dưới là SUY DIỄN CỦA CHÚNG TA — không báo cáo nào nói ra điều đó.**
 
-**Server Action shortcut:** POST to the page URL, header `next-action: <build-specific hash>` (the observed value was `0fb12b3561faa05adec51a82efb3e4f4f427f07b`), body `["187045"]`, accept `text/x-component`. **The hash is build-specific and breaks on every deploy.** ~100× cheaper than a browser. Recommended shape: use a browser to discover the current hash, then bulk-replay the action, guarded by a hash-staleness check.
+- **Nghiên cứu 04** đã fetch site **đã xây lại**: `robots.txt` = `Allow: /` với `Disallow: /api/` và `Disallow: /Pages/`; văn bản nằm ở `/van-ban/chi-tiet/...`, vốn được **cho phép rõ ràng**. Nó đọc bản relaunch như trạng thái hiện tại.
+- **Nghiên cứu 12** đã fetch `robots.txt: Disallow: /Pages/` và kết luận **robots loại trừ chính xác corpus**, vì trên site mà nó thấy, mọi URL văn bản *đều là* `/Pages/vbpq-toanvan.aspx?ItemID=...`. Nó cũng nhận một vỏ 404 giống hệt 52.199 byte trên một ItemID được Google index, và gọi vbpl là "không scrape được một cách đáng tin cậy".
+- **Cách đọc của chúng ta:** cả hai đều nhất quán nội tại và mô tả **các thế hệ site khác nhau**. `Disallow: /Pages/` là cùng một dòng trong cả hai; cái đã thay đổi là liệu corpus có nằm dưới `/Pages/` hay không. Sau lần relaunch 2026-04-23 thì không, nên cùng một chỉ thị đó nay chỉ loại trừ cây legacy đã chết.
 
-**Hiệu lực is first-class** — JSON fields `effFrom`, `effTo`, `status`; badge values `Còn hiệu lực`, `Hết hiệu lực một phần`, `Hết hiệu lực toàn bộ`, `Chưa có hiệu lực`. Plus a **Lịch sử** version diff ("Hệ thống chỉ hiển thị các nội dung thay đổi so với phiên bản trước") and article-level **`Điều khoản được sửa đổi, bổ sung`**. With `Hết hiệu lực một phần` documents, article-level amendment tracking is what stops the system citing repealed text.
+**Sự dung hòa này hợp lý nhưng chưa được xác minh.** Nó là suy diễn của chúng ta, không phải một phát hiện. Không báo cáo nào nói "nghiên cứu 12 bị thay thế". **Hãy kiểm tra lại `vbpl.vn/robots.txt` và một lần fetch văn bản trực tiếp trước khi giai đoạn RAG phụ thuộc vào nó** — và lưu ý rằng mức độ quan trọng đối với v1 là thấp, vì v1 hoàn toàn không đụng đến vbpl. Cùng trạng thái chưa giải quyết này được ghi nhận trong [Quy tắc nghiệp vụ](../business-rules.md#xung-đột-chưa-giải-quyết), [ADR: Dùng VBHN đã công bố](../architecture-decisions/2026-07-17-use-published-vbhn-not-computed-consolidation.md), và [Kế hoạch khởi tạo](../planning/00-bootstrap.md). Hãy giữ chúng nhất quán.
 
-**Relationships — best-in-class: 27 typed, bidirectional relations**, verified rendering live on `?tabs=luoc-do` with counts (`Căn cứ ban hành (3)`, `Văn bản bị bãi bỏ (3)`, `Văn bản được quy định chi tiết, hướng dẫn thi hành (2)`). Full enum extracted:
+Cổng ASP.NET legacy đã chết (đã xác minh 2026-07-17, nguồn: https://vbpl.vn/): `/TW/Pages/vbpq-toanvan.aspx?ItemID=187045` → **404**; `/Pages/portal.aspx` → **308 → https://vbpl.vn/**.
+
+**Mọi crawler trên GitHub đều có trước lần relaunch** — `duyet/vietnamese-legal-documents-dataset` (push cuối 2026-04-10, 13 ngày trước), `mlalab/VNLegalText` (2023), `NguyenNamUET/laws_project_crawler` (2022). **Đừng bắt đầu từ bất kỳ cái nào trong số đó.**
+
+**Mẫu URL:** `https://vbpl.vn/van-ban/chi-tiet/{slug}--{ItemID}`
+
+- Dấu phân tách `--` là **BẮT BUỘC**. `/van-ban/chi-tiet/12898` (không slug) render "Văn bản không tồn tại" — **dù `<link rel="canonical">` quảng cáo đúng dạng không-slug đó. Đó là một bug; đừng dựa vào nó.**
+- Các tab có thể deep-link: `?tabs=noi-dung|thuoc-tinh|luoc-do|van-ban-goc|tai-ve`. Đây là điểm nắm để crawl.
+
+**⚠️ Render hoàn toàn phía client — và cái bẫy.** `curl` trả về một vỏ loading 57KB với **KHÔNG có text luật nào** (0 kết quả cho text thân, 10 kết quả cho "Đang tải"). Các chuỗi `Còn hiệu lực` có trong HTML tĩnh là **nhãn i18n, không phải dữ liệu — một cái bẫy âm thầm đầu độc một scraper ngây thơ** khiến nó ghi nhận mọi văn bản là còn hiệu lực. Render qua JS thì bạn nhận được **~32.198 ký tự** HTML sạch (Luật 109/2025/QH15), và **các bảng tồn tại dưới dạng phần tử `<table>` thực sự** — tốt hơn hẳn PDF cho RAG.
+
+**Đường tắt Server Action:** POST tới URL trang, header `next-action: <hash riêng theo build>` (giá trị quan sát được là `0fb12b3561faa05adec51a82efb3e4f4f427f07b`), body `["187045"]`, accept `text/x-component`. **Hash riêng theo build và vỡ ở mỗi lần deploy.** Rẻ hơn ~100× so với một trình duyệt. Hình dạng khuyến nghị: dùng một trình duyệt để khám phá hash hiện tại, rồi replay hàng loạt action, có bảo vệ bằng một kiểm tra hash cũ.
+
+**Hiệu lực là hạng nhất** — các trường JSON `effFrom`, `effTo`, `status`; các giá trị badge `Còn hiệu lực`, `Hết hiệu lực một phần`, `Hết hiệu lực toàn bộ`, `Chưa có hiệu lực`. Cộng một diff phiên bản **Lịch sử** ("Hệ thống chỉ hiển thị các nội dung thay đổi so với phiên bản trước") và **`Điều khoản được sửa đổi, bổ sung`** ở cấp điều. Với các văn bản `Hết hiệu lực một phần`, việc theo dõi sửa đổi ở cấp điều là thứ ngăn hệ thống trích dẫn văn bản đã bãi bỏ.
+
+**Quan hệ — thuộc hàng tốt nhất: 27 quan hệ có kiểu, hai chiều**, đã xác minh render trực tiếp trên `?tabs=luoc-do` với số đếm (`Căn cứ ban hành (3)`, `Văn bản bị bãi bỏ (3)`, `Văn bản được quy định chi tiết, hướng dẫn thi hành (2)`). Enum đầy đủ được trích xuất:
 
 `guided` / `guides` · `detailAndGuided` / `detailAndGuides` · `consolidated` / `consolidates` · `amended` / `amends` · `corrected` / `corrects` · `replaced` / `replaces` · `abrogated` / `abrogates` · `referenced` / `referencedText` · `basis` / `basedText` · `explained` / `explanatoryText` · `suspendedFromExecution` / `suspendExecution` · `suspended` / `temporarilySuspended` · `published` / `publish` · `relatedContent`
 
-The Server Action JSON carries `references[]` → `{targetDocument:{id,docType,docNum,title,issueDate,effFrom,effTo,status}, referenceType:int, referenceProvisions}`.
+JSON của Server Action mang theo `references[]` → `{targetDocument:{id,docType,docNum,title,issueDate,effFrom,effTo,status}, referenceType:int, referenceProvisions}`.
 
-**⚠️ Dangling references — the graph loader must tolerate broken edges.** `referenceType` is an **integer** (values `3` and `12` observed) with **no int→label mapping recovered**. Worse, reference targets can point at **UNPUBLISHED** documents: Luật Thuế TNCN 2007 (`id=12898`) is referenced by 187045 with `status:"Confirm_Step2"` (not `"Publish"`), is **absent from the sitemap**, and its page returns "Văn bản không tồn tại".
+**⚠️ Tham chiếu treo — bộ nạp đồ thị phải chịu được các cạnh bị gãy.** `referenceType` là một **số nguyên** (quan sát được các giá trị `3` và `12`) với **không khôi phục được ánh xạ int→nhãn**. Tệ hơn, đích tham chiếu có thể trỏ tới các văn bản **CHƯA CÔNG BỐ**: Luật Thuế TNCN 2007 (`id=12898`) được tham chiếu bởi 187045 với `status:"Confirm_Step2"` (không phải `"Publish"`), **vắng mặt trong sitemap**, và trang của nó trả về "Văn bản không tồn tại".
 
-**Crawlability: good.** `robots.txt` (verified 2026-07-17, source: https://vbpl.vn/robots.txt):
+**Khả năng crawl: tốt.** `robots.txt` (đã xác minh 2026-07-17, nguồn: https://vbpl.vn/robots.txt):
 
 ```
 User-Agent: *
@@ -172,105 +172,105 @@ Disallow: /Pages/
 Sitemap: https://vbpl.vn/sitemap.xml
 ```
 
-`/van-ban/` is **explicitly allowed**; the disallowed `/Pages/` is the dead legacy tree. No Cloudflare, no ToS page, no copyright/reuse restriction on `/gioi-thieu` (its own words: *"dễ khai thác các thông tin và tải về sử dụng"*).
+`/van-ban/` được **cho phép rõ ràng**; `/Pages/` bị chặn là cây legacy đã chết. Không Cloudflare, không trang ToS, không hạn chế bản quyền/tái sử dụng trên `/gioi-thieu` (chính lời của nó: *"dễ khai thác các thông tin và tải về sử dụng"*).
 
-**Corpus size, enumerated directly from 33 sitemap files** (verified 2026-07-17, source: https://vbpl.vn/sitemap.xml): Trung ương **54,480** = **43,895 Vietnamese** + **10,585 official English translations** (`--vbpqta_{id}` — a genuinely valuable bilingual asset); địa phương ~**104,346**; **total ≈ 158,826**, ItemID range 1–187,517.
+**Kích thước corpus, được liệt kê trực tiếp từ 33 file sitemap** (đã xác minh 2026-07-17, nguồn: https://vbpl.vn/sitemap.xml): Trung ương **54.480** = **43.895 tiếng Việt** + **10.585 bản dịch tiếng Anh chính thức** (`--vbpqta_{id}` — một tài sản song ngữ thực sự có giá trị); địa phương ~**104.346**; **tổng ≈ 158.826**, dải ItemID 1–187.517.
 
-**Legal basis — why vbpl text is citable.** It is **Điều 4 of Nghị định 52/2015/NĐ-CP** — *not* Điều 3, which is what most secondary sources wrongly cite. Verified verbatim from vbpl itself (`--67193`, status "Hết hiệu lực một phần"):
+**Cơ sở pháp lý — vì sao text vbpl trích dẫn được.** Đó là **Điều 4 của Nghị định 52/2015/NĐ-CP** — *không phải* Điều 3, vốn là cái mà hầu hết các nguồn thứ cấp trích dẫn sai. Đã xác minh nguyên văn từ chính vbpl (`--67193`, status "Hết hiệu lực một phần"):
 
 > **Điều 4. Sử dụng văn bản trên Cơ sở dữ liệu quốc gia về pháp luật** — "Văn bản trên Cơ sở dữ liệu quốc gia về pháp luật **được sử dụng chính thức** trong việc quản lý nhà nước, phổ biến pháp luật, nghiên cứu, tìm hiểu, áp dụng và thi hành pháp luật của cơ quan, tổ chức, cá nhân."
 
-This is the citation-trust foundation: vbpl text is **officially usable**, including for research. **Nothing else on this page has that property.**
+Đây là nền tảng của sự tin cậy trích dẫn: text vbpl là **được dùng chính thức**, kể cả cho nghiên cứu. **Không có gì khác trên trang này có thuộc tính đó.**
 
 ---
 
-## ⭐ HF bootstrap — `th1nhng0/vietnamese-legal-documents`
+## ⭐ Khởi tạo từ HF — `th1nhng0/vietnamese-legal-documents`
 
-Updated 2026-04-27. Verified against the **datasets-server API**, not README claims (verified 2026-07-17, source: https://huggingface.co/datasets/th1nhng0/vietnamese-legal-documents):
+Cập nhật 2026-04-27. Đã xác minh dựa trên **datasets-server API**, không phải các tuyên bố trong README (đã xác minh 2026-07-17, nguồn: https://huggingface.co/datasets/th1nhng0/vietnamese-legal-documents):
 
 | config | rows | size | fields |
 |---|---|---|---|
-| `metadata` | **153,420** | 33 MB | incl. `ngay_co_hieu_luc`, `ngay_het_hieu_luc`, **`tinh_trang_hieu_luc`**, `co_quan_ban_hanh`, `nguoi_ky`, `linh_vuc` |
+| `metadata` | **153,420** | 33 MB | gồm `ngay_co_hieu_luc`, `ngay_het_hieu_luc`, **`tinh_trang_hieu_luc`**, `co_quan_ban_hanh`, `nguoi_ky`, `linh_vuc` |
 | `relationships` | **897,890** | 5.4 MB | `doc_id`, `other_doc_id`, `relationship` |
 | `content` | 178,665 | 3.2 GB | `id`, `content_html` |
-| `legacy` | 518,235 + 518,601 | 10.7 GB | TVPL-derived — **avoid: inherits TVPL's terms** |
+| `legacy` | 518,235 + 518,601 | 10.7 GB | dẫn xuất từ TVPL — **tránh: thừa hưởng các điều khoản của TVPL** |
 
-**The single most useful fact:** **`id` IS the vbpl ItemID, and the new portal kept the same ID space** (its `references` cite `12898`, `32801`). **So this dataset joins directly to the new site.** You get 897k relationship edges + hiệu lực status for free, then re-fetch only current text. Sampled rows confirm real data: `{'doc_id': 77, 'other_doc_id': '195', 'relationship': 'Văn bản hết hiệu lực'}`.
+**Sự thật hữu ích nhất:** **`id` CHÍNH LÀ vbpl ItemID, và cổng mới giữ nguyên không gian ID đó** (các `references` của nó trích dẫn `12898`, `32801`). **Vậy tập dữ liệu này join trực tiếp vào site mới.** Bạn nhận 897k cạnh quan hệ + trạng thái hiệu lực miễn phí, rồi chỉ re-fetch text hiện hành. Các dòng lấy mẫu xác nhận dữ liệu thực: `{'doc_id': 77, 'other_doc_id': '195', 'relationship': 'Văn bản hết hiệu lực'}`.
 
-Also usable: **`tmquan/vbpl-vn`** — 158,822 docs captured 2026-05-23 (post-relaunch, sitemap-harvested), CC-BY-4.0. Its count **independently corroborates the sitemap enumeration of ~158,826** (Δ=4), which is why the corpus figure above is trustworthy. But: **no hiệu lực, no relationships**, no điều/khoản structure, `markdown` **null for 11,505 docs**, 71% lack `legal_area`.
+Cũng dùng được: **`tmquan/vbpl-vn`** — 158.822 văn bản chụp ngày 2026-05-23 (sau relaunch, thu hoạch từ sitemap), CC-BY-4.0. Số đếm của nó **độc lập chứng thực cho phép liệt kê sitemap ~158.826** (Δ=4), đó là lý do con số corpus ở trên đáng tin. Nhưng: **không có hiệu lực, không có quan hệ**, không có cấu trúc điều/khoản, `markdown` **null cho 11.505 văn bản**, 71% thiếu `legal_area`.
 
-All existing datasets are **stale w.r.t. the April relaunch** and none carry the new provision-level structure.
-
----
-
-## 🚫 DO NOT SCRAPE — thuvienphapluat.vn
-
-**Three independent refusals** (verified 2026-07-17, source: https://thuvienphapluat.vn/robots.txt):
-
-1. **`robots.txt` names ClaudeBot explicitly** → `User-agent: ClaudeBot` / `Disallow: /` (alongside GPTBot, CCBot, Google-Extended, Bytespider, Amazonbot, meta-externalagent).
-2. **`Content-Signal: search=yes, ai-train=no, use=reference`**, framed as *"express reservations of rights under Article 4 of EU Directive 2019/790"*.
-3. **Cloudflare 403s it anyway** — "Just a moment" on all attempts (browser UA, default curl UA, ClaudeBot UA).
-
-**Why this is a refusal and not an obstacle to route around:** we are the crawler they named by name; `ai-train=no` covers building a training/embedding corpus; no `ai-input` signal is granted. What TVPL adds over vbpl — curated văn bản hợp nhất, plain-language summaries, English translations, better search — is real, but it is **their editorial work product**, which is exactly what they are reserving. **The underlying laws are all in vbpl.** If the project wants TVPL specifically, **license it** — they sell API/data access.
+Mọi tập dữ liệu hiện có đều **cũ so với lần relaunch tháng Tư** và không cái nào mang cấu trúc cấp điều khoản mới.
 
 ---
 
-## 🚫 DO NOT USE — luatvietnam.vn
+## 🚫 KHÔNG SCRAPE — thuvienphapluat.vn
 
-Commercial freemium. HTTP 200 with a browser UA, but heavily login-walled (11× "Đăng nhập", "Thành viên", "Tải văn bản", VIP tiers). `robots.txt` disallows `/VL/*` and all `?Keywords=` search URLs (verified 2026-07-17, source: https://luatvietnam.vn/robots.txt).
+**Ba lần từ chối độc lập** (đã xác minh 2026-07-17, nguồn: https://thuvienphapluat.vn/robots.txt):
 
-**The disqualifying finding:** it **resolves by numeric ID and IGNORES the slug**. During research, the URL `/thue/luat-thue-thu-nhap-ca-nhan-2007-30759-d1.html` (Luật Thuế TNCN 2007) **silently 301'd to a completely unrelated Công văn về đất đai** at `-30759-d6.html`. **Silent wrong-document resolution is disqualifying for a legal tool** — the failure is invisible, and the output looks correct. No advantage over vbpl anyway.
+1. **`robots.txt` nêu đích danh ClaudeBot** → `User-agent: ClaudeBot` / `Disallow: /` (cùng với GPTBot, CCBot, Google-Extended, Bytespider, Amazonbot, meta-externalagent).
+2. **`Content-Signal: search=yes, ai-train=no, use=reference`**, được đóng khung là *"bảo lưu quyền một cách rõ ràng theo Điều 4 của EU Directive 2019/790"*.
+3. **Cloudflare 403 nó bất kể** — "Just a moment" ở mọi lần thử (browser UA, curl UA mặc định, ClaudeBot UA).
 
----
-
-## 🚫 data.gov.vn does not exist
-
-Search engines confidently describe `data.gov.vn` and `open.data.gov.vn` as live. **They are not.** Authoritative DNS returns **NXDOMAIN** from the `gov.vn` zone (SOA `dns-master.vnnic.vn`), via **both 8.8.8.8 and 1.1.1.1**. Controls resolve fine (`vbpl.vn` → 124.197.21.218, `dichvucong.gov.vn` → 14.238.3.76), **so this is not geo-blocking**. `open.data.gov.vn`, `opendata.gov.vn`, `dulieuquocgia.gov.vn` are likewise NXDOMAIN (verified 2026-07-17, source: DNS queries against 8.8.8.8 and 1.1.1.1).
-
-**There is no national open-data API for legal documents.** **NĐ 278/2025/NĐ-CP** (in force 22/10/2025) mandates data connection/sharing — but **agency-to-agency via Nền tảng chia sẻ dữ liệu, not public open data**. Standardization deadline for remaining systems: 31/12/2026. **Not a channel available to this project.**
-
-Note: research 10 hit the same DNS failure but flagged it as *unverified, not confirmed-dead* (it could not rule out geo-fencing from its network). Research 04 closed that gap with authoritative-nameserver queries plus resolving controls. **The "does not exist" verdict is research 04's and it supersedes.**
+**Vì sao đây là một sự từ chối chứ không phải một chướng ngại để đi vòng:** chúng ta là crawler mà họ nêu đích danh; `ai-train=no` bao trùm việc xây dựng một corpus huấn luyện/embedding; không có tín hiệu `ai-input` nào được cấp. Cái TVPL thêm vào so với vbpl — văn bản hợp nhất được biên tập, tóm tắt ngôn ngữ dễ hiểu, bản dịch tiếng Anh, tìm kiếm tốt hơn — là có thật, nhưng đó là **sản phẩm biên tập của họ**, chính là thứ họ đang bảo lưu. **Các luật gốc đều có trong vbpl.** Nếu dự án muốn TVPL cụ thể, **hãy mua giấy phép** — họ bán quyền truy cập API/dữ liệu.
 
 ---
 
-## VNTR / Vietnam Trade Portal / VNSW / eCoSys — no API
+## 🚫 KHÔNG SỬ DỤNG — luatvietnam.vn
 
-Closest thing to structured non-tariff-measure data, and the reason quản lý chuyên ngành data is hard:
+Thương mại freemium. HTTP 200 với một browser UA, nhưng bị chặn bởi tường đăng nhập nặng nề (11× "Đăng nhập", "Thành viên", "Tải văn bản", các bậc VIP). `robots.txt` chặn `/VL/*` và tất cả URL tìm kiếm `?Keywords=` (đã xác minh 2026-07-17, nguồn: https://luatvietnam.vn/robots.txt).
 
-- **VNTR (`vntr.moit.gov.vn`)** — official MoIT repository, covers all FTAs + rules of origin. **No public API or bulk download found.** Form-based only. (verified 2026-07-17, source: https://vntr.moit.gov.vn/)
-- **Vietnam Trade Portal**, **VNSW**, **eCoSys** — **no API or bulk export found on any of them.** VNSW additionally requires a **digital signature** and **failed TLS verification** during research.
-- **ASEAN Tariff Finder** — connection timed out; could not verify.
-- **VNACCS/VCIS** — no public data feed; it is a declaration-processing system, not a data source. Requires enterprise registration + digital cert.
+**Phát hiện loại bỏ:** nó **phân giải theo ID số và BỎ QUA slug**. Trong quá trình nghiên cứu, URL `/thue/luat-thue-thu-nhap-ca-nhan-2007-30759-d1.html` (Luật Thuế TNCN 2007) **âm thầm 301 sang một Công văn về đất đai hoàn toàn không liên quan** tại `-30759-d6.html`. **Phân giải sai văn bản một cách âm thầm là điều loại bỏ đối với một công cụ pháp lý** — thất bại vô hình, và đầu ra trông có vẻ đúng. Dù sao cũng không có ưu điểm nào so với vbpl.
 
 ---
 
-## Crawl politeness
+## 🚫 data.gov.vn không tồn tại
 
-Research made only **~40 requests** to vbpl and observed **no throttling** (verified 2026-07-17, source: https://vbpl.vn/). **That is not evidence of no throttling at 158k scale.** Rate-limit ourselves; treat a sudden 403/429 as expected, not exceptional.
+Các công cụ tìm kiếm tự tin mô tả `data.gov.vn` và `open.data.gov.vn` là còn sống. **Chúng không sống.** DNS có thẩm quyền trả về **NXDOMAIN** từ zone `gov.vn` (SOA `dns-master.vnnic.vn`), qua **cả 8.8.8.8 lẫn 1.1.1.1**. Các đối chứng phân giải tốt (`vbpl.vn` → 124.197.21.218, `dichvucong.gov.vn` → 14.238.3.76), **nên đây không phải là chặn theo địa lý**. `open.data.gov.vn`, `opendata.gov.vn`, `dulieuquocgia.gov.vn` cũng đều là NXDOMAIN (đã xác minh 2026-07-17, nguồn: các truy vấn DNS đối với 8.8.8.8 và 1.1.1.1).
 
----
+**Không có API dữ liệu mở quốc gia nào cho văn bản pháp luật.** **NĐ 278/2025/NĐ-CP** (có hiệu lực 22/10/2025) bắt buộc kết nối/chia sẻ dữ liệu — nhưng **giữa các cơ quan qua Nền tảng chia sẻ dữ liệu, không phải dữ liệu mở công khai**. Thời hạn chuẩn hóa cho các hệ thống còn lại: 31/12/2026. **Không phải một kênh khả dụng cho dự án này.**
 
-## Related Knowledge
-
-- [Tariff System](tariff-system.md) — the decree structure, the annex trap, and the gazette-lag temporal gap that bounds every source on this page.
-- [HS Classification](hs-classification.md) — why the nomenclature is a dimension with validity dates, not a constant.
-- [Project Context](../project-context.md) — what Customs Assistant is and is not.
-- [Business Rules](../business-rules.md) — the human-decides / cite-the-decree rules these sources feed.
+Lưu ý: nghiên cứu 10 gặp cùng lỗi DNS nhưng đánh dấu nó là *chưa xác minh, không phải xác nhận đã chết* (nó không thể loại trừ khả năng bị chặn theo địa lý từ mạng của nó). Nghiên cứu 04 lấp khoảng trống đó bằng các truy vấn nameserver có thẩm quyền cộng các đối chứng phân giải. **Kết luận "không tồn tại" là của nghiên cứu 04 và nó thay thế.**
 
 ---
 
-## Unverified / Do Not Rely On
+## VNTR / Vietnam Trade Portal / VNSW / eCoSys — không có API
 
-Reproduced from the research agents' own honest flags. **Do not launder any of these into a confident claim.**
+Thứ gần nhất với dữ liệu biện pháp phi thuế quan có cấu trúc, và là lý do dữ liệu quản lý chuyên ngành khó:
 
-- **customs.gov.vn API — the 10-vs-12 conflict itself is UNRESOLVED.** The "different endpoints" explanation (`/bridge` proxy vs raw backend IP `123.30.210.236:8080`) is a **hypothesis**, not a finding. Test both in Phase 0.
-- **Whether `APIBieuThue` has rate limiting** — research 10 did not probe aggressively.
-- **Whether `123.30.210.236:8080` is actually unreachable** — research 12 explicitly declined to claim this; it could not distinguish geo-fencing from a sandbox egress block.
-- **vbpl gateway routes** — `https://vbpl-bientap-gateway.moj.gov.vn/api` was **found and reachable but UNMAPPED**. It is a Spring Cloud Gateway, publicly reachable and unauthenticated at the edge, but every probed path 404s, `/actuator` exposes only `health`, and there is no Swagger. The frontend calls it **server-side via Next.js Server Actions**, so routes never appear client-side. Worth ~30 more minutes: a documented API would delete the whole headless-browser step.
-- **`referenceType` int → label mapping** — values `3` and `12` observed; we have the 27 labels but **not the join**.
-- **Whether `provisionTree` / `referenceProvisions` are EVER populated** — `null` on both sampled documents. **This is the highest-value open question.** If populated site-wide, it is a **provision-level legal graph**, which is exactly what the April relaunch press claims ("quản lý chi tiết đến từng điều, khoản, điểm... máy có thể tự động đọc, hiểu") — and it would reshape the retrieval schema. **Test 10–20 recent documents before designing the schema.**
-- **`?tabs=tai-ve` file links** — the panel rendered no links on the sample; the JSON has `hasOriginalPdf` / `hasContent` flags. May be document-specific.
-- **Công báo total corpus size / date coverage** — not enumerated. Unknown.
-- **Sustained-rate crawl behaviour on vbpl** — ~40 requests, no throttling seen; **not evidence of none at 158k scale**.
-- **The EVFTA parser fix is INFERRED, not proven** — that LibreOffice → docx → `w:tbl/w:tr/w:tc` recovers the collapsed rate columns is an inference from RCEP's identical structure parsing correctly. No `soffice` / `python-docx` was available to prove it. **Close this gap first.**
-- **Bộ Tư pháp "datafiles" bulk export** — searched for, not found. Absence of evidence only.
+- **VNTR (`vntr.moit.gov.vn`)** — kho chính thức của MoIT, bao trùm tất cả FTA + quy tắc xuất xứ. **Không tìm thấy API công khai hay tải hàng loạt.** Chỉ dựa trên biểu mẫu. (đã xác minh 2026-07-17, nguồn: https://vntr.moit.gov.vn/)
+- **Vietnam Trade Portal**, **VNSW**, **eCoSys** — **không tìm thấy API hay xuất hàng loạt trên bất kỳ cái nào.** VNSW ngoài ra còn yêu cầu một **chữ ký số** và **thất bại xác thực TLS** trong quá trình nghiên cứu.
+- **ASEAN Tariff Finder** — kết nối bị timeout; không xác minh được.
+- **VNACCS/VCIS** — không có luồng dữ liệu công khai; nó là một hệ thống xử lý tờ khai, không phải một nguồn dữ liệu. Yêu cầu đăng ký doanh nghiệp + chứng thư số.
+
+---
+
+## Lịch sự khi crawl
+
+Nghiên cứu chỉ thực hiện **~40 yêu cầu** tới vbpl và quan sát thấy **không bị throttle** (đã xác minh 2026-07-17, nguồn: https://vbpl.vn/). **Đó không phải là bằng chứng về việc không throttle ở quy mô 158k.** Hãy tự giới hạn tốc độ; coi một cú 403/429 đột ngột là điều dự kiến, không phải ngoại lệ.
+
+---
+
+## Kiến thức liên quan
+
+- [Hệ thống biểu thuế](tariff-system.md) — cấu trúc nghị định, cái bẫy phụ lục, và khoảng trống thời gian do độ trễ công báo vốn giới hạn mọi nguồn trên trang này.
+- [Phân loại mã HS](hs-classification.md) — vì sao hệ danh mục là một chiều có ngày hiệu lực, không phải một hằng số.
+- [Bối cảnh dự án](../project-context.md) — Customs Assistant là gì và không là gì.
+- [Quy tắc nghiệp vụ](../business-rules.md) — các quy tắc con-người-quyết-định / trích-dẫn-nghị-định mà các nguồn này cung cấp dữ liệu cho.
+
+---
+
+## Chưa xác minh / Không được dựa vào
+
+Tái hiện từ chính các cảnh báo trung thực của các agent nghiên cứu. **Đừng tẩy trắng bất kỳ điều nào trong số này thành một khẳng định chắc chắn.**
+
+- **customs.gov.vn API — bản thân xung đột 10-vs-12 là CHƯA GIẢI QUYẾT.** Giải thích "các endpoint khác nhau" (proxy `/bridge` vs IP backend thô `123.30.210.236:8080`) là một **giả thuyết**, không phải một phát hiện. Kiểm thử cả hai trong Phase 0.
+- **Liệu `APIBieuThue` có giới hạn tốc độ hay không** — nghiên cứu 10 không dò một cách quyết liệt.
+- **Liệu `123.30.210.236:8080` có thực sự không thể tiếp cận hay không** — nghiên cứu 12 dứt khoát từ chối khẳng định điều này; nó không thể phân biệt chặn theo địa lý với chặn egress của sandbox.
+- **Các route gateway của vbpl** — `https://vbpl-bientap-gateway.moj.gov.vn/api` được **tìm thấy và tiếp cận được nhưng CHƯA ĐƯỢC ÁNH XẠ**. Đó là một Spring Cloud Gateway, tiếp cận được công khai và không xác thực ở biên, nhưng mọi đường dẫn được dò đều 404, `/actuator` chỉ phơi ra `health`, và không có Swagger. Frontend gọi nó **phía server qua Next.js Server Actions**, nên các route không bao giờ xuất hiện phía client. Đáng thêm ~30 phút: một API có tài liệu sẽ xóa bỏ toàn bộ bước headless-browser.
+- **Ánh xạ `referenceType` int → nhãn** — quan sát được các giá trị `3` và `12`; chúng ta có 27 nhãn nhưng **không có phép join**.
+- **Liệu `provisionTree` / `referenceProvisions` có BAO GIỜ được điền hay không** — `null` trên cả hai văn bản được lấy mẫu. **Đây là câu hỏi mở có giá trị cao nhất.** Nếu được điền trên toàn site, nó là một **đồ thị pháp luật ở cấp điều khoản**, đúng là thứ mà thông cáo relaunch tháng Tư tuyên bố ("quản lý chi tiết đến từng điều, khoản, điểm... máy có thể tự động đọc, hiểu") — và nó sẽ định hình lại schema truy xuất. **Kiểm thử 10–20 văn bản gần đây trước khi thiết kế schema.**
+- **Các link file `?tabs=tai-ve`** — panel không render link nào trên mẫu; JSON có các cờ `hasOriginalPdf` / `hasContent`. Có thể tùy theo từng văn bản.
+- **Tổng kích thước corpus / độ phủ ngày của Công báo** — chưa được liệt kê. Không rõ.
+- **Hành vi crawl ở tốc độ duy trì trên vbpl** — ~40 yêu cầu, không thấy throttle; **không phải bằng chứng về việc không có ở quy mô 158k**.
+- **Bản vá parser EVFTA là SUY DIỄN, không phải đã chứng minh** — việc LibreOffice → docx → `w:tbl/w:tr/w:tc` khôi phục được các cột mức thuế bị gộp là một suy diễn từ việc cấu trúc giống hệt của RCEP parse đúng. Không có `soffice` / `python-docx` để chứng minh. **Lấp khoảng trống này trước.**
+- **Xuất hàng loạt "datafiles" của Bộ Tư pháp** — đã tìm, không thấy. Chỉ là thiếu bằng chứng.

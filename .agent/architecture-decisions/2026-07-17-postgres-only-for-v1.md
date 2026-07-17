@@ -12,126 +12,126 @@ related:
   - ../concepts/legal-rag-retrieval.md
 ---
 
-# PostgreSQL Alone For v1 — No Qdrant, Neo4j, MinIO Or BullMQ
+# Chỉ Dùng PostgreSQL Cho v1 — Không Qdrant, Neo4j, MinIO Hay BullMQ
 
-## Status
+## Trạng thái
 
-Approved — 2026-07-17, by the project owner.
+Đã phê duyệt — 2026-07-17, bởi chủ dự án.
 
-## Context
+## Bối cảnh
 
-Customs Assistant v1 does two things: deterministic tariff lookup keyed by HS + schedule + date, and HS code candidate suggestion returning top-3 with verbatim legal-note evidence. See [Project Context](../project-context.md).
+Customs Assistant v1 làm hai việc: tra cứu biểu thuế tất định khóa theo HS + biểu + ngày, và gợi ý ứng viên mã HS trả về top-3 kèm bằng chứng ghi chú pháp lý nguyên văn. Xem [Bối cảnh Dự án](../project-context.md).
 
-The original roadmap named a vector database, a graph database, an object store and a job queue. This ADR removes all four from v1.
+Lộ trình ban đầu đặt tên một cơ sở dữ liệu vector, một cơ sở dữ liệu đồ thị, một kho lưu trữ đối tượng và một hàng đợi công việc. ADR này loại bỏ cả bốn khỏi v1.
 
-**This is not a capability question.** The owner is backend-solid and could run any of these. It is a question of what a 5–50-user internal tool can amortize. Every component added is another process to run, another thing to back up, another thing to debug at 11pm, and — the binding constraint — another surface of AI-generated code the owner lacks the context to review properly. The review budget, not the skill, is scarce.
+**Đây không phải là câu hỏi về năng lực.** Chủ dự án vững backend và có thể vận hành bất kỳ thứ nào trong số này. Đây là câu hỏi về những gì một công cụ nội bộ 5–50 người dùng có thể phân bổ chi phí. Mỗi thành phần thêm vào là thêm một tiến trình phải chạy, thêm một thứ phải sao lưu, thêm một thứ phải gỡ lỗi lúc 11 giờ đêm, và — ràng buộc quyết định — thêm một bề mặt code do AI sinh ra mà chủ dự án thiếu bối cảnh để rà soát cho đúng. Ngân sách rà soát, chứ không phải kỹ năng, mới là thứ khan hiếm.
 
-The workload is small and its shape is known:
+Khối lượng công việc nhỏ và hình dạng của nó đã biết:
 
-- The nomenclature is **11,414 eight-digit lines** across 21 phần / 97 chương / 1,228 nhóm / 4,084 phân nhóm (Thông tư 31/2022/TT-BTC) (verified 2026-07-17, source: research report 10). An independent annex-aware parse of the Công báo `.doc` parts of Nghị định 26/2023 recovered **11,874 unique 8-digit codes**, 11,160 of them with a rate in Phụ lục II (verified 2026-07-17, source: research report 12, https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm).
-- Tariff lookup has **no semantic component at all** — it is a keyed table read with a temporal predicate, and no LLM touches the numbers ([Business Rules](../business-rules.md)).
-- The only semantic surface in v1 is retrieval over HS Section/Chapter Notes and Explanatory Notes — order 10⁴ chunks, and published practice retrieves **top-k = 5**, because legal RAG degrades from lost-in-the-middle when over-retrieved (verified 2026-07-17, source: research report 02, citing https://arxiv.org/pdf/2605.19806).
-- The ingestion cadence is **weeks**, not events. Gazette publication lags legal effect by **15–48 days** across the sampled decrees (verified 2026-07-17, source: research report 12).
+- Danh mục có **11.414 dòng tám chữ số** trải trên 21 phần / 97 chương / 1.228 nhóm / 4.084 phân nhóm (Thông tư 31/2022/TT-BTC) (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 10). Một lần phân tích độc lập có nhận biết phụ lục trên các phần `.doc` từ Công báo của Nghị định 26/2023 đã khôi phục **11.874 mã 8 chữ số duy nhất**, trong đó 11.160 mã có một mức thuế suất trong Phụ lục II (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 12, https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-26-2023-nd-cp-39522.htm).
+- Tra cứu biểu thuế **hoàn toàn không có thành phần ngữ nghĩa nào** — nó là một lần đọc bảng theo khóa với một vị từ thời gian, và không LLM nào chạm vào các con số ([Quy tắc Nghiệp vụ](../business-rules.md)).
+- Bề mặt ngữ nghĩa duy nhất trong v1 là truy xuất trên Ghi chú Phần/Chương HS và Ghi chú Giải thích — cỡ 10⁴ đoạn, và thực hành đã công bố truy xuất **top-k = 5**, bởi vì RAG pháp lý suy giảm do lost-in-the-middle khi truy xuất quá nhiều (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 02, dẫn https://arxiv.org/pdf/2605.19806).
+- Nhịp nạp dữ liệu tính bằng **tuần**, không phải sự kiện. Việc đăng Công báo trễ so với hiệu lực pháp lý **15–48 ngày** trên các nghị định được lấy mẫu (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 12).
 
-## Decision
+## Quyết định
 
-**PostgreSQL is the only stateful service in v1.** NestJS + PostgreSQL (with pgvector) + Docker, and nothing else.
+**PostgreSQL là dịch vụ có trạng thái duy nhất trong v1.** NestJS + PostgreSQL (với pgvector) + Docker, và không gì khác.
 
-- **pgvector replaces Qdrant.** Embeddings live in the same database as the temporal validity intervals they must be filtered by.
-- **Relational tables and JOINs replace Neo4j.** The amendment/reference graph is modelled in SQL.
-- **A `jobs` table plus a scheduler replaces BullMQ.** Ingestion runs as a batch with rows recording state, attempts, and outcome.
-- **The filesystem (a Docker volume) replaces MinIO.** Source `.doc` / PDF artifacts are stored on disk with their checksum and provenance recorded in PostgreSQL.
+- **pgvector thay thế Qdrant.** Các embedding sống trong cùng cơ sở dữ liệu với các khoảng hiệu lực thời gian mà chúng phải được lọc theo.
+- **Bảng quan hệ và JOIN thay thế Neo4j.** Đồ thị sửa đổi/tham chiếu được mô hình hóa trong SQL.
+- **Một bảng `jobs` cộng với một trình lập lịch thay thế BullMQ.** Việc nạp dữ liệu chạy dưới dạng một mẻ với các dòng ghi lại trạng thái, số lần thử, và kết quả.
+- **Hệ thống tệp (một Docker volume) thay thế MinIO.** Các artifact `.doc` / PDF nguồn được lưu trên đĩa với checksum và xuất xứ của chúng được ghi trong PostgreSQL.
 
-Each component may be added later — but only when a specific, named, observed reason appears. "We might need it" is not a reason. The burden of proof is on the addition.
+Mỗi thành phần có thể được thêm vào sau — nhưng chỉ khi một lý do cụ thể, được nêu tên, được quan sát xuất hiện. "Có thể chúng ta sẽ cần nó" không phải là một lý do. Gánh nặng chứng minh thuộc về việc bổ sung.
 
-## Rationale
+## Lý do căn bản
 
-### pgvector, not Qdrant — because the temporal filter must be a JOIN, not a sync job
+### pgvector, không phải Qdrant — bởi vì bộ lọc thời gian phải là một JOIN, không phải một tác vụ đồng bộ
 
-Temporal validity has to be a **hard filter, not a ranking signal**. LLMs show a measured recency bias — preferring newer provisions even when the older version applies — that RAG alone does not fix; approaches that treat validity as a hard constraint substantially improve performance (verified 2026-07-17, source: research report 02, citing https://arxiv.org/abs/2605.23497). The point-in-time query is a deterministic interval predicate: `tv.valid_start ≤ t < coalesce(tv.valid_end, +∞)` (verified 2026-07-17, source: https://arxiv.org/abs/2505.00039).
+Hiệu lực thời gian phải là một **bộ lọc cứng, không phải một tín hiệu xếp hạng**. Các LLM cho thấy một thiên lệch về tính mới có thể đo được — thiên về các điều khoản mới hơn ngay cả khi phiên bản cũ mới là phiên bản áp dụng — mà chỉ riêng RAG không khắc phục được; các cách tiếp cận coi hiệu lực là một ràng buộc cứng cải thiện hiệu năng đáng kể (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 02, dẫn https://arxiv.org/abs/2605.23497). Truy vấn tại-một-thời-điểm là một vị từ khoảng tất định: `tv.valid_start ≤ t < coalesce(tv.valid_end, +∞)` (đã xác minh 2026-07-17, nguồn: https://arxiv.org/abs/2505.00039).
 
-In pgvector that predicate is a `WHERE` clause in the same transaction as the vector search. With Qdrant, validity intervals become a denormalized payload in a second system, and correctness now depends on two stores agreeing. **The failure mode of this project is plausible-looking wrong data that reports success** — a stale payload in a vector DB is exactly that, and it produces a confident answer citing a repealed provision. Qdrant buys throughput we do not need at the price of the one property we cannot lose.
+Trong pgvector vị từ đó là một mệnh đề `WHERE` trong cùng một transaction với phép tìm kiếm vector. Với Qdrant, các khoảng hiệu lực trở thành một payload phi chuẩn hóa trong một hệ thống thứ hai, và tính đúng đắn giờ đây phụ thuộc vào hai kho dữ liệu đồng thuận với nhau. **Chế độ hỏng của dự án này là dữ liệu sai trông có vẻ hợp lý mà lại báo thành công** — một payload lỗi thời trong một vector DB chính xác là như vậy, và nó tạo ra một câu trả lời tự tin trích dẫn một điều khoản đã bị bãi bỏ. Qdrant mua cho chúng ta throughput mà chúng ta không cần với cái giá là chính thuộc tính duy nhất mà chúng ta không thể đánh mất.
 
-Scale confirms it: ~10⁴ chunks with top-k = 5. This is not a workload that strains a Postgres index.
+Quy mô khẳng định điều đó: ~10⁴ đoạn với top-k = 5. Đây không phải là một khối lượng công việc làm căng thẳng một chỉ mục Postgres.
 
-### JOINs, not Neo4j — because the strongest evidence for a graph admits it is unproven
+### JOIN, không phải Neo4j — bởi vì bằng chứng mạnh nhất ủng hộ một đồ thị lại tự thừa nhận nó chưa được chứng minh
 
-The best published Vietnamese precedent is SBV-LawGraph: a legal knowledge graph in Neo4j with four relation types (Amend/Supplement, Repeal, Replace, Guidance/Regulation), traversed 1 hop, scoring ALQAC R@1 **0.69** against **0.57** for a hybrid-RAG baseline (verified 2026-07-17, source: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf). Attractive — until the authors' own caveats: **no ablation isolating the graph's contribution** (so the KG's independent effect is unproven), a 100-QA-pair eval set, no KG quality audit, binary correctness with two annotators and no inter-annotator agreement (verified 2026-07-17, source: research report 02).
+Tiền lệ Việt Nam đã công bố tốt nhất là SBV-LawGraph: một đồ thị tri thức pháp lý trong Neo4j với bốn loại quan hệ (Sửa đổi/Bổ sung, Bãi bỏ, Thay thế, Hướng dẫn/Quy định), duyệt 1 bước, đạt điểm ALQAC R@1 **0.69** so với **0.57** của một baseline hybrid-RAG (đã xác minh 2026-07-17, nguồn: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf). Hấp dẫn — cho đến khi xét các cảnh báo của chính các tác giả: **không có ablation nào cô lập đóng góp của đồ thị** (nên tác động độc lập của KG là chưa được chứng minh), một tập đánh giá 100 cặp hỏi–đáp, không có kiểm toán chất lượng KG, tính đúng đắn nhị phân với hai người chú giải và không có độ đồng thuận giữa các người chú giải (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 02).
 
-So the case for Neo4j is: an unmeasured contribution to a task v1 is not building. Four relation types, 1-hop traversal, at our corpus size, is a table with a foreign key and a self-join.
+Vậy nên lập luận cho Neo4j là: một đóng góp chưa được đo lường cho một nhiệm vụ mà v1 không xây. Bốn loại quan hệ, duyệt 1 bước, ở quy mô kho ngữ liệu của chúng ta, là một bảng với một khóa ngoại và một phép tự-join.
 
-**Revisit only on a specific trigger:** if vbpl's `provisionTree` / `referenceProvisions` turn out to be populated site-wide, that is a provision-level (điều/khoản) legal graph over ~158,826 documents with 27 typed bidirectional relations — a genuinely graph-shaped asset, and worth re-opening this decision. Today both fields were **`null` on every document sampled**, and the `referenceType` int → label mapping is unknown (verified 2026-07-17, source: research report 04). See [Data Sources](../concepts/data-sources.md) and Open Questions in [Project Context](../project-context.md#open-questions).
+**Chỉ xem xét lại khi có một trigger cụ thể:** nếu `provisionTree` / `referenceProvisions` của vbpl hóa ra được điền dữ liệu trên toàn trang, thì đó là một đồ thị pháp lý ở cấp điều khoản (điều/khoản) trên ~158.826 văn bản với 27 quan hệ hai chiều có kiểu — một tài sản thực sự mang hình dạng đồ thị, và đáng để mở lại quyết định này. Hôm nay cả hai trường đều **`null` trên mọi văn bản được lấy mẫu**, và ánh xạ `referenceType` int → nhãn là chưa biết (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 04). Xem [Nguồn Dữ liệu](../concepts/data-sources.md) và Các câu hỏi mở trong [Bối cảnh Dự án](../project-context.md#câu-hỏi-mở).
 
-### A jobs table, not BullMQ — because the queue optimizes the wrong axis
+### Một bảng jobs, không phải BullMQ — bởi vì hàng đợi tối ưu sai trục
 
-The instinct is that fresh law needs fast pipelines. The measurement says otherwise: **Nghị định 72/2026/NĐ-CP was signed 09/03/2026 and took legal effect the same day ("kể từ ngày ký"), but was published in Công báo số 157 only on 24/03/2026 — 15 days after it was already binding law** (verified 2026-07-17, source: research report 12). During that window the in-force rate exists in machine-readable form nowhere.
+Trực giác cho rằng luật mới cần các pipeline nhanh. Phép đo lường lại nói khác: **Nghị định 72/2026/NĐ-CP được ký ngày 09/03/2026 và có hiệu lực pháp lý ngay trong ngày ("kể từ ngày ký"), nhưng chỉ được đăng Công báo số 157 vào 24/03/2026 — 15 ngày sau khi nó đã là luật ràng buộc** (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 12). Trong khoảng thời gian đó mức thuế suất đang có hiệu lực không tồn tại ở dạng máy đọc được ở bất kỳ đâu.
 
-A job queue reduces dispatch latency by seconds against a bottleneck measured in weeks, and it cannot invent a document that has not been gazetted. The correct mitigation is the **staleness refusal in the output contract**, not faster workers. Ingestion is a scheduled batch over a handful of documents; a `jobs` table gives idempotency, retry state and an audit trail in the same transaction as the data it produces — which BullMQ, living in a separate store, would not.
+Một hàng đợi công việc giảm độ trễ điều phối vài giây so với một nút thắt cổ chai đo bằng tuần, và nó không thể tạo ra một văn bản chưa được đăng công báo. Biện pháp giảm thiểu đúng đắn là **từ chối khi dữ liệu lỗi thời trong hợp đồng đầu ra**, chứ không phải worker nhanh hơn. Nạp dữ liệu là một mẻ theo lịch trên một số ít văn bản; một bảng `jobs` cho ta tính idempotent, trạng thái thử lại và một dấu vết kiểm toán trong cùng transaction với dữ liệu mà nó tạo ra — điều mà BullMQ, sống trong một kho riêng, sẽ không làm được.
 
-### Disk, not MinIO — because the volume is small and provenance is the actual requirement
+### Đĩa, không phải MinIO — bởi vì dung lượng nhỏ và xuất xứ mới là yêu cầu thực sự
 
-The corpus is modest: Nghị định 26/2023 is **14 `.doc` parts** on Công báo; RCEP (129/2022) is **51**; EVFTA (116/2022) is **16** (verified 2026-07-17, source: research report 12). Even the scanned fallbacks are small — the two ND 26/2023 PDFs are 19.0 MB and 15.5 MB for 1,016 pages of CCITT-fax bitonal scan (verified 2026-07-17, source: research report 12). Gigabytes at most, written rarely, read rarely.
+Kho ngữ liệu khiêm tốn: Nghị định 26/2023 là **14 phần `.doc`** trên Công báo; RCEP (129/2022) là **51**; EVFTA (116/2022) là **16** (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 12). Ngay cả các bản quét dự phòng cũng nhỏ — hai file PDF của ND 26/2023 là 19.0 MB và 15.5 MB cho 1.016 trang quét đen-trắng CCITT-fax (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 12). Cùng lắm là vài gigabyte, hiếm khi ghi, hiếm khi đọc.
 
-What we actually need from artifact storage is **provenance** — which gazette issue, which URL, which checksum, retrieved when — and that is a Postgres row pointing at a file, not an S3 API. MinIO would add a service, credentials and a backup story to solve a problem `cp` solves.
+Thứ chúng ta thực sự cần từ kho lưu trữ artifact là **xuất xứ** — số công báo nào, URL nào, checksum nào, truy xuất khi nào — và đó là một dòng Postgres trỏ tới một file, không phải một API S3. MinIO sẽ thêm một dịch vụ, một bộ thông tin xác thực và một câu chuyện sao lưu để giải quyết một bài toán mà `cp` đã giải.
 
-## Alternatives Considered
+## Các phương án đã cân nhắc
 
-- **Add pgvector now, Qdrant later if retrieval quality demands it.** Kept as the live option — it is the migration path, not a rejected alternative. The trigger would be measured recall or latency failure, not corpus growth alone.
-- **Neo4j now because the later RAG phase will want it.** Rejected. The later phase is explicitly not scoped ([Legal RAG Retrieval](../concepts/legal-rag-retrieval.md) is marked DO NOT BUILD IN v1). Provisioning a database for a phase whose requirements are unwritten is how you get a schema nobody chose.
-- **BullMQ now because ingestion will grow.** Rejected. It would grow into ~1,228 polite HTTP calls at most, on the contested customs.gov.vn path we are not depending on anyway (verified 2026-07-17, source: research report 10). A batch handles it.
-- **SQLite instead of PostgreSQL.** Rejected: pgvector, full-text search, and range/interval types are exactly what the bitemporal model needs, and Postgres is what the owner already runs.
+- **Thêm pgvector ngay bây giờ, thêm Qdrant sau nếu chất lượng truy xuất đòi hỏi.** Được giữ làm phương án còn hiệu lực — nó là con đường di trú, không phải một phương án bị bác. Trigger sẽ là recall hoặc độ trễ được đo lường thất bại, không phải chỉ riêng kho ngữ liệu tăng trưởng.
+- **Neo4j ngay bây giờ vì giai đoạn RAG sau này sẽ cần nó.** Bị bác. Giai đoạn sau rõ ràng không nằm trong phạm vi ([Truy xuất RAG Pháp lý](../concepts/legal-rag-retrieval.md) được đánh dấu KHÔNG XÂY TRONG v1). Cấp phát một cơ sở dữ liệu cho một giai đoạn mà yêu cầu của nó chưa được viết ra là cách bạn có được một schema mà không ai chọn.
+- **BullMQ ngay bây giờ vì việc nạp dữ liệu sẽ tăng trưởng.** Bị bác. Nó cùng lắm sẽ tăng lên thành ~1.228 lệnh gọi HTTP lịch sự, trên con đường customs.gov.vn gây tranh cãi mà dù sao chúng ta cũng không phụ thuộc (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 10). Một mẻ xử lý được nó.
+- **SQLite thay vì PostgreSQL.** Bị bác: pgvector, tìm kiếm toàn văn, và các kiểu range/interval chính xác là thứ mà mô hình song thời gian cần, và Postgres là thứ chủ dự án đã sẵn vận hành.
 
-## Scope
+## Phạm vi
 
-Applies to v1 only — the two features named in [Project Context](../project-context.md#in-scope):
+Chỉ áp dụng cho v1 — hai tính năng được nêu tên trong [Bối cảnh Dự án](../project-context.md#trong-phạm-vi):
 
-- `docker-compose` services: NestJS app + PostgreSQL (pgvector extension) only.
-- The tariff store, the bitemporal versioning tables, the amendment/reference tables, the HS-note embeddings, the `jobs` table, and the artifact-provenance table all live in one PostgreSQL database.
-- Source artifacts on a Docker volume, referenced by row.
+- Các dịch vụ `docker-compose`: chỉ ứng dụng NestJS + PostgreSQL (extension pgvector).
+- Kho biểu thuế, các bảng phiên bản hóa song thời gian, các bảng sửa đổi/tham chiếu, các embedding ghi chú HS, bảng `jobs`, và bảng xuất xứ artifact đều sống trong một cơ sở dữ liệu PostgreSQL.
+- Các artifact nguồn trên một Docker volume, được tham chiếu theo dòng.
 
-Does **not** decide anything for the later RAG-over-logistics-law phase. That phase re-opens this ADR with its own evidence.
+**Không** quyết định điều gì cho giai đoạn RAG-trên-luật-logistics sau này. Giai đoạn đó mở lại ADR này với bằng chứng của riêng nó.
 
-## Consequences
+## Hệ quả
 
-- One process to run, one thing to back up, one restore drill, one connection string.
-- Cross-store consistency bugs are structurally impossible in v1, because there is no second store.
-- The AI-generated-code review surface stays inside SQL and NestJS — the two things the owner can actually review line by line.
-- Retrieval quality is capped by what pgvector + Postgres full-text search can do. If that cap binds, we will know from a measurement, and swapping in a vector DB is a bounded change because the embeddings are already isolated behind a repository.
-- No horizontal scaling story. Correct: 5–50 internal users do not need one, and building one now would be work spent against a load that does not exist.
-- Anyone proposing a new component must bring the observation that motivates it. That friction is the point.
+- Một tiến trình phải chạy, một thứ phải sao lưu, một lần diễn tập khôi phục, một chuỗi kết nối.
+- Các lỗi nhất quán chéo giữa các kho là bất khả về mặt cấu trúc trong v1, bởi vì không có kho thứ hai.
+- Bề mặt rà soát code do AI sinh ra nằm gọn bên trong SQL và NestJS — hai thứ mà chủ dự án thực sự có thể rà soát từng dòng.
+- Chất lượng truy xuất bị giới hạn bởi những gì pgvector + tìm kiếm toàn văn Postgres có thể làm. Nếu giới hạn đó chạm ngưỡng, chúng ta sẽ biết từ một phép đo lường, và việc thay vào một vector DB là một thay đổi có phạm vi giới hạn bởi vì các embedding đã được cô lập sau một repository.
+- Không có câu chuyện mở rộng theo chiều ngang. Đúng vậy: 5–50 người dùng nội bộ không cần đến nó, và xây một cái ngay bây giờ sẽ là công sức bỏ ra chống lại một tải trọng không tồn tại.
+- Bất kỳ ai đề xuất một thành phần mới phải mang theo quan sát thúc đẩy nó. Ma sát đó chính là điểm mấu chốt.
 
-## Risks
+## Rủi ro
 
-- **Postgres full-text search ranking is not BM25.** The research prescribes hybrid lexical + dense retrieval, weighted ~75/25 toward the lexical side when using a non-fine-tuned embedding — because out-of-the-box dense embeddings *lose* to BM25 on Vietnamese legal text (BM25 R@1 **0.57** vs naive dense R@1 **0.36**), and terms of art like "có thể" vs "phải" are exactly the tokens dense embeddings blur (verified 2026-07-17, source: research report 02, https://lexuanbach.github.io/publication/ACIIDS2026a.pdf). Whether Postgres `tsvector` ranking is an adequate stand-in for BM25 on this corpus is **an engineering assumption, not a research finding — nobody measured it.** Test it before trusting the retrieval leg. This is the most likely reason this ADR gets revisited.
-- **Vietnamese text search configuration.** Vietnamese word segmentation is model-coupled and must match the embedding model's pretraining (verified 2026-07-17, source: research report 02). How that interacts with Postgres text-search configurations is untested here.
-- **"Temporary" disk storage becoming permanent unmanaged state.** Mitigation: every artifact file has a Postgres row with checksum and source URL; a file with no row is garbage, a row with no file is an alert.
-- **Someone reads this ADR as "never use these tools."** It says: not now, and here is the trigger for each.
+- **Xếp hạng tìm kiếm toàn văn của Postgres không phải là BM25.** Nghiên cứu chỉ định truy xuất hybrid từ vựng + dense, có trọng số ~75/25 nghiêng về phía từ vựng khi dùng một embedding chưa được tinh chỉnh — bởi vì các embedding dense dùng ngay ra khỏi hộp *thua* BM25 trên văn bản pháp lý tiếng Việt (BM25 R@1 **0.57** so với dense ngây thơ R@1 **0.36**), và các thuật ngữ chuyên môn như "có thể" so với "phải" chính xác là những token mà embedding dense làm mờ đi (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 02, https://lexuanbach.github.io/publication/ACIIDS2026a.pdf). Liệu xếp hạng `tsvector` của Postgres có phải là một vật thay thế thỏa đáng cho BM25 trên kho ngữ liệu này hay không là **một giả định kỹ thuật, không phải một phát hiện nghiên cứu — không ai đo lường nó cả.** Hãy kiểm thử nó trước khi tin cậy nhánh truy xuất. Đây là lý do có khả năng nhất khiến ADR này bị xem xét lại.
+- **Cấu hình tìm kiếm văn bản tiếng Việt.** Việc tách từ tiếng Việt gắn với mô hình và phải khớp với việc tiền huấn luyện của mô hình embedding (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 02). Việc đó tương tác thế nào với các cấu hình tìm kiếm văn bản của Postgres thì chưa được kiểm thử ở đây.
+- **Lưu trữ đĩa "tạm thời" trở thành trạng thái không được quản lý vĩnh viễn.** Giảm thiểu: mỗi file artifact có một dòng Postgres với checksum và URL nguồn; một file không có dòng là rác, một dòng không có file là một cảnh báo.
+- **Ai đó đọc ADR này thành "không bao giờ dùng những công cụ này."** Nó nói: không phải bây giờ, và đây là trigger cho từng cái.
 
-## Review Requirements
+## Yêu cầu rà soát
 
-- Verify no v1 code path depends on the contested customs.gov.vn API. Reports 10 and 12 **directly contradict each other** on whether it is reachable and captcha-gated, and **the conflict is unresolved** — see [Data Sources](../concepts/data-sources.md) and [Project Context](../project-context.md#open-questions). Both reports agree on the part that binds us: it has no ToS grant, no SLA, no versioning and **no legal authority — the Nghị định does**.
-- Verify the temporal predicate is a `WHERE` filter in the same query as any vector search, never a post-filter and never a ranking input.
-- Verify annex identity (Phụ lục I export vs Phụ lục II import) is part of the primary key, not inferred. **1,520 HS codes appear in both annexes of ND 26/2023 and 1,329 carry different rates** — an annex-blind parser returns the export rate for an import question at 94% apparent success (verified 2026-07-17, source: research report 12). See [Tariff System](../concepts/tariff-system.md).
-- Verify the `jobs` table records attempts and outcomes durably enough to answer "when did we last successfully ingest X, and from which gazette issue?"
-- Verify each artifact file on disk has a corresponding provenance row.
-- Before adding any component removed here, record the observation that motivates it in a new ADR that supersedes this one.
+- Xác minh rằng không đường code v1 nào phụ thuộc vào API customs.gov.vn gây tranh cãi. Báo cáo 10 và 12 **trực tiếp mâu thuẫn với nhau** về việc liệu nó có truy cập được và bị chặn bằng captcha hay không, và **xung đột chưa được giải quyết** — xem [Nguồn Dữ liệu](../concepts/data-sources.md) và [Bối cảnh Dự án](../project-context.md#câu-hỏi-mở). Cả hai báo cáo đồng thuận về phần ràng buộc chúng ta: nó không có cấp phép Điều khoản dịch vụ, không có SLA, không có phiên bản hóa và **không có thẩm quyền pháp lý — Nghị định mới có**.
+- Xác minh rằng vị từ thời gian là một bộ lọc `WHERE` trong cùng truy vấn với bất kỳ tìm kiếm vector nào, không bao giờ là một hậu-lọc và không bao giờ là một đầu vào xếp hạng.
+- Xác minh rằng định danh phụ lục (Phụ lục I xuất khẩu so với Phụ lục II nhập khẩu) là một phần của khóa chính, không phải được suy ra. **1.520 mã HS xuất hiện trong cả hai phụ lục của ND 26/2023 và 1.329 mã mang mức thuế suất khác nhau** — một bộ phân tích mù phụ lục trả về mức thuế xuất khẩu cho một câu hỏi nhập khẩu ở tỷ lệ thành công biểu kiến 94% (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 12). Xem [Hệ thống Biểu thuế](../concepts/tariff-system.md).
+- Xác minh rằng bảng `jobs` ghi lại số lần thử và kết quả một cách bền vững đủ để trả lời "lần cuối chúng ta nạp thành công X là khi nào, và từ số công báo nào?"
+- Xác minh rằng mỗi file artifact trên đĩa có một dòng xuất xứ tương ứng.
+- Trước khi thêm bất kỳ thành phần nào đã bị loại bỏ ở đây, hãy ghi lại quan sát thúc đẩy nó trong một ADR mới thay thế ADR này.
 
-## Unverified / Do Not Rely On
+## Chưa xác minh / Không được dựa vào
 
-- **The customs.gov.vn API conflict is unresolved** (reports 10 vs 12). Do not treat either account as settled. Reproduced in full in [Data Sources](../concepts/data-sources.md).
-- **Postgres FTS as a BM25 substitute is unmeasured** — see Risks. This is our assumption, not the research's.
-- **Whether vbpl's provision-level graph is populated is the highest-value open question** and the only named trigger for reconsidering Neo4j. Both `provisionTree` and `referenceProvisions` were `null` on every sampled document; the April 2026 relaunch press claims provision-level modelling, but nobody has confirmed it (verified 2026-07-17, source: research report 04).
-- **SBV-LawGraph's graph contribution is unproven by its own authors** (no ablation, 100-QA-pair eval). Do not cite its 0.69 R@1 as evidence that a graph database would help us.
+- **Xung đột về API customs.gov.vn chưa được giải quyết** (báo cáo 10 so với 12). Đừng coi bất kỳ tường thuật nào là đã ngã ngũ. Được tái hiện đầy đủ trong [Nguồn Dữ liệu](../concepts/data-sources.md).
+- **Postgres FTS như một vật thay thế BM25 là chưa được đo lường** — xem Rủi ro. Đây là giả định của chúng ta, không phải của nghiên cứu.
+- **Việc liệu đồ thị cấp điều khoản của vbpl có được điền dữ liệu hay không là câu hỏi mở có giá trị cao nhất** và là trigger được nêu tên duy nhất để cân nhắc lại Neo4j. Cả `provisionTree` và `referenceProvisions` đều `null` trên mọi văn bản được lấy mẫu; thông cáo tái ra mắt tháng 4 năm 2026 tuyên bố có mô hình hóa ở cấp điều khoản, nhưng không ai xác nhận được điều đó (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 04).
+- **Đóng góp đồ thị của SBV-LawGraph là chưa được chính các tác giả của nó chứng minh** (không ablation, tập đánh giá 100 cặp hỏi–đáp). Đừng trích dẫn điểm 0.69 R@1 của nó làm bằng chứng rằng một cơ sở dữ liệu đồ thị sẽ giúp ích cho chúng ta.
 
-## Related Knowledge
+## Kiến thức liên quan
 
-- [Project Context](../project-context.md)
-- [Business Rules](../business-rules.md)
-- [Architecture Decision Index](README.md)
-- [Tariff System](../concepts/tariff-system.md)
-- [Data Sources](../concepts/data-sources.md)
-- [HS Classification](../concepts/hs-classification.md)
-- [Legal RAG Retrieval](../concepts/legal-rag-retrieval.md) — future phase; re-opens this decision
-- [Vietnamese Legal Documents](../concepts/vietnamese-legal-documents.md)
-- [Code Organization](../docs/code-organization.md)
-- [Agent Memory Index](../index.md)
+- [Bối cảnh Dự án](../project-context.md)
+- [Quy tắc Nghiệp vụ](../business-rules.md)
+- [Chỉ mục Quyết định Kiến trúc](README.md)
+- [Hệ thống Biểu thuế](../concepts/tariff-system.md)
+- [Nguồn Dữ liệu](../concepts/data-sources.md)
+- [Phân loại HS](../concepts/hs-classification.md)
+- [Truy xuất RAG Pháp lý](../concepts/legal-rag-retrieval.md) — giai đoạn tương lai; mở lại quyết định này
+- [Văn bản Pháp luật Việt Nam](../concepts/vietnamese-legal-documents.md)
+- [Tổ chức Mã nguồn](../docs/code-organization.md)
+- [Chỉ mục Bộ nhớ Agent](../index.md)

@@ -1,11 +1,11 @@
-# Agent Documentation
+# Tài liệu tác nhân (Agent Documentation)
 
-This directory stores agent-facing project documentation such as implementation design, API contracts, architecture notes, and setup notes.
+Thư mục này lưu trữ tài liệu dự án hướng tới tác nhân như thiết kế triển khai, hợp đồng API, ghi chú kiến trúc, và ghi chú cài đặt.
 
-Root `docs/` is optional and should only be used for human-facing documentation outside the agent workflow.
+Thư mục `docs/` ở gốc là tùy chọn và chỉ nên được dùng cho tài liệu hướng tới con người nằm ngoài luồng làm việc của tác nhân.
 
-For broad orientation, start from [Agent Memory Index](../index.md). Documentation notes should link back to related planning notes, architecture decisions, review history, and source files when those links help future agents trace context.
+Để có định hướng tổng quát, hãy bắt đầu từ [Chỉ mục bộ nhớ tác nhân](../index.md). Các ghi chú tài liệu nên liên kết ngược lại tới các ghi chú lập kế hoạch, quyết định kiến trúc, lịch sử đánh giá, và file nguồn liên quan khi những liên kết đó giúp các tác nhân tương lai truy vết bối cảnh.
 
-## Included Documents
+## Các tài liệu bao gồm
 
-- `code-organization.md` defines framework-first structure mapping, the recommended baseline source layout, module boundaries, shared code rules, and reuse checks.
+- `code-organization.md` định nghĩa việc ánh xạ cấu trúc theo hướng framework-first, bố cục mã nguồn cơ sở được khuyến nghị, ranh giới module, quy tắc mã dùng chung, và các kiểm tra tái sử dụng.

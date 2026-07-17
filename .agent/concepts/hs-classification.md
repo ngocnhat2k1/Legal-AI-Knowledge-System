@@ -8,413 +8,443 @@ related:
   - ../index.md
 ---
 
-# HS Classification (Phân loại mã HS)
+# Phân loại mã HS (HS Classification)
 
-Durable domain knowledge for feature 2 of Customs Assistant: **HS code CANDIDATE suggestion**. The
-short version: classification is a legal determination, not a lookup, and no published system
-approaches human accuracy at the digit depth Vietnam declares at. This note records the numbers that
-justify the "top-3 + verbatim evidence + human decides" contract so that a future agent does not
-quietly redesign it into an answer engine.
+Kiến thức miền bền vững cho tính năng 2 của Customs Assistant: **gợi ý ỨNG VIÊN mã HS**. Nói ngắn
+gọn: phân loại là một sự xác định pháp lý, không phải là tra cứu, và không có hệ thống công bố nào
+tiệm cận độ chính xác của con người ở độ sâu chữ số mà Việt Nam khai báo. Ghi chú này ghi lại những
+con số biện minh cho hợp đồng "top-3 + bằng chứng nguyên văn + con người quyết định" để một agent
+trong tương lai không lặng lẽ thiết kế lại nó thành một cỗ máy trả lời.
 
-All claims below come from research report 09 (HS classification) and report 12 (adversarial
-verification of tariff data), unless marked otherwise.
+Tất cả các khẳng định dưới đây đều đến từ báo cáo nghiên cứu 09 (phân loại HS) và báo cáo 12 (xác
+minh đối kháng dữ liệu thuế quan), trừ khi có ghi chú khác.
 
 ---
 
-## 1. What the HS is
+## 1. HS là gì
 
-The Harmonized System is a WCO nomenclature: **21 Sections / 97 Chapters**, harmonized
-internationally to **6 digits**. Vietnam extends to **8 digits** via AHTN (ASEAN Harmonised Tariff
-Nomenclature). (verified 2026-07-17, source: https://www.wcoomd.org/-/media/wco/public/global/pdf/topics/nomenclature/instruments-and-tools/hs-interpretation-general-rules/0001_2012e_gir.pdf)
+Hệ thống hài hòa (Harmonized System) là một danh pháp của WCO: **21 Phần / 97 Chương**, được hài hòa
+quốc tế đến **6 chữ số**. Việt Nam mở rộng đến **8 chữ số** thông qua AHTN (Danh mục thuế quan hài hòa
+ASEAN). (đã xác minh 2026-07-17, nguồn: https://www.wcoomd.org/-/media/wco/public/global/pdf/topics/nomenclature/instruments-and-tools/hs-interpretation-general-rules/0001_2012e_gir.pdf)
 
-Vietnam's operative list is **Thông tư 31/2022/TT-BTC** (hiệu lực 01/12/2022), Danh mục hàng hóa xuất
-khẩu, nhập khẩu Việt Nam on HS 2022 / AHTN 2022 — **21 phần / 97 chương / 1,228 nhóm / 4,084 phân
-nhóm / 11,414 dòng hàng 8 số**. It is still the operative list in 2026. (verified 2026-07-17, source:
+Danh mục có hiệu lực của Việt Nam là **Thông tư 31/2022/TT-BTC** (hiệu lực 01/12/2022), Danh mục hàng
+hóa xuất khẩu, nhập khẩu Việt Nam trên nền HS 2022 / AHTN 2022 — **21 phần / 97 chương / 1,228 nhóm /
+4,084 phân nhóm / 11,414 dòng hàng 8 số**. Đây vẫn là danh mục có hiệu lực trong năm 2026. (đã xác minh
+2026-07-17, nguồn:
 https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Thong-tu-31-2022-TT-BTC-Danh-muc-hang-hoa-xuat-nhap-khau-Viet-Nam-343978.aspx)
 
-**Version horizon.** HS revises roughly every 5 years. **HS 2028 amendments were provisionally
-adopted at the 75th HSC session (April 2025) and enter force 01/01/2028.** (verified 2026-07-17,
-source: https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2028-edition/amendments-effective-from-1-january-2028.aspx)
-**Do not hardcode AHTN 2022.** Every stored code, note, and mapping needs a nomenclature-version key.
-Renomenclature re-bases codes and orphans historical mappings — a schema without a version column
-will silently mix 2022 and 2028 meanings for the same digits.
+**Chân trời phiên bản.** HS được sửa đổi khoảng mỗi 5 năm. **Các sửa đổi HS 2028 đã được thông qua tạm
+thời tại phiên họp HSC lần thứ 75 (tháng 4/2025) và có hiệu lực từ 01/01/2028.** (đã xác minh 2026-07-17,
+nguồn: https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2028-edition/amendments-effective-from-1-january-2028.aspx)
+**Không được hardcode AHTN 2022.** Mọi mã, ghi chú và ánh xạ được lưu trữ đều cần một khóa phiên-bản-danh-pháp.
+Việc tái danh pháp (renomenclature) tái định cơ sở cho các mã và làm mồ côi các ánh xạ lịch sử — một
+lược đồ không có cột phiên bản sẽ lặng lẽ trộn lẫn ý nghĩa 2022 và 2028 cho cùng một dãy chữ số.
 
-## 2. The 6 GRI — a decision procedure, applied in strict sequential order
+## 2. 6 quy tắc GRI — một quy trình quyết định, áp dụng theo trình tự nghiêm ngặt
 
-You may **not** jump to GRI 3 if GRI 1 resolves the good. The order is the law, not a heuristic.
-(verified 2026-07-17, source: https://www.wcoomd.org/-/media/wco/public/global/pdf/topics/nomenclature/instruments-and-tools/hs-interpretation-general-rules/0001_2012e_gir.pdf)
+Bạn **không được** nhảy sang GRI 3 nếu GRI 1 đã giải quyết được hàng hóa. Thứ tự chính là luật, không
+phải là một heuristic. (đã xác minh 2026-07-17, nguồn:
+https://www.wcoomd.org/-/media/wco/public/global/pdf/topics/nomenclature/instruments-and-tools/hs-interpretation-general-rules/0001_2012e_gir.pdf)
 
-| Rule | What it does |
+| Quy tắc | Nội dung |
 |---|---|
-| **GRI 1** | Heading text **+ Section/Chapter Notes** decide. Section/Chapter **titles are reference only** and carry no legal force. |
-| **GRI 2(a)** | Incomplete / unassembled goods that have the essential character of the finished article. |
-| **GRI 2(b)** | Mixtures and composite goods (routes into GRI 3). |
-| **GRI 3** | Two or more headings prima facie applicable: **3(a)** most specific description → **3(b)** essential character → **3(c)** last in numerical order. Strictly in that order. |
-| **GRI 4** | Goods most akin. Rarely used. |
-| **GRI 5** | Cases, containers, packing materials. |
-| **GRI 6** | Subheadings — compare **only at the same level**, applying subheading notes *mutatis mutandis*. |
+| **GRI 1** | Nội dung nhóm **+ Chú giải Phần/Chương** quyết định. Tiêu đề Phần/Chương **chỉ mang tính tham khảo** và không có giá trị pháp lý. |
+| **GRI 2(a)** | Hàng hóa chưa hoàn chỉnh / chưa lắp ráp nhưng đã có đặc trưng cơ bản của sản phẩm hoàn chỉnh. |
+| **GRI 2(b)** | Hỗn hợp và hàng hóa hợp thành (dẫn vào GRI 3). |
+| **GRI 3** | Hai hoặc nhiều nhóm thoạt nhìn đều có thể áp dụng: **3(a)** mô tả cụ thể nhất → **3(b)** đặc trưng cơ bản → **3(c)** nhóm có thứ tự số cuối cùng. Nghiêm ngặt theo thứ tự đó. |
+| **GRI 4** | Hàng hóa giống nhất. Hiếm khi được dùng. |
+| **GRI 5** | Bao, hộp, vật liệu đóng gói. |
+| **GRI 6** | Phân nhóm — chỉ so sánh **ở cùng một cấp**, áp dụng chú giải phân nhóm với những sửa đổi thích hợp (*mutatis mutandis*). |
 
-Vietnam's copy of the six rules is **Phụ lục II of Thông tư 31/2022/TT-BTC** ("6 quy tắc tổng quát").
-(verified 2026-07-17, source: https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Thong-tu-31-2022-TT-BTC-Danh-muc-hang-hoa-xuat-nhap-khau-Viet-Nam-343978.aspx)
+Bản sao sáu quy tắc của Việt Nam nằm ở **Phụ lục II của Thông tư 31/2022/TT-BTC** ("6 quy tắc tổng
+quát"). (đã xác minh 2026-07-17, nguồn:
+https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Thong-tu-31-2022-TT-BTC-Danh-muc-hang-hoa-xuat-nhap-khau-Viet-Nam-343978.aspx)
 
-**Model the GRI order as CODE, not as a prompt instruction.** Why: GRI 3(a) → 3(b) → 3(c) is a
-deterministic decision procedure with a defined fallthrough. If it lives in a prompt, the model is
-free to reach 3(c) while 3(a) was still available, and nothing in the output will reveal that it did.
-Encoded as control flow, "did we exhaust 3(a)?" is an assertion you can test. This is not a style
-preference — see §5, where handing models the written rules **decreased** accuracy while a pipeline
-whose control flow *is* the hierarchy roughly doubled it.
+**Hãy mô hình hóa thứ tự GRI dưới dạng CODE, chứ không phải dưới dạng chỉ dẫn trong prompt.** Lý do:
+GRI 3(a) → 3(b) → 3(c) là một quy trình quyết định tất định với một đường rơi qua (fallthrough) đã được
+định nghĩa. Nếu nó nằm trong prompt, mô hình được tự do đạt đến 3(c) trong khi 3(a) vẫn còn khả dụng,
+và không có gì trong đầu ra tiết lộ rằng nó đã làm vậy. Được mã hóa thành luồng điều khiển, "chúng ta
+đã vét cạn 3(a) chưa?" là một khẳng định có thể kiểm tra được. Đây không phải là một sở thích về phong
+cách — xem §5, nơi việc trao cho mô hình các quy tắc được viết ra **làm GIẢM** độ chính xác trong khi
+một pipeline mà luồng điều khiển của nó *chính là* cấu trúc phân cấp đã tăng gần gấp đôi độ chính xác.
 
-## 3. Hierarchy of authority — the key structural fact
+## 3. Thứ bậc hiệu lực pháp lý — sự thật cấu trúc then chốt
 
-Any evidence the system quotes must be tagged with its authority tier, because tiers are not
-interchangeable in an argument before Chi cục Hải quan.
+Bất kỳ bằng chứng nào mà hệ thống trích dẫn đều phải được gắn thẻ với cấp độ thẩm quyền của nó, bởi vì
+các cấp độ không thể thay thế cho nhau trong một lập luận trước Chi cục Hải quan.
 
-- **BINDING**: heading text, subheading text, and the **Legal Notes** — Section Notes, Chapter Notes,
-  Subheading Notes. (verified 2026-07-17, source: https://www.cbsa-asfc.gc.ca/trade-commerce/tariff-tarif/guide/legal-notes-legales-eng.html)
-- **AUTHORITATIVE BUT NOT BINDING**: WCO **Explanatory Notes (EN)** and the **Compendium of
-  Classification Opinions**. Administrations treat them as the authoritative interpretation and
-  disputes are routinely resolved by reference to them, but they do not override the Legal Notes.
-  (verified 2026-07-17, source: https://taxation-customs.ec.europa.eu/customs/common-customs-tariff-cct/tariff-classification-goods/harmonized-system_en)
-- **ASEAN LAYER**: **SEN (Supplementary Explanatory Notes)** for the AHTN 8-digit lines. SEN 2022 was
-  circulated in Vietnam by **Công văn 3866/TCHQ-TXNK (24/07/2023)**. **SEN is not independently
-  binding** — an argument resting on SEN that contradicts the HS EN is legally weak. (verified
-  2026-07-17, source: https://thuvienxuatnhapkhau.com/wp-content/uploads/2023/07/3866_Chu-giai-SEN-2022.pdf)
+- **RÀNG BUỘC (BINDING)**: nội dung nhóm, nội dung phân nhóm, và các **Chú giải pháp lý (Legal Notes)** —
+  Chú giải Phần, Chú giải Chương, Chú giải Phân nhóm. (đã xác minh 2026-07-17, nguồn: https://www.cbsa-asfc.gc.ca/trade-commerce/tariff-tarif/guide/legal-notes-legales-eng.html)
+- **CÓ THẨM QUYỀN NHƯNG KHÔNG RÀNG BUỘC**: **Chú giải chi tiết (EN)** của WCO và **Tuyển tập các ý
+  kiến phân loại (Compendium of Classification Opinions)**. Các cơ quan quản lý coi chúng là cách giải
+  thích có thẩm quyền và các tranh chấp thường được giải quyết bằng cách viện dẫn chúng, nhưng chúng
+  không ghi đè lên các Chú giải pháp lý.
+  (đã xác minh 2026-07-17, nguồn: https://taxation-customs.ec.europa.eu/customs/common-customs-tariff-cct/tariff-classification-goods/harmonized-system_en)
+- **LỚP ASEAN**: **SEN (Chú giải bổ sung — Supplementary Explanatory Notes)** cho các dòng hàng 8 chữ
+  số AHTN. SEN 2022 được lưu hành tại Việt Nam theo **Công văn 3866/TCHQ-TXNK (24/07/2023)**. **SEN
+  không tự nó có tính ràng buộc độc lập** — một lập luận dựa trên SEN mà mâu thuẫn với EN của HS là yếu
+  về mặt pháp lý. (đã xác minh
+  2026-07-17, nguồn: https://thuvienxuatnhapkhau.com/wp-content/uploads/2023/07/3866_Chu-giai-SEN-2022.pdf)
 
-Why this matters for the product: a citation stack that leads with SEN and never reaches a Chapter
-Note looks convincing and is legally thin. Rank and label evidence by tier in the UI so a staff
-member can see whether they are holding a binding argument or a persuasive one.
+Tại sao điều này quan trọng đối với sản phẩm: một chồng trích dẫn dẫn đầu bằng SEN và không bao giờ
+đạt đến một Chú giải Chương trông có vẻ thuyết phục nhưng lại mỏng về mặt pháp lý. Hãy xếp hạng và gắn
+nhãn bằng chứng theo cấp độ trong giao diện để một nhân viên có thể thấy liệu họ đang nắm trong tay một
+lập luận ràng buộc hay một lập luận chỉ có tính thuyết phục.
 
-## 4. Why classification is genuinely hard
+## 4. Vì sao phân loại thực sự khó
 
-1. **It is legal reasoning, not lookup.** The same physical object classifies differently by
-   *function*, *material*, *essential character*, *state of assembly*, and *presentation*. Exclusion
-   notes cross-reference chapters far away from the one you are reading.
-2. **Multi-axis constraints with priority.** Material vs function vs form must be resolved in the
-   right order. The characteristic failure mode is **resolving one axis while ignoring the priority
-   constraints on the others** — diagnosed explicitly as the way end-to-end prompting fails.
-   (verified 2026-07-17, source: https://arxiv.org/html/2605.14857)
-3. **Deliberately open-textured drafting.** Legal notes use "for example", "such as", "principally",
-   "of a kind used for". The vagueness is intentional and creates boundary confusion by design.
-   (verified 2026-07-17, source: https://arxiv.org/html/2510.19631)
-4. **Reasonable experts disagree.** In HSCodeComp's construction two experts disagreed enough to need
-   a senior tiebreaker; a later audit of 226 disagreements found **~42.5% of "wrong" model
-   predictions were actually better supported by HS rules than the published ground truth**.
-   (verified 2026-07-17, source: https://arxiv.org/html/2605.14857) **The ground truth itself is
-   contestable.** A system that reproduces the official label is optimizing for *agreement with
-   customs* — commercially the right target, but not the same thing as being right. Say so out loud
-   rather than calling it accuracy.
-5. **The money is in the last digits.** Most errors happen *after* the correct heading is found: the
-   split between two subheadings drives duty rate, AD/CVD exposure, FTA eligibility, licensing.
-   (verified 2026-07-17, source: https://aomeara.com/how-customs-actually-classifies-products/)
+1. **Đây là lập luận pháp lý, không phải tra cứu.** Cùng một vật thể vật lý sẽ được phân loại khác nhau
+   theo *công dụng*, *vật liệu*, *đặc trưng cơ bản*, *trạng thái lắp ráp*, và *hình thức trình bày*.
+   Các chú giải loại trừ tham chiếu chéo tới những chương ở rất xa chương mà bạn đang đọc.
+2. **Các ràng buộc đa trục có ưu tiên.** Vật liệu, công dụng và hình thức phải được giải quyết theo
+   đúng thứ tự. Kiểu thất bại đặc trưng là **giải quyết một trục trong khi bỏ qua các ràng buộc ưu tiên
+   trên các trục khác** — được chẩn đoán rõ ràng là cách mà prompting đầu-cuối (end-to-end) thất bại.
+   (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2605.14857)
+3. **Cách soạn thảo cố ý để ngỏ (open-textured).** Các chú giải pháp lý dùng "ví dụ", "chẳng hạn như",
+   "chủ yếu", "loại được dùng cho". Sự mơ hồ này là cố ý và tạo ra sự nhầm lẫn ranh giới một cách có
+   chủ đích. (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2510.19631)
+4. **Các chuyên gia có lý cũng bất đồng.** Trong quá trình xây dựng HSCodeComp, hai chuyên gia đã bất
+   đồng đủ để cần một người thứ ba cấp cao phân xử; một cuộc rà soát sau đó trên 226 bất đồng phát hiện
+   **~42,5% các dự đoán "sai" của mô hình thực ra được các quy tắc HS hỗ trợ tốt hơn so với dữ liệu
+   chuẩn (ground truth) đã công bố**. (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2605.14857)
+   **Bản thân dữ liệu chuẩn (ground truth) là có thể tranh cãi.** Một hệ thống tái tạo lại nhãn chính
+   thức đang tối ưu cho *sự đồng thuận với hải quan* — về mặt thương mại đây là mục tiêu đúng, nhưng
+   không phải là một điều giống với việc đúng. Hãy nói thẳng điều đó ra thay vì gọi nó là độ chính xác.
+5. **Tiền nằm ở những chữ số cuối cùng.** Hầu hết sai sót xảy ra *sau khi* đã tìm được nhóm đúng: việc
+   tách giữa hai phân nhóm quyết định mức thuế, mức độ chịu thuế AD/CVD, điều kiện hưởng FTA, giấy phép.
+   (đã xác minh 2026-07-17, nguồn: https://aomeara.com/how-customs-actually-classifies-products/)
 
-## 5. AI accuracy — the real numbers
+## 5. Độ chính xác của AI — những con số thực tế
 
-### HSCodeComp — 632 expert-annotated real e-commerce products, 27 chapters, 10-digit target
-(verified 2026-07-17, source: https://arxiv.org/html/2510.19631)
+### HSCodeComp — 632 sản phẩm thương mại điện tử thực tế do chuyên gia gán nhãn, 27 chương, mục tiêu mã 10 chữ số
+(đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2510.19631)
 
-| System | 10-digit accuracy |
+| Hệ thống | Độ chính xác 10 chữ số |
 |---|---|
-| **Human experts** | **95.0%** |
-| Best agent (SmolAgent + GPT-5 VLM) | 46.8% |
+| **Chuyên gia con người** | **95.0%** |
+| Agent tốt nhất (SmolAgent + GPT-5 VLM) | 46.8% |
 | Gemini Deep Research | 40.8% |
-| GPT-5, LLM only (no tools) | 29.0% |
+| GPT-5, chỉ LLM (không công cụ) | 29.0% |
 | Qwen2.5-72B | 0.16% |
 
-**Accuracy collapses down the hierarchy: ~82% at 2-digit → 29–47% at 10-digit.** Depth is the whole
-problem. A demo that shows "it got the chapter right" is measuring the easy 82% and telling you
-nothing about the digits that decide the duty.
+**Độ chính xác sụp đổ khi đi xuống theo cấu trúc phân cấp: ~82% ở 2 chữ số → 29–47% ở 10 chữ số.** Độ
+sâu chính là toàn bộ vấn đề. Một bản demo cho thấy "nó đã đoán đúng chương" thực chất đang đo phần dễ
+82% và không nói cho bạn biết gì về những chữ số quyết định mức thuế.
 
-**Two counterintuitive findings that must shape the design:**
+**Hai phát hiện phản trực giác phải định hình thiết kế:**
 
-- **Test-time scaling does not help.** Majority voting and self-reflection gave **negligible** gains,
-  unlike other reasoning domains. Why it matters: the obvious cheap fix — "sample 5 times and vote"
-  — buys nothing here. Wrong answers are wrong *consistently*, because the model misapplies the same
-  rule every sample. Do not budget for it.
-- **Giving the model explicit human-written decision rules DECREASED performance** for most systems.
-  Why it matters: the instinct to paste GRI + chapter notes into the prompt is actively harmful.
-  More prompt-stuffed rules ≠ better. Rules belong in control flow and in retrieval, not in context.
+- **Mở rộng quy mô tại thời điểm suy luận (test-time scaling) không giúp ích.** Bỏ phiếu đa số và
+  tự-phản-tư mang lại lợi ích **không đáng kể**, khác với các miền lập luận khác. Tại sao điều này quan
+  trọng: cách khắc phục rẻ tiền hiển nhiên — "lấy mẫu 5 lần rồi bỏ phiếu" — chẳng mang lại gì ở đây.
+  Các câu trả lời sai thì sai một cách *nhất quán*, bởi mô hình áp dụng sai cùng một quy tắc ở mỗi lần
+  lấy mẫu. Đừng dự trù ngân sách cho nó.
+- **Việc trao cho mô hình các quy tắc quyết định do con người viết ra một cách tường minh LÀM GIẢM hiệu
+  suất** đối với hầu hết các hệ thống. Tại sao điều này quan trọng: bản năng dán GRI + chú giải chương
+  vào prompt là chủ động gây hại. Nhồi thêm quy tắc vào prompt ≠ tốt hơn. Các quy tắc thuộc về luồng
+  điều khiển và truy xuất, không phải trong ngữ cảnh (context).
 
-**Errors are overwhelmingly "Error but Valid":** the model emits a real, legitimate-looking HS code
-that is wrong. **There is no syntactic signal of failure** — no exception, no parse error, no red
-flag. It flows into VNACCS, is accepted, and surfaces years later as a post-clearance audit. The
-model's confidence is uncorrelated with the legal outcome, and the failure is silent and delayed.
+**Sai sót áp đảo là dạng "Sai nhưng Hợp lệ" (Error but Valid):** mô hình phát ra một mã HS thật, trông
+hợp lệ nhưng lại sai. **Không có tín hiệu cú pháp nào của thất bại** — không có ngoại lệ, không có lỗi
+phân tích cú pháp, không có cờ đỏ. Nó chảy vào VNACCS, được chấp nhận, và nổi lên nhiều năm sau dưới
+dạng một cuộc kiểm tra sau thông quan. Mức độ tự tin của mô hình không tương quan với kết quả pháp lý,
+và thất bại thì âm thầm và bị trì hoãn.
 
-Six documented failure modes: premature decisions (committing before gathering evidence),
-information misprocessing (long-context loss of product details), unnecessary self-correction
-(talking itself out of a correct answer), reasoning hallucination, wrong rule application, and
-domain knowledge gaps (e.g. calling silicone "rubber").
+Sáu kiểu thất bại được ghi nhận: quyết định vội vàng (cam kết trước khi thu thập bằng chứng), xử lý
+sai thông tin (mất chi tiết sản phẩm trong ngữ cảnh dài), tự-sửa-lỗi không cần thiết (tự thuyết phục
+mình rời bỏ một câu trả lời đúng), ảo giác lập luận, áp dụng sai quy tắc, và thiếu hụt kiến thức miền
+(ví dụ gọi silicone là "cao su").
 
-### Vendor claims vs independent benchmarks
-Independent benchmark: 103 test cases from randomized CBP rulings (verified 2026-07-17, source:
-https://arxiv.org/html/2412.14179v1)
+### Tuyên bố của nhà cung cấp so với các benchmark độc lập
+Benchmark độc lập: 103 trường hợp thử nghiệm từ các phán quyết CBP được chọn ngẫu nhiên (đã xác minh
+2026-07-17, nguồn: https://arxiv.org/html/2412.14179v1)
 
-| Tool | 10-digit | Chapter-level |
+| Công cụ | 10 chữ số | Cấp chương |
 |---|---|---|
 | Tarifflo | 89.2% | 99/103 |
-| Avalara (AI **+ human review**) | 80.0% | 100/103 |
+| Avalara (AI **+ rà soát bởi con người**) | 80.0% | 100/103 |
 | Zonos | **44.1%** | 93/103 |
-| WCO BACUDA (6-digit ceiling) | 12.75% at 6-digit | 57/103 |
+| WCO BACUDA (trần 6 chữ số) | 12.75% ở 6 chữ số | 57/103 |
 
-**Zonos markets "90%+ accuracy out of the box"** (verified 2026-07-17, source:
-https://zonos.com/classify) and was **independently benchmarked at 44.1% at 10-digit** — a ~2× gap.
-Avalara's 80% comes from a product that explicitly includes **human expert review in the loop**
-(verified 2026-07-17, source: https://www.avalara.com/us/en/products/global-commerce-offerings/item-classification.html).
-**Treat every vendor number as marketing until independently reproduced.** Note the benchmark is
-itself small (n=103) and US-HTS-specific.
+**Zonos tiếp thị "độ chính xác 90%+ ngay từ đầu"** (đã xác minh 2026-07-17, nguồn:
+https://zonos.com/classify) và được **benchmark độc lập ở mức 44.1% tại 10 chữ số** — chênh lệch ~2×.
+Con số 80% của Avalara đến từ một sản phẩm bao gồm rõ ràng cả **khâu rà soát của chuyên gia con người
+trong vòng lặp** (đã xác minh 2026-07-17, nguồn:
+https://www.avalara.com/us/en/products/global-commerce-offerings/item-classification.html).
+**Hãy coi mọi con số của nhà cung cấp là tiếp thị cho đến khi được tái lập một cách độc lập.** Lưu ý
+rằng benchmark này tự thân đã nhỏ (n=103) và đặc thù cho US-HTS.
 
-BACUDA is the WCO's own model, predicting HS from commercial descriptions with a 6-digit ceiling,
-trained on historical declarations; its poor showing on CBP rulings is partly domain shift. BACUDA
-ran a **National Workshop on Data Analytics for Viet Nam Customs in December 2025** — Vietnam Customs
-is actively engaged with the WCO on this. (verified 2026-07-17, source:
+BACUDA là mô hình của chính WCO, dự đoán HS từ các mô tả thương mại với trần 6 chữ số, được huấn luyện
+trên các tờ khai lịch sử; kết quả kém của nó trên các phán quyết CBP một phần là do dịch chuyển miền
+(domain shift). BACUDA đã tổ chức một **Hội thảo quốc gia về Phân tích dữ liệu cho Hải quan Việt Nam
+vào tháng 12/2025** — Hải quan Việt Nam đang tích cực hợp tác với WCO về vấn đề này. (đã xác minh
+2026-07-17, nguồn:
 https://bacuda.wcoomd.org/2025/12/05/national-workshop-on-data-analytics-for-viet-nam-customs/)
 
-## 6. What actually works
+## 6. Những gì thực sự hiệu quả
 
-**Korea Customs Service — explainable candidates + evidence, for a human decider.** Predicts 6-digit
-subheadings, then **retrieves the relevant key sentences from the HS manual as explainable evidence**
-for each candidate. **Top-3 accuracy 93.9%** across 925 difficult subheadings, evaluated on 5,000
-recent classification requests. A user study with **32 customs experts** confirmed the suggestions +
-explanations substantially reduced review time and effort. It is explicitly **decision support, not
-autonomous classification**. (verified 2026-07-17, source: https://arxiv.org/abs/2311.10922 and
-https://dl.acm.org/doi/10.1145/3635158)
+**Cơ quan Hải quan Hàn Quốc (Korea Customs Service) — ứng viên có thể giải thích + bằng chứng, cho một
+người quyết định.** Dự đoán các phân nhóm 6 chữ số, sau đó **truy xuất các câu then chốt liên quan từ
+sổ tay HS làm bằng chứng có thể giải thích** cho mỗi ứng viên. **Độ chính xác top-3 đạt 93.9%** trên
+925 phân nhóm khó, được đánh giá trên 5,000 yêu cầu phân loại gần đây. Một nghiên cứu người dùng với
+**32 chuyên gia hải quan** xác nhận rằng các gợi ý + giải thích đã giảm đáng kể thời gian và công sức
+rà soát. Nó được xác định rõ ràng là **hỗ trợ quyết định, không phải phân loại tự động.** (đã xác minh
+2026-07-17, nguồn: https://arxiv.org/abs/2311.10922 và https://dl.acm.org/doi/10.1145/3635158)
 
-**Deterministic Agentic Workflow.** Rejects autonomous agents. Uses a **fixed 6-stage pipeline whose
-control flow is dictated by the tariff hierarchy itself**, not discovered by the LLM at runtime, and
-**pre-compiles GRI and chapter/section notes offline into typed clauses — inclusions, exclusions,
-priority rules** — loading the expensive chapter-note context only at the stage that needs it. On
-HSCodeComp: **4-digit 75.0% top-1 / 91.5% top-3; 6-digit 64.2% top-1 / 78.3% top-3** — roughly **2×
-the best autonomous agent** on the same benchmark. A **27B open-weight model reaches 84.2% (4-digit)
-/ 77.4% (6-digit) agreement with the frontier model** — you do not need a frontier model for most of
-the pipeline. (verified 2026-07-17, source: https://arxiv.org/html/2605.14857) 2026 preprint, not
-peer-reviewed.
+**Quy trình Agentic Tất định (Deterministic Agentic Workflow).** Bác bỏ các agent tự động. Sử dụng một
+**pipeline 6 giai đoạn cố định mà luồng điều khiển của nó được quy định bởi chính cấu trúc phân cấp thuế
+quan**, chứ không phải do LLM khám phá tại thời điểm chạy, và **biên dịch trước GRI cùng các chú giải
+chương/phần ngoại tuyến (offline) thành các mệnh đề có kiểu — bao gồm, loại trừ, quy tắc ưu tiên** —
+chỉ nạp ngữ cảnh chú-giải-chương đắt đỏ ở đúng giai đoạn cần đến nó. Trên HSCodeComp: **4 chữ số 75.0%
+top-1 / 91.5% top-3; 6 chữ số 64.2% top-1 / 78.3% top-3** — gần gấp **2× so với agent tự động tốt nhất**
+trên cùng benchmark. Một **mô hình mở 27B đạt 84.2% (4 chữ số) / 77.4% (6 chữ số) đồng thuận với mô hình
+tiền tuyến (frontier)** — bạn không cần một mô hình tiền tuyến cho hầu hết pipeline. (đã xác minh
+2026-07-17, nguồn: https://arxiv.org/html/2605.14857) Bản tiền ấn (preprint) năm 2026, chưa được bình
+duyệt.
 
-**The load-bearing conclusion.** Autonomous top-1 at 10-digit: 29–47%. Explainable top-3 + evidence
-at 6-digit: 93.9%, with *measured* expert time savings. **The gap is not model capability — it is the
-output contract.** Top-3 + evidence + human decides and top-1 + autonomy are different products, and
-only one of them works. This is why v1 ships candidates and verbatim legal-note evidence, and why the
-tariff numbers themselves are deterministic with no AI on them at all.
+**Kết luận chịu tải.** Top-1 tự động ở 10 chữ số: 29–47%. Top-3 có thể giải thích + bằng chứng ở 6 chữ
+số: 93.9%, với mức tiết kiệm thời gian chuyên gia *đã được đo lường*. **Khoảng cách không nằm ở năng
+lực của mô hình — nó nằm ở hợp đồng đầu ra (output contract).** "Top-3 + bằng chứng + con người quyết
+định" và "top-1 + tự động" là hai sản phẩm khác nhau, và chỉ một trong số đó hoạt động. Đây là lý do
+tại sao v1 xuất ra các ứng viên và bằng chứng chú-giải-pháp-lý nguyên văn, và tại sao bản thân các con
+số thuế quan lại là tất định và hoàn toàn không có AI trên đó.
 
-Corollaries worth keeping:
+Các hệ quả đáng giữ lại:
 
-- **Ship candidates, never a bare 8-digit number.** Prefer heading (4-digit) level first.
-- **Every candidate cites its authority verbatim** — the specific Chapter Note, Section Note, EN
-  paragraph, SEN entry, or công văn. Quote, do not paraphrase. The KCS study proved the value is in
-  the **evidence retrieval**, not the prediction. It is also the only defensible artifact when a Chi
-  cục challenges the code — it becomes the hồ sơ.
-- **Abstain loudly.** "These two headings both plausibly apply, here are the competing notes, this
-  needs xác định trước mã số" is the highest-value output on a hard good. Routing to the Điều 28
-  process is a feature, not a failure.
-- **Surface disagreement.** Where công văn conflict — and they do — show both. Concealing conflict
-  behind a confident single answer is the actively harmful design.
-- **Never let the user's preferred code into the prompt as a premise.** Confirmation-bias
-  amplification is documented: "if you want your HTS to be X (even if the correct HTS is Y), AI will
-  give you an argument (or three) to support your preferred HTS." (verified 2026-07-17, source:
-  https://aomeara.com/why-ai-tools-for-tariff-classification-may-lead-you-down-the-wrong-road/) The
-  model is a sycophantic advocate, not a judge — and this failure manufactures the paper trail for a
-  **trốn thuế** characterization.
-- **"An AI tool that produces a plausible-looking ten-digit number is not reasonable care."** The
-  importer is liable; the vendor assumes nothing. "The platform told me the HS code" is not a
-  defence. (verified 2026-07-17, source: https://internationaltradematters.com/discussion/ai-customs-compliance-for-smes/)
+- **Xuất ra ứng viên, không bao giờ là một con số 8 chữ số trơ trọi.** Ưu tiên cấp nhóm (4 chữ số)
+  trước.
+- **Mỗi ứng viên trích dẫn thẩm quyền của nó một cách nguyên văn** — Chú giải Chương, Chú giải Phần,
+  đoạn EN, mục SEN, hay công văn cụ thể. Trích dẫn nguyên văn, đừng diễn giải lại. Nghiên cứu của KCS
+  đã chứng minh giá trị nằm ở khâu **truy xuất bằng chứng**, không phải ở dự đoán. Đó cũng là hiện vật
+  duy nhất có thể bảo vệ được khi một Chi cục chất vấn mã số — nó trở thành hồ sơ.
+- **Từ chối một cách rõ ràng (Abstain loudly).** "Cả hai nhóm này đều có vẻ hợp lý áp dụng, đây là các
+  chú giải cạnh tranh nhau, việc này cần xác định trước mã số" là đầu ra có giá trị cao nhất đối với
+  một mặt hàng khó. Việc định tuyến sang quy trình Điều 28 là một tính năng, không phải một thất bại.
+- **Đưa bất đồng ra ánh sáng (Surface disagreement).** Ở những chỗ công văn xung đột — và chúng có xung
+  đột — hãy hiển thị cả hai. Che giấu xung đột đằng sau một câu trả lời đơn lẻ đầy tự tin là thiết kế
+  chủ động gây hại.
+- **Không bao giờ để mã ưa thích của người dùng lọt vào prompt như một tiền đề.** Việc khuếch đại thiên
+  kiến xác nhận (confirmation bias) đã được ghi nhận: "nếu bạn muốn HTS của mình là X (dù cho HTS đúng
+  là Y), AI sẽ đưa cho bạn một lập luận (hoặc ba) để hỗ trợ HTS ưa thích của bạn." (đã xác minh
+  2026-07-17, nguồn:
+  https://aomeara.com/why-ai-tools-for-tariff-classification-may-lead-you-down-the-wrong-road/) Mô hình
+  là một luật sư biện hộ nịnh hót (sycophantic advocate), không phải một thẩm phán — và thất bại này
+  chế tạo ra dấu vết giấy tờ cho một cáo buộc **trốn thuế**.
+- **"Một công cụ AI tạo ra một con số mười chữ số trông có vẻ hợp lý không phải là sự cẩn trọng hợp lý
+  (reasonable care)."** Nhà nhập khẩu chịu trách nhiệm; nhà cung cấp không gánh chịu gì. "Nền tảng bảo
+  tôi mã HS đó" không phải là một biện hộ. (đã xác minh 2026-07-17, nguồn:
+  https://internationaltradematters.com/discussion/ai-customs-compliance-for-smes/)
 
-**Where AI wins today with no accuracy controversy:** retrieving the relevant chapter/section notes
-and exclusions for a good (a retrieval problem, where the tech is strong); finding prior Vietnamese
-công văn / thông báo xác định trước mã số for similar goods (near-impossible manually because the
-corpus is unindexed); **consistency auditing** — flagging where the company's own historical
-declarations used different codes for the same good (this is the Polvita scenario, detectable
-*before* the audit); drafting the hồ sơ xác định trước mã số; watching for FTA/C/O HS mismatches.
+**Nơi AI chiến thắng ngày nay mà không có tranh cãi về độ chính xác:** truy xuất các chú giải
+chương/phần và các loại trừ liên quan cho một mặt hàng (một bài toán truy xuất, nơi công nghệ mạnh);
+tìm các công văn / thông báo xác định trước mã số của Việt Nam cho những mặt hàng tương tự (gần như bất
+khả thi nếu làm thủ công vì kho tài liệu không được lập chỉ mục); **kiểm toán tính nhất quán** — gắn
+cờ những chỗ mà chính các tờ khai lịch sử của doanh nghiệp đã dùng các mã khác nhau cho cùng một mặt
+hàng (đây là kịch bản Polvita, có thể phát hiện *trước* cuộc kiểm tra); soạn thảo hồ sơ xác định trước
+mã số; theo dõi các sai lệch HS giữa FTA/C/O.
 
-## 7. Vietnam-specific consequences of a wrong code
+## 7. Hậu quả riêng của Việt Nam khi sai mã
 
-Penalties under **Nghị định 128/2020/NĐ-CP** (sửa đổi bởi **102/2021/NĐ-CP**):
+Chế tài theo **Nghị định 128/2020/NĐ-CP** (sửa đổi bởi **102/2021/NĐ-CP**):
 
-| Situation | Consequence |
+| Tình huống | Hậu quả |
 |---|---|
-| Wrong HS, **no tax effect** | 1–2 triệu VND (Điều 8 khoản 1) |
-| Wrong HS → underpaid tax, self-discovered and khai bổ sung within the Điều 9 khoản 2 windows | **10%** of the shortfall |
-| Wrong HS → underpaid tax, **found by customs** | **20%** of the shortfall (Điều 9 khoản 3) |
-| Characterized as **trốn thuế** (Điều 14) | **1×–3×** the evaded tax; criminal referral possible |
-| All of the above | Truy thu the full shortfall + late-payment interest **0.03%/day** |
+| Sai HS, **không ảnh hưởng thuế** | 1–2 triệu VND (Điều 8 khoản 1) |
+| Sai HS → nộp thiếu thuế, tự phát hiện và khai bổ sung trong các thời hạn của Điều 9 khoản 2 | **10%** phần thiếu |
+| Sai HS → nộp thiếu thuế, **bị hải quan phát hiện** | **20%** phần thiếu (Điều 9 khoản 3) |
+| Bị quy kết là **trốn thuế** (Điều 14) | **1×–3×** số thuế trốn; có thể chuyển hồ sơ hình sự |
+| Tất cả những điều trên | Truy thu toàn bộ phần thiếu + tiền chậm nộp **0.03%/ngày** |
 
-(verified 2026-07-17, source: https://hethongphapluat.com/nghi-dinh-128-2020-nd-cp-quy-dinh-ve-xu-phat-vi-pham-hanh-chinh-trong-linh-vuc-hai-quan/dieu-8 and .../dieu-9)
+(đã xác minh 2026-07-17, nguồn: https://hethongphapluat.com/nghi-dinh-128-2020-nd-cp-quy-dinh-ve-xu-phat-vi-pham-hanh-chinh-trong-linh-vuc-hai-quan/dieu-8 và .../dieu-9)
 
-- **De minimis**: no fine if the tax difference is under **500.000đ (cá nhân) / 2.000.000đ (tổ chức)**.
-- **50% reduction** where the declarant self-detects and files a late khai bổ sung (Điều 8 khoản 6).
-- **Limitation periods**: **5 years** for the administrative penalty, but **tax + interest recoverable
-  for 10 years** from discovery. The asymmetry is the point — the fine expires long before the money does.
-- **Knock-on damage dwarfs the fine**: loss of **FTA preferential rates** via C/O mismatch,
-  retroactive **anti-dumping duty** assessment, and being flagged **luồng đỏ / high-risk** in the
-  risk-management system. (verified 2026-07-17, source: https://thuvienphapluat.vn/tintuc/vn/thoi-su-phap-luat/tai-chinh/20921/xu-ly-khi-co-khac-biet-ma-so-hs-tren-c-o)
+- **Mức tối thiểu (de minimis)**: không phạt nếu chênh lệch thuế dưới **500.000đ (cá nhân) / 2.000.000đ
+  (tổ chức)**.
+- **Giảm 50%** khi người khai tự phát hiện và nộp khai bổ sung muộn (Điều 8 khoản 6).
+- **Thời hiệu**: **5 năm** đối với chế tài hành chính, nhưng **thuế + tiền lãi có thể truy thu trong 10
+  năm** kể từ khi phát hiện. Sự bất đối xứng chính là điểm mấu chốt — tiền phạt hết hiệu lực từ lâu
+  trước khi khoản tiền hết hiệu lực.
+- **Thiệt hại dây chuyền lấn át tiền phạt**: mất **mức thuế ưu đãi FTA** do sai lệch C/O, bị truy áp
+  **thuế chống bán phá giá** hồi tố, và bị gắn cờ **luồng đỏ / rủi ro cao** trong hệ thống quản lý rủi
+  ro. (đã xác minh 2026-07-17, nguồn: https://thuvienphapluat.vn/tintuc/vn/thoi-su-phap-luat/tai-chinh/20921/xu-ly-khi-co-khac-biet-ma-so-hs-tren-c-o)
 
-Why this shapes v1: the expected cost of a wrong suggestion is not the 1–2 triệu fine. It is a 10-year
-truy thu window plus destroyed FTA eligibility on every past shipment of that good. This is what
-makes "top-1, autonomous" indefensible at any accuracy the research reports.
+Tại sao điều này định hình v1: chi phí kỳ vọng của một gợi ý sai không phải là khoản phạt 1–2 triệu. Đó
+là một cửa sổ truy thu 10 năm cộng với việc phá hủy điều kiện hưởng FTA trên mọi lô hàng trong quá khứ
+của mặt hàng đó. Đây là điều khiến cho "top-1, tự động" không thể bảo vệ được ở bất kỳ độ chính xác nào
+mà các báo cáo nghiên cứu đưa ra.
 
 ## 8. Xác định trước mã số (advance ruling) — Điều 28 Luật Hải quan
 
-The intended safety valve, and the only mechanism that produces legal certainty in Vietnam.
-(verified 2026-07-17, source: https://luatvietan.vn/huong-dan-thu-tuc-xac-dinh-truoc-ma-so-hang-hoa.html)
+Van an toàn dự kiến, và là cơ chế duy nhất tạo ra sự chắc chắn pháp lý ở Việt Nam. (đã xác minh
+2026-07-17, nguồn: https://luatvietan.vn/huong-dan-thu-tuc-xac-dinh-truoc-ma-so-hang-hoa.html)
 
-- **File**: đơn mẫu **01/XĐTMS/TXNK** + technical dossier (phân tích thành phần, catalogue, ảnh, mẫu
-  hàng), **at least 60 days before** the shipment.
-- **Processing**: **30 days**, extended to **60 days** for complex cases needing verification.
-- **Validity**: **maximum 3 years** from issuance.
-- **Refusal grounds**: incomplete dossier; goods awaiting another agency's determination; the code has
-  already been guided by a state agency.
-- **The trap**: the ruling **ceases to apply if the actual goods or documents differ** from the
-  samples and documents submitted. **It protects the DESCRIBED good, not the shipment.** A ruling in
-  hand is not a shield if the spec drifted — so the dossier's description text is the asset, and it
-  is exactly what an AI can help draft precisely.
+- **Nộp**: đơn mẫu **01/XĐTMS/TXNK** + hồ sơ kỹ thuật (phân tích thành phần, catalogue, ảnh, mẫu hàng),
+  **ít nhất 60 ngày trước** khi lô hàng đến.
+- **Xử lý**: **30 ngày**, gia hạn đến **60 ngày** đối với các trường hợp phức tạp cần xác minh.
+- **Hiệu lực**: **tối đa 3 năm** kể từ ngày ban hành.
+- **Căn cứ từ chối**: hồ sơ không đầy đủ; hàng hóa đang chờ một cơ quan khác xác định; mã số đã được
+  một cơ quan nhà nước hướng dẫn.
+- **Cái bẫy**: kết quả xác định **ngừng áp dụng nếu hàng hóa hoặc chứng từ thực tế khác** với mẫu và tài
+  liệu đã nộp. **Nó bảo vệ mặt hàng ĐƯỢC MÔ TẢ, không phải lô hàng.** Một kết quả xác định trong tay
+  không phải là tấm khiên nếu quy cách sản phẩm bị lệch — vì vậy phần mô tả của hồ sơ chính là tài sản,
+  và đó chính xác là thứ mà AI có thể giúp soạn thảo một cách chính xác.
 
-Legal chain: Luật Hải quan 2014 Điều 28 → Nghị định 08/2015/NĐ-CP (sửa đổi bởi 59/2018/NĐ-CP) →
-Thông tư 38/2015/TT-BTC Điều 7 (sửa đổi bởi Thông tư 39/2018/TT-BTC khoản 3 Điều 1). **Thông tư
-121/2025/TT-BTC** (ban hành 18/12/2025, **hiệu lực 01/02/2026**) amends TT 38/2015 and 39/2018,
-including sửa đổi khoản 1 and bổ sung khoản 6 Điều 7 on the advance-ruling dossier/samples, and
-introduces new forms **01a-TB XDTMS / 01b-Thay the XDTMS / 01c-Huy XDTMS**. (verified 2026-07-17,
-source: https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Thong-tu-121-2025-TT-BTC-sua-doi-cac-Thong-tu-ve-thu-tuc-hai-quan-giam-sat-hai-quan-633118.aspx
-and https://www.pwc.com/vn/vn/publications/news-brief/251223-new-customs-procedures-effective-from-1-february-2026.html)
+Chuỗi pháp lý: Luật Hải quan 2014 Điều 28 → Nghị định 08/2015/NĐ-CP (sửa đổi bởi 59/2018/NĐ-CP) → Thông
+tư 38/2015/TT-BTC Điều 7 (sửa đổi bởi Thông tư 39/2018/TT-BTC khoản 3 Điều 1). **Thông tư 121/2025/TT-BTC**
+(ban hành 18/12/2025, **hiệu lực 01/02/2026**) sửa đổi TT 38/2015 và 39/2018, bao gồm sửa đổi khoản 1
+và bổ sung khoản 6 Điều 7 về hồ sơ/mẫu xác định trước, và giới thiệu các mẫu mới **01a-TB XDTMS /
+01b-Thay the XDTMS / 01c-Huy XDTMS**. (đã xác minh 2026-07-17, nguồn:
+https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Thong-tu-121-2025-TT-BTC-sua-doi-cac-Thong-tu-ve-thu-tuc-hai-quan-giam-sat-hai-quan-633118.aspx
+và https://www.pwc.com/vn/vn/publications/news-brief/251223-new-customs-procedures-effective-from-1-february-2026.html)
 
-## 9. The practitioner reality
+## 9. Thực tế hành nghề
 
-- **76% of enterprises report obstacles confirming HS codes**, up from 66.3% in 2018. (verified
-  2026-07-17, source: https://diendandoanhnghiep.vn/ganh-nang-ma-hs-trach-nhiem-cua-co-quan-hai-quan-o-dau-10077631.html)
-The three case studies below are **⚠️ illustrative, not established fact.** Research 09 §2 reports them
-**without any primary URL**. They describe the failure *shape* accurately and are directionally
-corroborated by the sourced enterprise-complaint reporting above and below, but the specific figures,
-codes, and dates are **not independently verified here**. Do not quote them as fact to the owner or in
-the product. (source: research 09 §2; see §12 below and
-[Business Rules → Unverified](../business-rules.md#unverified--do-not-rely-on))
+- **76% doanh nghiệp báo cáo gặp trở ngại trong việc xác nhận mã HS**, tăng từ 66.3% năm 2018. (đã xác
+  minh 2026-07-17, nguồn: https://diendandoanhnghiep.vn/ganh-nang-ma-hs-trach-nhiem-cua-co-quan-hai-quan-o-dau-10077631.html)
+Ba nghiên cứu điển hình dưới đây là **⚠️ có tính minh họa, không phải sự thật đã được xác lập.** Nghiên
+cứu 09 §2 báo cáo chúng **không kèm bất kỳ URL gốc nào**. Chúng mô tả chính xác *hình dạng* của thất
+bại và được chứng thực theo hướng phù hợp bởi các báo cáo phàn nàn của doanh nghiệp có nguồn ở trên và
+dưới, nhưng các con số, mã, và ngày tháng cụ thể **không được xác minh độc lập ở đây**. Đừng trích dẫn
+chúng như sự thật với chủ sở hữu hay trong sản phẩm. (nguồn: nghiên cứu 09 §2; xem §12 dưới đây và
+[Quy tắc nghiệp vụ → Chưa xác minh](../business-rules.md#chưa-xác-minh--không-được-dựa-vào))
 
-- **The dairy case**: 8 producers (Vinamilk, Hanoimilk, Nutifood…) reportedly faced retroactive truy thu
-  of **~700 tỷ VND** after customs reclassified Anhydrous Milk Fat in **Dec 2014 from 0405.90.10 →
-  0405.90.90**, destroying AANZFTA 0% eligibility — **applied back to 2010 declarations**.
-- **Polvita**: reportedly **78 clean declarations 2010–2019**, then sudden reclassification.
-  **Nhật Thiên Kim**: years at 8544.49.49, then reassessed. Some firms are reported to have gone
-  bankrupt. Businesses ask why a 5-year retroactive power designed for fraud lands on them when
-  *customs itself* accepted the code for 5–10 years.
-- **Inconsistency between customs units for the same good** is a documented recurring complaint.
-  (verified 2026-07-17, source: https://trungtamwto.vn/hiep-dinh-khac/18495-doanh-nghiep-va-hai-quan-van-co-khuc-mac-ve-ma-hs)
+- **Vụ sữa**: 8 nhà sản xuất (Vinamilk, Hanoimilk, Nutifood…) được cho là đã đối mặt với truy thu hồi
+  tố **~700 tỷ VND** sau khi hải quan phân loại lại Mỡ sữa khan (Anhydrous Milk Fat) vào **tháng 12/2014
+  từ 0405.90.10 → 0405.90.90**, phá hủy điều kiện hưởng AANZFTA 0% — **áp dụng ngược về các tờ khai năm
+  2010**.
+- **Polvita**: được cho là **78 tờ khai sạch giai đoạn 2010–2019**, rồi bị phân loại lại đột ngột.
+  **Nhật Thiên Kim**: nhiều năm ở 8544.49.49, rồi bị đánh giá lại. Một số doanh nghiệp được cho là đã
+  phá sản. Doanh nghiệp hỏi tại sao một quyền lực truy thu hồi tố 5 năm được thiết kế cho gian lận lại
+  giáng xuống họ khi *chính hải quan* đã chấp nhận mã số đó trong 5–10 năm.
+- **Sự thiếu nhất quán giữa các đơn vị hải quan cho cùng một mặt hàng** là một khiếu nại tái diễn đã
+  được ghi nhận. (đã xác minh 2026-07-17, nguồn: https://trungtamwto.vn/hiep-dinh-khac/18495-doanh-nghiep-va-hai-quan-van-co-khuc-mac-ve-ma-hs)
 
-**The implication to internalize**: the risk is not only "AI picks the wrong code". It is that **there
-is often no stable single right answer**, and the liability sits entirely on the declarant regardless.
-Past acceptance by customs is not protection. That is the argument for consistency auditing and for
-routing high-stakes goods to Điều 28 — not for a better classifier.
+**Hàm ý cần thấm nhuần**: rủi ro không chỉ là "AI chọn sai mã". Mà là **thường không có một câu trả lời
+đúng duy nhất ổn định**, và trách nhiệm pháp lý nằm hoàn toàn trên người khai bất kể thế nào. Việc hải
+quan đã chấp nhận trong quá khứ không phải là sự bảo vệ. Đó là luận cứ cho việc kiểm toán tính nhất
+quán và cho việc định tuyến các mặt hàng có rủi ro cao sang Điều 28 — chứ không phải cho một bộ phân
+loại tốt hơn.
 
-## 10. Institutional change — document numbering and the new ruling process
+## 10. Thay đổi thể chế — cách đánh số văn bản và quy trình xác định trước mới
 
-**Tổng cục Hải quan ceased to exist on 01/03/2025** (Nghị định 29/2025/NĐ-CP, Quyết định
-382/QĐ-BTC). It is now **Cục Hải quan** under Bộ Tài chính, with **20 Chi cục Hải quan khu vực**.
-**Documents issued after that date are numbered `-CHQ`, not `-TCHQ`.** (verified 2026-07-17, source:
+**Tổng cục Hải quan chấm dứt tồn tại vào 01/03/2025** (Nghị định 29/2025/NĐ-CP, Quyết định 382/QĐ-BTC).
+Nay là **Cục Hải quan** thuộc Bộ Tài chính, với **20 Chi cục Hải quan khu vực**. **Các văn bản ban hành
+sau ngày đó được đánh số `-CHQ`, không phải `-TCHQ`.** (đã xác minh 2026-07-17, nguồn:
 https://xaydungchinhsach.chinhphu.vn/quyet-dinh-382-qd-btc-quy-dinh-chuc-nang-nhiem-vu-quyen-han-va-co-cau-to-chuc-cua-cuc-hai-quan-119250228165530471.htm)
 
-Why this is a data-model fact, not trivia: any corpus of công văn spans the break. Deduplication,
-citation parsing, and "find the latest guidance on X" all need to reconcile `-TCHQ` (pre-01/03/2025)
-against `-CHQ` (post). A retrieval system that only knows one prefix will silently miss half the
-corpus.
+Tại sao đây là một sự kiện của mô hình dữ liệu, không phải chuyện vặt: bất kỳ kho công văn nào cũng bắc
+qua điểm gãy này. Việc khử trùng lặp, phân tích trích dẫn, và "tìm hướng dẫn mới nhất về X" đều cần đối
+chiếu `-TCHQ` (trước 01/03/2025) với `-CHQ` (sau đó). Một hệ thống truy xuất chỉ biết một tiền tố sẽ
+lặng lẽ bỏ sót một nửa kho tài liệu.
 
-**Quyết định 117/QĐ-CHQ (2026)** sets a new internal *Quy trình xác định trước mã số; kiểm tra tên
-hàng, mô tả, mã số, mức thuế, đơn vị tính*, applied from **~01/02/2026**, built on the principle that
-**each good has exactly one HS code** and on a **unified sector-wide classification database**.
-(verified 2026-07-17, source: https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Quyet-dinh-117-QD-CHQ-2026-Quy-trinh-Xac-dinh-truoc-ma-so-Kiem-tra-ten-hang-mo-ta-hang-hoa-692998.aspx)
-**That database is an INTERNAL system — do not assume it will ever be exposed.** Note the tension
-worth flagging to the owner: "each good has exactly one HS code" is an administrative principle, and
-§4 of this note is the evidence that reality does not comply.
+**Quyết định 117/QĐ-CHQ (2026)** đặt ra một *Quy trình xác định trước mã số; kiểm tra tên hàng, mô tả,
+mã số, mức thuế, đơn vị tính* nội bộ mới, áp dụng từ **~01/02/2026**, xây dựng trên nguyên tắc **mỗi
+mặt hàng có đúng một mã HS** và trên một **cơ sở dữ liệu phân loại thống nhất toàn ngành**. (đã xác minh
+2026-07-17, nguồn: https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Quyet-dinh-117-QD-CHQ-2026-Quy-trinh-Xac-dinh-truoc-ma-so-Kiem-tra-ten-hang-mo-ta-hang-hoa-692998.aspx)
+**Cơ sở dữ liệu đó là một hệ thống NỘI BỘ — đừng cho rằng nó sẽ bao giờ được phơi bày ra ngoài.** Lưu ý
+mâu thuẫn đáng nêu ra với chủ sở hữu: "mỗi mặt hàng có đúng một mã HS" là một nguyên tắc hành chính, và
+§4 của ghi chú này là bằng chứng cho thấy thực tế không tuân theo.
 
-## 11. Data availability for classification evidence
+## 11. Khả năng sẵn có của dữ liệu làm bằng chứng phân loại
 
-Vietnam has **no CROSS/EBTI equivalent** — no clean, complete, machine-readable, publicly queryable
-corpus of classification rulings comparable to US CBP CROSS or EU EBTI.
+Việt Nam **không có tương đương với CROSS/EBTI** — không có kho các phán quyết phân loại sạch, đầy đủ,
+đọc được bằng máy, có thể truy vấn công khai nào so sánh được với US CBP CROSS hay EU EBTI.
 
-- The **nomenclature is public** (TT 31/2022) but published as Word/PDF annexes; **no official API**.
-  Excel biểu thuế circulates commercially. Research 09 §3 describes customs.gov.vn as the only
-  *nomenclature* publication with legal value for declarations. ⚠️ **Do not generalise that to the
-  tariff API.** Research 10 and 12 are emphatic that the undocumented `APIBieuThue` endpoint carries
-  **no legal authority — the Nghị định text does**. The nomenclature publication and the tariff lookup
-  API are different artifacts on the same domain; only the first has standing. See
-  [Data Sources](data-sources.md) and [Tariff System](tariff-system.md).
-- **Chú giải chi tiết HS (WCO EN)** — the WCO EN is **copyrighted and not freely downloadable**.
-- **Thông báo xác định trước mã số**: only partially published. VNTR
-  (`vntr.moit.gov.vn/administrative_rulings`) mirrors rulings as an **HTML table of links — no API,
-  no bulk download, no structured dataset**, the visible sample set was ~Sept 2021–Jan 2022, and it
-  is explicitly "for consultation purpose only". (verified 2026-07-17, source:
-  https://vntr.moit.gov.vn/administrative_rulings)
-- **Thông báo kết quả phân loại** (Cục Kiểm định Hải quan, mẫu 04/TBKQPT-PL/2017) go to **Customslab**,
-  an internal system searchable by customs units, not the public. Volume is small: **~2,500 samples
-  processed**; first half of 2026 → **257 dossiers received, 143 classification notices issued**.
-  (verified 2026-07-17, source: https://thuehaiquan.tapchikinhtetaichinh.vn/hai-quan-xu-ly-gan-2-500-mam-phan-tich-phan-loai-hang-hoa-xuat-nhap-khau-160924.html)
+- **Danh pháp là công khai** (TT 31/2022) nhưng được công bố dưới dạng phụ lục Word/PDF; **không có API
+  chính thức**. Biểu thuế Excel được lưu hành thương mại. Nghiên cứu 09 §3 mô tả customs.gov.vn là ấn
+  phẩm *danh pháp* duy nhất có giá trị pháp lý cho việc khai báo. ⚠️ **Đừng khái quát điều đó cho API
+  thuế quan.** Nghiên cứu 10 và 12 nhấn mạnh rằng endpoint không có tài liệu `APIBieuThue` **không có
+  thẩm quyền pháp lý — văn bản Nghị định mới có**. Ấn phẩm danh pháp và API tra cứu thuế quan là những
+  hiện vật khác nhau trên cùng một tên miền; chỉ cái đầu tiên có giá trị pháp lý. Xem
+  [Nguồn dữ liệu](data-sources.md) và [Hệ thống thuế quan](tariff-system.md).
+- **Chú giải chi tiết HS (WCO EN)** — EN của WCO **có bản quyền và không thể tải xuống miễn phí**.
+- **Thông báo xác định trước mã số**: chỉ được công bố một phần. VNTR
+  (`vntr.moit.gov.vn/administrative_rulings`) phản chiếu các phán quyết dưới dạng một **bảng HTML gồm
+  các liên kết — không API, không tải hàng loạt, không tập dữ liệu có cấu trúc**, tập mẫu hiển thị là
+  ~tháng 9/2021–tháng 1/2022, và nó được ghi rõ ràng là "chỉ dành cho mục đích tham khảo". (đã xác minh
+  2026-07-17, nguồn: https://vntr.moit.gov.vn/administrative_rulings)
+- **Thông báo kết quả phân loại** (Cục Kiểm định Hải quan, mẫu 04/TBKQPT-PL/2017) đi vào **Customslab**,
+  một hệ thống nội bộ có thể tìm kiếm bởi các đơn vị hải quan, không dành cho công chúng. Khối lượng
+  nhỏ: **~2,500 mẫu đã xử lý**; nửa đầu 2026 → **257 hồ sơ tiếp nhận, 143 thông báo phân loại được ban
+  hành**. (đã xác minh 2026-07-17, nguồn: https://thuehaiquan.tapchikinhtetaichinh.vn/hai-quan-xu-ly-gan-2-500-mam-phan-tich-phan-loai-hang-hoa-xuat-nhap-khau-160924.html)
 
-**Retrieval quality is capped by data access, not by the model.** This is the single biggest
-data-engineering obstacle for the evidence half of the feature.
+**Chất lượng truy xuất bị giới hạn bởi khả năng truy cập dữ liệu, không phải bởi mô hình.** Đây là trở
+ngại kỹ thuật dữ liệu lớn nhất đối với nửa bằng-chứng của tính năng.
 
-### The annex trap (from research 12) — the failure mode this whole project must fear
+### Cái bẫy phụ lục (từ research 12) — chế độ lỗi mà cả dự án này phải e sợ
 
-Report 12 built a real 11,874-row tariff table from Công báo `.doc` sources and its **first naive
-parse reported 94% success and was confidently wrong**: `0301.11.10 → ['0', '15']`, because
+Báo cáo 12 đã xây dựng một bảng thuế quan thật 11,874 dòng từ các nguồn `.doc` của Công báo và **lần
+phân tích cú pháp ngây thơ đầu tiên báo cáo thành công 94% và đã sai một cách đầy tự tin**: `0301.11.10
+→ ['0', '15']`, bởi vì
 
 - **Phụ lục I (BIỂU THUẾ XUẤT KHẨU)** → `0301.11.10 = 0`
 - **Phụ lục II (BIỂU THUẾ NHẬP KHẨU ƯU ĐÃI)** → `0301.11.10 = 15`
 
-**1,520 HS codes appear in both annexes; 1,329 of them have different rates.** A parser that ignores
-annex boundaries returns the **export** rate for an **import** question — silently, with no error, at
-94% apparent success. (verified 2026-07-17, source: research 12, adversarial verification, working
-artifacts in the session scratchpad)
+**1,520 mã HS xuất hiện ở cả hai phụ lục; 1,329 trong số đó có mức thuế khác nhau.** Một bộ phân tích
+cú pháp bỏ qua ranh giới phụ lục sẽ trả về mức thuế **xuất khẩu** cho một câu hỏi **nhập khẩu** — một
+cách âm thầm, không lỗi, với thành công bề ngoài 94%. (đã xác minh 2026-07-17, nguồn: nghiên cứu 12,
+xác minh đối kháng, các hiện vật làm việc nằm trong scratchpad của phiên)
 
-Why it belongs in an HS-classification note: it is the *same* failure shape as "Error but Valid" HS
-predictions. **The danger in this project category is never missing data — it is plausible-looking
-wrong data that reports success.** Any ingestion of TT 31/2022 or a biểu thuế must be **annex-aware**
-and must carry the annex identity as a first-class key, exactly as any classification output must
-carry its authority tier and nomenclature version.
+Tại sao nó thuộc về một ghi chú phân-loại-HS: nó là *cùng* một hình dạng thất bại với các dự đoán HS
+"Sai nhưng Hợp lệ". **Mối nguy trong loại dự án này không bao giờ là dữ liệu bị thiếu — mà là dữ liệu
+sai trông có vẻ hợp lý nhưng báo cáo thành công.** Bất kỳ quá trình nạp TT 31/2022 hay một biểu thuế
+nào cũng phải **nhận biết được phụ lục (annex-aware)** và phải mang định danh phụ lục như một khóa hạng
+nhất, đúng như bất kỳ đầu ra phân loại nào cũng phải mang cấp độ thẩm quyền và phiên bản danh pháp của
+nó.
 
-Report 12 also found a **temporal gap**: decrees can take legal effect the day they are signed
-(ND 72/2026, signed and effective 09/03/2026) while appearing in Công báo machine-readable form
-**15–48 days later**, and some **expire and silently revert** (ND 72/2026 was valid only until
-30/04/2026). During that window the binding law exists publicly only as a 200-DPI scan. See the
-tariff/data-source notes in this directory for the full treatment — it is their subject, not this
-note's.
+Báo cáo 12 cũng phát hiện một **khoảng trống thời gian**: các nghị định có thể có hiệu lực pháp lý ngay
+ngày ký (NĐ 72/2026, ký và có hiệu lực 09/03/2026) trong khi xuất hiện dưới dạng đọc-được-bằng-máy trên
+Công báo **15–48 ngày sau đó**, và một số **hết hạn và lặng lẽ đảo ngược** (NĐ 72/2026 chỉ có hiệu lực
+đến 30/04/2026). Trong cửa sổ đó, luật ràng buộc chỉ tồn tại công khai dưới dạng một bản scan 200-DPI.
+Xem các ghi chú thuế-quan/nguồn-dữ-liệu trong thư mục này để có phần xử lý đầy đủ — đó là chủ đề của
+chúng, không phải của ghi chú này.
 
-## 12. Unverified / Do Not Rely On
+## 12. Chưa xác minh / Không được dựa vào
 
-Reproduced verbatim in spirit from research 09 and 12. Do not launder these into confident claims.
+Được tái tạo nguyên văn về mặt tinh thần từ nghiên cứu 09 và 12. Đừng "tẩy rửa" chúng thành các khẳng
+định đầy tự tin.
 
-- **The enforcement case studies in §9 — the dairy case (~700 tỷ VND, AMF 0405.90.10 → 0405.90.90,
-  Dec 2014, retroactive to 2010), Polvita (78 clean declarations 2010–2019), Nhật Thiên Kim
-  (8544.49.49), "some firms went bankrupt."** Research 09 §2 reports all of these **without a per-case
-  primary URL**. They are directionally corroborated by the separately-sourced enterprise-complaint
-  reporting (the 76% figure, and the customs-unit inconsistency complaint), but the **specific figures,
-  HS codes, and dates are not independently verified**. They earn their place as illustrations of the
-  failure shape. **Do not quote 700 tỷ as an established figure**, and do not put these cases in the
-  product. Also see [Business Rules → Unverified](../business-rules.md#unverified--do-not-rely-on),
-  which reaches the same conclusion.
-- **"Claude 3.5 Sonnet and GPT-4 achieve ~80% at 6-digit and >90% at 2-digit."** Surfaced in a search
-  snippet **without a traceable primary source**, and it **contradicts HSCodeComp** (GPT-5 LLM-only:
-  29.0% at 10-digit, ~82% at 2-digit). **Do not rely on it.**
-- **"1 in 3 customs entries is misclassified; tens of billions in duties incorrectly paid."** Appears
-  on vendor blogs with **no primary citation**. Directionally plausible, **unsourced**.
-- **Quyết định 117/QĐ-CHQ (2026) details** — research 09 could not fetch the full text
-  (paywall/403). Treat the ruling-process details in §10 as **medium confidence**.
-- **A further Luật Hải quan amendment was tabled to the UBTVQH on 15/7/2026** — the legal framework is
-  **in flux**; §7–§8 may move.
-- **Deterministic Agentic Workflow (arXiv:2605.14857)** is a **2026 preprint, not peer-reviewed**.
-- The vendor benchmark (arXiv:2412.14179) is **small (n=103) and US-HTS-specific**. It does not
-  transfer cleanly to AHTN 8-digit Vietnam.
-- **CONTESTED / UNRESOLVED — customs.gov.vn API.** Research 10 reports the discovery of a
-  customs.gov.vn API; **research 12 partially contradicts it**. Report 12 verified that
-  `/scripts/main.js` hardcodes a JSON backend at `http://123.30.210.236:8080/hqcustomsapi/` — a raw
-  IP over plain HTTP on port 8080, including a `.../hqcustomsapi/captcha/CheckCaptcha` endpoint, so
-  **at least part of the portal is CAPTCHA-gated** — but **that IP timed out** from the research
-  environment, and report 12 explicitly **could not distinguish geo-fencing from a sandbox egress
-  block** and therefore does **not** claim it is unreachable. Report 12's further position is that
-  even if reachable it is a *lookup* tool and not a bulk export, enumerating ~11k codes through a
-  CAPTCHA-fronted undocumented endpoint on a raw IP is fragile and adversarial, and **it carries no
-  legal authority — the Nghị định does**. **Both positions stand. The conflict is unresolved.** Do
-  not plan a dependency on this API without first reproducing reachability from Vietnam.
+- **Các nghiên cứu điển hình thực thi pháp luật trong §9 — vụ sữa (~700 tỷ VND, AMF 0405.90.10 →
+  0405.90.90, tháng 12/2014, hồi tố về 2010), Polvita (78 tờ khai sạch 2010–2019), Nhật Thiên Kim
+  (8544.49.49), "một số doanh nghiệp đã phá sản."** Nghiên cứu 09 §2 báo cáo tất cả những điều này
+  **không kèm URL gốc cho từng vụ**. Chúng được chứng thực theo hướng phù hợp bởi các báo cáo phàn nàn
+  của doanh nghiệp có nguồn riêng (con số 76%, và khiếu nại về sự thiếu nhất quán giữa các đơn vị hải
+  quan), nhưng các **con số, mã HS, và ngày tháng cụ thể không được xác minh độc lập**. Chúng có chỗ
+  đứng như là minh họa cho hình dạng thất bại. **Đừng trích dẫn 700 tỷ như một con số đã được xác lập**,
+  và đừng đưa những vụ này vào sản phẩm. Cũng xem
+  [Quy tắc nghiệp vụ → Chưa xác minh](../business-rules.md#chưa-xác-minh--không-được-dựa-vào), nơi đi đến cùng
+  một kết luận.
+- **"Claude 3.5 Sonnet và GPT-4 đạt ~80% ở 6 chữ số và >90% ở 2 chữ số."** Nổi lên trong một đoạn trích
+  tìm kiếm **không có nguồn gốc có thể truy vết**, và nó **mâu thuẫn với HSCodeComp** (GPT-5 chỉ LLM:
+  29.0% ở 10 chữ số, ~82% ở 2 chữ số). **Đừng dựa vào nó.**
+- **"1 trên 3 tờ khai hải quan bị phân loại sai; hàng chục tỷ tiền thuế bị nộp sai."** Xuất hiện trên
+  các blog của nhà cung cấp **không có trích dẫn gốc**. Hợp lý theo hướng, nhưng **không có nguồn**.
+- **Chi tiết Quyết định 117/QĐ-CHQ (2026)** — nghiên cứu 09 không thể lấy được toàn văn (bị chặn/403).
+  Hãy coi các chi tiết quy-trình-phán-quyết trong §10 là **độ tin cậy trung bình**.
+- **Một sửa đổi Luật Hải quan tiếp theo đã được trình lên UBTVQH vào 15/7/2026** — khung pháp lý đang
+  **biến động**; §7–§8 có thể thay đổi.
+- **Quy trình Agentic Tất định (arXiv:2605.14857)** là một **bản tiền ấn năm 2026, chưa được bình
+  duyệt**.
+- Benchmark của nhà cung cấp (arXiv:2412.14179) là **nhỏ (n=103) và đặc thù US-HTS**. Nó không chuyển
+  giao sạch sẽ sang AHTN 8 chữ số của Việt Nam.
+- **TRANH CÃI / CHƯA GIẢI QUYẾT — API customs.gov.vn.** Nghiên cứu 10 báo cáo phát hiện một API
+  customs.gov.vn; **nghiên cứu 12 mâu thuẫn một phần với nó**. Báo cáo 12 xác minh rằng `/scripts/main.js`
+  hardcode một backend JSON tại `http://123.30.210.236:8080/hqcustomsapi/` — một IP thô qua HTTP trần
+  trên cổng 8080, bao gồm một endpoint `.../hqcustomsapi/captcha/CheckCaptcha`, nên **ít nhất một phần
+  của cổng thông tin bị chặn bởi CAPTCHA** — nhưng **IP đó đã hết thời gian chờ (timed out)** từ môi
+  trường nghiên cứu, và báo cáo 12 nói rõ rằng nó **không thể phân biệt được giữa chặn theo địa lý
+  (geo-fencing) và chặn lối ra của sandbox** và do đó **không** khẳng định là không thể tiếp cận. Lập
+  trường thêm của báo cáo 12 là ngay cả khi tiếp cận được thì nó cũng là một công cụ *tra cứu* chứ
+  không phải xuất hàng loạt, việc liệt kê ~11k mã qua một endpoint không có tài liệu, được che bởi
+  CAPTCHA trên một IP thô là mong manh và đối kháng, và **nó không mang thẩm quyền pháp lý — Nghị định
+  mới có**. **Cả hai lập trường đều đứng vững. Xung đột chưa được giải quyết.** Đừng lập kế hoạch phụ
+  thuộc vào API này mà chưa tái lập được khả năng tiếp cận từ Việt Nam.
 
-## Related Knowledge
+## Kiến thức liên quan
 
-- [Project Context](../project-context.md) — what Customs Assistant is, who it serves, v1 scope.
-- [Business Rules](../business-rules.md) — where durable policy and validation rules for the
-  candidate-suggestion contract belong.
-- [Agent Rules](../AGENTS.md) — documentation and note conventions this file follows.
-- [Agent Memory Index](../index.md) — navigation map for durable memory.
-- Sibling notes in this `concepts/` directory cover the tariff schedule structure, tariff data
-  sources and their temporal model, and the Vietnamese legal corpus. This note deliberately stops at
-  the annex trap (§11) and defers the amendment-stream problem to them.
+- [Bối cảnh dự án](../project-context.md) — Customs Assistant là gì, nó phục vụ ai, phạm vi v1.
+- [Quy tắc nghiệp vụ](../business-rules.md) — nơi các chính sách bền vững và quy tắc kiểm tra hợp lệ cho
+  hợp đồng gợi-ý-ứng-viên thuộc về.
+- [Quy tắc Agent](../AGENTS.md) — các quy ước về tài liệu và ghi chú mà file này tuân theo.
+- [Chỉ mục Bộ nhớ Agent](../index.md) — bản đồ điều hướng cho bộ nhớ bền vững.
+- Các ghi chú anh em trong thư mục `concepts/` này bao quát cấu trúc biểu thuế, các nguồn dữ liệu thuế
+  quan và mô hình thời gian của chúng, và kho văn bản pháp luật Việt Nam. Ghi chú này cố ý dừng lại ở
+  cái bẫy phụ lục (§11) và nhường vấn đề dòng-chảy-sửa-đổi cho chúng.

@@ -1,11 +1,11 @@
-# Project Rules
+# Quy tắc dự án (Project Rules)
 
-This file is retained for compatibility with older APBF templates.
+File này được giữ lại để tương thích với các mẫu APBF cũ hơn.
 
-The current shared source of truth for agent behavior is:
+Nguồn sự thật chung hiện tại cho hành vi của tác nhân là:
 
 ```text
 .agent/AGENTS.md
 ```
 
-Future updates should be made in `.agent/AGENTS.md` unless a legacy note explicitly requires this file.
+Các cập nhật trong tương lai nên được thực hiện trong `.agent/AGENTS.md` trừ khi một ghi chú kế thừa (legacy note) yêu cầu rõ ràng file này.

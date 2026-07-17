@@ -1,126 +1,124 @@
-# APB Agent Rules
+# Quy tắc Agent APB
 
-This file is the shared source of truth for AI agents working in `Customs Assistant`.
+File này là nguồn chân lý dùng chung cho các AI agent làm việc trong `Customs Assistant`.
 
-## Communication
+## Giao tiếp
 
-- Always communicate with the project owner in Vietnamese.
-- All project documentation must be written in English.
-- All code, comments, identifiers, commit messages, filenames, and API names must be written in English.
+- Luôn trao đổi với chủ dự án bằng tiếng Việt.
+- Toàn bộ tài liệu dự án phải được viết bằng tiếng Việt.
+- Toàn bộ mã nguồn, chú thích trong mã, định danh, thông điệp commit, tên file, và tên API phải được viết bằng tiếng Anh.
 
-## Default Workflow
+## Quy trình làm việc mặc định
 
-For every software task, follow this order:
+Với mỗi tác vụ phần mềm, hãy tuân theo thứ tự sau:
 
-1. Planning
-2. Planning Review
-3. Freeze Planning
-4. Implementation Design
-5. Design Review
-6. Freeze Design
-7. Milestone Implementation
-8. Code Review
-9. Fix Feedback
-10. Update Documentation
-11. Update Agent Knowledge
-12. Update `planning/02-progress.md` — resume point, task status, session log
-13. Commit only when requested
+1. Lập kế hoạch
+2. Rà soát kế hoạch
+3. Chốt kế hoạch
+4. Thiết kế triển khai
+5. Rà soát thiết kế
+6. Chốt thiết kế
+7. Triển khai theo cột mốc
+8. Rà soát mã nguồn
+9. Sửa theo phản hồi
+10. Cập nhật tài liệu
+11. Cập nhật tri thức của agent
+12. Cập nhật `planning/02-progress.md` — điểm tiếp tục, trạng thái tác vụ, nhật ký phiên
+13. Chỉ commit khi được yêu cầu
 
-Never start implementation before planning and design are reviewed.
+Không bao giờ bắt đầu triển khai trước khi kế hoạch và thiết kế đã được rà soát.
 
-## Session Continuity — Read First, Update Last
+## Tính liên tục giữa các phiên — Đọc đầu tiên, Cập nhật sau cùng
 
-**`.agent/planning/02-progress.md` is the resume point. Read it before doing anything else in a new session.**
+**`.agent/planning/02-progress.md` là điểm tiếp tục. Hãy đọc nó trước khi làm bất cứ điều gì khác trong một phiên mới.**
 
-It states the current phase, the next task, what is blocked, and what previous sessions learned the
-hard way. `00-bootstrap.md` is the plan and `01-task-list.md` is the work; **02-progress.md is what
-actually happened**, which is usually different.
+Nó nêu rõ giai đoạn hiện tại, tác vụ tiếp theo, những gì đang bị chặn, và những gì các phiên trước đã học được một cách vất vả. `00-bootstrap.md` là kế hoạch và `01-task-list.md` là công việc; **02-progress.md là những gì đã thực sự xảy ra**, thường khác với dự tính.
 
-**At the end of every working session, before the final commit, you MUST:**
+**Vào cuối mỗi phiên làm việc, trước khi commit cuối cùng, bạn PHẢI:**
 
-1. Update **Resume Here** in `02-progress.md` — phase, next task, blockers.
-2. Update the **Task Status** table there **and** `01-task-list.md` in the same commit. If they
-   disagree, the progress table is a lie and the next agent will act on it.
-3. Add a **Session Log** entry at the top of the log: what changed, what was learned, what surprised
-   you. Dead ends and wrong turns are the most valuable entries — a plan records intent, only the log
-   records what the territory actually did.
+1. Cập nhật **Resume Here** trong `02-progress.md` — giai đoạn, tác vụ tiếp theo, các yếu tố cản trở.
+2. Cập nhật bảng **Task Status** ở đó **và** `01-task-list.md` trong cùng một commit. Nếu chúng
+   mâu thuẫn, bảng tiến độ là một lời nói dối và agent kế tiếp sẽ hành động dựa trên nó.
+3. Thêm một mục **Session Log** ở đầu nhật ký: điều gì đã thay đổi, điều gì đã học được, điều gì khiến bạn
+   bất ngờ. Những ngõ cụt và những bước đi sai lầm là những mục có giá trị nhất — một kế hoạch ghi lại ý định, chỉ có nhật ký
+   mới ghi lại được thực tế đã diễn ra như thế nào.
 
-This is not ceremony. This project's failure mode is silent and delayed, so an agent that rediscovers
-a known trap from scratch will usually rediscover it *wrong* and confidently. The log is what stops
-that.
+Đây không phải là hình thức. Chế độ thất bại của dự án này là âm thầm và bị trì hoãn, nên một agent tái phát hiện
+một cái bẫy đã biết từ đầu thường sẽ tái phát hiện nó *sai* và đầy tự tin. Nhật ký là thứ ngăn chặn
+điều đó.
 
-**Routing discipline:** `02-progress.md` is a pointer and a diary, not a knowledge store. Anything
-that outlives the session goes to `concepts/`, `business-rules.md`, or an ADR — never buried in the
-log. Follow the Question Answer Routing rules below.
+**Kỷ luật định tuyến:** `02-progress.md` là một con trỏ và một cuốn nhật ký, không phải kho tri thức. Bất cứ điều gì
+tồn tại lâu hơn phiên làm việc đều phải chuyển đến `concepts/`, `business-rules.md`, hoặc một ADR — không bao giờ chôn vùi trong
+nhật ký. Hãy tuân theo các quy tắc Question Answer Routing bên dưới.
 
-**`.agent/` must stay at the repository root.** The root `AGENTS.md` and `CLAUDE.md` bridge files
-hardcode `.agent/AGENTS.md`. Moving or nesting `.agent/` silently orphans the entire knowledge base
-from every agent — the bridge resolves to nothing and no error is raised. This has already happened
-once; see the 2026-07-17 session log.
+**`.agent/` phải luôn nằm ở gốc kho lưu trữ.** Các file cầu nối `AGENTS.md` và `CLAUDE.md` ở gốc
+hardcode `.agent/AGENTS.md`. Việc di chuyển hoặc lồng `.agent/` sẽ âm thầm tách rời toàn bộ cơ sở tri thức
+khỏi mọi agent — cầu nối phân giải thành không có gì và không có lỗi nào được báo. Điều này đã từng xảy ra
+một lần; xem nhật ký phiên ngày 2026-07-17.
 
-## Project Orientation
+## Định hướng dự án
 
-Before following links into specialized notes, start from `.agent/index.md` when it exists. The index is the map of durable project memory and should point to the current source-of-truth notes for context, rules, decisions, planning, reviews, and feature or module knowledge.
+Trước khi theo các liên kết dẫn vào những ghi chú chuyên biệt, hãy bắt đầu từ `.agent/index.md` khi nó tồn tại. Chỉ mục là bản đồ của bộ nhớ dự án bền vững và nên trỏ đến các ghi chú nguồn-chân-lý hiện tại về bối cảnh, quy tắc, quyết định, lập kế hoạch, rà soát, và tri thức về tính năng hoặc module.
 
-Before starting a non-trivial task, read `.agent/project-context.md` to understand what the project does, who it serves, its boundaries, core workflows, domain terms, constraints, and open questions.
+Trước khi bắt đầu một tác vụ không tầm thường, hãy đọc `.agent/project-context.md` để hiểu dự án làm gì, phục vụ ai, ranh giới của nó, các quy trình cốt lõi, thuật ngữ chuyên ngành, ràng buộc, và các câu hỏi còn để ngỏ.
 
-During first bootstrap only, if `.agent/project-context.md` is missing, empty, or still contains only placeholder content, ask the owner for a one-time project description and use it to populate `.agent/project-context.md`. After `.agent/project-context.md` is populated, do not repeat the initial description step; read the file as the durable project brief and update it only when project context actually changes.
+Chỉ trong lần bootstrap đầu tiên, nếu `.agent/project-context.md` thiếu, trống, hoặc vẫn chỉ chứa nội dung placeholder, hãy hỏi chủ dự án một mô tả dự án dùng một lần và dùng nó để điền vào `.agent/project-context.md`. Sau khi `.agent/project-context.md` đã được điền, không lặp lại bước mô tả ban đầu; hãy đọc file như bản tóm tắt dự án bền vững và chỉ cập nhật nó khi bối cảnh dự án thực sự thay đổi.
 
-If `.agent/project-context.md` remains incomplete after bootstrap, treat project orientation as incomplete. Ask the owner for the minimum context needed before making product, architecture, or business-logic changes.
+Nếu `.agent/project-context.md` vẫn chưa hoàn chỉnh sau khi bootstrap, hãy coi việc định hướng dự án là chưa hoàn chỉnh. Hãy hỏi chủ dự án bối cảnh tối thiểu cần thiết trước khi thực hiện các thay đổi về sản phẩm, kiến trúc, hoặc logic nghiệp vụ.
 
-For small known-known tasks, only read the project context when the change could affect product behavior, business rules, user-facing workflows, terminology, or architecture.
+Với các tác vụ known-known nhỏ, chỉ đọc bối cảnh dự án khi thay đổi có thể ảnh hưởng đến hành vi sản phẩm, quy tắc nghiệp vụ, quy trình hướng đến người dùng, thuật ngữ, hoặc kiến trúc.
 
-## Knowledge Coverage And Unknowns
+## Phạm vi tri thức và những điều chưa biết
 
-Planning and design reduce misunderstanding but do not remove missing context. For every feature or workflow request, classify project knowledge into these buckets when the task has meaningful ambiguity, risk, or implementation impact:
+Lập kế hoạch và thiết kế giúp giảm hiểu lầm nhưng không loại bỏ bối cảnh còn thiếu. Với mỗi yêu cầu tính năng hoặc quy trình, hãy phân loại tri thức dự án vào các nhóm sau khi tác vụ có sự mơ hồ, rủi ro, hoặc tác động triển khai đáng kể:
 
-- Confirmed Requirements: the owner explicitly described the requirement and the agent can trace it to the request or existing documentation.
-- Assumptions: the owner may know the requirement, but it was not fully described to the agent. State the assumption clearly and continue only when the assumption is safe and reversible.
-- Open Questions: information that is required before implementation can proceed safely. Ask the owner instead of guessing when an Open Question blocks implementation.
-- Risk Areas / Unknowns: areas the owner may not have identified yet and the agent cannot fully infer from the request.
-- Out of Scope: related behavior intentionally excluded from the current task.
-- Validation Plan: how the implementation will prove the confirmed requirements and assumptions.
+- Yêu cầu đã xác nhận (Confirmed Requirements): chủ dự án đã mô tả rõ ràng yêu cầu và agent có thể truy vết nó về yêu cầu hoặc tài liệu hiện có.
+- Giả định (Assumptions): chủ dự án có thể biết yêu cầu, nhưng nó chưa được mô tả đầy đủ cho agent. Hãy nêu rõ giả định và chỉ tiếp tục khi giả định là an toàn và có thể đảo ngược.
+- Câu hỏi để ngỏ (Open Questions): thông tin cần thiết trước khi triển khai có thể tiến hành an toàn. Hãy hỏi chủ dự án thay vì đoán khi một Open Question chặn việc triển khai.
+- Vùng rủi ro / Điều chưa biết (Risk Areas / Unknowns): những vùng chủ dự án có thể chưa nhận ra và agent không thể suy luận đầy đủ từ yêu cầu.
+- Ngoài phạm vi (Out of Scope): hành vi liên quan bị loại trừ có chủ đích khỏi tác vụ hiện tại.
+- Kế hoạch kiểm chứng (Validation Plan): cách triển khai sẽ chứng minh các yêu cầu đã xác nhận và các giả định.
 
-For known-known work, where the owner clearly states the requested change and the agent understands it, use a lightweight form. Small tasks such as typo fixes, text changes, and simple configuration updates only need assumptions, risks, or validation notes when they actually exist.
+Với công việc known-known, khi chủ dự án nêu rõ thay đổi được yêu cầu và agent hiểu nó, hãy dùng một hình thức nhẹ nhàng. Các tác vụ nhỏ như sửa lỗi chính tả, thay đổi văn bản, và cập nhật cấu hình đơn giản chỉ cần các ghi chú về giả định, rủi ro, hoặc kiểm chứng khi chúng thực sự tồn tại.
 
-Planning Review and Design Review should scale with task complexity. For complex or ambiguous tasks, explicitly ask the owner to validate assumptions and risk areas before freezing planning or design. For small known-known tasks with no meaningful unknowns, the owner's request can serve as sufficient review.
+Rà soát Kế hoạch và Rà soát Thiết kế nên co giãn theo độ phức tạp của tác vụ. Với các tác vụ phức tạp hoặc mơ hồ, hãy chủ động yêu cầu chủ dự án xác nhận các giả định và vùng rủi ro trước khi chốt kế hoạch hoặc thiết kế. Với các tác vụ known-known nhỏ không có điều chưa biết đáng kể, yêu cầu của chủ dự án có thể xem là đủ để rà soát.
 
-Do not turn the knowledge buckets into a formal checklist. Their value is to expose missing knowledge, not to force headings into every small task.
+Đừng biến các nhóm tri thức thành một danh sách kiểm tra hình thức. Giá trị của chúng là phơi bày tri thức còn thiếu, không phải ép buộc các tiêu đề vào mọi tác vụ nhỏ.
 
-When a requirement is discovered after implementation begins, record it in the relevant planning note, review history, business rules, or architecture decision before continuing.
+Khi một yêu cầu được phát hiện sau khi việc triển khai đã bắt đầu, hãy ghi lại nó trong ghi chú kế hoạch liên quan, lịch sử rà soát, quy tắc nghiệp vụ, hoặc quyết định kiến trúc trước khi tiếp tục.
 
-## Question Answer Routing
+## Định tuyến câu hỏi và câu trả lời
 
-When source documents or owner requests are unclear, ask Open Questions instead of silently guessing. Use the owner's answers to route confirmed knowledge into the correct agent memory location.
+Khi tài liệu nguồn hoặc yêu cầu của chủ dự án không rõ ràng, hãy đặt các Open Question thay vì âm thầm đoán. Dùng câu trả lời của chủ dự án để định tuyến tri thức đã xác nhận vào đúng vị trí bộ nhớ của agent.
 
-Routing rules:
+Quy tắc định tuyến:
 
-- Product purpose, audience, boundaries, and operating context go to `.agent/project-context.md` and relevant `.agent/planning/*.md` files.
-- Durable business behavior, policy, validation rules, permission rules, compliance rules, and accounting rules go to `.agent/business-rules.md`.
-- Technical structure, integration choices, storage choices, and major tradeoffs go to separate ADR files in `.agent/architecture-decisions/`.
-- Naming patterns, terminology, code naming rules, and API naming rules go to `.agent/naming-conventions.md`.
-- Current task scope, assumptions, out-of-scope behavior, acceptance criteria, and validation plans go to `.agent/planning/*.md`.
-- API contracts, setup notes, implementation designs, and module documentation go to `.agent/docs/*.md`.
-- Review decisions, approvals, rejected assumptions, and resolved concerns go to `.agent/review-history/*.md`.
-- Unresolved or low-confidence interpretations go to `.agent/reviews/` or `.agent/previews/` until approved.
+- Mục đích sản phẩm, đối tượng, ranh giới, và bối cảnh vận hành chuyển đến `.agent/project-context.md` và các file `.agent/planning/*.md` liên quan.
+- Hành vi nghiệp vụ bền vững, chính sách, quy tắc kiểm chứng, quy tắc phân quyền, quy tắc tuân thủ, và quy tắc kế toán chuyển đến `.agent/business-rules.md`.
+- Cấu trúc kỹ thuật, lựa chọn tích hợp, lựa chọn lưu trữ, và các đánh đổi lớn chuyển đến các file ADR riêng trong `.agent/architecture-decisions/`.
+- Mẫu đặt tên, thuật ngữ, quy tắc đặt tên mã nguồn, và quy tắc đặt tên API chuyển đến `.agent/naming-conventions.md`.
+- Phạm vi tác vụ hiện tại, giả định, hành vi ngoài phạm vi, tiêu chí nghiệm thu, và kế hoạch kiểm chứng chuyển đến `.agent/planning/*.md`.
+- Hợp đồng API, ghi chú thiết lập, thiết kế triển khai, và tài liệu module chuyển đến `.agent/docs/*.md`.
+- Quyết định rà soát, phê duyệt, giả định bị bác bỏ, và các mối lo đã được giải quyết chuyển đến `.agent/review-history/*.md`.
+- Các diễn giải chưa được giải quyết hoặc có độ tin cậy thấp chuyển đến `.agent/reviews/` hoặc `.agent/previews/` cho đến khi được phê duyệt.
 
-If one owner answer contains multiple knowledge types, split it across the appropriate files instead of forcing it into one document. Preserve traceability by noting the source question, answer, or review decision where practical.
+Nếu một câu trả lời của chủ dự án chứa nhiều loại tri thức, hãy tách nó ra các file phù hợp thay vì ép nó vào một tài liệu duy nhất. Hãy bảo toàn khả năng truy vết bằng cách ghi chú câu hỏi nguồn, câu trả lời, hoặc quyết định rà soát khi khả thi.
 
-## Note-Linked Agent Memory
+## Bộ nhớ agent liên kết bằng ghi chú
 
-Use `.agent/` as a plain-Markdown knowledge graph. Maintain readable notes that link related project knowledge together without requiring Obsidian or any editor-specific runtime.
+Dùng `.agent/` như một đồ thị tri thức Markdown thuần túy. Hãy duy trì các ghi chú dễ đọc liên kết tri thức dự án liên quan với nhau mà không cần Obsidian hay bất kỳ runtime đặc thù của trình soạn thảo nào.
 
-Use `.agent/index.md` as the first navigation surface for durable memory. Update it whenever adding, moving, renaming, or promoting an important note.
+Dùng `.agent/index.md` làm bề mặt điều hướng đầu tiên cho bộ nhớ bền vững. Hãy cập nhật nó bất cứ khi nào thêm, di chuyển, đổi tên, hoặc thăng cấp một ghi chú quan trọng.
 
-Prefer relative Markdown links for required knowledge:
+Ưu tiên dùng liên kết Markdown tương đối cho tri thức bắt buộc:
 
 ```md
-[Project Context](project-context.md)
+[Bối cảnh dự án](project-context.md)
 ```
 
-Wiki-style links such as `[[Project Context]]` may be used only as supplemental editor affordances. Do not store required knowledge exclusively in Obsidian-only syntax, canvas files, Dataview queries, embeds, or plugin metadata.
+Các liên kết kiểu wiki như `[[Project Context]]` chỉ có thể dùng như tiện ích bổ trợ cho trình soạn thảo. Không lưu trữ tri thức bắt buộc chỉ trong cú pháp riêng của Obsidian, file canvas, truy vấn Dataview, embed, hoặc metadata của plugin.
 
-Important notes should be self-contained enough to read outside a graph view. When useful, include simple YAML frontmatter:
+Các ghi chú quan trọng nên đủ tự chứa để đọc được bên ngoài chế độ xem đồ thị. Khi hữu ích, hãy thêm YAML frontmatter đơn giản:
 
 ```yaml
 ---
@@ -132,17 +130,17 @@ related:
 ---
 ```
 
-Use the smallest note that represents a durable concept, not one note per function. Good note boundaries include project context, business rules, architecture decisions, module boundaries, domain concepts, workflows, API contracts, review outcomes, and reusable implementation patterns.
+Hãy dùng ghi chú nhỏ nhất đại diện cho một khái niệm bền vững, không phải một ghi chú cho mỗi hàm. Ranh giới ghi chú tốt bao gồm bối cảnh dự án, quy tắc nghiệp vụ, quyết định kiến trúc, ranh giới module, khái niệm chuyên ngành, quy trình, hợp đồng API, kết quả rà soát, và các mẫu triển khai có thể tái sử dụng.
 
-Each durable note should include a `Related Knowledge` section when cross-links would help future agents trace behavior, constraints, or decisions.
+Mỗi ghi chú bền vững nên bao gồm một mục `Related Knowledge` khi các liên kết chéo có thể giúp các agent tương lai truy vết hành vi, ràng buộc, hoặc quyết định.
 
-## Code Organization
+## Tổ chức mã nguồn
 
-Use `.agent/docs/code-organization.md` as the source of truth for repository code structure.
+Dùng `.agent/docs/code-organization.md` làm nguồn chân lý cho cấu trúc mã nguồn của kho lưu trữ.
 
-If the project already uses a framework, platform, monorepo layout, or established repository convention, follow that convention first and document the mapping in `.agent/docs/code-organization.md`.
+Nếu dự án đã dùng một framework, nền tảng, bố cục monorepo, hoặc quy ước kho lưu trữ đã thiết lập, hãy tuân theo quy ước đó trước và ghi lại ánh xạ trong `.agent/docs/code-organization.md`.
 
-For projects without an existing structure, use this recommended baseline:
+Với các dự án chưa có cấu trúc, hãy dùng baseline khuyến nghị sau:
 
 ```text
 src/
@@ -156,19 +154,19 @@ src/
     helpers/
 ```
 
-Feature-specific logic must live inside the framework's feature/module boundary, or inside `src/modules/<module-name>/` when the recommended baseline is used.
+Logic đặc thù của tính năng phải nằm trong ranh giới feature/module của framework, hoặc bên trong `src/modules/<module-name>/` khi dùng baseline khuyến nghị.
 
-Reusable code may be added to the project's shared-code location only when at least two modules need it, or when the project owner explicitly approves it as shared infrastructure.
+Mã có thể tái sử dụng chỉ được thêm vào vị trí mã dùng chung của dự án khi ít nhất hai module cần nó, hoặc khi chủ dự án phê duyệt rõ ràng nó là hạ tầng dùng chung.
 
-Do not create generic catch-all helpers or directories such as `utils`, `helpers`, `common`, `misc`, `shared.ts`, or `helpers.ts`.
+Không tạo các helper hoặc thư mục gom chung chung như `utils`, `helpers`, `common`, `misc`, `shared.ts`, hoặc `helpers.ts`.
 
-Before adding a helper, utility, abstraction, shared module, or new module, search the repository for existing equivalent behavior. Reuse or extend existing code when appropriate.
+Trước khi thêm một helper, tiện ích, trừu tượng, module dùng chung, hoặc module mới, hãy tìm trong kho lưu trữ hành vi tương đương đã có. Hãy tái sử dụng hoặc mở rộng mã hiện có khi phù hợp.
 
-When new shared code is necessary, document why existing code is insufficient in the task plan or review summary, then update `.agent/docs/code-organization.md` if the structure, framework mapping, or reusable pattern changes.
+Khi mã dùng chung mới là cần thiết, hãy ghi lại lý do mã hiện có không đủ trong kế hoạch tác vụ hoặc tóm tắt rà soát, rồi cập nhật `.agent/docs/code-organization.md` nếu cấu trúc, ánh xạ framework, hoặc mẫu tái sử dụng thay đổi.
 
-## Project Structure
+## Cấu trúc dự án
 
-Use this structure for agent-facing workflow material:
+Hãy dùng cấu trúc này cho tài liệu quy trình hướng đến agent:
 
 ```text
 .agent/
@@ -188,15 +186,15 @@ Use this structure for agent-facing workflow material:
   project-context.md
 ```
 
-Root `docs/` is optional. Use it only for documentation intended for humans outside the agent workflow.
+Thư mục `docs/` ở gốc là tùy chọn. Chỉ dùng nó cho tài liệu dành cho con người bên ngoài quy trình agent.
 
-Root `AGENTS.md` and `CLAUDE.md` are bridge files that point to `.agent/AGENTS.md`. Keep these bridge files thin and do not duplicate project rules in them. Codex, Claude, and other agents share `.agent/AGENTS.md` as the source of truth.
+`AGENTS.md` và `CLAUDE.md` ở gốc là các file cầu nối trỏ đến `.agent/AGENTS.md`. Hãy giữ các file cầu nối này mỏng và không sao chép quy tắc dự án vào chúng. Codex, Claude, và các agent khác chia sẻ `.agent/AGENTS.md` làm nguồn chân lý.
 
-## Documentation
+## Tài liệu
 
-Documentation is a living artifact.
+Tài liệu là một sản phẩm sống.
 
-Whenever code, API behavior, architecture, setup, or business logic changes, automatically update relevant docs:
+Bất cứ khi nào mã nguồn, hành vi API, kiến trúc, thiết lập, hoặc logic nghiệp vụ thay đổi, hãy tự động cập nhật các tài liệu liên quan:
 
 - `.agent/planning/*.md`
 - `.agent/docs/*.md`
@@ -204,20 +202,20 @@ Whenever code, API behavior, architecture, setup, or business logic changes, aut
 - `.agent/review-history/*.md`
 - `README.md`
 
-Never leave documentation outdated.
+Không bao giờ để tài liệu lỗi thời.
 
-## Agent Knowledge
+## Tri thức agent
 
-Use `.agent/` as the long-term project memory.
+Dùng `.agent/` làm bộ nhớ dài hạn của dự án.
 
-When updating agent memory, also update related note links and `.agent/index.md` if the change affects durable navigation.
+Khi cập nhật bộ nhớ agent, hãy cập nhật thêm các liên kết ghi chú liên quan và `.agent/index.md` nếu thay đổi ảnh hưởng đến điều hướng bền vững.
 
-Record architecture decisions as separate ADR files in `.agent/architecture-decisions/`.
+Ghi lại các quyết định kiến trúc thành các file ADR riêng trong `.agent/architecture-decisions/`.
 
-Use this naming format:
+Dùng định dạng đặt tên này:
 
 ```text
 YYYY-MM-DD-<short-decision-title>.md
 ```
 
-Do not keep all architecture decisions in a single markdown file.
+Không giữ tất cả các quyết định kiến trúc trong một file markdown duy nhất.
