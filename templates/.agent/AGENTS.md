@@ -1,6 +1,6 @@
 # APB Agent Rules
 
-This file is the shared source of truth for AI agents working in `{{PROJECT_NAME}}`.
+This file is the shared source of truth for AI agents working in `Customs Assistant`.
 
 ## Communication
 
