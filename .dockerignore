@@ -1,0 +1,13 @@
+node_modules
+dist
+build
+coverage
+.git
+.yarn
+.env
+.env.*
+!.env.example
+.agent
+fixtures
+*.md
+.DS_Store

@@ -1,0 +1,55 @@
+# Local development stack for Customs Assistant.
+#
+# One command brings up the whole thing:
+#   docker compose up --build
+#
+# Order is enforced: db (healthy) -> migrate (runs to completion) -> api (boots).
+# PostgreSQL is the only stateful service in v1 (see the postgres-only ADR).
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: customs_assistant
+    ports:
+      # Published on host 5433 to avoid colliding with a Postgres already running
+      # on the developer's 5432. Inside the compose network the API still uses db:5432.
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d customs_assistant"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: customs-assistant:local
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ["node_modules/.bin/tsx", "db/migrate.ts"]
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/customs_assistant
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    image: customs-assistant:local
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/customs_assistant
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  db_data:

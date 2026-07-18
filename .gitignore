@@ -3,6 +3,13 @@
 # Dependencies
 node_modules/
 
+# Yarn (Berry, node-modules linker; yarn itself comes from Corepack)
+.yarn/*
+!.yarn/patches
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

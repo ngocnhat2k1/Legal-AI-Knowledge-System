@@ -11,11 +11,31 @@ Nó trả lời hai câu hỏi mà một người khai báo đặt ra mỗi ngà
 
 ## Trạng thái
 
-**Tiền triển khai (Pre-implementation).** Chưa có mã ứng dụng nào — một cách có chủ đích.
-
-Kho tri thức bền vững đã được viết và kiểm toán. Bước tiếp theo là bộ vàng (golden set), và nó cần
-chủ sở hữu chứ không phải một tác nhân. Xem **[`.agent/planning/02-progress.md`](.agent/planning/02-progress.md)**
+**Giai đoạn 0 — Nền móng.** Bộ vàng (golden set) đã có (TASK-001), và **khung sườn repo đã dựng** (TASK-006):
+monorepo NestJS + PostgreSQL/pgvector + Docker, với một migration bật `pgvector` được áp dụng. Chưa có
+logic biểu thuế — đó là TASK-007 trở đi. Xem **[`.agent/planning/02-progress.md`](.agent/planning/02-progress.md)**
 để biết mọi thứ thực sự đang ở đâu.
+
+## Chạy local
+
+Yêu cầu duy nhất: **Docker + git**. Từ một bản clone sạch:
+
+```bash
+docker compose up --build
+```
+
+Thứ tự được đảm bảo: `db` (Postgres 17 + pgvector, khỏe) → `migrate` (áp dụng migration, chạy xong rồi thoát)
+→ `api` (NestJS, boot). Kiểm tra:
+
+```bash
+curl http://localhost:3000/health
+# {"status":"ok","db":"up","pgvector":"0.8.5"}
+```
+
+Postgres publish ra host cổng **5433** (tránh đụng Postgres sẵn có trên 5432). Phát triển ngoài Docker:
+`corepack yarn install` rồi `corepack yarn start:dev` (đặt `DATABASE_URL`, xem [`.env.example`](.env.example)).
+Toolchain: Node 22 LTS, Yarn 4 (Corepack), Drizzle (migration SQL), Jest. Chi tiết lựa chọn:
+[ADR công cụ repo](.agent/architecture-decisions/2026-07-18-repo-tooling-drizzle-yarn.md).
 
 ## Bắt đầu tại đây
 
@@ -72,6 +92,12 @@ mang tính chịu lực (load-bearing) — đừng dọn dẹp chúng thành vă
   planning/                roadmap, task list, progress log
   docs/evaluation.md       the golden set and the ship gates
 AGENTS.md, CLAUDE.md       thin bridges to .agent/AGENTS.md — keep them thin
+apps/api/                  the NestJS application (monorepo workspace, one app)
+  src/modules/             feature modules (health now; tariff-lookup in TASK-007+)
+  src/shared/adapters/     infrastructure adapters (database: Drizzle client)
+db/                        Drizzle schema, SQL migrations, migrate runner
+docker-compose.yml         db + migrate + api, one-command local bring-up
+fixtures/golden-set/       the golden set from real declarations (TASK-001)
 ```
 
 `.agent/` **phải nằm ở gốc kho mã (repository root).** Các file cầu nối (bridge files) mã hóa cứng đường dẫn đó; di chuyển nó

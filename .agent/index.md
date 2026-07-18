@@ -70,6 +70,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Web app, không phải Zalo](architecture-decisions/2026-07-17-web-app-not-zalo.md)
 - [Dùng VBHN đã công bố, không tự hợp nhất](architecture-decisions/2026-07-17-use-published-vbhn-not-computed-consolidation.md)
 - [Hiệu lực bitemporal ngay từ đầu](architecture-decisions/2026-07-17-bitemporal-validity-from-day-one.md)
+- [Công cụ repo: Drizzle + Yarn + Docker (khung TASK-006)](architecture-decisions/2026-07-18-repo-tooling-drizzle-yarn.md)
 
 ## Đánh giá (Reviews)
 
