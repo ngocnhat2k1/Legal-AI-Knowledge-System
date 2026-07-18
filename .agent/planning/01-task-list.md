@@ -349,7 +349,9 @@ Tiêu chí chấp nhận:
 
 ## TASK-010: Phát hiện tình trạng lỗi thời
 
-Status: todo
+Status: done (2026-07-18)
+
+> **Kết quả:** tích hợp trong API tra cứu ([research/task-010-011-lookup-api](../../research/task-010-011-lookup-api/README.md)). Mỗi phản hồi mang `snapshotDate` (transaction time = `max(recorded_at)` hoặc config `DATA_SNAPSHOT_DATE`), `reliableThrough = snapshotDate − GAZETTE_LAG_DAYS` (mặc định 48), và cờ `stale` + `warning`. **Acceptance PASS:** snapshot 2026-03-15 + tra 2026-03-10 → trả 10% (ND 26/2023) **nhưng stale=true + cảnh báo**, không âm thầm coi là hiện hành; tra cũ 2023-08-01 → không stale.
 
 Depends on: TASK-007.
 
@@ -383,7 +385,9 @@ Ghi chú:
 
 ## TASK-011: API tra cứu
 
-Status: todo
+Status: done (2026-07-18) — MFN/export/TRQ/Ch.98/CBPG + staleness. FTA `preferential[]` chờ nạp biểu FTA.
+
+> **Kết quả:** `GET /tariff?hs=&date=&origin=` trong `apps/api/src/modules/tariff/` — SQL keyed, **vị từ khoảng** (không ORDER BY date DESC), **không LLM**. Trả rate + nghị định điều chỉnh + as-of + điều kiện + staleness. Mọi loại rate là **view có kiểu** (ad_valorem/specific/excluded/trq) với `statement` chữ, không bao giờ số trần. FTA/Ch.98 trả **có điều kiện** ("X% nếu có C/O form Y, ngược lại MFN"). CBPG là khoản cộng thêm riêng. Kiểm chứng live: xem [research/task-010-011-lookup-api](../../research/task-010-011-lookup-api/README.md) (star-case 8481.80.99, hai-phụ-lục, TRQ, Ch.98, 400/404, staleness). **Còn:** `preferential[]` rỗng đến khi nạp biểu FTA (bước kế).
 
 Depends on: TASK-007, TASK-008, TASK-010.
 

@@ -23,7 +23,7 @@ thực sự đã xảy ra**, thường khác đi.
 | | |
 |---|---|
 | **Giai đoạn hiện tại** | Giai đoạn 0 — Nền móng |
-| **Công việc tiếp theo** | TASK-001..008 xong. Tiếp: TASK-009 (chuỗi sửa đổi MFN 2026 từ Công báo) — và nạp các biểu FTA (ACFTA/AANZFTA/ATIGA/EVFTA/RCEP) bằng cùng parser để phục vụ TASK-011/012 |
+| **Công việc tiếp theo** | TASK-001..008, 010, 011 xong. Tiếp: nạp biểu FTA (ACFTA/AANZFTA/ATIGA/EVFTA/RCEP) → TASK-009 (chuỗi sửa đổi MFN 2026, cắt khoảng) → TASK-012 (nghiệm thu golden set) |
 | **Đang bị chặn bởi** | Không có. Chủ dự án đã chốt: FTA scope = MFN + 4 FTA đang dùng + RCEP; oracle TASK-012 = corpus 117 tờ khai sẵn có. |
 | **Code đã viết** | TASK-006 khung repo + **TASK-007 schema** (migration `0001`+`0002`) + **TASK-008 loader ND 26/2023** (`research/task-008-congbao-loader/`: fetch_doc.py, parse_nd26.py, load.ts; 13.161 dòng nạp, 13/13 verify). Fixtures golden set `fixtures/golden-set/`. |
 | **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
@@ -66,8 +66,8 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | TASK-007 — Schema biểu thuế (thời gian + nhận biết phụ lục) | ✅ xong 2026-07-18 | Drizzle + migration `0001`/`0002`; annex NOT NULL, EXCLUDE chống chồng khoảng, trigger append-only, CBPG tách bảng. Chứng minh live **17/17** (6 ca khó + DB chối shape sai). Xem [research/task-007-schema](../../research/task-007-schema/README.md) |
 | TASK-008 — Nạp Công báo (bộ phân tích nhận biết phụ lục) | ✅ xong 2026-07-18 | ND 26/2023, 13.161 dòng, 13/13 verify; annex-aware; Chương 98 tách schedule; khớp research 12 (11.874/11.150). Xem [research/task-008-congbao-loader](../../research/task-008-congbao-loader/README.md) |
 | TASK-009 — Xác lập chuỗi sửa đổi MFN 2026 | 🔲 chưa làm | **Đừng** gộp research 10 + 12 và giả định hợp của chúng |
-| TASK-010 — Phát hiện độ cũ | 🔲 chưa làm | |
-| TASK-011 — API tra cứu | 🔲 chưa làm | |
+| TASK-010 — Phát hiện độ cũ | ✅ xong 2026-07-18 | Trong API: snapshotDate + reliableThrough (−48 ngày lag) + stale/warning. Acceptance PASS (snapshot 2026-03-15/query 2026-03-10 → stale). |
+| TASK-011 — API tra cứu | ✅ xong 2026-07-18 | `GET /tariff` SQL keyed, vị từ khoảng, không LLM; rate có kiểu + statement, FTA/Ch.98 có điều kiện, CBPG riêng, staleness. FTA `preferential[]` chờ nạp biểu FTA. Xem [research/task-010-011-lookup-api](../../research/task-010-011-lookup-api/README.md) |
 | TASK-012 — Nghiệm thu Giai đoạn 1 | 🔲 chưa làm | Cổng: các con số khớp ECUS trên một lô hàng thật |
 
 Chú thích: ✅ xong · 🟡 đang tiến hành · 🔲 chưa làm · ⛔ bị chặn · ❌ bỏ dở (nói lý do)
@@ -113,6 +113,22 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-07-18 — TASK-010 + TASK-011: API tra cứu + phát hiện độ cũ, live
+
+**Đã làm**
+- Module `apps/api/src/modules/tariff/` (controller + service + types): `GET /tariff?hs=&date=&origin=`. SQL keyed qua `db.execute(sql\`\`)`, **vị từ khoảng**, **không LLM**. Rate là view có kiểu (ad_valorem/specific/excluded/trq) + `statement` chữ; FTA/Ch.98 trả **có điều kiện**; CBPG khoản riêng; staleness (snapshotDate + reliableThrough −48 ngày + stale/warning). Đăng ký vào `app.module`, build tsc sạch, chạy `node dist/apps/api/main.js`.
+- Kiểm chứng live (dữ liệu ND 26/2023): star-case 8481.80.99→MFN 10%; 0301.11.10→15(NK)/0(XK); 2710.12.21→10; 0407.21.00→TRQ trong 40/ngoài 80; 9804.15.00→Ch.98 27% có điều kiện; 400 cho hs xấu; 404 cho dòng không-rate; **TASK-010 acceptance**: snapshot 2026-03-15/query 2026-03-10→stale+warning.
+
+**Đã học — địa hình thật**
+- **Tra cứu = SQL thô, cố ý.** Không dùng query-builder có type → giữ vị-từ-khoảng hiện rõ (đúng ADR bitemporal) và **né footgun path-alias** (`@db/schema` build ra không resolve runtime; phát hiện ở review scaffold). Không import schema vào API.
+- **Server nền: đừng lồng `&` trong run_in_background** — process bị mồ côi/thoát. Chạy trực tiếp (tool tự background).
+- **Rate không bao giờ là số trần.** Mỗi loại có `statement` chữ; FTA "0% nếu có C/O form Y, ngược lại MFN"; excluded "không phải 0%"; trq "trong/ngoài hạn ngạch". Đây là chỗ nguyên tắc research 12 thành code.
+
+**Tiếp theo**
+- Nạp biểu FTA để `preferential[]` có dữ liệu (star-case trả 0% ACFTA). → TASK-009 (cắt khoảng 2026) → TASK-012.
 
 ---
 
