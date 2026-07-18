@@ -26,8 +26,8 @@ export class TariffController {
   }
 
   @Get('search')
-  search(@Query('q') q: string): Promise<SearchCandidate[]> {
-    return this.tariff.search(q);
+  search(@Query('q') q: string, @Query('prefix') prefix?: string): Promise<SearchCandidate[]> {
+    return this.tariff.search(q, prefix);
   }
 
   @Get('confirmations')

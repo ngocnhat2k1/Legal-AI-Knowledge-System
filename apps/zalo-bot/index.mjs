@@ -126,34 +126,40 @@ async function searchGoods(kw) {
 }
 
 /**
- * Hiểu câu tự nhiên bằng Claude (subscription trên VPS, qua CLAUDE_CODE_OAUTH_TOKEN).
- * CHỈ bóc ý {hàng, xuất xứ, ngày} — KHÔNG dùng để tính thuế (thuế luôn tất định).
- * Không có token/CLI → trả null để answer() rơi về tách-từ đơn giản.
+ * Hiểu câu + SUY LUẬN phân loại HS bằng Claude (subscription VPS, không tốn phí/token).
+ * Trả về từ khoá tiếng Việt + gợi ý nhóm HS + xuất xứ/ngày + 1 câu giải thích. Claude CHỈ
+ * gợi ý MÃ để tra; thuế luôn tất định từ DB, và mọi mã đều được lọc lại theo dữ liệu thật.
+ * Không có token/CLI → null để rơi về tách-từ đơn giản (giữ portable).
  */
 function claudeExtract(text) {
   return new Promise((resolve) => {
     if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) return resolve(null);
     const prompt =
-      'Trích thông tin tra cứu thuế nhập khẩu Việt Nam từ câu người dùng. ' +
-      'CHỈ trả JSON một dòng, không giải thích, không markdown: ' +
-      '{"product":"<tên hàng ngắn gọn để tìm mã HS, ví dụ van, xăng, ô tô, thép, cá>",' +
-      '"origin":"<mã nước 2 chữ ISO viết HOA như CN JP KR AU NZ TH MY SG ID PH DE US GB IN, hoặc null nếu không nêu>",' +
-      '"date":"<YYYY-MM-DD hoặc null>"}. ' +
-      `Câu: "${String(text).replace(/["\n]/g, ' ').slice(0, 300)}"`;
+      'Bạn hỗ trợ tra cứu thuế nhập khẩu Việt Nam. Từ câu người dùng, suy luận sơ bộ phân loại HS (AHTN). ' +
+      'CHỈ trả JSON một dòng, KHÔNG markdown, KHÔNG chữ ngoài JSON:\n' +
+      '{"keywords":["<1-3 từ khoá TIẾNG VIỆT có thể xuất hiện trong Danh mục hải quan, vd thẻ, thẻ thông minh>"],' +
+      '"hs_hints":["<0-3 nhóm HS 4 hoặc 6 chữ số phù hợp theo kiến thức phân loại, vd 8523.52>"],' +
+      '"origin":"<mã nước 2 chữ ISO HOA hoặc null>",' +
+      '"date":"<YYYY-MM-DD hoặc null>",' +
+      '"note":"<1 câu ngắn giải thích phân loại, vd: Thẻ RFID thường phân loại là thẻ thông minh nhóm 8523.52>"}\n' +
+      `Câu: "${String(text).replace(/["\n]/g, ' ').slice(0, 400)}"`;
     execFile(
       'claude',
       ['-p', prompt],
-      { timeout: 35000, env: { ...process.env, HOME: process.env.HOME || '/tmp' } },
+      { timeout: 40000, env: { ...process.env, HOME: process.env.HOME || '/tmp' } },
       (err, stdout) => {
         if (err) return resolve(null);
         try {
-          const m = String(stdout).match(/\{[\s\S]*?\}/);
+          const m = String(stdout).match(/\{[\s\S]*\}/);
           if (!m) return resolve(null);
           const o = JSON.parse(m[0]);
+          const arr = (x) => (Array.isArray(x) ? x.map(String).map((s) => s.trim()).filter(Boolean) : []);
           resolve({
-            product: o.product && String(o.product).trim() ? String(o.product).trim() : null,
+            keywords: arr(o.keywords),
+            hsHints: arr(o.hs_hints).map((s) => s.replace(/\D/g, '')).filter((s) => s.length >= 4),
             origin: /^[A-Za-z]{2}$/.test(o.origin || '') ? String(o.origin).toUpperCase() : null,
             date: /^\d{4}-\d{2}-\d{2}$/.test(o.date || '') ? o.date : null,
+            note: o.note && String(o.note).trim() ? String(o.note).trim() : null,
           });
         } catch {
           resolve(null);
@@ -161,6 +167,17 @@ function claudeExtract(text) {
       },
     );
   });
+}
+
+async function searchByPrefix(prefix) {
+  const res = await fetch(`${API}/tariff/search?prefix=${encodeURIComponent(prefix)}`);
+  return res.ok ? res.json() : [];
+}
+
+async function lookupFull(hsDotted, origin, date) {
+  const hs = hsDotted.replace(/\./g, '');
+  const res = await fetch(`${API}/tariff?hs=${hs}&date=${date}${origin ? `&origin=${origin}` : ''}`);
+  return res.ok ? res.json() : null;
 }
 
 function formatCandidates(kw, list, origin) {
@@ -212,29 +229,44 @@ async function answer(text) {
     }
     return formatAnswer(q, await res.json());
   }
-  // Không có mã HS → hiểu câu bằng Claude (subscription), fallback tách-từ đơn giản.
+  // Không có mã HS → Claude suy luận phân loại; tra DB (grounded); TRẢ THẲNG thuế mã khả dĩ nhất.
   const lower = text.toLowerCase();
   const nlu = await claudeExtract(text);
-  const kw = nlu?.product || keywordFrom(text, detectOrigin(lower));
   const origin = nlu?.origin || detectOrigin(lower);
-  if (!kw || kw.length < 2) {
-    return 'Nhắn TÊN HÀNG (van, xăng, thép, ô tô…) hoặc MÃ HS (vd "8481.80.99 TQ"). Ví dụ: "nhập cái van từ Trung Quốc".';
+  const date = nlu?.date || new Date().toISOString().slice(0, 10);
+
+  const seen = new Set();
+  const cands = [];
+  const add = (list) => {
+    for (const c of list || []) if (!seen.has(c.hs)) { seen.add(c.hs); cands.push(c); }
+  };
+  // Nhóm HS Claude gợi ý (nhắm trúng hơn) trước, rồi tới từ khoá.
+  for (const p of nlu?.hsHints || []) add(await searchByPrefix(p));
+  const keywords = (nlu?.keywords?.length ? nlu.keywords : [keywordFrom(text, origin)]).filter((k) => k && k.length >= 2);
+  for (const kw of keywords) {
+    let l = await searchGoods(kw);
+    if (!l.length && /\s/.test(kw)) {
+      for (const w of kw.split(/\s+/).filter((w) => w.length >= 2)) { l = await searchGoods(w); if (l.length) break; }
+    }
+    add(l);
   }
-  // Thử cả cụm; nếu không ra, thử từng từ (danh từ tiếng Việt thường đứng trước: "van công nghiệp" → "van").
-  let list = await searchGoods(kw);
-  let effKw = kw;
-  if (!list.length && /\s/.test(kw)) {
-    for (const w of kw.split(/\s+/).filter((w) => w.length >= 2)) {
-      const l = await searchGoods(w);
-      if (l.length) {
-        list = l;
-        effKw = w;
-        break;
-      }
+
+  if (!cands.length) {
+    return `Chưa tìm được mã HS phù hợp${keywords.length ? ` cho "${keywords.join(', ')}"` : ''}.${nlu?.note ? ` (${nlu.note})` : ''} Thử mô tả rõ hơn, hoặc gõ thẳng mã HS.`;
+  }
+
+  const top = cands[0];
+  const full = await lookupFull(top.hsDotted, origin, date);
+  const out = [];
+  if (nlu?.note) out.push(`💡 ${nlu.note}`);
+  out.push(full ? formatAnswer({ dotted: top.hsDotted, origin, date }, full) : `📋 ${top.hsDotted} — ${top.path}`);
+  if (cands.length > 1) {
+    out.push('— Nếu không đúng loại hàng, chọn mã khác:');
+    for (const c of cands.slice(1, 6)) {
+      out.push(`• ${c.hsDotted} · MFN ${c.mfn != null ? Number(c.mfn) + '%' : '—'} · ${(c.path || '').split(' › ').slice(-2).join(' › ')}`);
     }
   }
-  if (!list.length) return `Không thấy mã HS nào cho "${kw}". Thử từ khoá khác, hoặc gõ thẳng mã HS.`;
-  return formatCandidates(effKw, list, origin);
+  return out.join('\n');
 }
 
 /** Bỏ các đoạn @tag khỏi nội dung (dùng pos/len của mentions, an toàn từ cuối lên). */

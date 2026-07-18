@@ -49,6 +49,23 @@ interface CbpgRow {
   effective_to: string | null;
 }
 
+interface SearchRow {
+  hs_code: string;
+  heading: string | null;
+  path: string;
+  mfn: string | null;
+}
+
+function toCandidate(r: SearchRow): SearchCandidate {
+  return {
+    hs: r.hs_code,
+    hsDotted: r.hs_code.replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3'),
+    heading: r.heading,
+    path: r.path,
+    mfn: r.mfn,
+  };
+}
+
 function subtractDays(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);
   const t = Date.UTC(y!, m! - 1, d!) - days * 86_400_000;
@@ -259,19 +276,30 @@ export class TariffService {
    * MENU for a human to choose from — never a single auto-picked code, because a
    * wrong HS looks exactly like a right one (research 09).
    */
-  async search(qRaw: string): Promise<SearchCandidate[]> {
+  async search(qRaw: string, prefixRaw?: string): Promise<SearchCandidate[]> {
+    // MFN subquery reused by both branches.
+    const mfnSub = sql`(SELECT r.rate_percent FROM tariff_rate r JOIN tariff_schedule s ON s.id = r.schedule_id
+        WHERE r.hs_code = d.hs_code AND s.code = 'NK_uu_dai' AND r.superseded_at IS NULL
+          AND r.effective_from <= CURRENT_DATE AND (r.effective_to IS NULL OR CURRENT_DATE <= r.effective_to)
+        LIMIT 1)`;
+
+    // Prefix branch: an HS heading/subheading (e.g. Claude's classification hint "8523").
+    const prefix = (prefixRaw ?? '').replace(/\D/g, '');
+    if (prefix.length >= 4 && prefix.length <= 8) {
+      const rows = (await this.db.execute(sql`
+        SELECT d.hs_code, d.heading, d.path, ${mfnSub} AS mfn
+        FROM hs_description d WHERE d.hs_code LIKE ${prefix + '%'}
+        ORDER BY d.hs_code LIMIT 25
+      `)) as unknown as SearchRow[];
+      return rows.map(toCandidate);
+    }
+
+    // Keyword branch: WHOLE-WORD match, not substring ("van" ≠ "vani"/"vang"). \y = word boundary.
     const q = (qRaw ?? '').trim();
-    if (q.length < 2) throw new BadRequestException('q (từ khoá) cần ít nhất 2 ký tự');
-    // WHOLE-WORD match, not substring: "van" (valve) must not drag in "vani"
-    // (vanilla) or "rượu vang" (wine). \y is a POSIX word boundary.
-    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const rx = `\\y${escaped}\\y`;
+    if (q.length < 2) throw new BadRequestException('q (từ khoá) cần ít nhất 2 ký tự, hoặc dùng prefix nhóm HS');
+    const rx = `\\y${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\y`;
     const rows = (await this.db.execute(sql`
-      SELECT d.hs_code, d.heading, d.path,
-             (SELECT r.rate_percent FROM tariff_rate r JOIN tariff_schedule s ON s.id = r.schedule_id
-              WHERE r.hs_code = d.hs_code AND s.code = 'NK_uu_dai' AND r.superseded_at IS NULL
-                AND r.effective_from <= CURRENT_DATE AND (r.effective_to IS NULL OR CURRENT_DATE <= r.effective_to)
-              LIMIT 1) AS mfn
+      SELECT d.hs_code, d.heading, d.path, ${mfnSub} AS mfn
       FROM hs_description d
       WHERE d.path ~* ${rx}
       ORDER BY
@@ -279,14 +307,8 @@ export class TariffService {
         (CASE WHEN d.heading ~* ${rx} THEN position(lower(${q}) in lower(d.heading)) ELSE 9999 END),
         d.hs_code
       LIMIT 25
-    `)) as unknown as Array<{ hs_code: string; heading: string | null; path: string; mfn: string | null }>;
-    return rows.map((r) => ({
-      hs: r.hs_code,
-      hsDotted: r.hs_code.replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3'),
-      heading: r.heading,
-      path: r.path,
-      mfn: r.mfn,
-    }));
+    `)) as unknown as SearchRow[];
+    return rows.map(toCandidate);
   }
 
   /**
