@@ -126,27 +126,31 @@ async function searchGoods(kw) {
 }
 
 /**
- * Hiểu câu + SUY LUẬN phân loại HS bằng Claude (subscription VPS, không tốn phí/token).
- * Trả về từ khoá tiếng Việt + gợi ý nhóm HS + xuất xứ/ngày + 1 câu giải thích. Claude CHỈ
- * gợi ý MÃ để tra; thuế luôn tất định từ DB, và mọi mã đều được lọc lại theo dữ liệu thật.
- * Không có token/CLI → null để rơi về tách-từ đơn giản (giữ portable).
+ * Bộ ĐỊNH TUYẾN (một bước suy luận Claude ở giữa): phân loại ý định câu hỏi →
+ *   - tariff : tra thuế/mã HS một mặt hàng  → chạy đường TẤT ĐỊNH (không LLM tính số)
+ *   - legal  : hỏi luật/thủ tục/C/O/khái niệm → Claude trả lời + cảnh báo tham khảo
+ *   - general: chào hỏi/hỏi năng lực/ngoài phạm vi → Claude trả lời tự nhiên
+ * Claude chạy bằng subscription VPS (không tốn phí/token). Không có token → null → fallback.
  */
-function claudeExtract(text) {
+function route(text) {
   return new Promise((resolve) => {
     if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) return resolve(null);
     const prompt =
-      'Bạn hỗ trợ tra cứu thuế nhập khẩu Việt Nam. Từ câu người dùng, suy luận sơ bộ phân loại HS (AHTN). ' +
-      'CHỈ trả JSON một dòng, KHÔNG markdown, KHÔNG chữ ngoài JSON:\n' +
-      '{"keywords":["<1-3 từ khoá TIẾNG VIỆT có thể xuất hiện trong Danh mục hải quan, vd thẻ, thẻ thông minh>"],' +
-      '"hs_hints":["<0-3 nhóm HS 4 hoặc 6 chữ số phù hợp theo kiến thức phân loại, vd 8523.52>"],' +
-      '"origin":"<mã nước 2 chữ ISO HOA hoặc null>",' +
-      '"date":"<YYYY-MM-DD hoặc null>",' +
-      '"note":"<MỘT câu NGẮN tối đa 22 từ giải thích phân loại, vd: Thẻ RFID thường là thẻ thông minh nhóm 8523.52>"}\n' +
-      `Câu: "${String(text).replace(/["\n]/g, ' ').slice(0, 400)}"`;
+      'Bạn là bộ định tuyến cho trợ lý hải quan Việt Nam. Phân loại câu hỏi và trả JSON MỘT dòng, KHÔNG markdown, KHÔNG chữ ngoài JSON:\n' +
+      '{"intent":"tariff|legal|general",' +
+      '"keywords":["<nếu tariff: 1-3 từ khoá TIẾNG VIỆT tìm trong Danh mục HS, vd thẻ, thẻ thông minh>"],' +
+      '"hs_hints":["<nếu tariff: 0-3 nhóm HS 4-6 chữ số phù hợp, vd 8523.52>"],' +
+      '"origin":"<mã nước 2 chữ ISO HOA hoặc null>","date":"<YYYY-MM-DD hoặc null>",' +
+      '"note":"<nếu tariff: MỘT câu ngắn ≤22 từ giải thích phân loại>",' +
+      '"reply":"<nếu legal/general: câu trả lời TIẾNG VIỆT, rõ ràng, đúng trọng tâm, ≤120 từ>"}\n' +
+      '- intent=tariff: hỏi thuế suất hoặc mã HS của MỘT mặt hàng cụ thể.\n' +
+      '- intent=legal: hỏi về luật/quy định/thủ tục hải quan, C/O, hồ sơ, khái niệm thuế XNK, nghị định.\n' +
+      '- intent=general: chào hỏi, hỏi bot làm được gì, hoặc ngoài phạm vi hải quan.\n' +
+      `Câu: "${String(text).replace(/["\n]/g, ' ').slice(0, 500)}"`;
     execFile(
       'claude',
       ['-p', prompt],
-      { timeout: 40000, env: { ...process.env, HOME: process.env.HOME || '/tmp' } },
+      { timeout: 45000, env: { ...process.env, HOME: process.env.HOME || '/tmp' } },
       (err, stdout) => {
         if (err) return resolve(null);
         try {
@@ -155,11 +159,13 @@ function claudeExtract(text) {
           const o = JSON.parse(m[0]);
           const arr = (x) => (Array.isArray(x) ? x.map(String).map((s) => s.trim()).filter(Boolean) : []);
           resolve({
+            intent: ['tariff', 'legal', 'general'].includes(o.intent) ? o.intent : 'tariff',
             keywords: arr(o.keywords),
             hsHints: arr(o.hs_hints).map((s) => s.replace(/\D/g, '')).filter((s) => s.length >= 4),
             origin: /^[A-Za-z]{2}$/.test(o.origin || '') ? String(o.origin).toUpperCase() : null,
             date: /^\d{4}-\d{2}-\d{2}$/.test(o.date || '') ? o.date : null,
-            note: o.note && String(o.note).trim() ? String(o.note).trim().slice(0, 200) : null,
+            note: o.note ? String(o.note).trim().slice(0, 200) : null,
+            reply: o.reply ? String(o.reply).trim().slice(0, 1500) : null,
           });
         } catch {
           resolve(null);
@@ -214,35 +220,19 @@ function formatAnswer(q, r) {
   return lines.join('\n');
 }
 
-async function answer(text) {
-  const q = parseQuery(text);
-  if (q) {
-    // Có mã HS → tra cứu thuế đầy đủ.
-    const url = `${API}/tariff?hs=${q.hs}&date=${q.date}${q.origin ? `&origin=${q.origin}` : ''}`;
-    const res = await fetch(url);
-    if (res.status === 404) {
-      return `Không tìm thấy thuế cho HS ${q.dotted} (ngày ${q.date}). Có thể là dòng không mang thuế, dòng đặc biệt, hoặc ngoài dữ liệu đã nạp.`;
-    }
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      return `Lỗi tra cứu: ${body.message || res.status}. Thử "8481.80.99 TQ".`;
-    }
-    return formatAnswer(q, await res.json());
-  }
-  // Không có mã HS → Claude suy luận phân loại; tra DB (grounded); TRẢ THẲNG thuế mã khả dĩ nhất.
+/** Đường TẤT ĐỊNH: từ gợi ý (từ khoá + nhóm HS) → tra DB → trả thẳng thuế mã khả dĩ nhất + mã thay thế. */
+async function tariffByClues(clues, text) {
   const lower = text.toLowerCase();
-  const nlu = await claudeExtract(text);
-  const origin = nlu?.origin || detectOrigin(lower);
-  const date = nlu?.date || new Date().toISOString().slice(0, 10);
+  const origin = clues?.origin || detectOrigin(lower);
+  const date = clues?.date || new Date().toISOString().slice(0, 10);
 
   const seen = new Set();
   const cands = [];
   const add = (list) => {
     for (const c of list || []) if (!seen.has(c.hs)) { seen.add(c.hs); cands.push(c); }
   };
-  // Nhóm HS Claude gợi ý (nhắm trúng hơn) trước, rồi tới từ khoá.
-  for (const p of nlu?.hsHints || []) add(await searchByPrefix(p));
-  const keywords = (nlu?.keywords?.length ? nlu.keywords : [keywordFrom(text, origin)]).filter((k) => k && k.length >= 2);
+  for (const p of clues?.hsHints || []) add(await searchByPrefix(p));
+  const keywords = (clues?.keywords?.length ? clues.keywords : [keywordFrom(text, origin)]).filter((k) => k && k.length >= 2);
   for (const kw of keywords) {
     let l = await searchGoods(kw);
     if (!l.length && /\s/.test(kw)) {
@@ -252,13 +242,13 @@ async function answer(text) {
   }
 
   if (!cands.length) {
-    return `Chưa tìm được mã HS phù hợp${keywords.length ? ` cho "${keywords.join(', ')}"` : ''}.${nlu?.note ? ` (${nlu.note})` : ''} Thử mô tả rõ hơn, hoặc gõ thẳng mã HS.`;
+    return `Chưa tìm được mã HS phù hợp${keywords.length ? ` cho "${keywords.join(', ')}"` : ''}.${clues?.note ? ` (${clues.note})` : ''} Thử mô tả rõ hơn, hoặc gõ thẳng mã HS.`;
   }
 
   const top = cands[0];
   const full = await lookupFull(top.hsDotted, origin, date);
   const out = [];
-  if (nlu?.note) out.push(`💡 ${nlu.note}`);
+  if (clues?.note) out.push(`💡 ${clues.note}`);
   out.push(full ? formatAnswer({ dotted: top.hsDotted, origin, date }, full) : `📋 ${top.hsDotted} — ${top.path}`);
   if (cands.length > 1) {
     out.push('— Nếu không đúng loại hàng, chọn mã khác:');
@@ -267,6 +257,37 @@ async function answer(text) {
     }
   }
   return out.join('\n');
+}
+
+async function answer(text) {
+  // Có mã HS → tra thẳng (không cần router).
+  const q = parseQuery(text);
+  if (q) {
+    const res = await fetch(`${API}/tariff?hs=${q.hs}&date=${q.date}${q.origin ? `&origin=${q.origin}` : ''}`);
+    if (res.status === 404) {
+      return `Không tìm thấy thuế cho HS ${q.dotted} (ngày ${q.date}). Có thể là dòng không mang thuế, dòng đặc biệt, hoặc ngoài dữ liệu đã nạp.`;
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return `Lỗi tra cứu: ${body.message || res.status}. Thử "8481.80.99 TQ".`;
+    }
+    return formatAnswer(q, await res.json());
+  }
+
+  // Không có mã HS → BỘ ĐỊNH TUYẾN phân loại ý định.
+  const r = await route(text);
+  if (!r) return tariffByClues(null, text); // không có LLM → coi như tra hàng theo từ khoá
+
+  if (r.intent === 'legal') {
+    return `${r.reply || 'Mình chưa rõ câu hỏi, bạn nói cụ thể hơn nhé.'}\n\n⚠️ Thông tin THAM KHẢO, không phải tư vấn pháp lý chính thức — hãy đối chiếu văn bản gốc / hỏi chuyên viên. Cần con số thuế cụ thể thì cho mình tên hàng + xuất xứ.`;
+  }
+  if (r.intent === 'general') {
+    return (
+      r.reply ||
+      'Mình là bot hải quan: gõ TÊN HÀNG (van, xăng…) hoặc MÃ HS để xem thuế; hỏi về thủ tục/C/O/khái niệm cũng được.'
+    );
+  }
+  return tariffByClues(r, text); // intent === tariff
 }
 
 /** Bỏ các đoạn @tag khỏi nội dung (dùng pos/len của mentions, an toàn từ cuối lên). */
