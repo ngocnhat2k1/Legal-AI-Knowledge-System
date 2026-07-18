@@ -121,12 +121,12 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 - **Đừng khái quát từ mẫu nhỏ.** Lô 35 tờ chỉ thấy ACFTA → kết luận sai "công ty chỉ dùng ACFTA". Full 117 lộ **4 FTA**: AANZFTA, ACFTA, ATIGA, EVFTA (REX). Đã sửa note.
 - **CBPG (chống bán phá giá) là khoản riêng, có thật.** Có dòng bị áp CBPG 35,58% chồng lên thuế NK (thu thật ~9,4tr VND), có dòng được miễn. Schema TASK-007 phải tách CBPG khỏi thuế NK — bề mặt trách nhiệm pháp lý mới.
 - **Cross-check 249/249 là validation thật.** Tờ khai thật (oracle độc lập) đồng thuận 100% với biểu thuế thương mại (nguồn thứ cấp). Nhưng cả hai đều phái sinh từ nghị định; **Công báo mới là thẩm quyền** (TASK-008 vẫn phải đối chiếu văn bản gốc).
-- **Bẫy xuất xứ ≠ nước người bán phổ biến (36/259).** Baosteel Singapore → xuất xứ CN, Bossard Malaysia → CN, Webcontrol Đài Loan → DE. Đọc "Nước xuất xứ" theo dòng.
+- **Bẫy xuất xứ ≠ nước người bán phổ biến (36/259).** Vd Bossard Malaysia (MY) → hàng xuất xứ CN; Webcontrol Đài Loan (TW) → xuất xứ DE. Đọc "Nước xuất xứ" theo dòng. (Baosteel "Singapore" khai mã nước CN = xuất xứ — tên khác mã nước, KHÔNG tính vào 36; chấm tay bắt được chỗ ghi nhầm này.)
 
 **Tiếp theo**
 - Bộ phận khai báo tick confidence 55 case (bảng review `confidence-review.csv` đã xuất).
 - Gửi lại file rỗng `108337700001` (0-byte).
-- Chấm mẫu tay ~5 tờ. Có thể chạy song song TASK-002/003/004 (điều tra độc lập).
+- Chấm mẫu tay: đã đọc 4 tờ (15/15 dòng khớp HS/xuất xứ/ngày/thuế/C/O/CBPG). Có thể chạy song song TASK-002/003/004 (điều tra độc lập).
 
 ---
 
