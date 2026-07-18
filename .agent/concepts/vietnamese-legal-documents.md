@@ -1,7 +1,7 @@
 ---
 type: concept
 status: active
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - ../project-context.md
   - ../business-rules.md
@@ -200,6 +200,16 @@ Ba lý do, theo thứ tự sức thuyết phục:
 **Tổng hợp:** VBHN là tầng *văn bản*; một **graph** sửa đổi/tham chiếu tường minh là tầng *xuất xứ + thời gian*. *(thay đổi pháp lý là Đã thiết lập; việc tách kiến trúc này là một suy luận thiết kế từ research 02, không phải một kết quả đã công bố)*
 
 Graph cần ít loại quan hệ. SBV-LawGraph — hệ thống duy nhất thực nghiệm giải quyết việc này trên pháp luật Việt Nam — dùng đúng bốn: **Amend/Supplement, Repeal, Replace, Guidance/Regulation** (loại cuối là thứ bậc Luật→Nghị định→Thông tư). *(đã xác minh 2026-07-17, nguồn: https://lexuanbach.github.io/publication/ACIIDS2026a.pdf)*
+
+### TASK-004 (đã đo): vbpl CÓ cây điều khoản, KHÔNG có cạnh trích dẫn cấp điều khoản
+
+**Câu trả lời cho câu hỏi mở "`provisionTree` / `referenceProvisions` có bao giờ được điền không" là MỘT PHẦN.** Đã lấy mẫu **21 văn bản đã công bố** (4 Luật, 7 Nghị định, 10 Thông tư; ngày ban hành 2014 → 15/07/2026) + 1 control, qua Server Action của vbpl.vn. *(đã xác minh 2026-07-18, nguồn: 21 văn bản qua Server Action vbpl.vn — xem [research/task-004-vbpl-provisiontree](../../research/task-004-vbpl-provisiontree/README.md))*
+
+- **Trường `provisionTree` (trong payload chi tiết, action `0fb12b3561…`): `null` trên cả 21/21.** Nhất quán với research 04.
+- **`referenceProvisions`: `null` trên MỌI tham chiếu, mọi văn bản.** Tham chiếu chỉ nối **văn bản → văn bản**, không xuống cấp điều/khoản. `referenceType` là số nguyên, quan sát được **8 giá trị (1, 3, 4, 7, 8, 9, 10, 12)**, vẫn **không** có ánh xạ int→nhãn (bổ sung cho câu hỏi mở này ở [data-sources.md](data-sources.md)).
+- **NHƯNG một Server Action *khác* (`94635012466e…`, research 04 không thấy) trả về một cây điều khoản đầy đủ** — Chương → Điều → Khoản → Điểm (`ptype` 2/5/6/7, `level` Chapter/Article/Clause/Point) — cho **21/21** văn bản, từ 5 node đến 1.300 node. Có cả ở văn bản cũ đã di trú (TT 200/2014), nên **không** giới hạn ở văn bản hậu-relaunch.
+
+**Hệ quả cho tầng graph ở trên:** cấu trúc cấp điều khoản (đơn vị điều/khoản/điểm để chunk RAG) **có sẵn, máy đọc được** từ vbpl — nhưng **cạnh trích dẫn cấp điều khoản** (điều X văn bản này dẫn điều Y văn bản kia) **KHÔNG có**; đồ thị đó vẫn phải tự dựng như [ba khoảng trống](#nhưng-riêng-vbhn-là-không-đủ--ba-khoảng-trống) ở trên đã nêu. Cây outline chỉ là *cấu trúc* (tiêu đề + UUID + orderIndex), chưa phải *nội dung text* — ghép outline với tab nội dung mới ra đơn vị RAG hoàn chỉnh. **Tham chiếu treo có thật:** văn bản chưa công bố (control `id=12898`, `status:"Confirm_Step2"`) trả về HTTP 500 — bộ nạp đồ thị phải chịu được cạnh gãy.
 
 ### Các VBHN đã biết cho mảng dọc này
 

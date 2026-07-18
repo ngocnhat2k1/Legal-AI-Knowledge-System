@@ -23,9 +23,9 @@ thực sự đã xảy ra**, thường khác đi.
 | | |
 |---|---|
 | **Giai đoạn hiện tại** | Giai đoạn 0 — Nền móng |
-| **Công việc tiếp theo** | TASK-001 + TASK-002 + TASK-003 xong. Tiếp: TASK-006 (khung repo) / TASK-007 (schema, gồm CBPG) hoặc TASK-004 (điều tra) |
+| **Công việc tiếp theo** | TASK-001..004 + TASK-006 xong. Tiếp: TASK-007 (schema biểu thuế bitemporal + nhận biết phụ lục + CBPG) |
 | **Đang bị chặn bởi** | Không có. TASK-001 đã đóng (confidence = uncertain toàn bộ; xác minh để lúc dùng qua Zalo). |
-| **Code đã viết** | Chưa có code ứng dụng (cố ý). Đã có fixtures golden set `fixtures/golden-set/`. |
+| **Code đã viết** | Khung repo TASK-006: monorepo NestJS (`apps/api`) + Docker + Drizzle + Yarn 4. Chưa có logic biểu thuế (TASK-007). Fixtures golden set `fixtures/golden-set/`. |
 | **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
 
 ### ⚠️ TASK-001 — phần còn lại cần con người, không phải agent
@@ -60,9 +60,9 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | TASK-001 — Golden set | ✅ xong 2026-07-18 | 55 case + 259 corpus, cross-check 249/249, chấm tay 15/15; confidence = uncertain toàn bộ (xác minh qua Zalo lúc dùng) |
 | TASK-002 — Giải quyết xung đột API customs.gov.vn | ✅ xong 2026-07-18 | Quan sát trực tiếp trên trình duyệt (tab Network): portal gọi `/bridge` và nhận dữ liệu → xác nhận research 10, bác research 12; dùng `/bridge`, không đuổi IP-thô. Vẫn chỉ là lớp cross-check, không phải nguồn pháp lý. Còn tồn (không chặn thiết kế): bare-curl từ mạng công ty, lưu sample response, dò rate-limit |
 | TASK-003 — Chứng minh phân tích DOCX nhận biết bảng | ✅ xong 2026-07-18 | Lỗ hổng GIẢ: cells ngăn bởi `\x07`/`\n`, research không thấy delimiter. Parse được → GĐ1 gồm EVFTA+RCEP |
-| TASK-004 — Kiểm tra provisionTree của vbpl có được điền không | 🔲 chưa làm | Câu hỏi mở giá trị cao nhất cho giai đoạn RAG |
+| TASK-004 — Kiểm tra provisionTree của vbpl có được điền không | ✅ xong 2026-07-18 | MỘT PHẦN: `provisionTree`/`referenceProvisions` = null trên 21/21 văn bản; nhưng cây điều khoản Chương→Điều→Khoản→Điểm CÓ qua một Server Action khác. Cạnh trích dẫn cấp điều khoản phải tự dựng. Gateway MoJ còn sống, route chưa ánh xạ. Xem research/task-004-vbpl-provisiontree |
 | TASK-005 — Viết các ghi chú kiến thức .agent | ✅ xong 2026-07-17 | Đã kiểm toán; xem Nhật ký phiên làm việc |
-| TASK-006 — Khung sườn repository | 🔲 chưa làm | |
+| TASK-006 — Khung sườn repository | ✅ xong 2026-07-18 | NestJS monorepo + Docker + Drizzle + Yarn 4; migration `0000` bật pgvector. Verify: clean-clone → `docker compose up` → `/health` ok (pgvector 0.8.5). db host cổng **5433**. Xem [ADR công cụ repo](../architecture-decisions/2026-07-18-repo-tooling-drizzle-yarn.md) |
 | TASK-007 — Schema biểu thuế (thời gian + nhận biết phụ lục) | 🔲 chưa làm | Nhận biết phụ lục từ migration **đầu tiên**, không trang bị thêm |
 | TASK-008 — Nạp Công báo (bộ phân tích nhận biết phụ lục) | 🔲 chưa làm | Phụ thuộc TASK-003 |
 | TASK-009 — Xác lập chuỗi sửa đổi MFN 2026 | 🔲 chưa làm | **Đừng** gộp research 10 + 12 và giả định hợp của chúng |
@@ -103,8 +103,7 @@ vài cái thay đổi thiết kế.
 2. ✅ **ĐÃ GIẢI QUYẾT 2026-07-18 (TASK-003):** CÓ — parse được (cells ngăn bởi dấu ô Word `\x07`/`\n`, không cần LibreOffice, không heuristic); GĐ1 gồm EVFTA + RCEP. Xem [research/task-003-evfta-parser](../../research/task-003-evfta-parser/README.md). ~~Câu hỏi gốc:~~ **Một bộ phân tích DOCX nhận biết bảng có khôi phục các cột sáu-mức-thuế EVFTA không?** Research 12 suy luận nó
    sẽ khôi phục được nhưng không thể chứng minh (không có LibreOffice/python-docx khả dụng). Khoảng trống này phải khép lại trước
    khi bất kỳ dữ liệu thuế nào được tin. → TASK-003
-3. **`provisionTree` / `referenceProvisions` của vbpl có bao giờ được điền không?** `null` trên cả hai mẫu. Nếu
-   được điền, nó là một đồ thị pháp lý cấp điều khoản và nó thay đổi toàn bộ thiết kế RAG. → TASK-004
+3. ✅ **ĐÃ GIẢI QUYẾT 2026-07-18 (TASK-004, một phần):** `provisionTree`/`referenceProvisions` = `null` trên **21/21** văn bản đã lấy mẫu — tham chiếu chỉ ở cấp văn bản. **NHƯNG** cây điều khoản Chương→Điều→Khoản→Điểm CÓ qua một Server Action **khác** (research 04 không thấy). Vậy: cấu trúc cấp điều khoản để chunk RAG **có sẵn, máy đọc được**; **cạnh trích dẫn cấp điều khoản thì KHÔNG — phải tự dựng.** Xem [research/task-004-vbpl-provisiontree](../../research/task-004-vbpl-provisiontree/README.md). → TASK-004
 4. **Chuỗi sửa đổi MFN 2026 thực sự là gì?** Research 10 và 12 cho các danh sách khác nhau, mỗi cái đều
    không đầy đủ. Xác lập nó từ Công báo. → TASK-009
 
@@ -114,6 +113,43 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-07-18 — TASK-006: khung sườn repo (NestJS + Docker + Drizzle)
+
+**Đã làm**
+- Dựng monorepo NestJS (`apps/api`) + Docker Compose (Postgres 17 + pgvector) + Drizzle (migration SQL) + Yarn 4 (Corepack). Module `health` chứng minh boot + DB + pgvector. Migration `0000_enable_pgvector.sql` (custom, bật `vector`).
+- Verify thật: clean-clone (copy cây trừ gitignored, không `node_modules`) → `docker compose up --build` → `db` healthy → `migrate` exit 0 → `api` boot → `/health` = `{"status":"ok","db":"up","pgvector":"0.8.5"}`. Idempotent (up lại 2 lần, migration count = 1). Quyết định ghi ở [ADR công cụ repo](../architecture-decisions/2026-07-18-repo-tooling-drizzle-yarn.md).
+
+**Đã học — địa hình thật**
+- **Cổng 5432 đụng Postgres local của máy dev** → publish db ra host **5433** (trong compose api vẫn `db:5432`). Publish DB ra cổng phổ biến là bẫy "chạy trên máy bất kỳ".
+- **`typescript@latest` = 7.0.2** (bản Go-native mới) và `@types/node` = 26 — quá mới, vỡ ts-jest/ts-node/NestJS. Pin TS **5.9.x**, @types/node 22. Đừng lấy "latest" cho toolchain.
+- **Yarn 4 tắt build script** (hardened) → esbuild vẫn chạy nhờ optional-dep binary theo platform (cài trong container = binary linux đúng kiến trúc). `tsx` chạy migrate TS OK.
+- **NOTICE "already exists, skipping" từ postgres.js trông như lỗi** khi migrate chạy lại — tắt bằng `onnotice: () => {}`. Idempotency thật ở tầng migrator (skip theo hash).
+- **⚠️ Mâu thuẫn ngôn ngữ doc chưa chốt:** AGENTS.md nói doc tiếng Việt; project-context.md + 00-bootstrap.md nói tiếng Anh (đều viện dẫn AGENTS.md). Theo AGENTS.md (tiếng Việt) tới khi chủ dự án quyết.
+
+**Tiếp theo**
+- TASK-007: schema biểu thuế bitemporal + nhận biết phụ lục + tách CBPG. `db/schema/` + `db/migrations/` đã sẵn.
+- Lưu ý commit: scaffold đang trên branch `task-003-evfta-parser` lẫn với work task-003/004 — cân nhắc tách branch riêng cho TASK-006.
+
+---
+
+### 2026-07-18 — TASK-004: provisionTree của vbpl (một phần) + gateway MoJ
+
+**Đã làm**
+- Lấy mẫu **21 văn bản đã công bố** (4 Luật, 7 Nghị định, 10 Thông tư; 2014 → 15/07/2026) + 1 control, qua Server Action vbpl.vn. Dùng Playwright khám phá `next-action` hash một lần, rồi replay bằng Python stdlib (`urllib`) — reproducible. Parser + bằng chứng: `research/task-004-vbpl-provisiontree/`.
+- Trả lời câu hỏi mở #3: **MỘT PHẦN.** `provisionTree` (trường) = `null` trên 21/21; `referenceProvisions` = `null` trên mọi tham chiếu. NHƯNG cây điều khoản Chương→Điều→Khoản→Điểm CÓ qua một action khác.
+
+**Đã học — bất ngờ lớn**
+- **Research 04 đúng về trường nó thấy, nhưng bỏ sót một Server Action.** Trang chi tiết có ≥3 action: `0fb12b3561…` (payload chi tiết: references[], `provisionTree:null`), `94635012466e…` (**cây outline điều khoản đầy đủ** — cái research 04 không thấy), `4a3423ce…` (payload nhỏ khác). Bài học: **"trường X null" ≠ "dữ liệu X không tồn tại"** — có thể nó ở một action/endpoint khác. Liệt kê hết action trước khi kết luận.
+- **Cấu trúc cấp điều khoản CÓ, cạnh trích dẫn cấp điều khoản thì KHÔNG.** Cây outline đầy đủ (5 → 1.300 node, cả văn bản cũ đã di trú như TT 200/2014). Nhưng tham chiếu chỉ nối văn bản↔văn bản; `referenceType` là số nguyên (8 giá trị: 1,3,4,7,8,9,10,12), không có ánh xạ nhãn. → Giai đoạn 5: chunk RAG cấp điều khoản làm được từ outline+nội dung; **đồ thị trích dẫn cấp điều khoản phải tự dựng.**
+- **URL id là ItemID số (văn bản di trú) HOẶC UUID (văn bản tạo sau relaunch 2026-04-23).** Body action = `["<id>"]` cho cả hai. Dạng không-slug `--<id>` hoạt động (cả số lẫn UUID). `next-action` hash vỡ theo mỗi deploy — script có bảo vệ stale-hash.
+- **Tham chiếu treo có thật:** control `12898` (chưa công bố, `Confirm_Step2`) → HTTP 500. Bộ nạp đồ thị phải chịu được cạnh gãy.
+- **Bonus gateway MoJ:** base URL `https://vbpl-bientap-gateway.moj.gov.vn/api` hardcode trong bundle client (axios, timeout 600s). Còn sống (`/actuator/health` UP; `/api` → 404 JSON Spring). Nhưng **route không ánh xạ được từ client** — không literal `/api/...` trong ~4MB JS; đường dẫn ghép động, gọi phía server. Đúng như research 04.
+
+**Tiếp theo**
+- TASK-004 không đổi quyết định v1 (vẫn Postgres-only, v1 không đụng vbpl). Tiếp: TASK-006 (khung repo) / TASK-007 (schema).
 
 ---
 
