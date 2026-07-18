@@ -38,7 +38,17 @@ function onQrEvent(ev) {
     } catch {
       /* nếu ASCII lỗi, dùng file /session/qr.png */
     }
-    console.log('[zalo] (QR cũng lưu ở /session/qr.png nếu ASCII khó quét). Mã sống ~90s, tự làm mới.');
+    // Lưu ảnh QR nét (PNG) để quét dễ hơn ASCII terminal.
+    try {
+      const b64 = String(ev.data.image || '').replace(/^data:image\/\w+;base64,/, '');
+      if (b64) {
+        mkdirSync('/session', { recursive: true });
+        writeFileSync('/session/qr.png', Buffer.from(b64, 'base64'));
+      }
+    } catch {
+      /* ignore */
+    }
+    console.log('[zalo] Ảnh QR nét: /session/qr.png. Mã sống ~90s, tự làm mới. QUÉT BẰNG CHỨC NĂNG QUÉT QR TRONG APP ZALO.');
   } else if (ev.type === LoginQRCallbackEventType.QRCodeScanned) {
     console.log('[zalo] đã quét — xác nhận trên điện thoại…');
   } else if (ev.type === LoginQRCallbackEventType.GotLoginInfo) {
