@@ -41,3 +41,8 @@ coverage/
 # committed instead, so the loader runs offline even after the download tokens expire.
 research/task-008-congbao-loader/doc/
 research/task-008-congbao-loader/page.html
+
+# FTA raw Công báo downloads (hundreds of MB of `.doc`/`.docx` + tokened pages).
+# The parsed extracts (research/fta-loader/*/rows.ndjson) are committed instead.
+research/fta-loader/*/doc/
+research/fta-loader/*/page.html

@@ -22,10 +22,10 @@ thực sự đã xảy ra**, thường khác đi.
 
 | | |
 |---|---|
-| **Giai đoạn hiện tại** | Giai đoạn 0 — Nền móng |
-| **Công việc tiếp theo** | TASK-001..011 xong (trừ FTA loading). Tiếp: nạp biểu FTA (ACFTA/AANZFTA/ATIGA/EVFTA/RCEP) → **TASK-012** (nghiệm thu: golden set + 20 mã random đối chiếu Công báo) |
-| **Đang bị chặn bởi** | Không có. Chủ dự án đã chốt: FTA scope = MFN + 4 FTA đang dùng + RCEP; oracle TASK-012 = corpus 117 tờ khai sẵn có. |
-| **Code đã viết** | TASK-006 khung repo + **TASK-007 schema** (migration `0001`+`0002`) + **TASK-008 loader ND 26/2023** (`research/task-008-congbao-loader/`: fetch_doc.py, parse_nd26.py, load.ts; 13.161 dòng nạp, 13/13 verify). Fixtures golden set `fixtures/golden-set/`. |
+| **Giai đoạn hiện tại** | **Giai đoạn 1 — Tra cứu thuế suất: HOÀN TẤT & nghiệm thu (2026-07-18)** |
+| **Công việc tiếp theo** | **Tất cả TASK-001..012 xong.** Tùy chọn mở rộng: nạp RCEP (cột-theo-nước); áp mức sửa đổi 144/108/199 từng dòng; nạp nghị quyết gia hạn NQ 25/2026. Sau đó → Giai đoạn 2 (gợi ý HS). |
+| **Đang bị chặn bởi** | Không có. Toàn bộ Giai đoạn 1 đã chứng minh end-to-end trên Postgres thật. |
+| **Code đã viết** | Khung repo (006) + schema (007) + loader ND 26/2023 (008) + chuỗi sửa đổi/hồi quy (009) + **API `/tariff` + staleness** (010/011, `apps/api/src/modules/tariff/`) + **loader 4 FTA** (`research/fta-loader/`) + **validator nghiệm thu** (012). Golden set `fixtures/golden-set/`. |
 | **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
 
 ### ⚠️ TASK-001 — phần còn lại cần con người, không phải agent
@@ -68,7 +68,7 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | TASK-009 — Xác lập chuỗi sửa đổi MFN 2026 | ✅ xong 2026-07-18 | Chuỗi xác lập từ nguồn chính thức (R10+R12 bù nhau; 201/2026 là XK; 72/2026 gia hạn NQ 25/2026). Hồi quy 72/2026 nạp bằng cắt-khoảng append-only, live 6/6. Xem [research/task-009-amendment-chain](../../research/task-009-amendment-chain/README.md) |
 | TASK-010 — Phát hiện độ cũ | ✅ xong 2026-07-18 | Trong API: snapshotDate + reliableThrough (−48 ngày lag) + stale/warning. Acceptance PASS (snapshot 2026-03-15/query 2026-03-10 → stale). |
 | TASK-011 — API tra cứu | ✅ xong 2026-07-18 | `GET /tariff` SQL keyed, vị từ khoảng, không LLM; rate có kiểu + statement, FTA/Ch.98 có điều kiện, CBPG riêng, staleness. FTA `preferential[]` chờ nạp biểu FTA. Xem [research/task-010-011-lookup-api](../../research/task-010-011-lookup-api/README.md) |
-| TASK-012 — Nghiệm thu Giai đoạn 1 | 🟡 MFN xong (FTA pending) | Golden set 27/27 + corpus 192/192 MFN khớp 100%; random 20/20 khớp source. 77 dòng FTA chờ nạp biểu FTA. Xem [research/task-012-acceptance](../../research/task-012-acceptance/README.md) |
+| TASK-012 — Nghiệm thu Giai đoạn 1 | ✅ xong 2026-07-18 | **Corpus 249/249 khớp 100%** (MFN + 4 FTA); random 20/20 khớp source; star-case đủ 4 FTA 0%. Xem [research/task-012-acceptance](../../research/task-012-acceptance/README.md) + [fta-loader](../../research/fta-loader/README.md) |
 
 Chú thích: ✅ xong · 🟡 đang tiến hành · 🔲 chưa làm · ⛔ bị chặn · ❌ bỏ dở (nói lý do)
 
@@ -113,6 +113,23 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-07-18 — Nạp 4 biểu FTA + TASK-012 nghiệm thu: Giai đoạn 1 HOÀN TẤT
+
+**Đã làm**
+- Nạp 4 biểu FTA công ty dùng từ Công báo (`research/fta-loader/`, `parse_fta.py` + `load_fta.ts` tham số hoá): ACFTA (118/2022, 10 phần, 1 cột) · ATIGA (126/2022, 9 phần, 6 cột-năm) · EVFTA (116/2022, 16 phần, 6 cột giảm dần) · AANZFTA (121/2022, 1 `.docx` datafiles, 1 cột). Mỗi biểu 11.414 mã; ATIGA/EVFTA nạp 6 khoảng một-năm/mã (~68k dòng). Mức FTA có điều kiện (`requires_co`).
+- **TASK-012 nghiệm thu (`research/task-012-acceptance/validate.ts`): corpus 249/249 khớp 100%** (MFN 192 + ACFTA 25 + AANZFTA 26 + ATIGA 4 + EVFTA 2); curated 47/47. **Mẫu ngẫu nhiên 20/20** khớp verbatim ô nguồn. → **toàn bộ Giai đoạn 1 đối chiếu được với thực tế.**
+
+**Đã học — địa hình thật**
+- **Cấu trúc FTA khác nhau:** ACFTA/AANZFTA một mức 2022–2027; ATIGA/EVFTA một cột mỗi năm (tra 2026 = cột 2026; EVFTA giảm dần 5→0%). Phải kiểm distribution rate-count trước khi map năm, không giả định.
+- **congbao định tuyến theo id nội bộ, bỏ qua slug** — dò URL AANZFTA bằng slug vô ích (id là của văn bản khác). Lối thoát: `datafiles.chinhphu.vn/cpp/files/vbpq/.../<số>_<năm>_nd-cp_*.docx` (không token, ổn định). `textutil` đọc `.docx` như `.doc`.
+- **RCEP khác hẳn (51 phần, cột-theo-nước RCEP_CN/JP/KR/AU/NZ)** — golden set không dùng → cố ý để sau, không ép vào khuôn ACFTA.
+- **249/249 = đúng con số cross-check golden set** — oracle độc lập (tờ khai thật) đồng thuận 100% với dữ liệu nạp từ Công báo. Đóng vòng: golden set (TASK-001) ↔ pipeline (TASK-007→011).
+
+**Tiếp theo**
+- Giai đoạn 1 xong. Mở rộng tùy chọn: RCEP; áp mức 144/108/199 từng dòng; NQ 25/2026. Rồi Giai đoạn 2 (gợi ý HS top-3).
 
 ---
 

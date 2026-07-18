@@ -423,11 +423,9 @@ Ghi chú:
 
 ## TASK-012: Chấp nhận Giai đoạn 1 — đối chiếu với thực tế
 
-Status: doing (2026-07-18) — MFN xong 100%, FTA chờ nạp biểu FTA
+Status: done (2026-07-18) — 249/249 dòng tờ khai thật khớp 100% (MFN + 4 FTA)
 
-> **Kết quả (MFN):** ([research/task-012-acceptance](../../research/task-012-acceptance/README.md)) golden set curated **27/27 MFN khớp (100%)**; full corpus **192/192 MFN khớp (100%)**; **0 mismatch** — pipeline base tái hiện **219 dòng tờ khai thật** hoàn hảo. **Mẫu ngẫu nhiên 20/20** khớp verbatim ô nguồn Công báo (`source_cell_text`). → phần MFN của Giai đoạn 1 đối chiếu được với thực tế.
->
-> **Còn lại (không phải điểm một phần — dữ liệu còn thiếu):** **77 dòng FTA** (ACFTA 34/AANZFTA 34/ATIGA 5/EVFTA 4) chờ nạp 4 biểu FTA + RCEP (cùng pipeline TASK-008/003); sau đó `preferential[]` của API có dữ liệu, validate ca "0% nếu có C/O".
+> **Kết quả:** ([research/task-012-acceptance](../../research/task-012-acceptance/README.md)) sau khi nạp 4 biểu FTA công ty dùng (ACFTA/AANZFTA/ATIGA/EVFTA — [fta-loader](../../research/fta-loader/README.md)): full corpus **249/249 khớp 100%** (MFN 192 + ACFTA 25 + AANZFTA 26 + ATIGA 4 + EVFTA 2); curated 47/47. **249/249 đúng con số cross-check khi dựng golden set.** **Mẫu ngẫu nhiên 20/20** khớp verbatim ô nguồn Công báo. Star-case `8481.80.99` CN: MFN 10% / ACFTA 0% / AANZFTA 0% / ATIGA 0% / EVFTA 0% (đều có điều kiện C/O). **RCEP** cố ý chưa nạp (golden set không dùng; cột-theo-nước, để sau).
 
 Depends on: TASK-001, TASK-011.
 

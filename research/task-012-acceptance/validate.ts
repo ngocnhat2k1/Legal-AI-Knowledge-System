@@ -67,11 +67,16 @@ function parseGolden(path: string): Case[] {
   return out;
 }
 
-async function mfnAt(hs: string, date: string): Promise<{ rate: number | null; type: string } | null> {
+/** Map a golden-set schedule label to a loaded tariff_schedule.code. */
+const SCHEDULE_CODE: Record<string, string> = {
+  MFN: 'NK_uu_dai', ACFTA: 'ACFTA', AANZFTA: 'AANZFTA', ATIGA: 'ATIGA', EVFTA: 'EVFTA', RCEP: 'RCEP',
+};
+
+async function rateAt(hs: string, date: string, scheduleCode: string): Promise<{ rate: number | null; type: string } | null> {
   const rows = (await sql`
     SELECT r.rate_type, r.rate_percent FROM tariff_rate r
     JOIN tariff_schedule s ON s.id = r.schedule_id
-    WHERE r.hs_code = ${hs} AND s.code = 'NK_uu_dai' AND r.superseded_at IS NULL
+    WHERE r.hs_code = ${hs} AND s.code = ${scheduleCode} AND r.superseded_at IS NULL
       AND r.effective_from <= ${date} AND (r.effective_to IS NULL OR ${date} <= r.effective_to)
     LIMIT 1`) as unknown as Array<{ rate_type: string; rate_percent: string | null }>;
   if (!rows.length) return null;
@@ -79,37 +84,43 @@ async function mfnAt(hs: string, date: string): Promise<{ rate: number | null; t
 }
 
 async function validateSet(name: string, cases: Case[]): Promise<void> {
-  let mfnMatch = 0, mfnMismatch = 0, mfnNotLoaded = 0, ftaPending = 0, skipped = 0;
+  const tally: Record<string, { match: number; mismatch: number; notLoaded: number }> = {};
+  let skipped = 0, ftaPending = 0;
   const mismatches: string[] = [];
   for (const c of cases) {
-    if (!c.hs.match(/^\d{8}$/) || !c.date) { skipped++; continue; }
-    if (c.schedule !== 'MFN') {
-      // FTA case: applied rate is the FTA preferential; FTA schedules not loaded yet.
-      ftaPending++;
+    if (!c.hs.match(/^\d{8}$/) || !c.date || c.applied == null) { skipped++; continue; }
+    const code = SCHEDULE_CODE[c.schedule];
+    if (!code) { skipped++; continue; }
+    const got = await rateAt(c.hs, c.date, code);
+    if (!got) {
+      // Schedule not loaded, or HS absent from it.
+      if (c.schedule !== 'MFN') ftaPending++;
+      else (tally.MFN ??= { match: 0, mismatch: 0, notLoaded: 0 }).notLoaded++;
       continue;
     }
-    const got = await mfnAt(c.hs, c.date);
-    if (!got) { mfnNotLoaded++; continue; }
-    if (c.applied == null) { skipped++; continue; }
-    if (got.rate != null && Math.abs(got.rate - c.applied) < 0.001) {
-      mfnMatch++;
+    const t = (tally[c.schedule] ??= { match: 0, mismatch: 0, notLoaded: 0 });
+    const declared = got.type === 'excluded' ? null : c.applied;
+    if (got.rate != null && declared != null && Math.abs(got.rate - declared) < 0.001) {
+      t.match++;
     } else {
-      mfnMismatch++;
-      if (mismatches.length < 12) {
-        mismatches.push(`    ${c.id} HS ${c.hs} @${c.date}: declared ${c.appliedRaw}, loaded ${got.rate ?? got.type}`);
+      t.mismatch++;
+      if (mismatches.length < 14) {
+        mismatches.push(`    ${c.id} [${c.schedule}] HS ${c.hs} @${c.date}: declared ${c.appliedRaw}, loaded ${got.rate ?? got.type}`);
       }
     }
   }
-  const mfnTotal = mfnMatch + mfnMismatch;
   console.log(`\n${name} (${cases.length} rows)`);
-  console.log(`  MFN cases with a loaded rate: ${mfnTotal}`);
-  console.log(`    ✓ match (reproduces declaration):  ${mfnMatch}${mfnTotal ? `  (${((100 * mfnMatch) / mfnTotal).toFixed(1)}%)` : ''}`);
-  console.log(`    ✗ differ (amendment not yet loaded, or to investigate): ${mfnMismatch}`);
-  console.log(`  MFN, HS not in loaded rated set (rate-less / structural):  ${mfnNotLoaded}`);
-  console.log(`  FTA cases (schedule not loaded — pending):                 ${ftaPending}`);
-  console.log(`  skipped (no hs/date/rate):                                 ${skipped}`);
+  let totMatch = 0, totCmp = 0;
+  for (const s of ['MFN', 'ACFTA', 'AANZFTA', 'ATIGA', 'EVFTA', 'RCEP']) {
+    const t = tally[s];
+    if (!t) continue;
+    const cmp = t.match + t.mismatch;
+    totMatch += t.match; totCmp += cmp;
+    console.log(`  ${s.padEnd(8)} ✓${t.match} match  ✗${t.mismatch} differ  ${t.notLoaded ? `(${t.notLoaded} rate-less)` : ''}${cmp ? `  → ${((100 * t.match) / cmp).toFixed(1)}%` : ''}`);
+  }
+  console.log(`  OVERALL comparable: ${totMatch}/${totCmp}${totCmp ? `  (${((100 * totMatch) / totCmp).toFixed(1)}%)` : ''}  | FTA pending (schedule not loaded): ${ftaPending} | skipped: ${skipped}`);
   if (mismatches.length) {
-    console.log('  sample MFN differences (candidates for amendment loading):');
+    console.log('  sample differences:');
     mismatches.forEach((m) => console.log(m));
   }
 }
