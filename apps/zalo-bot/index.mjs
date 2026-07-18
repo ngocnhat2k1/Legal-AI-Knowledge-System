@@ -31,6 +31,22 @@ const saveSession = (data) => {
   writeFileSync(SESSION, JSON.stringify(data));
 };
 
+function onQrEvent(ev) {
+  if (ev.type === LoginQRCallbackEventType.QRCodeGenerated) {
+    try {
+      qrcode.generate(ev.data.code, { small: true });
+    } catch {
+      /* nếu ASCII lỗi, dùng file /session/qr.png */
+    }
+    console.log('[zalo] (QR cũng lưu ở /session/qr.png nếu ASCII khó quét). Mã sống ~90s, tự làm mới.');
+  } else if (ev.type === LoginQRCallbackEventType.QRCodeScanned) {
+    console.log('[zalo] đã quét — xác nhận trên điện thoại…');
+  } else if (ev.type === LoginQRCallbackEventType.GotLoginInfo) {
+    saveSession({ imei: ev.data.imei, cookie: ev.data.cookie, userAgent: ev.data.userAgent });
+    console.log('[zalo] đã lưu session — lần restart sau không cần QR nữa');
+  }
+}
+
 async function connect() {
   const zalo = new Zalo();
   const saved = loadSession();
@@ -43,23 +59,16 @@ async function connect() {
       console.warn('[zalo] session cũ hỏng/hết hạn:', e?.message, '— chuyển sang QR');
     }
   }
-  console.log('\n[zalo] ĐĂNG NHẬP QR — mở Zalo của TÀI KHOẢN BOT, quét mã dưới đây:\n');
-  const api = await zalo.loginQR({ userAgent: USER_AGENT, qrPath: '/session/qr.png' }, (ev) => {
-    if (ev.type === LoginQRCallbackEventType.QRCodeGenerated) {
-      try {
-        qrcode.generate(ev.data.code, { small: true });
-      } catch {
-        /* nếu ASCII lỗi, dùng file /session/qr.png */
-      }
-      console.log('[zalo] (QR cũng lưu ở /session/qr.png nếu ASCII khó quét)');
-    } else if (ev.type === LoginQRCallbackEventType.QRCodeScanned) {
-      console.log('[zalo] đã quét — xác nhận trên điện thoại…');
-    } else if (ev.type === LoginQRCallbackEventType.GotLoginInfo) {
-      saveSession({ imei: ev.data.imei, cookie: ev.data.cookie, userAgent: ev.data.userAgent });
-      console.log('[zalo] đã lưu session — lần restart sau không cần QR nữa');
+  // Lặp: mỗi khi QR hết hạn mà chưa quét, tạo mã mới — process không chết, chờ bạn quét.
+  for (let attempt = 1; ; attempt++) {
+    console.log(`\n[zalo] ĐĂNG NHẬP QR (lần ${attempt}) — mở Zalo của TÀI KHOẢN BOT, quét mã dưới đây:\n`);
+    try {
+      return await zalo.loginQR({ userAgent: USER_AGENT, qrPath: '/session/qr.png' }, onQrEvent);
+    } catch (e) {
+      console.warn('[zalo] QR chưa được quét/đã hết hạn — tạo mã mới…', e?.message || '');
+      await new Promise((r) => setTimeout(r, 1500));
     }
-  });
-  return api;
+  }
 }
 
 // --- Query parsing ----------------------------------------------------------
