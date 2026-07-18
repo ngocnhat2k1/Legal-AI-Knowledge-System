@@ -47,8 +47,12 @@ export interface GenerationResult {
 }
 
 export function buildPrompt(query: string, asOf: string, articles: RetrievedArticle[]): string {
+  // Give the model the FULL Điều (article), not just the matched Khoản — an
+  // enumeration question ("các trường hợp miễn thuế") needs every clause of the
+  // article, and a chunk indexed at the Khoản is only one of them. stdin has no
+  // arg-size limit, so passing whole articles is fine.
   const blocks = articles
-    .map((a) => `[id=${a.articleProvisionId}] ${a.clauseCitation}\n${a.clauseBody}`)
+    .map((a) => `[id=${a.articleProvisionId}] ${a.articleCitation}\n${a.articleBody}`)
     .join('\n---\n');
   return [
     'Bạn là trợ lý pháp luật hải quan Việt Nam. Trả lời câu hỏi CHỈ dựa trên các ĐIỀU KHOẢN được cung cấp bên dưới.',
