@@ -43,9 +43,12 @@
  */
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
+  bigint,
   bigserial,
   boolean,
   check,
+  customType,
   date,
   index,
   integer,
@@ -59,6 +62,27 @@ import {
   unique,
   varchar,
 } from 'drizzle-orm/pg-core';
+
+// --- Custom column types for the Phase 5 legal RAG corpus -------------------
+// These live only on legal prose tables (legal_chunk). The tariff tables are
+// never given a vector index — see the no-LLM-on-tariff-numbers ADR.
+
+/** pgvector dense embedding. `[a,b,c]` text form on the wire; number[] in TS. */
+const vector = customType<{ data: number[]; config: { dimensions: number }; configRequired: true; driverData: string }>({
+  dataType(config) {
+    return `vector(${config.dimensions})`;
+  },
+  toDriver(value: number[]): string {
+    return `[${value.join(',')}]`;
+  },
+});
+
+/** Postgres full-text search vector, populated by a STORED generated column. */
+const tsvector = customType<{ data: string }>({
+  dataType() {
+    return 'tsvector';
+  },
+});
 
 // --- Enumerations -----------------------------------------------------------
 
@@ -312,5 +336,132 @@ export const lookupConfirmation = pgTable(
   (t) => [
     index('confirmation_lookup_idx').on(t.hsCode, t.origin),
     check('confirmation_hs_format', sql`${t.hsCode} ~ '^[0-9]{8}$'`),
+  ],
+);
+
+// --- Legal RAG corpus (Phase 5) ---------------------------------------------
+
+/**
+ * Authoritative legal prose for grounded, cited answers — the surface the bot
+ * uses to answer "what does the law say", quoting Điều/Khoản verbatim instead of
+ * an LLM's general knowledge. Distinct product from tariff lookup: shared infra
+ * (Postgres, bitemporal validity), separate core (see customs-first-law-later ADR).
+ *
+ *   - pgvector lives on legal_chunk ONLY. The tariff tables never get a vector
+ *     index (no-LLM-on-tariff-numbers ADR); this prose corpus is the "text
+ *     surface" that ADR reserves pgvector for.
+ *   - valid-time (effective_from/effective_to) + effectiveness are a HARD FILTER
+ *     applied before ranking. ~62% of the VN corpus is dead/partly-dead law, so a
+ *     "latest wins" read is wrong — a point-in-time read is an interval predicate.
+ *   - a chunk is indexed at the Khoản (clause) level but denormalises its parent
+ *     Điều (article) so retrieval returns the whole article, never a stray clause.
+ *   - we index published VBHN (văn bản hợp nhất) where one exists — the official
+ *     citation basis since Pháp lệnh 01/2026 — never a self-computed consolidation.
+ *
+ * See .agent/concepts/legal-rag-retrieval.md for the retrieval design this shape serves.
+ */
+
+/** Kind of legal instrument. `vbhn` = văn bản hợp nhất (consolidated). */
+export const legalDocType = pgEnum('legal_doc_type', [
+  'luat', // Luật (law)
+  'phap_lenh', // Pháp lệnh
+  'nghi_dinh', // Nghị định
+  'nghi_quyet', // Nghị quyết
+  'thong_tu', // Thông tư
+  'quyet_dinh', // Quyết định
+  'vbhn', // văn bản hợp nhất
+]);
+
+/** In-force status — a HARD FILTER, not a ranking signal. */
+export const legalEffectiveness = pgEnum('legal_effectiveness', [
+  'con_hieu_luc', // in force
+  'het_hieu_luc', // repealed in full
+  'het_hieu_luc_mot_phan', // partly repealed
+  'chua_co_hieu_luc', // not yet in force
+]);
+
+/** The internal structure of a VBQPPL: Chương → Mục → Điều → Khoản → Điểm. */
+export const provisionType = pgEnum('provision_type', ['chuong', 'muc', 'dieu', 'khoan', 'diem']);
+
+/** A source legal document (prefer the published VBHN where one exists). */
+export const legalDocument = pgTable('legal_document', {
+  id: serial('id').primaryKey(),
+  docType: legalDocType('doc_type').notNull(),
+  number: varchar('number', { length: 48 }).notNull().unique(), // '31/2018/NĐ-CP', '46/VBHN-BTC'
+  title: text('title').notNull(),
+  issuingBody: text('issuing_body'), // 'Chính phủ', 'Bộ Tài chính'
+  signedDate: date('signed_date'),
+  gazetteDate: date('gazette_date'),
+  effectiveFrom: date('effective_from').notNull(),
+  effectiveTo: date('effective_to'),
+  effectiveness: legalEffectiveness('effectiveness').notNull().default('con_hieu_luc'),
+  isConsolidated: boolean('is_consolidated').notNull().default(false), // true for VBHN
+  consolidates: varchar('consolidates', { length: 48 }), // the base document a VBHN consolidates
+  gazetteIssue: varchar('gazette_issue', { length: 32 }),
+  sourceUrl: text('source_url'), // Công báo link
+  docSummary: varchar('doc_summary', { length: 200 }), // ~150-char SAC prefix (fights DRM)
+  embedModel: varchar('embed_model', { length: 48 }), // e.g. 'bge-m3@1' — re-embed on change
+  recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
+  supersededAt: timestamp('superseded_at', { withTimezone: true }),
+});
+
+/** The Chương/Mục/Điều/Khoản/Điểm tree. `body` is verbatim — never paraphrased. */
+export const legalProvision = pgTable(
+  'legal_provision',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    documentId: integer('document_id')
+      .notNull()
+      .references(() => legalDocument.id),
+    parentId: bigint('parent_id', { mode: 'number' }).references((): AnyPgColumn => legalProvision.id),
+    ptype: provisionType('ptype').notNull(),
+    number: varchar('number', { length: 16 }), // '12', '1', 'a'
+    orderIndex: integer('order_index').notNull(), // preserves document order
+    heading: text('heading'), // "Điều 5. Từ chối cấp Giấy chứng nhận xuất xứ"
+    body: text('body'), // verbatim provision text
+    path: text('path').notNull(), // 'NĐ 31/2018 › Chương II › Điều 5 › Khoản 2'
+    citationLabel: text('citation_label').notNull(), // 'Khoản 2 Điều 5 Nghị định 31/2018/NĐ-CP'
+    // Provision-level valid-time: an Điều amended by a later decree carries its own interval.
+    effectiveFrom: date('effective_from'),
+    effectiveTo: date('effective_to'),
+    effectiveness: legalEffectiveness('effectiveness'),
+  },
+  (t) => [
+    index('legal_provision_doc_order_idx').on(t.documentId, t.orderIndex),
+    index('legal_provision_parent_idx').on(t.parentId),
+  ],
+);
+
+/** The retrieval unit: indexed at Khoản, carries its parent Điều. pgvector here only. */
+export const legalChunk = pgTable(
+  'legal_chunk',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    provisionId: bigint('provision_id', { mode: 'number' })
+      .notNull()
+      .references(() => legalProvision.id), // the Khoản indexed
+    articleProvisionId: bigint('article_provision_id', { mode: 'number' })
+      .notNull()
+      .references(() => legalProvision.id), // its parent Điều (denormalised to return)
+    documentId: integer('document_id')
+      .notNull()
+      .references(() => legalDocument.id),
+    sacPrefix: varchar('sac_prefix', { length: 200 }), // doc-level summary; embedded, NOT in tsv
+    body: text('body').notNull(), // verbatim clause text
+    embedText: text('embed_text').notNull(), // sac_prefix + '\n' + body (what was embedded)
+    embedding: vector('embedding', { dimensions: 1024 }), // BGE-M3 dense
+    // Keyword index built from body ONLY — the SAC prefix is deliberately excluded.
+    tsv: tsvector('tsv').generatedAlwaysAs(sql`to_tsvector('simple', "body")`),
+    // Valid-time denormalised so the hard filter needs no join.
+    effectiveFrom: date('effective_from').notNull(),
+    effectiveTo: date('effective_to'),
+    effectiveness: legalEffectiveness('effectiveness').notNull(),
+  },
+  (t) => [
+    index('legal_chunk_hnsw').using('hnsw', sql`${t.embedding} vector_cosine_ops`),
+    index('legal_chunk_tsv_gin').using('gin', sql`${t.tsv}`),
+    index('legal_chunk_valid_idx').on(t.effectiveFrom, t.effectiveTo),
+    index('legal_chunk_article_idx').on(t.articleProvisionId),
+    index('legal_chunk_document_idx').on(t.documentId),
   ],
 );

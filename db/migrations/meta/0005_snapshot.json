@@ -1,0 +1,1411 @@
+{
+  "id": "a01222ce-12a5-44b8-873d-7da23a98187b",
+  "prevId": "8cf404d4-ef75-45f4-8bcf-f5ec21bd4f7e",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.annex": {
+      "name": "annex",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "decree_id": {
+          "name": "decree_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trade_direction": {
+          "name": "trade_direction",
+          "type": "trade_direction",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "annex_decree_id_decree_id_fk": {
+          "name": "annex_decree_id_decree_id_fk",
+          "tableFrom": "annex",
+          "tableTo": "decree",
+          "columnsFrom": [
+            "decree_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "annex_decree_code_uq": {
+          "name": "annex_decree_code_uq",
+          "nullsNotDistinct": false,
+          "columns": [
+            "decree_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.anti_dumping_duty": {
+      "name": "anti_dumping_duty",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "hs_code": {
+          "name": "hs_code",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_scope": {
+          "name": "product_scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "origin_country": {
+          "name": "origin_country",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "exporter": {
+          "name": "exporter",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duty_kind": {
+          "name": "duty_kind",
+          "type": "duty_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rate_percent": {
+          "name": "rate_percent",
+          "type": "numeric(7, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount_currency": {
+          "name": "amount_currency",
+          "type": "varchar(3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount_unit": {
+          "name": "amount_unit",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decision_number": {
+          "name": "decision_number",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decision_authority": {
+          "name": "decision_authority",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Bộ Công Thương'"
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_to": {
+          "name": "effective_to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "cbpg_lookup_idx": {
+          "name": "cbpg_lookup_idx",
+          "columns": [
+            {
+              "expression": "hs_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "origin_country",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "cbpg_hs_format": {
+          "name": "cbpg_hs_format",
+          "value": "\"anti_dumping_duty\".\"hs_code\" ~ '^[0-9]{8}$'"
+        },
+        "cbpg_validity_order": {
+          "name": "cbpg_validity_order",
+          "value": "\"anti_dumping_duty\".\"effective_to\" IS NULL OR \"anti_dumping_duty\".\"effective_to\" >= \"anti_dumping_duty\".\"effective_from\""
+        },
+        "cbpg_shape": {
+          "name": "cbpg_shape",
+          "value": "CASE \"anti_dumping_duty\".\"duty_kind\"\n        WHEN 'percent'  THEN \"anti_dumping_duty\".\"rate_percent\" IS NOT NULL AND \"anti_dumping_duty\".\"amount\" IS NULL\n        WHEN 'specific' THEN \"anti_dumping_duty\".\"amount\" IS NOT NULL AND \"anti_dumping_duty\".\"amount_currency\" IS NOT NULL AND \"anti_dumping_duty\".\"amount_unit\" IS NOT NULL AND \"anti_dumping_duty\".\"rate_percent\" IS NULL\n        ELSE false\n      END"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.decree": {
+      "name": "decree",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "signed_date": {
+          "name": "signed_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gazette_date": {
+          "name": "gazette_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_to": {
+          "name": "effective_to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gazette_issue": {
+          "name": "gazette_issue",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "decree_number_unique": {
+          "name": "decree_number_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.hs_description": {
+      "name": "hs_description",
+      "schema": "",
+      "columns": {
+        "hs_code": {
+          "name": "hs_code",
+          "type": "varchar(8)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "heading": {
+          "name": "heading",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "hs_description_path_trgm": {
+          "name": "hs_description_path_trgm",
+          "columns": [
+            {
+              "expression": "\"path\" gin_trgm_ops",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "hs_description_hs_format": {
+          "name": "hs_description_hs_format",
+          "value": "\"hs_description\".\"hs_code\" ~ '^[0-9]{8}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.hs_version": {
+      "name": "hs_version",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_to": {
+          "name": "effective_to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "hs_version_code_unique": {
+          "name": "hs_version_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.legal_chunk": {
+      "name": "legal_chunk",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "provision_id": {
+          "name": "provision_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "article_provision_id": {
+          "name": "article_provision_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sac_prefix": {
+          "name": "sac_prefix",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "embed_text": {
+          "name": "embed_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "vector(1024)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tsv": {
+          "name": "tsv",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "to_tsvector('simple', \"body\")",
+            "type": "stored"
+          }
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_to": {
+          "name": "effective_to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effectiveness": {
+          "name": "effectiveness",
+          "type": "legal_effectiveness",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "legal_chunk_hnsw": {
+          "name": "legal_chunk_hnsw",
+          "columns": [
+            {
+              "expression": "\"embedding\" vector_cosine_ops",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "hnsw",
+          "with": {}
+        },
+        "legal_chunk_tsv_gin": {
+          "name": "legal_chunk_tsv_gin",
+          "columns": [
+            {
+              "expression": "\"tsv\"",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "legal_chunk_valid_idx": {
+          "name": "legal_chunk_valid_idx",
+          "columns": [
+            {
+              "expression": "effective_from",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "effective_to",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "legal_chunk_article_idx": {
+          "name": "legal_chunk_article_idx",
+          "columns": [
+            {
+              "expression": "article_provision_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "legal_chunk_document_idx": {
+          "name": "legal_chunk_document_idx",
+          "columns": [
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "legal_chunk_provision_id_legal_provision_id_fk": {
+          "name": "legal_chunk_provision_id_legal_provision_id_fk",
+          "tableFrom": "legal_chunk",
+          "tableTo": "legal_provision",
+          "columnsFrom": [
+            "provision_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "legal_chunk_article_provision_id_legal_provision_id_fk": {
+          "name": "legal_chunk_article_provision_id_legal_provision_id_fk",
+          "tableFrom": "legal_chunk",
+          "tableTo": "legal_provision",
+          "columnsFrom": [
+            "article_provision_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "legal_chunk_document_id_legal_document_id_fk": {
+          "name": "legal_chunk_document_id_legal_document_id_fk",
+          "tableFrom": "legal_chunk",
+          "tableTo": "legal_document",
+          "columnsFrom": [
+            "document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.legal_document": {
+      "name": "legal_document",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "doc_type": {
+          "name": "doc_type",
+          "type": "legal_doc_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issuing_body": {
+          "name": "issuing_body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "signed_date": {
+          "name": "signed_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gazette_date": {
+          "name": "gazette_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_to": {
+          "name": "effective_to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effectiveness": {
+          "name": "effectiveness",
+          "type": "legal_effectiveness",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'con_hieu_luc'"
+        },
+        "is_consolidated": {
+          "name": "is_consolidated",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "consolidates": {
+          "name": "consolidates",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gazette_issue": {
+          "name": "gazette_issue",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "doc_summary": {
+          "name": "doc_summary",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embed_model": {
+          "name": "embed_model",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "legal_document_number_unique": {
+          "name": "legal_document_number_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.legal_provision": {
+      "name": "legal_provision",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ptype": {
+          "name": "ptype",
+          "type": "provision_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number": {
+          "name": "number",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "order_index": {
+          "name": "order_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "heading": {
+          "name": "heading",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "citation_label": {
+          "name": "citation_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_to": {
+          "name": "effective_to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effectiveness": {
+          "name": "effectiveness",
+          "type": "legal_effectiveness",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "legal_provision_doc_order_idx": {
+          "name": "legal_provision_doc_order_idx",
+          "columns": [
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "order_index",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "legal_provision_parent_idx": {
+          "name": "legal_provision_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "legal_provision_document_id_legal_document_id_fk": {
+          "name": "legal_provision_document_id_legal_document_id_fk",
+          "tableFrom": "legal_provision",
+          "tableTo": "legal_document",
+          "columnsFrom": [
+            "document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "legal_provision_parent_id_legal_provision_id_fk": {
+          "name": "legal_provision_parent_id_legal_provision_id_fk",
+          "tableFrom": "legal_provision",
+          "tableTo": "legal_provision",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.lookup_confirmation": {
+      "name": "lookup_confirmation",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "hs_code": {
+          "name": "hs_code",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "origin": {
+          "name": "origin",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "as_of_date": {
+          "name": "as_of_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schedule": {
+          "name": "schedule",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verdict": {
+          "name": "verdict",
+          "type": "confirmation_verdict",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "staff_name": {
+          "name": "staff_name",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "response_snapshot": {
+          "name": "response_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "confirmation_lookup_idx": {
+          "name": "confirmation_lookup_idx",
+          "columns": [
+            {
+              "expression": "hs_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "origin",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "confirmation_hs_format": {
+          "name": "confirmation_hs_format",
+          "value": "\"lookup_confirmation\".\"hs_code\" ~ '^[0-9]{8}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tariff_rate": {
+      "name": "tariff_rate",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "hs_code": {
+          "name": "hs_code",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hs_version_id": {
+          "name": "hs_version_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "annex_id": {
+          "name": "annex_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schedule_id": {
+          "name": "schedule_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rate_type": {
+          "name": "rate_type",
+          "type": "rate_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rate_percent": {
+          "name": "rate_percent",
+          "type": "numeric(7, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount_currency": {
+          "name": "amount_currency",
+          "type": "varchar(3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount_unit": {
+          "name": "amount_unit",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_to": {
+          "name": "effective_to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_decree_id": {
+          "name": "source_decree_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gazette_issue": {
+          "name": "gazette_issue",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "out_of_quota_annex_id": {
+          "name": "out_of_quota_annex_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "conditions": {
+          "name": "conditions",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_cell_text": {
+          "name": "source_cell_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "tariff_rate_lookup_idx": {
+          "name": "tariff_rate_lookup_idx",
+          "columns": [
+            {
+              "expression": "hs_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "schedule_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "annex_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tariff_rate_hs_version_id_hs_version_id_fk": {
+          "name": "tariff_rate_hs_version_id_hs_version_id_fk",
+          "tableFrom": "tariff_rate",
+          "tableTo": "hs_version",
+          "columnsFrom": [
+            "hs_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tariff_rate_annex_id_annex_id_fk": {
+          "name": "tariff_rate_annex_id_annex_id_fk",
+          "tableFrom": "tariff_rate",
+          "tableTo": "annex",
+          "columnsFrom": [
+            "annex_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tariff_rate_schedule_id_tariff_schedule_id_fk": {
+          "name": "tariff_rate_schedule_id_tariff_schedule_id_fk",
+          "tableFrom": "tariff_rate",
+          "tableTo": "tariff_schedule",
+          "columnsFrom": [
+            "schedule_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tariff_rate_source_decree_id_decree_id_fk": {
+          "name": "tariff_rate_source_decree_id_decree_id_fk",
+          "tableFrom": "tariff_rate",
+          "tableTo": "decree",
+          "columnsFrom": [
+            "source_decree_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tariff_rate_out_of_quota_annex_id_annex_id_fk": {
+          "name": "tariff_rate_out_of_quota_annex_id_annex_id_fk",
+          "tableFrom": "tariff_rate",
+          "tableTo": "annex",
+          "columnsFrom": [
+            "out_of_quota_annex_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "tariff_rate_hs_format": {
+          "name": "tariff_rate_hs_format",
+          "value": "\"tariff_rate\".\"hs_code\" ~ '^[0-9]{8}$'"
+        },
+        "tariff_rate_validity_order": {
+          "name": "tariff_rate_validity_order",
+          "value": "\"tariff_rate\".\"effective_to\" IS NULL OR \"tariff_rate\".\"effective_to\" >= \"tariff_rate\".\"effective_from\""
+        },
+        "tariff_rate_shape": {
+          "name": "tariff_rate_shape",
+          "value": "CASE \"tariff_rate\".\"rate_type\"\n        WHEN 'ad_valorem' THEN \"tariff_rate\".\"rate_percent\" IS NOT NULL AND \"tariff_rate\".\"amount\" IS NULL AND \"tariff_rate\".\"amount_currency\" IS NULL\n        WHEN 'specific'   THEN \"tariff_rate\".\"amount\" IS NOT NULL AND \"tariff_rate\".\"amount_currency\" IS NOT NULL AND \"tariff_rate\".\"amount_unit\" IS NOT NULL AND \"tariff_rate\".\"rate_percent\" IS NULL\n        WHEN 'compound'   THEN \"tariff_rate\".\"rate_percent\" IS NOT NULL AND \"tariff_rate\".\"amount\" IS NOT NULL AND \"tariff_rate\".\"amount_currency\" IS NOT NULL AND \"tariff_rate\".\"amount_unit\" IS NOT NULL\n        WHEN 'excluded'   THEN \"tariff_rate\".\"rate_percent\" IS NULL AND \"tariff_rate\".\"amount\" IS NULL\n        WHEN 'trq'        THEN \"tariff_rate\".\"rate_percent\" IS NOT NULL AND \"tariff_rate\".\"out_of_quota_annex_id\" IS NOT NULL\n        ELSE false\n      END"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tariff_schedule": {
+      "name": "tariff_schedule",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fta_form": {
+          "name": "fta_form",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requires_co": {
+          "name": "requires_co",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tariff_schedule_code_unique": {
+          "name": "tariff_schedule_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.confirmation_verdict": {
+      "name": "confirmation_verdict",
+      "schema": "public",
+      "values": [
+        "correct",
+        "wrong",
+        "unsure"
+      ]
+    },
+    "public.duty_kind": {
+      "name": "duty_kind",
+      "schema": "public",
+      "values": [
+        "percent",
+        "specific"
+      ]
+    },
+    "public.legal_doc_type": {
+      "name": "legal_doc_type",
+      "schema": "public",
+      "values": [
+        "luat",
+        "phap_lenh",
+        "nghi_dinh",
+        "nghi_quyet",
+        "thong_tu",
+        "quyet_dinh",
+        "vbhn"
+      ]
+    },
+    "public.legal_effectiveness": {
+      "name": "legal_effectiveness",
+      "schema": "public",
+      "values": [
+        "con_hieu_luc",
+        "het_hieu_luc",
+        "het_hieu_luc_mot_phan",
+        "chua_co_hieu_luc"
+      ]
+    },
+    "public.provision_type": {
+      "name": "provision_type",
+      "schema": "public",
+      "values": [
+        "chuong",
+        "muc",
+        "dieu",
+        "khoan",
+        "diem"
+      ]
+    },
+    "public.rate_type": {
+      "name": "rate_type",
+      "schema": "public",
+      "values": [
+        "ad_valorem",
+        "specific",
+        "compound",
+        "excluded",
+        "trq"
+      ]
+    },
+    "public.trade_direction": {
+      "name": "trade_direction",
+      "schema": "public",
+      "values": [
+        "import",
+        "export"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

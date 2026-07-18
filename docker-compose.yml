@@ -49,19 +49,63 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # Legal RAG corpus loader (documents + provisions + pre-embedded chunks). Runs
+  # after the tariff seed; needs no model (vectors are baked into the committed
+  # extract), so it stays portable like the tariff seed.
+  seed-legal:
+    image: customs-assistant:local
+    command: ["node_modules/.bin/tsx", "db/seed/legal.ts"]
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/customs_assistant
+      # The legal chunks are committed as text; the seed embeds them here via the
+      # BGE-M3 sidecar (the model lives in one place). This is the only seed step
+      # that needs the embedder — hence it waits for it to be healthy.
+      EMBEDDER_URL: "${EMBEDDER_URL:-http://embedder:8000}"
+      FORCE_RESEED: "${FORCE_RESEED:-}"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      embedder:
+        condition: service_healthy
+
+  # BGE-M3 embedding sidecar — the ONE place the model lives (self-contained, no
+  # per-token cost). The API calls it at query time; the ingest pipeline calls it
+  # offline to bake vectors into the committed chunks. Model is baked into the image.
+  embedder:
+    image: legal-embedder:local
+    build:
+      context: apps/embedder
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      EMBED_MODEL: "${EMBED_MODEL:-BAAI/bge-m3}"
+      EMBED_ID: "${EMBED_ID:-bge-m3@1}"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)\""]
+      interval: 10s
+      timeout: 8s
+      retries: 20
+      start_period: 120s
+
   api:
     image: customs-assistant:local
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://app:app@db:5432/customs_assistant
       PORT: 3000
+      # The legal RAG module embeds queries via this sidecar (localhost cost-free).
+      EMBEDDER_URL: "${EMBEDDER_URL:-http://embedder:8000}"
       # How stale is the loaded data? Defaults to max(recorded_at); override when known.
       DATA_SNAPSHOT_DATE: "${DATA_SNAPSHOT_DATE:-}"
     ports:
       # Localhost only — a reverse proxy (Caddy) fronts it with TLS on the server.
       - "127.0.0.1:3000:3000"
+    # NOTE: api does NOT wait on the embedder. Tariff lookup + the web UI must never
+    # be blocked by the embedding model loading (or failing) — only /legal needs it,
+    # and it degrades gracefully (a legal query returns 400 while the embedder is
+    # still warming up). The embedder starts in parallel as its own service.
     depends_on:
-      seed:
+      seed-legal:
         condition: service_completed_successfully
 
   zalo-bot:

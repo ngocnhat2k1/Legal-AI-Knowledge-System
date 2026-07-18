@@ -220,6 +220,34 @@ function formatAnswer(q, r) {
   return lines.join('\n');
 }
 
+// --- Legal RAG (grounded, cited answers) -----------------------------------
+async function legalAnswer(text, asOf) {
+  const qs = new URLSearchParams({ q: text });
+  if (asOf) qs.set('asOf', asOf);
+  try {
+    const res = await fetch(`${API}/legal?${qs}`);
+    return res.ok ? res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Trả lời luật: câu trả lời có căn cứ + TRÍCH NGUYÊN VĂN điều/khoản + hiệu lực + link Công báo. */
+function formatLegal(r) {
+  const out = [];
+  out.push(r.answer ? r.answer : '📚 Mình chưa tổng hợp được câu trả lời chắc chắn, nhưng đây là điều khoản liên quan nhất:');
+  for (const c of (r.citations || []).slice(0, 3)) {
+    const stale = c.effectiveness && c.effectiveness !== 'con_hieu_luc' ? ` ⚠️ ${c.effectiveness}` : '';
+    const eff = c.effectiveFrom ? ` · hiệu lực từ ${c.effectiveFrom}${c.effectiveTo ? '→' + c.effectiveTo : ''}` : '';
+    const text = (c.verbatimText || '').replace(/\s+/g, ' ').trim();
+    const quoted = text.length > 480 ? text.slice(0, 480) + '…' : text;
+    out.push(`\n📖 ${c.provisionLabel}${stale}${eff}\n“${quoted}”`);
+    if (c.gazetteUrl) out.push(`↗ ${c.gazetteUrl}`);
+  }
+  out.push('\n📌 Trích nguyên văn từ văn bản trên Công báo — đối chiếu link để chắc chắn.');
+  return out.join('\n');
+}
+
 /** Đường TẤT ĐỊNH: từ gợi ý (từ khoá + nhóm HS) → tra DB → trả thẳng thuế mã khả dĩ nhất + mã thay thế. */
 async function tariffByClues(clues, text) {
   const lower = text.toLowerCase();
@@ -279,7 +307,16 @@ async function answer(text) {
   if (!r) return tariffByClues(null, text); // không có LLM → coi như tra hàng theo từ khoá
 
   if (r.intent === 'legal') {
-    return `${r.reply || 'Mình chưa rõ câu hỏi, bạn nói cụ thể hơn nhé.'}\n\n⚠️ Thông tin THAM KHẢO, không phải tư vấn pháp lý chính thức — hãy đối chiếu văn bản gốc / hỏi chuyên viên. Cần con số thuế cụ thể thì cho mình tên hàng + xuất xứ.`;
+    // RAG có trích dẫn: tra CSDL văn bản đã kiểm chứng thay vì kiến thức chung của LLM.
+    const la = await legalAnswer(text, r.date);
+    if (!la || la.abstained || !(la.citations || []).length) {
+      return (
+        'Mình không tìm thấy điều khoản đủ căn cứ trong CSDL pháp luật hải quan đã kiểm chứng' +
+        (la?.reason ? ` (${la.reason})` : '') +
+        '. Bạn kiểm tra tại congbao.chinhphu.vn hoặc hỏi chuyên viên; cần con số thuế cụ thể thì cho mình TÊN HÀNG + XUẤT XỨ.'
+      );
+    }
+    return formatLegal(la);
   }
   if (r.intent === 'general') {
     return (

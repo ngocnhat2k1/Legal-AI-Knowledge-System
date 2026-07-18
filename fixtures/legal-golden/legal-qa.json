@@ -1,0 +1,27 @@
+{
+  "note": "Golden set for legal RAG (Phase 5). Retrieval eval only checks that the expected ĐIỀU is retrieved (recall@k) — separate from generation. `expect` names the governing document + article a correct answer must rest on. Preregister: metric = recall@5 at the article level; abstain cases must return zero relevant provisions. Curated from the seeded corpus (NĐ 31/2018, NĐ 128/2020, VBHN 96/VBHN-VPQH).",
+  "k": 5,
+  "asOf": "2026-07-19",
+  "cases": [
+    { "id": "co-hoso", "q": "hồ sơ đề nghị cấp giấy chứng nhận xuất xứ gồm những gì", "domain": "C/O", "expect": { "doc": "31/2018/NĐ-CP", "dieu": 15 } },
+    { "id": "co-deminimis", "q": "quy định De Minimis về tỷ lệ nguyên liệu không đáp ứng chuyển đổi mã số hàng hóa", "domain": "C/O", "expect": { "doc": "31/2018/NĐ-CP", "dieu": 11 } },
+    { "id": "co-uudai-dieuuoc", "q": "quy tắc xuất xứ ưu đãi theo điều ước quốc tế áp dụng thế nào", "domain": "C/O", "expect": { "doc": "31/2018/NĐ-CP", "dieu": 4 } },
+    { "id": "co-yetogiantiep", "q": "các yếu tố gián tiếp khi xác định xuất xứ hàng hóa", "domain": "C/O", "expect": { "doc": "31/2018/NĐ-CP", "dieu": 12 } },
+    { "id": "co-baobi", "q": "xác định xuất xứ của bao bì phụ kiện phụ tùng đi kèm hàng hóa", "domain": "C/O", "expect": { "doc": "31/2018/NĐ-CP", "dieu": 10 } },
+
+    { "id": "xp-thoihieu", "q": "thời hiệu xử phạt vi phạm hành chính trong lĩnh vực hải quan là bao lâu", "domain": "Xử phạt", "expect": { "doc": "128/2020/NĐ-CP", "dieu": 4 } },
+    { "id": "xp-khongxuphat", "q": "những trường hợp nào không xử phạt vi phạm hành chính về hải quan", "domain": "Xử phạt", "expect": { "doc": "128/2020/NĐ-CP", "dieu": 6 } },
+    { "id": "xp-giamnhe", "q": "tình tiết giảm nhẹ khi xử phạt vi phạm hành chính hải quan", "domain": "Xử phạt", "expect": { "doc": "128/2020/NĐ-CP", "dieu": 3 } },
+    { "id": "xp-hinhthuc", "q": "hình thức xử phạt và biện pháp khắc phục hậu quả trong lĩnh vực hải quan", "domain": "Xử phạt", "expect": { "doc": "128/2020/NĐ-CP", "dieu": 5 } },
+
+    { "id": "thue-mien", "q": "các trường hợp được miễn thuế xuất khẩu nhập khẩu", "domain": "Thuế", "expect": { "doc": "96/VBHN-VPQH", "dieu": 16 } },
+    { "id": "thue-hoan", "q": "hoàn thuế xuất khẩu nhập khẩu trong những trường hợp nào", "domain": "Thuế", "expect": { "doc": "96/VBHN-VPQH", "dieu": 19 } },
+    { "id": "thue-giam", "q": "điều kiện giảm thuế xuất khẩu nhập khẩu", "domain": "Thuế", "expect": { "doc": "96/VBHN-VPQH", "dieu": 18 } },
+    { "id": "thue-thutucmien", "q": "thủ tục miễn thuế xuất khẩu nhập khẩu thực hiện ra sao", "domain": "Thuế", "expect": { "doc": "96/VBHN-VPQH", "dieu": 17 } },
+    { "id": "thue-chongbanphagia", "q": "thuế chống bán phá giá là gì và áp dụng thế nào", "domain": "Thuế", "expect": { "doc": "96/VBHN-VPQH", "dieu": 12 } },
+    { "id": "thue-doituongchiuthue", "q": "đối tượng chịu thuế xuất khẩu thuế nhập khẩu gồm những gì", "domain": "Thuế", "expect": { "doc": "96/VBHN-VPQH", "dieu": 2 } },
+
+    { "id": "oos-pho", "q": "công thức nấu phở bò ngon tại nhà", "should_abstain": true },
+    { "id": "oos-bongda", "q": "lịch thi đấu bóng đá ngoại hạng Anh cuối tuần", "should_abstain": true }
+  ]
+}

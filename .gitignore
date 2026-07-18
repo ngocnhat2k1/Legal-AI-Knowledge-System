@@ -52,3 +52,11 @@ research/fta-loader/*/page.html
 # large regenerated .ndjson under research/.
 research/task-008-congbao-loader/out/
 research/fta-loader/*/rows.ndjson
+
+# Legal RAG raw Công báo downloads (.doc binaries + tokened content pages). The
+# parsed extract under db/seed/data/legal/*.ndjson is committed instead, so the
+# loader runs offline after the download tokens expire (same as TASK-008).
+research/legal-loader/doc/
+research/legal-loader/*.page.html
+research/legal-loader/page.html
+research/legal-loader/out/
