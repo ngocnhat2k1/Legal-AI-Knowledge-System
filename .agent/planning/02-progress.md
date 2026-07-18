@@ -23,7 +23,7 @@ thực sự đã xảy ra**, thường khác đi.
 | | |
 |---|---|
 | **Giai đoạn hiện tại** | Giai đoạn 0 — Nền móng |
-| **Công việc tiếp theo** | TASK-001..008, 010, 011 xong. Tiếp: nạp biểu FTA (ACFTA/AANZFTA/ATIGA/EVFTA/RCEP) → TASK-009 (chuỗi sửa đổi MFN 2026, cắt khoảng) → TASK-012 (nghiệm thu golden set) |
+| **Công việc tiếp theo** | TASK-001..011 xong (trừ FTA loading). Tiếp: nạp biểu FTA (ACFTA/AANZFTA/ATIGA/EVFTA/RCEP) → **TASK-012** (nghiệm thu: golden set + 20 mã random đối chiếu Công báo) |
 | **Đang bị chặn bởi** | Không có. Chủ dự án đã chốt: FTA scope = MFN + 4 FTA đang dùng + RCEP; oracle TASK-012 = corpus 117 tờ khai sẵn có. |
 | **Code đã viết** | TASK-006 khung repo + **TASK-007 schema** (migration `0001`+`0002`) + **TASK-008 loader ND 26/2023** (`research/task-008-congbao-loader/`: fetch_doc.py, parse_nd26.py, load.ts; 13.161 dòng nạp, 13/13 verify). Fixtures golden set `fixtures/golden-set/`. |
 | **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
@@ -65,7 +65,7 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | TASK-006 — Khung sườn repository | ✅ xong 2026-07-18 | NestJS monorepo + Docker + Drizzle + Yarn 4; migration `0000` bật pgvector. Verify: clean-clone → `docker compose up` → `/health` ok (pgvector 0.8.5). db host cổng **5433**. Xem [ADR công cụ repo](../architecture-decisions/2026-07-18-repo-tooling-drizzle-yarn.md) |
 | TASK-007 — Schema biểu thuế (thời gian + nhận biết phụ lục) | ✅ xong 2026-07-18 | Drizzle + migration `0001`/`0002`; annex NOT NULL, EXCLUDE chống chồng khoảng, trigger append-only, CBPG tách bảng. Chứng minh live **17/17** (6 ca khó + DB chối shape sai). Xem [research/task-007-schema](../../research/task-007-schema/README.md) |
 | TASK-008 — Nạp Công báo (bộ phân tích nhận biết phụ lục) | ✅ xong 2026-07-18 | ND 26/2023, 13.161 dòng, 13/13 verify; annex-aware; Chương 98 tách schedule; khớp research 12 (11.874/11.150). Xem [research/task-008-congbao-loader](../../research/task-008-congbao-loader/README.md) |
-| TASK-009 — Xác lập chuỗi sửa đổi MFN 2026 | 🔲 chưa làm | **Đừng** gộp research 10 + 12 và giả định hợp của chúng |
+| TASK-009 — Xác lập chuỗi sửa đổi MFN 2026 | ✅ xong 2026-07-18 | Chuỗi xác lập từ nguồn chính thức (R10+R12 bù nhau; 201/2026 là XK; 72/2026 gia hạn NQ 25/2026). Hồi quy 72/2026 nạp bằng cắt-khoảng append-only, live 6/6. Xem [research/task-009-amendment-chain](../../research/task-009-amendment-chain/README.md) |
 | TASK-010 — Phát hiện độ cũ | ✅ xong 2026-07-18 | Trong API: snapshotDate + reliableThrough (−48 ngày lag) + stale/warning. Acceptance PASS (snapshot 2026-03-15/query 2026-03-10 → stale). |
 | TASK-011 — API tra cứu | ✅ xong 2026-07-18 | `GET /tariff` SQL keyed, vị từ khoảng, không LLM; rate có kiểu + statement, FTA/Ch.98 có điều kiện, CBPG riêng, staleness. FTA `preferential[]` chờ nạp biểu FTA. Xem [research/task-010-011-lookup-api](../../research/task-010-011-lookup-api/README.md) |
 | TASK-012 — Nghiệm thu Giai đoạn 1 | 🔲 chưa làm | Cổng: các con số khớp ECUS trên một lô hàng thật |

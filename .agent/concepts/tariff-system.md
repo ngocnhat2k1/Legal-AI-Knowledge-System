@@ -90,6 +90,33 @@ hai danh sách không đầy đủ tạo ra một danh sách vẫn không đầy
 [Kế hoạch khởi tạo](../planning/00-bootstrap.md) và TASK-009 trong [Danh sách công việc](../planning/01-task-list.md),
 vốn nêu cùng một ràng buộc: *đừng gộp chúng và cho rằng phép hợp là đúng*.
 
+### ✅ ĐÃ XÁC LẬP (TASK-009, 2026-07-18) — chuỗi thực, đối chiếu nguồn chính thức
+
+Từng nghị định đã được xác minh tồn tại (chinhphu.vn / vanban.chinhphu.vn / bản toàn văn). **Cả hai báo
+cáo nghiên cứu đều thiếu, nhưng bù nhau** — đúng như cảnh báo "đừng gộp mù":
+
+| Nghị định | Hiệu lực | Vai trò (đã xác minh 2026-07-18) |
+|---|---|---|
+| **26/2023** | 15/07/2023 | Nền — không bị thay thế |
+| **144/2024** | 16/12/2024 | Sửa Biểu NK (Phụ lục II) — *chỉ research 12 có* |
+| **108/2025** | 19/05/2025 | Sửa đổi, bổ sung 26/2023 — *chỉ research 10 có; xác nhận là THẬT* |
+| **199/2025** | 08/07/2025 | Sửa Biểu XK + NK MFN nhiều mặt hàng |
+| **72/2026** | 09/03→**30/04/2026** | Xăng `2710.12.21/.22/.24/.25/.80` 10%→0%; diesel/jet 7%→0%; xylene 3%→0%. Sau đó **hồi quy 26/2023** |
+| **201/2026** | 08/06/2026 | Sửa thuế **XUẤT KHẨU** (Biểu XK) — *KHÔNG phải NK*; research 10 liệt kê chung dễ gây nhầm |
+
+**Phát hiện mới (địa hình dịch chuyển):** ND 72/2026 được **gia hạn tới 30/06/2026 bằng Nghị quyết
+25/2026/NQ-CP** — bản thân nghị định ghi "đến 30/04/2026", nhưng một văn bản riêng kéo dài nó. Hệ thống
+đầy đủ phải nạp nghị quyết gia hạn như một instrument riêng (chưa nạp — ghi rõ, không giả vờ).
+
+**Đã biểu diễn trong dữ liệu (đã xác minh live):** hồi quy ND 72/2026 nạp bằng **cắt khoảng append-only**
+— `2710.12.21` đọc `10% (26/2023)` trước 09/03/2026, `0% (72/2026)` trong 09/03–30/04, `10% (26/2023)`
+hồi quy sau 01/05, **đúng một dòng mỗi ngày** (ràng buộc EXCLUDE giữ khoảng rời). Xem
+[research/task-009-amendment-chain](../../research/task-009-amendment-chain/README.md).
+
+**Còn lại (không chặn v1):** các thay đổi mức thuế của 144/2024 / 108/2025 / 199/2025 (ngoài xăng dầu)
+chưa được áp từng dòng — mới đăng ký thực thể nghị định + demo cơ chế trên ca xăng dầu. Áp đầy đủ cần
+tải + parse `.doc` từng nghị định sửa đổi (cùng pipeline TASK-008).
+
 Một nghị định sửa đổi bị thiếu không phải là một thất bại hữu hình. Đó là một mức thuế sai một cách âm
 thầm, đầy tự tin, và về mặt pháp lý — cùng một hình dạng thất bại với cái bẫy phụ lục ở trên.
 

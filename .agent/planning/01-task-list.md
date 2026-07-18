@@ -323,7 +323,9 @@ Ghi chú:
 
 ## TASK-009: Xác lập chuỗi sửa đổi cho MFN 2026
 
-Status: todo
+Status: done (2026-07-18)
+
+> **Kết quả:** chuỗi xác lập từ nguồn chính thức ([research/task-009-amendment-chain](../../research/task-009-amendment-chain/README.md), [tariff-system.md](../concepts/tariff-system.md)). **Cả research 10 lẫn 12 đều thiếu, nhưng bù nhau** (không gộp mù): 26/2023 ← 144/2024 (chỉ R12) ← 108/2025 (chỉ R10, xác nhận thật) ← 199/2025 ← 72/2026; **201/2026 sửa XUẤT KHẨU** (không phải NK). **Phát hiện mới:** 72/2026 gia hạn tới 30/06/2026 bằng NQ 25/2026 (chưa nạp, ghi rõ). **Hồi quy ND 72/2026 biểu diễn live 6/6** bằng cắt-khoảng append-only: `2710.12.21` = 10%(26/2023)→0%(72/2026, 09/03–30/04)→10%(hồi quy), đúng 1 dòng/ngày (EXCLUDE giữ khoảng rời), cùng vị-từ-khoảng API dùng.
 
 Depends on: TASK-008.
 
