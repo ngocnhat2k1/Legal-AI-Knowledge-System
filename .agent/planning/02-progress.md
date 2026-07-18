@@ -22,9 +22,9 @@ thực sự đã xảy ra**, thường khác đi.
 
 | | |
 |---|---|
-| **Giai đoạn hiện tại** | **Giai đoạn 1 — Tra cứu thuế suất: HOÀN TẤT & nghiệm thu (2026-07-18)** |
-| **Công việc tiếp theo** | **Tất cả TASK-001..012 xong.** Tùy chọn mở rộng: nạp RCEP (cột-theo-nước); áp mức sửa đổi 144/108/199 từng dòng; nạp nghị quyết gia hạn NQ 25/2026. Sau đó → Giai đoạn 2 (gợi ý HS). |
-| **Đang bị chặn bởi** | Không có. Toàn bộ Giai đoạn 1 đã chứng minh end-to-end trên Postgres thật. |
+| **Giai đoạn hiện tại** | **Giai đoạn 3 — Web UI + bot Zalo: ĐÃ DEPLOY lên VPS (2026-07-18)** (Giai đoạn 1 xong trước đó) |
+| **Công việc tiếp theo** | Chủ dự án: (1) thêm DNS A `bieuthue.ngocnhat.info → 164.68.126.127` cho web HTTPS; (2) quét QR bằng Zalo TÀI KHOẢN BOT để kích hoạt bot. Sau đó tùy chọn: Giai đoạn 2 (gợi ý HS), mở rộng dữ liệu (RCEP/amendments). |
+| **Đang bị chặn bởi** | Không (kỹ thuật). Chờ 2 thao tác chủ dự án ở trên (DNS + quét QR). |
 | **Code đã viết** | Khung repo (006) + schema (007) + loader ND 26/2023 (008) + chuỗi sửa đổi/hồi quy (009) + **API `/tariff` + staleness** (010/011, `apps/api/src/modules/tariff/`) + **loader 4 FTA** (`research/fta-loader/`) + **validator nghiệm thu** (012). Golden set `fixtures/golden-set/`. |
 | **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
 
@@ -113,6 +113,23 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-07-18 — Giai đoạn 3: web UI + bot Zalo, deploy VPS Contabo
+
+**Đã làm** (chủ dự án đổi hướng: lật ADR web-app-only, thêm điều khiển Zalo, YÊU CẦU self-contained)
+- **Web UI** `public/index.html` (serve-static): tra cứu honesty-first (nghị định + as-of + điều kiện C/O + banner độ cũ) + **vòng xác nhận in-app** (đúng/sai/không chắc → `lookup_confirmation`, migration 0003, `POST /tariff/confirm` + `GET /tariff/confirmations`).
+- **Bot Zalo** `apps/zalo-bot/` (zca-js, ESM): nhắn "8481.80.99 TQ" → thuế MFN + FTA có điều kiện + CBPG + độ cũ dạng text. Client thuần của `/tariff` (không LLM). Session lưu volume, QR login (tự làm mới ~90s tới khi quét).
+- **Self-contained**: một `docker-compose.yml` = db+migrate+**seed**+api(web)+zalo-bot. Seed idempotent (skip nếu đã có data). Đổi server = `docker compose up`. ADR [self-hosted-zalo-bot](../architecture-decisions/2026-07-18-self-hosted-zalo-bot.md).
+- **Deploy VPS Contabo** (`ssh vps-contabo`, Ubuntu 24.04, Docker+Caddy): git archive → /opt/customs-assistant → `docker compose up --build`. Live: seed 172.962, /health ok, web + /tariff + confirm chạy, bot sinh QR. Caddy: site block `bieuthue.ngocnhat.info` → 127.0.0.1:3000 + basic_auth (giữ nguyên block agent-webhook). restart:unless-stopped cho db/api/bot (sống lại sau reboot).
+
+**Đã học — địa hình thật**
+- **congbao/Caddy định tuyến theo domain; DNS chưa có wildcard** → subdomain mới cần A record của chủ dự án. Bot Zalo KHÔNG cần domain (nối thẳng Zalo).
+- **zca-js QR hết hạn thì throw** → ban đầu bot crash-restart; sửa thành vòng lặp tạo QR mới, process ổn định.
+- **Rủi ro đã ghi**: zca-js vi phạm ToS Zalo → dùng TÀI KHOẢN BOT RIÊNG, không dùng Zalo cá nhân.
+
+**Chờ chủ dự án**: DNS A record (web HTTPS) + quét QR (kích hoạt bot). basic_auth web: khaibao / (đã đưa).
 
 ---
 

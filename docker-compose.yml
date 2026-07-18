@@ -10,6 +10,7 @@
 services:
   db:
     image: pgvector/pgvector:pg17
+    restart: unless-stopped
     environment:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
@@ -50,6 +51,7 @@ services:
 
   api:
     image: customs-assistant:local
+    restart: unless-stopped
     environment:
       DATABASE_URL: postgres://app:app@db:5432/customs_assistant
       PORT: 3000
