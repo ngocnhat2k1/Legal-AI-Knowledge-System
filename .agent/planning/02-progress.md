@@ -23,9 +23,9 @@ thực sự đã xảy ra**, thường khác đi.
 | | |
 |---|---|
 | **Giai đoạn hiện tại** | Giai đoạn 0 — Nền móng |
-| **Công việc tiếp theo** | TASK-001..004 + TASK-006 xong. Tiếp: TASK-007 (schema biểu thuế bitemporal + nhận biết phụ lục + CBPG) |
-| **Đang bị chặn bởi** | Không có. TASK-001 đã đóng (confidence = uncertain toàn bộ; xác minh để lúc dùng qua Zalo). |
-| **Code đã viết** | Khung repo TASK-006: monorepo NestJS (`apps/api`) + Docker + Drizzle + Yarn 4. Chưa có logic biểu thuế (TASK-007). Fixtures golden set `fixtures/golden-set/`. |
+| **Công việc tiếp theo** | TASK-001..007 xong. Tiếp: TASK-008 (nạp Công báo ND 26/2023, parser nhận biết phụ lục) |
+| **Đang bị chặn bởi** | Không có. Mạng tới Công báo + CDN `.doc` + `bridge` customs.gov.vn đều thông từ môi trường agent (kiểm chứng 2026-07-18). TASK-008 tự tải + parse được; chỉ chờ 1 quyết định phạm vi (nạp thêm biểu FTA nào). |
+| **Code đã viết** | TASK-006 khung repo + **TASK-007 schema biểu thuế** (`db/schema/index.ts`, migration `0001`+`0002`; bitemporal, annex-in-PK, EXCLUDE chống chồng khoảng, trigger append-only, CBPG tách bảng). Chứng minh live 17/17. Fixtures golden set `fixtures/golden-set/`. |
 | **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
 
 ### ⚠️ TASK-001 — phần còn lại cần con người, không phải agent
@@ -63,7 +63,7 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | TASK-004 — Kiểm tra provisionTree của vbpl có được điền không | ✅ xong 2026-07-18 | MỘT PHẦN: `provisionTree`/`referenceProvisions` = null trên 21/21 văn bản; nhưng cây điều khoản Chương→Điều→Khoản→Điểm CÓ qua một Server Action khác. Cạnh trích dẫn cấp điều khoản phải tự dựng. Gateway MoJ còn sống, route chưa ánh xạ. Xem research/task-004-vbpl-provisiontree |
 | TASK-005 — Viết các ghi chú kiến thức .agent | ✅ xong 2026-07-17 | Đã kiểm toán; xem Nhật ký phiên làm việc |
 | TASK-006 — Khung sườn repository | ✅ xong 2026-07-18 | NestJS monorepo + Docker + Drizzle + Yarn 4; migration `0000` bật pgvector. Verify: clean-clone → `docker compose up` → `/health` ok (pgvector 0.8.5). db host cổng **5433**. Xem [ADR công cụ repo](../architecture-decisions/2026-07-18-repo-tooling-drizzle-yarn.md) |
-| TASK-007 — Schema biểu thuế (thời gian + nhận biết phụ lục) | 🔲 chưa làm | Nhận biết phụ lục từ migration **đầu tiên**, không trang bị thêm |
+| TASK-007 — Schema biểu thuế (thời gian + nhận biết phụ lục) | ✅ xong 2026-07-18 | Drizzle + migration `0001`/`0002`; annex NOT NULL, EXCLUDE chống chồng khoảng, trigger append-only, CBPG tách bảng. Chứng minh live **17/17** (6 ca khó + DB chối shape sai). Xem [research/task-007-schema](../../research/task-007-schema/README.md) |
 | TASK-008 — Nạp Công báo (bộ phân tích nhận biết phụ lục) | 🔲 chưa làm | Phụ thuộc TASK-003 |
 | TASK-009 — Xác lập chuỗi sửa đổi MFN 2026 | 🔲 chưa làm | **Đừng** gộp research 10 + 12 và giả định hợp của chúng |
 | TASK-010 — Phát hiện độ cũ | 🔲 chưa làm | |
@@ -113,6 +113,24 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-07-18 — TASK-007: schema biểu thuế (bitemporal + phụ lục + CBPG), chứng minh live
+
+**Đã làm**
+- Viết schema Drizzle `db/schema/index.ts`: `hs_version` (chiều phiên bản HS), `decree` (4 mốc ngày), `annex` (phụ lục hạng nhất), `tariff_schedule` (MFN/FTA + `requires_co`), `tariff_rate` (lõi, bitemporal, append-only), `anti_dumping_duty` (CBPG tách riêng).
+- Migration `0001` (Drizzle sinh): CHECK shape theo `rate_type`/`duty_kind`, FK, **annex NOT NULL**. Migration `0002` (viết tay, custom): `btree_gist` + **EXCLUDE** cấm 2 dòng sống chồng khoảng hiệu lực + **trigger append-only** (cấm DELETE; UPDATE chỉ được đóng dấu `superseded_at`).
+- Proof `research/task-007-schema/prove_schema.ts` trên Postgres thật: **17/17**. Clean-clone `docker compose up --build` → migrate 0000→0002 → `/health` ok. Dọn sạch (`down -v`).
+
+**Đã học — địa hình thật**
+- **EXCLUDE khả thi CHÍNH VÌ bộ nạp cắt khoảng.** Ca hồi quy ND 72/2026 không mô hình bằng "mới nhất thắng" (vi phạm "không ORDER BY date DESC"). Thay vào đó: cắt khoảng gốc ND 26/2023 thành `[.., 03-08]` và `[05-01, ..]`, chèn `[03-09, 04-30]` của 72/2026 vào giữa → 3 khoảng **rời nhau**, `daterange('[]')` canonical hóa thành các range kề-mà-không-chồng, vị từ khoảng trả **đúng 1 dòng**/ngày. Đây là ràng buộc cứng cho TASK-008/009: **bộ nạp phải cắt khoảng**, không chèn đè.
+- **Trigger append-only so nguyên dòng.** `NEW IS DISTINCT FROM OLD` sau khi ép `superseded_at` bằng nhau → phát hiện mọi thay đổi cột khác mà không cần liệt kê cột; hợp cho cả 2 bảng (đều có `id`). `TRUNCATE` KHÔNG kích trigger DELETE cấp-dòng → reset test được.
+- **`bridge` customs.gov.vn trả DATA THẬT từ môi trường agent** (thử HS 8481 → JSON đủ cột FTA). Cùng với Công báo + CDN `.doc` đều thông → phần tồn TASK-002 (bắt sample) làm được, và TASK-008/009 **không cần chủ dự án tải file**.
+
+**Tiếp theo**
+- TASK-008: nạp ND 26/2023 từ `.doc` Công báo bằng parser task-003. Bộ nạp phải: gắn `annex_id` thật (không default), **cắt khoảng** khi có nghị định đè, map `*`→excluded / USD→specific. Cross-check số đếm research 12 (11.874 mã / 11.160 có thuế) + khẳng định hai-phụ-lục `0301.11.10` = 15 (NK) & 0 (XK).
+- **Chờ chủ dự án 1 quyết định:** ngoài MFN (ND 26/2023), nạp thêm biểu FTA nào (mặc định đề xuất: 4 FTA quan sát trong 117 tờ khai — AANZFTA/ACFTA/ATIGA/EVFTA — + RCEP đã chứng minh).
 
 ---
 

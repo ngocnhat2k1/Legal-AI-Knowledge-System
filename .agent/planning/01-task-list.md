@@ -241,7 +241,11 @@ Tiêu chí chấp nhận:
 
 ## TASK-007: Schema thuế suất — nhận biết thời gian và phụ lục ngay từ migration đầu tiên
 
-Status: todo
+Status: done (2026-07-18)
+
+> **Kết quả:** schema Drizzle ([db/schema/index.ts](../../db/schema/index.ts)) + 2 migration (`0001` sinh tự động: CHECK theo `rate_type`, FK, **annex NOT NULL**; `0002` viết tay: **EXCLUDE btree_gist** cấm khoảng hiệu lực chồng nhau + **trigger append-only**). **Chứng minh live 17/17** trên Postgres thật ([research/task-007-schema](../../research/task-007-schema/README.md)): 6 ca khó biểu diễn được không special-case (hai-phụ-lục, `*` loại trừ, tuyệt đối USD, có-điều-kiện-C/O, TRQ, hồi quy ND 72/2026), DB **tự chối** mọi shape sai (annex thiếu, `*` mang số, ad_valorem mang USD, khoảng chồng nhau, DELETE, UPDATE đổi thuế). Tra tại-một-thời-điểm là **vị từ khoảng**, đúng 1 dòng/ngày. **CBPG tách bảng riêng** (`anti_dumping_duty`). Clean-clone `docker compose up --build` → migrate 0000→0002 → `/health` ok (không phá boot).
+>
+> **Hệ quả cho TASK-008:** bộ nạp phải (a) gắn mỗi dòng một `annex_id` thật (không default), (b) **cắt khoảng** hiệu lực khi một nghị định sau đè lên (để thỏa EXCLUDE), (c) map `*`→`excluded`, dòng USD→`specific`.
 
 Mục tiêu: một schema có thể biểu diễn luật đúng như cách nó thực sự vận hành. Trang bị lại điều này về sau nghĩa là phải nạp lại toàn bộ.
 
