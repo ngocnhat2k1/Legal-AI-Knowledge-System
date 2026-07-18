@@ -2,8 +2,10 @@
 # Source: 100 unique cleared ECUS import declarations, extracted 2026-07-18. NOT curated — this is the
 # full set for RANDOM sampling in TASK-012. The curated golden set is cases.yaml.
 # applied_rate = statutory NK rate as declared (E31/E62 duty may be exempted; rate still shown).
-# cbpg = anti-dumping duty note if present (separate from NK duty). confidence pending staff review.
-# 1 declaration unreadable (0-byte): ToKhaiHQ7N_QDTQ_108337700001.pdf — re-provide.
+# cbpg = anti-dumping duty note if present (separate from NK duty).
+# confidence = 'uncertain' for ALL rows (owner decision 2026-07-18): past-practice, cleared but NOT
+# certified legally correct; correctness is verified later at point-of-use via a Zalo confirmation loop.
+# 1 declaration was unreadable (0-byte) and is intentionally skipped: ToKhaiHQ7N_QDTQ_108337700001.pdf.
 ---
 lines:
 - id: imp-001
@@ -21,7 +23,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: G12 tạm nhập tái xuất phục vụ công việc; thuế NK 0% và VAT được miễn (VK110/XN012);
     origin=exporter AU
 - id: imp-002
@@ -39,7 +41,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: G12 tạm nhập tái xuất; thuế NK 0% và VAT miễn (VK110/XN012)
 - id: imp-003
   declaration_ref: '107798602661'
@@ -56,7 +58,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: G12 tạm nhập tái xuất; thuế NK 0% và VAT miễn (VK110/XN012)
 - id: imp-004
   declaration_ref: '108318295740'
@@ -73,7 +75,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: origin CN ≠ exporter MY (Bossard Malaysia); E31 nhập SXXK, thuế NK 20% và
     VAT được miễn (XN210/VK120)
 - id: imp-005
@@ -91,7 +93,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: CBPG 34.27% (được miễn)
-  confidence: unmarked
+  confidence: uncertain
   note: C/O form E (ACFTA) E266316963822702; ưu đãi đặc biệt 0% (mã C); có thuế chống
     bán phá giá CBPG 34,27% mã G061 nhưng được miễn (GM); exporter Baosteel Singapore
     PTE nhưng mã nước CN; E31 SXXK, VAT miễn VK120
@@ -110,7 +112,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E13 chuyển hàng giữa 2 khu phi thuế quan (PTQ→PTQ, XNK33); exporter là DN
     VN (Tessellation Hoà Bình) nhưng origin CN; máy đã qua sử dụng; ô Thuế suất NK
     hiển thị 'M' không có %, thuế NK & VAT được miễn (VK130); người mua-bán có quan
@@ -130,7 +132,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: origin DE ≠ exporter TW (Webcontrol Machinery, Taiwan)
 - id: imp-008
   declaration_ref: '108324648940'
@@ -147,7 +149,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: origin DE ≠ exporter TW
 - id: imp-009
   declaration_ref: '108324648940'
@@ -164,7 +166,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-010
   declaration_ref: '108324648940'
@@ -181,7 +183,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-011
   declaration_ref: '108324648940'
@@ -198,7 +200,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-012
   declaration_ref: '108324648940'
@@ -215,7 +217,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-013
   declaration_ref: '108324648940'
@@ -232,7 +234,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-014
   declaration_ref: '108326239230'
@@ -249,7 +251,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: CBPG 35.58% (áp dụng)
-  confidence: unmarked
+  confidence: uncertain
   note: Thuế chống bán phá giá CBPG 35,58% (mã G088) được áp dụng (9.409.606 VND)
 - id: imp-015
   declaration_ref: '108326239230'
@@ -266,7 +268,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-016
   declaration_ref: '108326239230'
@@ -283,7 +285,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-017
   declaration_ref: '108326239230'
@@ -300,7 +302,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: CBPG 35.58% (áp dụng)
-  confidence: unmarked
+  confidence: uncertain
   note: Thuế chống bán phá giá CBPG 35,58% (mã G088) được áp dụng (6.970.078 VND)
 - id: imp-018
   declaration_ref: '108327253310'
@@ -317,7 +319,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: exporter Wing Singa Machinery (HK) Limited, địa chỉ Kowloon HK nhưng mã nước
     CN; origin CN; MFN 0% (B01)
 - id: imp-019
@@ -335,7 +337,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: A21 chuyển mục đích sử dụng từ TK G12 107798602661 (file 1) mục 1; người XK
     = người NK (Rheem VN, mã nước VN) nhưng xuất xứ hàng AU; nay nộp VAT 10%
 - id: imp-020
@@ -353,7 +355,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: A21 chuyển mục đích sử dụng từ TK G12 107798602661 mục 2; XK=NK Rheem VN,
     xuất xứ AU
 - id: imp-021
@@ -371,7 +373,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: A21 chuyển mục đích sử dụng từ TK G12 107798602661 mục 3; XK=NK Rheem VN,
     xuất xứ AU
 - id: imp-022
@@ -389,7 +391,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Origin CN != exporter ES (Keonn Technologies, Tây Ban Nha; NSX Unitech-TQ).
     Hàng mẫu không thanh toán (H11). Chung bill với TK 108328742650/A41. Letter A
     = thuế suất ưu đãi/MFN 0%; VAT 10% có nộp (533.485 VND).
@@ -408,7 +410,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'DNCX (Detmold Packaging) nhập tạo TSCĐ E13: KHÔNG chịu thuế NK (mã miễn XNK32,
     ô thuế suất ghi ''M''/miễn, mã biểu thuế B30) và KHÔNG chịu VAT (VK130), không
     có % rate. Origin CN != exporter HK (Wuhan Phezer, mã nước HK, xếp hàng Hong Kong).
@@ -429,7 +431,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: CBPG (được miễn)
-  confidence: unmarked
+  confidence: uncertain
   note: C/O form E E266316963822730 ngày 10/06/2026 (ACFTA) -> thuế NK ưu đãi đặc
     biệt 0% (letter C). CÓ thuế chống bán phá giá (CBPG) mã G061 thuế suất 34,27%
     nhưng được MIỄN (mã GM). NL nhập SXXK (E31), VAT không chịu (VK120). Người XK
@@ -450,7 +452,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-026
   declaration_ref: '108333611740'
@@ -467,7 +469,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-027
   declaration_ref: '108334418950'
@@ -484,7 +486,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: C/O form E E267222820460026 ngày 10/06/2026 (ACFTA) -> thuế NK ưu đãi đặc
     biệt 0% (letter C). NL nhập SXXK (E31, XN210), VAT không chịu (VK120). Phụ phí
     LSS 1.883.209 VND (khoản điều chỉnh mã AD). Khai CAS không thuộc phụ lục II/III
@@ -504,7 +506,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 NL nhập SXXK: thuế NK 17% (letter A, MFN) được MIỄN (mã XN210); VAT không
     chịu (VK120). Chung bill/invoice với TK 108339558830/A12. Không có C/O ưu đãi.'
 - id: imp-029
@@ -522,7 +524,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 NL nhập SXXK: thuế NK 17% (letter A, MFN) được MIỄN (XN210); VAT không
     chịu (VK120). Cùng loại dòng 1, khác số lượng.'
 - id: imp-030
@@ -540,7 +542,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 NL nhập SXXK: thuế NK 17% (letter A, MFN) được MIỄN (XN210); VAT không
     chịu (VK120).'
 - id: imp-031
@@ -558,7 +560,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 NL nhập SXXK: thuế NK 17% (letter A, MFN) được MIỄN (XN210); VAT không
     chịu (VK120).'
 - id: imp-032
@@ -576,7 +578,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 NL nhập SXXK: thuế NK 17% (letter A, MFN) được MIỄN (XN210); VAT không
     chịu (VK120). Dòng cuối của tờ khai (5 dòng, cùng HS 8544.42.94, xuất xứ CN).'
 - id: imp-033
@@ -593,7 +595,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Nhập chung bill/invoice với TK 108336397520/E31 (B01 MFN)
 - id: imp-034
   declaration_ref: '108339558830'
@@ -609,7 +611,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-035
   declaration_ref: '108339558830'
@@ -625,7 +627,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-036
   declaration_ref: '108339558830'
@@ -641,7 +643,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-037
   declaration_ref: '108340115810'
@@ -658,7 +660,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: VAT 8% (mã VB245); B01 MFN dù xuất xứ AU
 - id: imp-038
   declaration_ref: '108340115810'
@@ -674,7 +676,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-039
   declaration_ref: '108340115810'
@@ -690,7 +692,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-040
   declaration_ref: '108340358600'
@@ -706,7 +708,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Xuất xứ US khác nước người XK (KR); hàng gửi từ Korea
 - id: imp-041
   declaration_ref: '108340358600'
@@ -722,7 +724,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-042
   declaration_ref: '108340358600'
@@ -738,7 +740,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-043
   declaration_ref: '108340358600'
@@ -754,7 +756,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-044
   declaration_ref: '108340358600'
@@ -770,7 +772,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-045
   declaration_ref: '108340358600'
@@ -787,7 +789,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-046
   declaration_ref: '108340570000'
@@ -804,7 +806,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK miễn (XN210), GTGT không thu (VK120); thuế suất NK
     10% chỉ hiển thị'
 - id: imp-047
@@ -822,7 +824,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-048
   declaration_ref: '108340878440'
@@ -839,7 +841,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK miễn (XN210), GTGT không thu (VK120); thuế suất NK
     12% chỉ hiển thị'
 - id: imp-049
@@ -857,7 +859,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-050
   declaration_ref: '108340878440'
@@ -874,7 +876,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-051
   declaration_ref: '108341162860'
@@ -891,7 +893,7 @@ lines:
   has_co: true
   co_form: EVFTA self-certified origin (REX)
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Ưu đãi đặc biệt EVFTA (mã biểu thuế B25); C/O tự chứng nhận REX theo TT 14/2026/TT-BCT
 - id: imp-052
   declaration_ref: '108341162860'
@@ -908,7 +910,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: B01 MFN (không dùng ưu đãi EVFTA cho dòng này)
 - id: imp-053
   declaration_ref: '108341162860'
@@ -925,7 +927,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-054
   declaration_ref: '108341162860'
@@ -941,7 +943,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-055
   declaration_ref: '108341162860'
@@ -957,7 +959,7 @@ lines:
   has_co: true
   co_form: EVFTA self-certified origin (REX)
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Ưu đãi đặc biệt EVFTA (mã biểu thuế B25); MFN cho HS này là 12% -> 0% nhờ
     C/O REX
 - id: imp-056
@@ -974,7 +976,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Xuất xứ CH (Thụy Sĩ) khác nước người XK (DE); dùng MFN B01
 - id: imp-057
   declaration_ref: '108341162860'
@@ -990,7 +992,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-058
   declaration_ref: '108341270440'
@@ -1006,7 +1008,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: C/O AANZ EC1326132800 (áp dụng mục 1,2,8,15), mã biểu thuế B07; E31 nhập SXXK
     NK miễn/GTGT không thu; nhập chung Cont/BL/INV với TK 108341376250/H11
 - id: imp-059
@@ -1023,7 +1025,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: C/O AANZ (B07); E31 nhập SXXK NK miễn/GTGT không thu
 - id: imp-060
   declaration_ref: '108341270440'
@@ -1039,7 +1041,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-061
   declaration_ref: '108341270440'
@@ -1055,7 +1057,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Xuất xứ CN khác nước người XK (AU); E31 NK miễn/GTGT không thu
 - id: imp-062
   declaration_ref: '108341270440'
@@ -1071,7 +1073,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-063
   declaration_ref: '108341270440'
@@ -1087,7 +1089,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-064
   declaration_ref: '108341270440'
@@ -1103,7 +1105,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-065
   declaration_ref: '108341270440'
@@ -1120,7 +1122,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: CBPG (được miễn)
-  confidence: unmarked
+  confidence: uncertain
   note: C/O AANZ (B07, áp dụng mục 8); thuế CBPG - thuộc đối tượng KHÔNG chịu (mã
     GK); E31 NK miễn/GTGT không thu
 - id: imp-066
@@ -1137,7 +1139,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-067
   declaration_ref: '108341270440'
@@ -1153,7 +1155,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-068
   declaration_ref: '108341270440'
@@ -1169,7 +1171,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-069
   declaration_ref: '108341270440'
@@ -1185,7 +1187,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-070
   declaration_ref: '108341270440'
@@ -1201,7 +1203,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-071
   declaration_ref: '108341270440'
@@ -1217,7 +1219,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-072
   declaration_ref: '108341270440'
@@ -1234,7 +1236,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: CBPG (được miễn)
-  confidence: unmarked
+  confidence: uncertain
   note: C/O AANZ (B07, áp dụng mục 15); thuế CBPG - KHÔNG chịu (mã GK); E31 NK miễn/GTGT
     không thu
 - id: imp-073
@@ -1251,7 +1253,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Xuất xứ TW (Đài Loan) khác nước người XK (AU); E31 NK miễn/GTGT không thu
 - id: imp-074
   declaration_ref: '108341270440'
@@ -1267,7 +1269,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-075
   declaration_ref: '108341270440'
@@ -1283,7 +1285,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Xuất xứ AE (UAE) khác nước người XK (AU); E31 NK miễn/GTGT không thu
 - id: imp-076
   declaration_ref: '108341270440'
@@ -1299,7 +1301,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: NK miễn/GTGT không thu'
 - id: imp-077
   declaration_ref: '108341376250'
@@ -1315,7 +1317,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Nhập chung Cont/BL/INV với TK 108341270440/E31 (B01 MFN)
 - id: imp-078
   declaration_ref: '108341376250'
@@ -1331,7 +1333,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-079
   declaration_ref: '108341602240'
@@ -1348,7 +1350,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-080
   declaration_ref: '108341602240'
@@ -1365,7 +1367,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-081
   declaration_ref: '108342507120'
@@ -1382,7 +1384,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Nhập vào DNCX/khu phi thuế quan từ nước ngoài (E13, XNK32); Thuế suất NK để
     trống, mã M = không chịu thuế NK & GTGT; không có mức thuế in ra
 - id: imp-082
@@ -1400,7 +1402,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-083
   declaration_ref: '108342965400'
@@ -1417,7 +1419,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập NPL để SXXK; thuế NK 12% được miễn (số tiền miễn giảm = 12% trị giá,
     mã VK120/XN210); GTGT không chịu (mã V)
 - id: imp-084
@@ -1435,7 +1437,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập NPL để SXXK; thuế NK 12% được miễn (mã VK120/XN210); GTGT không chịu
     (mã V)
 - id: imp-085
@@ -1453,7 +1455,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-086
   declaration_ref: '108342974720'
@@ -1470,7 +1472,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-087
   declaration_ref: '108347343900'
@@ -1487,7 +1489,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-088
   declaration_ref: '108347343900'
@@ -1504,7 +1506,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Thuế suất NK 0%
 - id: imp-089
   declaration_ref: '108347343900'
@@ -1521,7 +1523,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-090
   declaration_ref: '108347363940'
@@ -1538,7 +1540,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Nhập vào DNCX (E13); người XK là NCC nội địa 'CN NETMARKS VN' mã nước VN nhưng
     xuất xứ hàng CN → origin≠exporter; mã M = không chịu thuế NK & GTGT (VK900/XNK90);
     'IT-CO0089' là mã tài sản nội bộ, không phải C/O
@@ -1557,7 +1559,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Nhập vào DNCX (E13); người XK là NCC nội địa 'CN NETMARKS VN' mã nước VN nhưng
     xuất xứ hàng CN → origin≠exporter; mã M = không chịu thuế NK & GTGT (VK900/XNK90)
 - id: imp-092
@@ -1575,7 +1577,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập NPL để SXXK; thuế NK 5% được miễn (mã VK120/XN210); GTGT không chịu
     (mã V). Người XK 'JRS COMPONENTS (HK) LIMITED' khai mã nước CN
 - id: imp-093
@@ -1593,7 +1595,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập NPL để SXXK; thuế NK 5% được miễn (mã VK120/XN210); GTGT không chịu
     (mã V)
 - id: imp-094
@@ -1611,7 +1613,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập NPL để SXXK; thuế NK 3% được miễn (mã VK120/XN210); GTGT không chịu
     (mã V)
 - id: imp-095
@@ -1629,7 +1631,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập NPL để SXXK; thuế NK 12% được miễn (mã VK120/XN210); GTGT không chịu
     (mã V)
 - id: imp-096
@@ -1647,7 +1649,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nguyên liệu SX hàng XK; NPL bình nước nóng
 - id: imp-097
   declaration_ref: '108349189760'
@@ -1664,7 +1666,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: origin US ≠ exporter AU (Tesa Tape Australia); E31, duty 15% tính nhưng miễn
     giảm 84.008.258 VND
 - id: imp-098
@@ -1682,7 +1684,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: origin CN ≠ exporter AU (Gulf Rubber Australia); E31, duty 3% miễn giảm 3.622.992
     VND
 - id: imp-099
@@ -1700,7 +1702,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: C/O form E (ACFTA) E265693661700030 ngày 17/06/2026, ưu đãi 0% (mã C); exporter
     FLAT (Hong Kong) khai mã nước CN
 - id: imp-100
@@ -1718,7 +1720,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: C/O form E (ACFTA) ưu đãi 0% (mã C)
 - id: imp-101
   declaration_ref: '108351885350'
@@ -1735,7 +1737,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: origin CN ≠ exporter HK (Shenzhen Chainway); H11 hàng không có giá trị thương
     mại; VAT mã VB901 10%
 - id: imp-102
@@ -1753,7 +1755,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: origin IT ≠ exporter NZ (Rheem New Zealand); H11 hàng mẫu; VAT mã VB901 10%
 - id: imp-103
   declaration_ref: '108353250240'
@@ -1770,7 +1772,7 @@ lines:
   has_co: true
   co_form: form D
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Nhập khẩu tại chỗ (NKTC) VN-VN; exporter & origin đều VN; C/O form D điện
     tử VN-VN, mã C 0%; hóa đơn bằng VND
 - id: imp-104
@@ -1788,7 +1790,7 @@ lines:
   has_co: true
   co_form: form D
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: NKTC VN-VN; C/O form D; mã C 0%
 - id: imp-105
   declaration_ref: '108353250240'
@@ -1805,7 +1807,7 @@ lines:
   has_co: true
   co_form: form D
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: NKTC VN-VN; C/O form D; mã C 0% (dòng trùng mô tả dòng 2, lượng khác)
 - id: imp-106
   declaration_ref: '108353250240'
@@ -1822,7 +1824,7 @@ lines:
   has_co: true
   co_form: form D
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: NKTC VN-VN; C/O form D; mã C 0%
 - id: imp-107
   declaration_ref: '108353419860'
@@ -1839,7 +1841,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'Importer khác: Công ty TNHH Kyodo Printing (Việt Nam), không phải Rheem;
     HQ Biên Hòa Đồng Nai; H11 hàng mẫu không thanh toán; MFN 30%, VAT mã VB245 8%;
     origin DK = exporter DK (Vetaphone A/S)'
@@ -1858,7 +1860,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: VAT 8% (mức GTGT giảm)
 - id: imp-109
   declaration_ref: '108354699020'
@@ -1875,7 +1877,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; C/O AANZ EC1426331571 (01/06/2026); VAT không chịu thuế (để
     trống)
 - id: imp-110
@@ -1892,7 +1894,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; C/O AANZ; VAT không chịu thuế
 - id: imp-111
   declaration_ref: '108354699020'
@@ -1909,7 +1911,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; C/O AANZ; VAT không chịu thuế
 - id: imp-112
   declaration_ref: '108354699020'
@@ -1925,7 +1927,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; C/O AANZ; VAT không chịu thuế
 - id: imp-113
   declaration_ref: '108354699020'
@@ -1941,7 +1943,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; C/O AANZ; VAT không chịu thuế
 - id: imp-114
   declaration_ref: '108355515000'
@@ -1958,7 +1960,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Xuất xứ IT khác Mã nước người XK CN (Nordmeccanica Machinery Shanghai); không
     có C/O, thuế NK ưu đãi MFN 3%
 - id: imp-115
@@ -1976,7 +1978,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Người XK Totani Asia Pacific Pte Ltd (địa chỉ Singapore) nhưng Mã nước khai
     JP; shipper thực tế Totani Corporation, Japan
 - id: imp-116
@@ -1993,7 +1995,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Người XK khai Mã nước JP (Cty đăng ký tại Singapore)
 - id: imp-117
   declaration_ref: '108356042320'
@@ -2010,7 +2012,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Người XK khai Mã nước JP (Cty đăng ký tại Singapore)
 - id: imp-118
   declaration_ref: '108356168650'
@@ -2026,7 +2028,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; VAT không chịu thuế (để trống); không có C/O
 - id: imp-119
   declaration_ref: '108360951420'
@@ -2043,7 +2045,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; C/O form E E26MA2JQDRA90049 (16/06/2026); VAT không chịu thuế
 - id: imp-120
   declaration_ref: '108360951420'
@@ -2059,7 +2061,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; C/O form E; VAT không chịu thuế
 - id: imp-121
   declaration_ref: '108360951420'
@@ -2076,7 +2078,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; C/O form E; VAT không chịu thuế
 - id: imp-122
   declaration_ref: '108360951420'
@@ -2092,7 +2094,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; C/O form E; VAT không chịu thuế
 - id: imp-123
   declaration_ref: '108361335020'
@@ -2109,7 +2111,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-124
   declaration_ref: '108361335020'
@@ -2126,7 +2128,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-125
   declaration_ref: '108361335020'
@@ -2143,7 +2145,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-126
   declaration_ref: '108361335020'
@@ -2160,7 +2162,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-127
   declaration_ref: '108361587130'
@@ -2177,7 +2179,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: H11 nhập khác; hàng không có giá trị thương mại, trị giá 20 USD, PTTT KHONGTT
     (không thanh toán)
 - id: imp-128
@@ -2194,7 +2196,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SX hàng XK: thuế NK 5% được miễn, VAT không áp dụng (ô trống). Xuất
     xứ = người XK NZ (RHEEM NEW ZEALAND); nhập theo MFN (B01), không dùng C/O AANZ.'
 - id: imp-129
@@ -2212,7 +2214,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: thuế NK 3% được miễn, VAT trống. Hàng xuất xứ VN, mua từ DN chế
     xuất KTC VN (KCX Tân Thuận); origin = exporter VN.'
 - id: imp-130
@@ -2230,7 +2232,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: thuế NK 3% được miễn, VAT trống. Xuất xứ VN từ DN chế xuất.'
 - id: imp-131
   declaration_ref: '108364401460'
@@ -2247,7 +2249,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: C/O form E (ACFTA) E266143234370006 mục 1 → NK 0% ưu đãi đặc biệt (ký hiệu
     C, mã B05). Người XK ghi ROBERTSHAW (THAILAND) LTD nhưng Mã nước = CN, xếp hàng
     Qingdao/CN. E31, VAT trống.
@@ -2266,7 +2268,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: C/O form E (ACFTA) E266143234370005 mục 2 → NK 0% (ký hiệu C, mã B05). Người
     XK tên Thailand nhưng Mã nước CN. E31, VAT trống.
 - id: imp-133
@@ -2284,7 +2286,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: thuế NK 12% được miễn, VAT trống. Chung cont/chứng từ với TK A12
     108364788820 (hàng cùng loại, bên đó nộp thuế).'
 - id: imp-134
@@ -2302,7 +2304,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: thuế NK 12% được miễn, VAT trống. Chung cont với TK 108364788820/A12.'
 - id: imp-135
   declaration_ref: '108364788820'
@@ -2319,7 +2321,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'A12 kinh doanh/SX: NK 12% (A, B01 MFN) + VAT 10% (mã VB901). Cùng hàng/cont
     với TK E31 108364768150 (bên E31 được miễn NK).'
 - id: imp-136
@@ -2337,7 +2339,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'A12: NK 12% + VAT 10% (VB901). Chung cont với TK 108364768150/E31.'
 - id: imp-137
   declaration_ref: '108365843240'
@@ -2354,7 +2356,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'A12: máy móc thiết bị phục vụ SX trực tiếp. NK 0% (A, B01) + VAT 8% (mã VB245).
     Người NK là Avery Dennison RIS VN (khác các TK Rheem). Người XK GOLD FAI địa chỉ
     Hong Kong nhưng Mã nước = CN; xuất xứ CN.'
@@ -2373,7 +2375,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: NK 0% (A, B01), VAT trống. TK 7 dòng, người XK Ningbo Friendship
     Bronze/CN; có phụ phí LSS 369.924 VND (khoản điều chỉnh mã AD).'
 - id: imp-139
@@ -2391,7 +2393,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: NK 0% (A, B01), VAT trống.'
 - id: imp-140
   declaration_ref: '108368222320'
@@ -2408,7 +2410,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: NK 10% được miễn, VAT trống. Dòng chịu thuế suất khác các dòng
     ghép nối 0% (HS 7415 vs 7412).'
 - id: imp-141
@@ -2426,7 +2428,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: NK 0% (A, B01), VAT trống.'
 - id: imp-142
   declaration_ref: '108368222320'
@@ -2443,7 +2445,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: NK 0% (A, B01), VAT trống.'
 - id: imp-143
   declaration_ref: '108368222320'
@@ -2460,7 +2462,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: NK 5% được miễn, VAT trống.'
 - id: imp-144
   declaration_ref: '108368222320'
@@ -2477,7 +2479,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: NK 0% (A, B01), VAT trống.'
 - id: imp-145
   declaration_ref: '108368583260'
@@ -2494,7 +2496,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 SXXK: thuế NK 15% được miễn, VAT trống. Xuất xứ VN; người XK COMPUTIME
     LIMITED địa chỉ Hong Kong nhưng Mã nước = VN; hàng do P&C Intelligent Control
     Technology (VN, MST 3702462610) gia công (NGH), luân chuyển nội địa kho P&C →
@@ -2514,7 +2516,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: DNCX/EPE import (E13) - hàng không chịu thuế NK & GTGT (XNK90/VK900); Thuế
     suất fields blank. Origin CN but Người xuất khẩu is a Vietnamese domestic supplier
     (mã nước VN) -> origin != exporter.
@@ -2533,7 +2535,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: DNCX/EPE import (E13) - không chịu thuế NK & GTGT (XNK90/VK900); rate blank.
     Origin CN vs exporter VN.
 - id: imp-148
@@ -2550,7 +2552,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: DNCX/EPE import (E13) - không chịu thuế NK & GTGT (XNK90/VK900); rate blank.
     Origin CN vs exporter VN.
 - id: imp-149
@@ -2567,7 +2569,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: DNCX/EPE import (E13) - không chịu thuế NK & GTGT (XNK90/VK900); rate blank.
     Origin CN vs exporter VN.
 - id: imp-150
@@ -2585,7 +2587,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: DNCX/EPE import (E13) - không chịu thuế NK & GTGT (XNK90/VK900); rate blank.
     Origin CN vs exporter VN.
 - id: imp-151
@@ -2603,7 +2605,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; NK MFN 0% (letter A) nhưng miễn thuế (XN210); VAT không chịu
     (VK120). Hàng hóa chất - tự CBHC (CAS declared).
 - id: imp-152
@@ -2621,7 +2623,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Origin US but exporter AU (Tesa Tape Australia) -> origin != exporter. E31
     nhập SXXK; NK 15% miễn thuế (XN210); VAT không chịu (VK120).
 - id: imp-153
@@ -2639,7 +2641,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Origin DE but exporter AU (Tesa Tape Australia) -> origin != exporter. E31
     nhập SXXK; NK 15% miễn thuế (XN210); VAT không chịu (VK120).
 - id: imp-154
@@ -2657,7 +2659,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; NK 12% miễn thuế (XN210); VAT không chịu (VK120).
 - id: imp-155
   declaration_ref: '108374586940'
@@ -2674,7 +2676,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; NK 12% miễn thuế (XN210); VAT không chịu (VK120).
 - id: imp-156
   declaration_ref: '108378197800'
@@ -2691,7 +2693,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: A12 nhập kinh doanh (taxable); NK 0% MFN (A); VAT 10% phải nộp (VB901), tiền
     thuế 8.159.739 VND.
 - id: imp-157
@@ -2709,7 +2711,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; NK 17% miễn thuế (XN210); VAT không chịu (VK120).
 - id: imp-158
   declaration_ref: '108379268540'
@@ -2726,7 +2728,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; NK 17% miễn thuế (XN210); VAT không chịu (VK120).
 - id: imp-159
   declaration_ref: '108379268540'
@@ -2743,7 +2745,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; NK 17% miễn thuế (XN210); VAT không chịu (VK120).
 - id: imp-160
   declaration_ref: '108379268540'
@@ -2760,7 +2762,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; NK 17% miễn thuế (XN210); VAT không chịu (VK120).
 - id: imp-161
   declaration_ref: '108379268540'
@@ -2777,7 +2779,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; NK 17% miễn thuế (XN210); VAT không chịu (VK120).
 - id: imp-162
   declaration_ref: '108381248510'
@@ -2794,7 +2796,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; NK 5% miễn thuế (XN210), miễn 96.398.244 VND; VAT không chịu
     (VK120). Người xuất khẩu là Midea Electric Trading (Singapore) nhưng khai mã nước
     CN (địa chỉ Singapore).
@@ -2813,7 +2815,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'H11 nhập hàng khác - mẫu hàng không có giá trị thương mại để thử nghiệm/giám
     định (trị giá danh nghĩa 21 USD, PTTT KHONGTT). Taxable: NK 15% MFN (A) = 1.393.930,5
     VND + VAT 10% (VB901) = 1.068.680,05 VND. Tờ khai có sửa đổi đăng ký ngày 30/06/2026.'
@@ -2832,7 +2834,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-165
   declaration_ref: '108390297520'
@@ -2849,7 +2851,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-166
   declaration_ref: '108390297520'
@@ -2866,7 +2868,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-167
   declaration_ref: '108392435540'
@@ -2883,7 +2885,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-168
   declaration_ref: '108392859630'
@@ -2900,7 +2902,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK 15% được miễn (XN210); VAT không chịu thuế (mã áp
     dụng thuế suất ''V'')'
 - id: imp-169
@@ -2918,7 +2920,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK 15% được miễn (XN210); VAT không chịu thuế (mã áp
     dụng thuế suất ''V'')'
 - id: imp-170
@@ -2935,7 +2937,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'origin≠exporter: xuất xứ TW (Taiwan) nhưng người XK là ARCTIC WOLF CANADA
     INC (CA); hàng mẫu, không thanh toán (KHONGTT)'
 - id: imp-171
@@ -2952,7 +2954,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'origin≠exporter: xuất xứ TW (Taiwan) nhưng người XK là ARCTIC WOLF CANADA
     INC (CA); hàng mẫu, không thanh toán (KHONGTT)'
 - id: imp-172
@@ -2970,7 +2972,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK (XN210); VAT không chịu thuế (mã áp dụng thuế suất 'V')
 - id: imp-173
   declaration_ref: '108393793800'
@@ -2987,7 +2989,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK 12% được miễn (XN210); VAT không chịu thuế (mã áp
     dụng thuế suất ''V'')'
 - id: imp-174
@@ -3005,7 +3007,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK 12% được miễn (XN210); VAT không chịu thuế (mã áp
     dụng thuế suất ''V'')'
 - id: imp-175
@@ -3023,7 +3025,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-176
   declaration_ref: '108396844620'
@@ -3040,7 +3042,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK & VAT được miễn (mã VK120/XN210), tỷ lệ 20% là mức
     MFN danh nghĩa. Người XK Welling International Hongkong Ltd (địa chỉ Hong Kong)
     khai mã nước = CN, trùng xuất xứ.'
@@ -3059,7 +3061,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK & VAT được miễn (mã VK120/XN210); 12% là mức MFN danh
     nghĩa.'
 - id: imp-178
@@ -3077,7 +3079,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'origin CN ≠ exporter HK: Chengdu Dongri Rim Machinery (địa chỉ Tứ Xuyên,
     Trung Quốc) khai mã nước HK, xếp hàng tại Hong Kong. A12 MFN (B01), thuế NK 0%,
     VAT 10%.'
@@ -3096,7 +3098,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK & VAT được miễn (mã VK120/XN210); 14% là mức MFN danh
     nghĩa. Xuất xứ Úc (Lawrence & Hanson Group).'
 - id: imp-180
@@ -3114,7 +3116,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'H11 (nhập khác): hàng mẫu không có giá trị thương mại, PTTT = KHONGTT. Thuế
     NK 20% + VAT 10% có nộp thực.'
 - id: imp-181
@@ -3132,7 +3134,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'H11 (nhập khác): hàng mẫu không có giá trị thương mại. Thuế NK 0%, VAT 10%.'
 - id: imp-182
   declaration_ref: '108401022440'
@@ -3149,7 +3151,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK; ưu đãi ACFTA theo C/O form E E267377927780139 ngày 30/06/2026
     (mã áp thuế C, biểu thuế B05) → thuế NK 0%; VAT được miễn (VK120).
 - id: imp-183
@@ -3167,7 +3169,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK; ưu đãi ACFTA form E (mã C/B05) → thuế NK 0%; VAT miễn (VK120).
 - id: imp-184
   declaration_ref: '108401022440'
@@ -3184,7 +3186,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK; ưu đãi ACFTA form E (mã C/B05) → thuế NK 0%; VAT miễn (VK120).
 - id: imp-185
   declaration_ref: '108401022440'
@@ -3200,7 +3202,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK; ưu đãi ACFTA form E (mã C/B05) → thuế NK 0%; VAT miễn (VK120).
 - id: imp-186
   declaration_ref: '108401022440'
@@ -3217,7 +3219,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK; ưu đãi ACFTA form E (mã C/B05) → thuế NK 0%; VAT miễn (VK120).
 - id: imp-187
   declaration_ref: '108401022440'
@@ -3234,7 +3236,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK; ưu đãi ACFTA form E (mã C/B05) → thuế NK 0%; VAT miễn. Cùng spec
     dòng 7 nhưng tách dòng (SL 200).
 - id: imp-188
@@ -3252,7 +3254,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK; ưu đãi ACFTA form E (mã C/B05) → thuế NK 0%; VAT miễn. Cùng spec
     dòng 6 (SL 500).
 - id: imp-189
@@ -3270,7 +3272,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK; ưu đãi ACFTA form E (mã C/B05) → thuế NK 0%; VAT miễn. Cùng spec
     dòng 9 (SL 1.000).
 - id: imp-190
@@ -3288,7 +3290,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK; ưu đãi ACFTA form E (mã C/B05) → thuế NK 0%; VAT miễn. Cùng spec
     dòng 8 (SL 700).
 - id: imp-191
@@ -3306,7 +3308,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: A41; ưu đãi ACFTA theo C/O form E 02261416650002040 ngày 29/06/2026 (mã áp
     thuế C, biểu thuế B05) → thuế NK 0%; VAT 10% (78.124.900 VND).
 - id: imp-192
@@ -3324,7 +3326,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Người NK là CÔNG TY TNHH DNP VIỆT NAM (khác các tờ khai còn lại của Rheem
     VN), HQ KCN Mỹ Phước. A12 MFN (B01), xuất xứ Đức; thuế NK 10% + VAT 10% có nộp
     thực.
@@ -3343,7 +3345,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK & VAT được miễn (VK120/XN210); 12% là mức MFN danh
     nghĩa. Người XK Wurth Electronics Singapore (địa chỉ Singapore) khai mã nước TW
     = xuất xứ, xếp hàng tại Taitung/Đài Loan.'
@@ -3362,7 +3364,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK được miễn (XN210), không chịu VAT'
 - id: imp-195
   declaration_ref: '108406576020'
@@ -3379,7 +3381,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: không chịu VAT'
 - id: imp-196
   declaration_ref: '108406576020'
@@ -3395,7 +3397,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: không chịu VAT'
 - id: imp-197
   declaration_ref: '108406576020'
@@ -3411,7 +3413,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK miễn, không chịu VAT'
 - id: imp-198
   declaration_ref: '108406576020'
@@ -3427,7 +3429,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: không chịu VAT'
 - id: imp-199
   declaration_ref: '108406576020'
@@ -3444,7 +3446,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: không chịu VAT'
 - id: imp-200
   declaration_ref: '108406576020'
@@ -3461,7 +3463,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: không chịu VAT'
 - id: imp-201
   declaration_ref: '108406576020'
@@ -3477,7 +3479,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: không chịu VAT'
 - id: imp-202
   declaration_ref: '108406576020'
@@ -3494,7 +3496,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: không chịu VAT'
 - id: imp-203
   declaration_ref: '108406576020'
@@ -3510,7 +3512,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: không chịu VAT'
 - id: imp-204
   declaration_ref: '108406576020'
@@ -3526,7 +3528,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: không chịu VAT. Người XK: NINGBO FRIENDSHIP BRONZE WARE, không
     có C/O'
 - id: imp-205
@@ -3544,7 +3546,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: G13 tạm nhập phục vụ gia công (không chịu thuế). Người XK khai Mã nước=CN
     nhưng tên/địa chỉ = MEDITEC JAPAN CO.,LTD, Osaka Japan; hàng bốc từ Shekou/Shenzhen
     (TQ)
@@ -3563,7 +3565,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Ưu đãi đặc biệt AANZFTA (mã C, 0%); C/O form AANZ EC1326133605 (18/06/2026)
 - id: imp-207
   declaration_ref: '108407661610'
@@ -3580,7 +3582,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Ưu đãi AANZFTA (mã C, 0%); C/O form AANZ
 - id: imp-208
   declaration_ref: '108407661610'
@@ -3597,7 +3599,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Ưu đãi AANZFTA (mã C, 0%); C/O form AANZ
 - id: imp-209
   declaration_ref: '108407661610'
@@ -3614,7 +3616,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Ưu đãi AANZFTA (mã C, 0%); C/O form AANZ
 - id: imp-210
   declaration_ref: '108407661610'
@@ -3631,7 +3633,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Ưu đãi AANZFTA (mã C, 0%); C/O form AANZ
 - id: imp-211
   declaration_ref: '108407661610'
@@ -3648,7 +3650,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Ưu đãi AANZFTA (mã C, 0%); Người XK SOLAHART INDUSTRIES PTY LTD; C/O form
     AANZ
 - id: imp-212
@@ -3665,7 +3667,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK (không chịu VAT) + ưu đãi AANZFTA mã C 0%; C/O form AANZ EC1426337150
     (07/07/2026)
 - id: imp-213
@@ -3683,7 +3685,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK không chịu VAT; ưu đãi AANZFTA mã C 0%; C/O form AANZ
 - id: imp-214
   declaration_ref: '108410428710'
@@ -3700,7 +3702,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK không chịu VAT; ưu đãi AANZFTA mã C 0%; C/O form AANZ
 - id: imp-215
   declaration_ref: '108410428710'
@@ -3716,7 +3718,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK không chịu VAT; ưu đãi AANZFTA mã C 0%; C/O form AANZ
 - id: imp-216
   declaration_ref: '108410428710'
@@ -3732,7 +3734,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK không chịu VAT; ưu đãi AANZFTA mã C 0%; C/O form AANZ
 - id: imp-217
   declaration_ref: '108410428710'
@@ -3748,7 +3750,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK không chịu VAT; ưu đãi AANZFTA mã C 0%; C/O form AANZ
 - id: imp-218
   declaration_ref: '108410428710'
@@ -3764,7 +3766,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK không chịu VAT; ưu đãi AANZFTA mã C 0%; C/O form AANZ
 - id: imp-219
   declaration_ref: '108410428710'
@@ -3780,7 +3782,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK không chịu VAT; ưu đãi AANZFTA mã C 0%; C/O form AANZ
 - id: imp-220
   declaration_ref: '108410428710'
@@ -3797,7 +3799,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK không chịu VAT; ưu đãi AANZFTA mã C 0%; C/O form AANZ
 - id: imp-221
   declaration_ref: '108410428710'
@@ -3813,7 +3815,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK không chịu VAT; ưu đãi AANZFTA mã C 0%; C/O form AANZ
 - id: imp-222
   declaration_ref: '108410428710'
@@ -3829,7 +3831,7 @@ lines:
   has_co: true
   co_form: form AANZ
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 SXXK không chịu VAT; Người XK RELIANCE WORLDWIDE CORP (AUST.); C/O form
     AANZ mã C 0%
 - id: imp-223
@@ -3847,7 +3849,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MFN (mã A); Người XK NORDMECCANICA MACHINERY (SHANGHAI); không có C/O
 - id: imp-224
   declaration_ref: '108413632130'
@@ -3864,7 +3866,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MFN (mã A); Người XK NISHIBE KIKAI CO., LTD (Nhật); không có C/O
 - id: imp-225
   declaration_ref: '108413632130'
@@ -3881,7 +3883,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MFN (mã A); không có C/O
 - id: imp-226
   declaration_ref: '108414451460'
@@ -3898,7 +3900,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 nhập SXXK (không chịu VAT); Người XK KTSENSING TECHNOLOGY (TQ)
 - id: imp-227
   declaration_ref: '108414451460'
@@ -3915,7 +3917,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 nhập SXXK: thuế NK 10% được miễn giảm (XN210), không chịu VAT'
 - id: imp-228
   declaration_ref: '108420628300'
@@ -3932,7 +3934,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MFN (mã A) - Italy nhưng không dùng C/O EUR.1; Người XK I.M.A. INDUSTRIA MACCHINE
     AUTOMATICHE S.P.A.
 - id: imp-229
@@ -3950,7 +3952,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MFN (mã A), VAT 8%; không có C/O
 - id: imp-230
   declaration_ref: '108420628300'
@@ -3966,7 +3968,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MFN (mã A), VAT 8%; không có C/O
 - id: imp-231
   declaration_ref: '108420628300'
@@ -3982,7 +3984,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MFN (mã A), VAT 8%; không có C/O
 - id: imp-232
   declaration_ref: '108420628300'
@@ -3999,7 +4001,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MFN (mã A), VAT 8%; không có C/O
 - id: imp-233
   declaration_ref: '108420628300'
@@ -4016,7 +4018,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Xuất xứ CH (Thụy Sĩ) khác nước Người XK (IT); MFN mã A; không có C/O
 - id: imp-234
   declaration_ref: '108420628300'
@@ -4032,7 +4034,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MFN (mã A); không có C/O
 - id: imp-235
   declaration_ref: '108420628300'
@@ -4048,7 +4050,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MFN (mã A), VAT 8%; không có C/O
 - id: imp-236
   declaration_ref: '108420628300'
@@ -4065,7 +4067,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MFN (mã A), VAT 8%; Người XK I.M.A. S.P.A. (Ý); không có C/O
 - id: imp-237
   declaration_ref: '108421796710'
@@ -4082,7 +4084,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MMTB nhập phục vụ SX trực tiếp; chung Bill với TK 108422428920/H11; thuế NK
     0% (MFN, B01)
 - id: imp-238
@@ -4100,7 +4102,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-239
   declaration_ref: '108422428920'
@@ -4116,7 +4118,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Hàng FOC (VNLWW20260612-FOC) đi kèm máy; chung Bill với TK 108421796710/A12
 - id: imp-240
   declaration_ref: '108422428920'
@@ -4133,7 +4135,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-241
   declaration_ref: '108428583060'
@@ -4150,7 +4152,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-242
   declaration_ref: '108428970861'
@@ -4167,7 +4169,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: MMTB nhập phục vụ SX trực tiếp; tờ khai có thay đổi đăng ký ngày 2026-07-15;
     thuế NK 0% (MFN, B01)
 - id: imp-243
@@ -4185,7 +4187,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-244
   declaration_ref: '108428970861'
@@ -4202,7 +4204,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-245
   declaration_ref: '108430900210'
@@ -4219,7 +4221,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Xuất xứ Đức (Novexx Solutions GmbH); thuế NK 0% (MFN, B01), không dùng C/O
     ưu đãi
 - id: imp-246
@@ -4237,7 +4239,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Xuất xứ Nhật (Nishibe Kikai); có phí đóng gói 5.000 JPY (mã điều chỉnh C/AD)
 - id: imp-247
   declaration_ref: '108431786740'
@@ -4254,7 +4256,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: Nước xuất xứ IT (Italy) KHÁC nước người xuất khẩu KR (Woojin Plaimm Co., Ltd,
     Hàn Quốc)
 - id: imp-248
@@ -4272,7 +4274,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 
 - id: imp-249
   declaration_ref: '108433007650'
@@ -4289,7 +4291,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 (SXXK): thuế NK 15% được miễn (XN210) và GTGT không thu (VK120). Xuất
     xứ IT khác nước người XK (MX - SIT Manufacturing, Mexico).'
 - id: imp-250
@@ -4307,7 +4309,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: 'E31 (SXXK): thuế NK 15% được miễn (XN210) và GTGT không thu (VK120). Xuất
     xứ IT khác nước người XK (MX).'
 - id: imp-251
@@ -4325,7 +4327,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 (SXXK); có C/O form E (ACFTA) số E26MA2JQDRA90057 ngày 08/07/2026 -> thuế
     suất ưu đãi đặc biệt 0% (mã biểu thuế B05, mã áp dụng C). GTGT không thu (VK120).
 - id: imp-252
@@ -4343,7 +4345,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 (SXXK); C/O form E (ACFTA) E26MA2JQDRA90057, thuế NK ưu đãi đặc biệt 0%
     (B05). GTGT không thu (VK120).
 - id: imp-253
@@ -4361,7 +4363,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 (SXXK); C/O form E (ACFTA) E26MA2JQDRA90057, thuế NK ưu đãi đặc biệt 0%
     (B05). GTGT không thu (VK120).
 - id: imp-254
@@ -4378,7 +4380,7 @@ lines:
   has_co: true
   co_form: form E
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 (SXXK); C/O form E (ACFTA) E26MA2JQDRA90057, thuế NK ưu đãi đặc biệt 0%
     (B05). GTGT không thu (VK120).
 - id: imp-255
@@ -4396,7 +4398,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 (SXXK); hàng TQ nhưng khai MFN (mã biểu thuế B01, mã áp dụng A) vì thuế
     NK ưu đãi đã 0%, không dùng C/O. GTGT không thu (VK120).
 - id: imp-256
@@ -4414,7 +4416,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: E31 (SXXK); hàng TQ khai MFN 0% (B01), không dùng C/O. GTGT không thu (VK120).
 - id: imp-257
   declaration_ref: '108435216850'
@@ -4431,7 +4433,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: A12 nhập kinh doanh. Xuất xứ JP khác nước người XK (TW - Webcontrol Machinery,
     Đài Loan). Thuế NK 0%, chỉ nộp GTGT 10% (mã VB901) = 6.149.141 VND.
 - id: imp-258
@@ -4449,7 +4451,7 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: A12 nhập kinh doanh; thuế NK 0% (B01), GTGT 10% (mã VB901). Trị giá khai theo
     JPY (EXW).
 - id: imp-259
@@ -4467,6 +4469,6 @@ lines:
   has_co: false
   co_form: 
   cbpg: 
-  confidence: unmarked
+  confidence: uncertain
   note: A12 nhập kinh doanh; thuế NK 0% (B01), GTGT 10% (mã VB901). Trị giá khai theo
     JPY (EXW).

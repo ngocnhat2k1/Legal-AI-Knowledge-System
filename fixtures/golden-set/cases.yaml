@@ -4,11 +4,14 @@
 #
 # RULES (full version in README.md):
 #   - Only real cleared declarations here. applied_rate = statutory NK rate as declared.
-#   - confidence: unmarked = pending declaration-staff review; they set confident|uncertain (TASK-001).
+#   - confidence = 'uncertain' for ALL cases (owner decision 2026-07-18): these are past-practice
+#     (cleared, but NOT certified legally correct). Correctness is verified later at point-of-use via
+#     a Zalo user-confirmation loop, not by upfront staff certification. So "accuracy" against this
+#     set means "reproduces past practice", NOT "proven correct". See README.md.
 #   - has_co=true → applied_rate is CONDITIONAL on a valid C/O (see conditions); else MFN applies.
 #   - cbpg = anti-dumping duty, a SEPARATE charge on top of NK duty; may be applied or exempted.
 #   - selected_for = why this case is in the golden set (coverage tag).
-# Cross-check: 247/249 lines agree with the commercial biểu thuế (BIEU THUE XNK 2026.04.05), 2026-07-18.
+# Cross-check: 249/249 lines agree with the commercial biểu thuế (BIEU THUE XNK 2026.04.05), 2026-07-18.
 ---
 cases:
 - id: gs-001
@@ -30,7 +33,7 @@ cases:
   cbpg: CBPG 34.27% (được miễn)
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - anti-dumping (CBPG)
   - FTA ACFTA (có C/O)
@@ -56,7 +59,7 @@ cases:
   cbpg: CBPG 35.58% (áp dụng)
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - anti-dumping (CBPG)
   note: Thuế chống bán phá giá CBPG 35,58% (mã G088) được áp dụng (9.409.606 VND)
@@ -79,7 +82,7 @@ cases:
   cbpg: CBPG (được miễn)
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - anti-dumping (CBPG)
   - FTA AANZFTA (có C/O)
@@ -104,7 +107,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA ACFTA (có C/O)
   note: C/O form E E267222820460026 ngày 10/06/2026 (ACFTA) -> thuế NK ưu đãi đặc
@@ -131,7 +134,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA EVFTA (có C/O)
   note: Ưu đãi đặc biệt EVFTA (mã biểu thuế B25); C/O tự chứng nhận REX theo TT 14/2026/TT-BCT
@@ -154,7 +157,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA EVFTA (có C/O)
   note: Ưu đãi đặc biệt EVFTA (mã biểu thuế B25); MFN cho HS này là 12% -> 0% nhờ
@@ -177,7 +180,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA AANZFTA (có C/O)
   note: C/O AANZ EC1326132800 (áp dụng mục 1,2,8,15), mã biểu thuế B07; E31 nhập SXXK
@@ -201,7 +204,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA ACFTA (có C/O)
   note: C/O form E (ACFTA) E265693661700030 ngày 17/06/2026, ưu đãi 0% (mã C); exporter
@@ -225,7 +228,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA ATIGA (có C/O)
   note: Nhập khẩu tại chỗ (NKTC) VN-VN; exporter & origin đều VN; C/O form D điện
@@ -249,7 +252,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA AANZFTA (có C/O)
   note: E31 nhập SXXK; C/O AANZ EC1426331571 (01/06/2026); VAT không chịu thuế (để
@@ -272,7 +275,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA AANZFTA (có C/O)
   note: E31 nhập SXXK; C/O AANZ; VAT không chịu thuế
@@ -295,7 +298,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA AANZFTA (có C/O)
   note: E31 nhập SXXK; C/O AANZ; VAT không chịu thuế
@@ -318,7 +321,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA ACFTA (có C/O)
   note: E31 nhập SXXK; C/O form E E26MA2JQDRA90049 (16/06/2026); VAT không chịu thuế
@@ -341,7 +344,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA ACFTA (có C/O)
   - cặp minh chứng C/O 8481.80.99
@@ -364,7 +367,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA ACFTA (có C/O)
   note: E31 nhập SXXK; C/O form E; VAT không chịu thuế
@@ -387,7 +390,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA ACFTA (có C/O)
   note: C/O form E (ACFTA) E266143234370006 mục 1 → NK 0% ưu đãi đặc biệt (ký hiệu
@@ -412,7 +415,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA ACFTA (có C/O)
   note: E31 nhập SXXK; ưu đãi ACFTA theo C/O form E E267377927780139 ngày 30/06/2026
@@ -436,7 +439,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA ACFTA (có C/O)
   note: A41; ưu đãi ACFTA theo C/O form E 02261416650002040 ngày 29/06/2026 (mã áp
@@ -460,7 +463,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA AANZFTA (có C/O)
   note: Ưu đãi đặc biệt AANZFTA (mã C, 0%); C/O form AANZ EC1326133605 (18/06/2026)
@@ -483,7 +486,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA AANZFTA (có C/O)
   note: Ưu đãi AANZFTA (mã C, 0%); C/O form AANZ
@@ -506,7 +509,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - FTA AANZFTA (có C/O)
   - cặp minh chứng C/O 8481.80.99
@@ -530,7 +533,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế miễn/không phải %
   - bẫy xuất xứ ≠ người bán
@@ -557,7 +560,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế miễn/không phải %
   note: 'DNCX (Detmold Packaging) nhập tạo TSCĐ E13: KHÔNG chịu thuế NK (mã miễn XNK32,
@@ -584,7 +587,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế miễn/không phải %
   note: Nhập vào DNCX/khu phi thuế quan từ nước ngoài (E13, XNK32); Thuế suất NK để
@@ -608,7 +611,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế miễn/không phải %
   note: Nhập vào DNCX (E13); người XK là NCC nội địa 'CN NETMARKS VN' mã nước VN nhưng
@@ -633,7 +636,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế miễn/không phải %
   note: DNCX/EPE import (E13) - hàng không chịu thuế NK & GTGT (XNK90/VK900); Thuế
@@ -657,7 +660,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế miễn/không phải %
   note: DNCX/EPE import (E13) - không chịu thuế NK & GTGT (XNK90/VK900); rate blank.
@@ -680,7 +683,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế miễn/không phải %
   note: DNCX/EPE import (E13) - không chịu thuế NK & GTGT (XNK90/VK900); rate blank.
@@ -704,7 +707,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế miễn/không phải %
   note: DNCX/EPE import (E13) - không chịu thuế NK & GTGT (XNK90/VK900); rate blank.
@@ -728,7 +731,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế cao 20%
   - bẫy xuất xứ ≠ người bán
@@ -754,7 +757,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế cao 17%
   - MFN đa dạng
@@ -778,7 +781,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế cao 25%
   - MFN đa dạng
@@ -802,7 +805,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế cao 30%
   note: 'Importer khác: Công ty TNHH Kyodo Printing (Việt Nam), không phải Rheem;
@@ -827,7 +830,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế cao 17%
   note: H11 nhập khác; hàng không có giá trị thương mại, trị giá 20 USD, PTTT KHONGTT
@@ -851,7 +854,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế cao 20%
   note: 'E31 nhập SXXK: thuế NK & VAT được miễn (mã VK120/XN210), tỷ lệ 20% là mức
@@ -876,7 +879,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế cao 20%
   note: 'H11 (nhập khác): hàng mẫu không có giá trị thương mại, PTTT = KHONGTT. Thuế
@@ -900,7 +903,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - thuế cao 20%
   note: 
@@ -923,7 +926,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - bẫy xuất xứ ≠ người bán
   - MFN đa dạng
@@ -947,7 +950,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - bẫy xuất xứ ≠ người bán
   - MFN đa dạng
@@ -972,7 +975,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - bẫy xuất xứ ≠ người bán
   - MFN đa dạng
@@ -997,7 +1000,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - bẫy xuất xứ ≠ người bán
   - MFN đa dạng
@@ -1023,7 +1026,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - cặp minh chứng C/O 8481.80.99
   note: 
@@ -1046,7 +1049,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: 
@@ -1069,7 +1072,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: 
@@ -1092,7 +1095,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: 
@@ -1115,7 +1118,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: 
@@ -1138,7 +1141,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: 
@@ -1161,7 +1164,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: exporter Wing Singa Machinery (HK) Limited, địa chỉ Kowloon HK nhưng mã nước
@@ -1185,7 +1188,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: 
@@ -1208,7 +1211,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: 
@@ -1230,7 +1233,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: Nhập chung bill/invoice với TK 108336397520/E31 (B01 MFN)
@@ -1252,7 +1255,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: 
@@ -1275,7 +1278,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: VAT 8% (mã VB245); B01 MFN dù xuất xứ AU
@@ -1297,7 +1300,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: Xuất xứ US khác nước người XK (KR); hàng gửi từ Korea
@@ -1319,7 +1322,7 @@ cases:
   cbpg: 
   decree: 
   cleared: true
-  confidence: unmarked
+  confidence: uncertain
   selected_for:
   - MFN đa dạng
   note: 

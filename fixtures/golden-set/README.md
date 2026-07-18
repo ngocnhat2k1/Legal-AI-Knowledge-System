@@ -11,7 +11,8 @@ Xem [TASK-001 trong danh sách công việc](../../.agent/planning/01-task-list.
 - **[cases.yaml](cases.yaml)** — **55 case tinh tuyển**, phủ 4 FTA (ACFTA/AANZFTA/ATIGA/EVFTA), ca CBPG (áp + miễn), bẫy xuất-xứ, thuế "M"/miễn, mức cao 17–30%, và bộ ba `8481.80.99` (MFN 10% / ACFTA 0% / AANZFTA 0%).
 - **[import-corpus.yaml](import-corpus.yaml)** — **toàn bộ 259 dòng hàng** (pool để TASK-012 lấy mẫu ngẫu nhiên).
 - **Đã cross-check: 249/249 dòng khớp** với biểu thuế thương mại `BIEU THUE XNK 2026.04.05` (nguồn thứ cấp độc lập) → xem [company-data-assets.md](../../.agent/concepts/company-data-assets.md).
-- **Còn thiếu:** cờ `confidence` vẫn `unmarked` — cần bộ phận khai báo rà và đổi thành `confident`/`uncertain` (mục 3 Luật chơi).
+- **Confidence:** tất cả 55 case = `uncertain` (quyết định chủ dự án 2026-07-18) — đây là dữ liệu *đã-khai-qua* (đã thông quan), **không phải** *chắc chắn đúng luật*. Việc xác minh đúng/sai diễn ra **lúc dùng thật qua vòng xác nhận Zalo**, không phải staff certify trước. → "chạy xanh" ở TASK-012 nghĩa là *tái hiện thực tiễn quá khứ*, không phải *đúng luật đã chứng nhận*.
+- **File rỗng `108337700001`** (0-byte) đã **bỏ qua** theo yêu cầu chủ dự án.
 
 ## Vì sao nó tồn tại
 

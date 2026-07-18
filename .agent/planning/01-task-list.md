@@ -30,9 +30,13 @@ Phạm vi của ghi chú này: Giai đoạn 0 (Nền tảng) và Giai đoạn 1 
 
 ## TASK-001: Xây dựng bộ golden set
 
-Status: doing
+Status: done (2026-07-18)
 
-> **Cập nhật 2026-07-18:** 55 case thật + 259 dòng corpus đã dựng trong `fixtures/golden-set/` (nguồn: 117 tờ khai nhập khẩu của chủ sở hữu), cross-check **249/249 khớp** với biểu thuế thương mại. **Còn lại để chuyển `done`:** (1) bộ phận khai báo tick cờ `confidence` (tự tin/không chắc) cho 55 case; (2) gửi lại 1 file rỗng `108337700001`. Xem [company-data-assets.md](../concepts/company-data-assets.md) và [fixtures/golden-set](../../fixtures/golden-set/README.md).
+> **Kết quả:** 55 case tinh tuyển + 259 dòng corpus trong `fixtures/golden-set/` (nguồn: 117 tờ khai NK của chủ sở hữu). Cross-check **249/249 khớp** với biểu thuế thương mại; chấm tay 4 tờ (15/15 dòng khớp).
+>
+> **Confidence = `uncertain` cho toàn bộ** (quyết định chủ dự án 2026-07-18): dữ liệu đã-khai-qua, không certify đúng luật. Xác minh đúng/sai để **lúc dùng thật qua vòng xác nhận Zalo**, không phải staff certify trước. File rỗng `108337700001` bỏ qua. Xem [company-data-assets.md](../concepts/company-data-assets.md) và [fixtures/golden-set](../../fixtures/golden-set/README.md).
+>
+> **Hệ quả cho TASK-012:** vì mọi mục là `uncertain`, "chạy xanh" nghĩa là *tái hiện đúng thực tiễn quá khứ*, không phải *đúng luật đã được chứng nhận*.
 
 **Công việc này đến trước tiên. Trước repo, trước parser, trước bất kỳ đoạn mã truy xuất nào.**
 

@@ -23,8 +23,8 @@ thực sự đã xảy ra**, thường khác đi.
 | | |
 |---|---|
 | **Giai đoạn hiện tại** | Giai đoạn 0 — Nền móng |
-| **Công việc tiếp theo** | Đóng nốt [TASK-001](01-task-list.md) (confidence từ bộ phận khai báo); có thể chạy song song TASK-002/003/004 |
-| **Đang bị chặn bởi** | TASK-001 chỉ còn chờ bộ phận khai báo tick confidence 55 case + gửi lại 1 file rỗng — không còn chặn toàn bộ |
+| **Công việc tiếp theo** | TASK-001 đã xong. Tiếp: TASK-002/003/004 (điều tra độc lập) hoặc TASK-006 (khung repo) |
+| **Đang bị chặn bởi** | Không có. TASK-001 đã đóng (confidence = uncertain toàn bộ; xác minh để lúc dùng qua Zalo). |
 | **Code đã viết** | Chưa có code ứng dụng (cố ý). Đã có fixtures golden set `fixtures/golden-set/`. |
 | **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
 
@@ -35,6 +35,8 @@ thực sự đã xảy ra**, thường khác đi.
 [company-data-assets.md](../concepts/company-data-assets.md). Phần DUY NHẤT còn lại là cờ `confidence`
 (tự tin / không chắc) do **bộ phận khai báo** tự đánh dấu — agent KHÔNG được tự quyết. Cảnh báo gốc bên
 dưới vẫn đúng về nguyên tắc; chỉ khác một điều: golden set nay đã tồn tại, chỉ chờ được đánh dấu.
+
+**→ Đã đóng (2026-07-18):** chủ dự án quyết định `confidence = uncertain` cho **toàn bộ** golden set (đã-khai-qua ≠ chắc chắn đúng luật), và xác minh đúng/sai để **lúc dùng thật qua vòng xác nhận Zalo**, không staff certify trước. TASK-001 xong. Nguyên tắc "không rửa thực-tiễn-cũ thành chắc-chắn-đúng" được giữ nguyên — chỉ dời điểm xác minh về lúc sử dụng.
 
 **TASK-001 là golden set: 30–50 câu hỏi từ chính các tờ khai của chủ sở hữu, với các đáp án mà
 chủ sở hữu đã biết là đúng.** Không agent nào có thể viết nó. Không agent nào nên bịa ra nó.
@@ -55,7 +57,7 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 
 | Công việc | Trạng thái | Ghi chú |
 |---|---|---|
-| TASK-001 — Golden set | 🟡 đang tiến hành | 55 case thật + 259 corpus, cross-check 249/249 khớp; chờ bộ phận khai báo tick confidence + 1 file rỗng gửi lại |
+| TASK-001 — Golden set | ✅ xong 2026-07-18 | 55 case + 259 corpus, cross-check 249/249, chấm tay 15/15; confidence = uncertain toàn bộ (xác minh qua Zalo lúc dùng) |
 | TASK-002 — Giải quyết xung đột API customs.gov.vn | 🔲 chưa làm | Research 10 và 12 mâu thuẫn; chưa giải quyết |
 | TASK-003 — Chứng minh phân tích DOCX nhận biết bảng | 🔲 chưa làm | Research 12 để lại khoảng trống này một cách tường minh |
 | TASK-004 — Kiểm tra provisionTree của vbpl có được điền không | 🔲 chưa làm | Câu hỏi mở giá trị cao nhất cho giai đoạn RAG |
@@ -123,10 +125,14 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 - **Cross-check 249/249 là validation thật.** Tờ khai thật (oracle độc lập) đồng thuận 100% với biểu thuế thương mại (nguồn thứ cấp). Nhưng cả hai đều phái sinh từ nghị định; **Công báo mới là thẩm quyền** (TASK-008 vẫn phải đối chiếu văn bản gốc).
 - **Bẫy xuất xứ ≠ nước người bán phổ biến (36/259).** Vd Bossard Malaysia (MY) → hàng xuất xứ CN; Webcontrol Đài Loan (TW) → xuất xứ DE. Đọc "Nước xuất xứ" theo dòng. (Baosteel "Singapore" khai mã nước CN = xuất xứ — tên khác mã nước, KHÔNG tính vào 36; chấm tay bắt được chỗ ghi nhầm này.)
 
+**Chốt TASK-001 (cùng phiên)**
+- Chủ dự án quyết: `confidence = uncertain` cho toàn bộ 55 case + 259 corpus. Lý do: dữ liệu đã-khai-qua ≠ đúng luật; **xác minh đúng/sai để lúc dùng thật qua vòng xác nhận Zalo**, không staff certify trước. → "chạy xanh" TASK-012 = tái hiện thực tiễn quá khứ.
+- File rỗng `108337700001` bỏ qua. Bảng review `confidence-review.csv` gỡ (không cần tick từng dòng nữa).
+- Chấm tay 4 tờ: 15/15 dòng khớp (HS/xuất xứ/ngày/thuế/C/O/CBPG).
+- **TASK-001 → done.** (Đáng cân nhắc: viết ADR riêng cho "verify-on-use qua Zalo" khi thiết kế Giai đoạn 3.)
+
 **Tiếp theo**
-- Bộ phận khai báo tick confidence 55 case (bảng review `confidence-review.csv` đã xuất).
-- Gửi lại file rỗng `108337700001` (0-byte).
-- Chấm mẫu tay: đã đọc 4 tờ (15/15 dòng khớp HS/xuất xứ/ngày/thuế/C/O/CBPG). Có thể chạy song song TASK-002/003/004 (điều tra độc lập).
+- TASK-002/003/004 (điều tra độc lập, không phụ thuộc dữ liệu chủ dự án) hoặc TASK-006 (khung repo NestJS + Postgres).
 
 ---
 
