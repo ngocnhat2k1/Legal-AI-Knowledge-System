@@ -1,7 +1,7 @@
 ---
 type: concept
 status: active
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - ../project-context.md
   - ../business-rules.md
@@ -425,7 +425,7 @@ chúng, không phải của ghi chú này.
   duyệt**.
 - Benchmark của nhà cung cấp (arXiv:2412.14179) là **nhỏ (n=103) và đặc thù US-HTS**. Nó không chuyển
   giao sạch sẽ sang AHTN 8 chữ số của Việt Nam.
-- **TRANH CÃI / CHƯA GIẢI QUYẾT — API customs.gov.vn.** Nghiên cứu 10 báo cáo phát hiện một API
+- **TRANH CÃI ĐÃ GIẢI QUYẾT (2026-07-18) — API customs.gov.vn.** Nghiên cứu 10 báo cáo phát hiện một API
   customs.gov.vn; **nghiên cứu 12 mâu thuẫn một phần với nó**. Báo cáo 12 xác minh rằng `/scripts/main.js`
   hardcode một backend JSON tại `http://123.30.210.236:8080/hqcustomsapi/` — một IP thô qua HTTP trần
   trên cổng 8080, bao gồm một endpoint `.../hqcustomsapi/captcha/CheckCaptcha`, nên **ít nhất một phần
@@ -435,8 +435,20 @@ chúng, không phải của ghi chú này.
   trường thêm của báo cáo 12 là ngay cả khi tiếp cận được thì nó cũng là một công cụ *tra cứu* chứ
   không phải xuất hàng loạt, việc liệt kê ~11k mã qua một endpoint không có tài liệu, được che bởi
   CAPTCHA trên một IP thô là mong manh và đối kháng, và **nó không mang thẩm quyền pháp lý — Nghị định
-  mới có**. **Cả hai lập trường đều đứng vững. Xung đột chưa được giải quyết.** Đừng lập kế hoạch phụ
-  thuộc vào API này mà chưa tái lập được khả năng tiếp cận từ Việt Nam.
+  mới có**. **Cả hai phát hiện đều là thật — chúng mô tả hai endpoint khác nhau, và xung đột nay đã được
+  giải quyết (2026-07-18):** chủ sở hữu **quan sát trực tiếp trên trình duyệt (tab Network của
+  devtools)** thấy cổng thông tin thuế quan customs.gov.vn **gọi endpoint "bridge"**
+  (`POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`) và **nhận
+  được dữ liệu trả về**. Điều này **bác bỏ** giả thuyết của báo cáo 12 rằng cổng thông tin chỉ là vỏ
+  JS chết mà backend duy nhất là IP thô `123.30.210.236:8080` (đã timeout), và **xác nhận** báo cáo
+  10 rằng "bridge" là endpoint sống. **Quyết định của chủ sở hữu: dùng "bridge"; KHÔNG theo đuổi
+  backend IP thô.** Đây là **quan sát trên tab trình duyệt, KHÔNG phải tái lập bằng curl trần và
+  KHÔNG phải một response mẫu đã chụp** — ba mục nghiệm thu còn lại của TASK-002 **vẫn chưa làm**
+  (nhưng không chặn thiết kế): tái lập bằng curl trần từ mạng công ty, chụp một response mẫu cho một
+  mã HS đã biết để đối chiếu với bộ phận khai báo, và dò giới hạn tần suất (rate-limit). **Trạng thái
+  không đổi:** API vẫn chỉ là lớp **đối chiếu tiện lợi (cross-check), KHÔNG phải nguồn chân lý pháp
+  lý** — không quyết định thiết kế nào phụ thuộc vào "bridge", pipeline `.doc` của Công báo vẫn là
+  đường chịu tải chính.
 
 ## Kiến thức liên quan
 

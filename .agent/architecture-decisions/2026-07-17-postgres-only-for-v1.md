@@ -1,7 +1,7 @@
 ---
 type: architecture-decision
 status: approved
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - README.md
   - ../project-context.md
@@ -109,7 +109,7 @@ Chỉ áp dụng cho v1 — hai tính năng được nêu tên trong [Bối cả
 
 ## Yêu cầu rà soát
 
-- Xác minh rằng không đường code v1 nào phụ thuộc vào API customs.gov.vn gây tranh cãi. Báo cáo 10 và 12 **trực tiếp mâu thuẫn với nhau** về việc liệu nó có truy cập được và bị chặn bằng captcha hay không, và **xung đột chưa được giải quyết** — xem [Nguồn Dữ liệu](../concepts/data-sources.md) và [Bối cảnh Dự án](../project-context.md#câu-hỏi-mở). Cả hai báo cáo đồng thuận về phần ràng buộc chúng ta: nó không có cấp phép Điều khoản dịch vụ, không có SLA, không có phiên bản hóa và **không có thẩm quyền pháp lý — Nghị định mới có**.
+- Xác minh rằng không đường code v1 nào phụ thuộc vào API customs.gov.vn gây tranh cãi. Báo cáo 10 và 12 từng mâu thuẫn về việc endpoint nào là backend sống, nhưng chúng mô tả hai endpoint khác nhau và **xung đột đã được giải quyết (2026-07-18)**: chủ dự án quan sát trực tiếp trên trình duyệt (tab Network) rằng cổng biểu thuế gọi endpoint "bridge" (POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue) và nhận về dữ liệu — xác nhận báo cáo 10, bác giả thuyết "vỏ JS chết chỉ trỏ tới raw IP" của báo cáo 12; raw IP 123.30.210.236:8080 cố tình không theo đuổi — xem [Nguồn Dữ liệu](../concepts/data-sources.md) và [Bối cảnh Dự án](../project-context.md#câu-hỏi-mở). Việc này không nâng trạng thái của API: nó vẫn chỉ là lớp đối chiếu tiện lợi, không phải nguồn chân lý pháp lý — cả hai báo cáo đồng thuận nó không có cấp phép Điều khoản dịch vụ, không có SLA, không có phiên bản hóa và **không có thẩm quyền pháp lý — Nghị định mới có**.
 - Xác minh rằng vị từ thời gian là một bộ lọc `WHERE` trong cùng truy vấn với bất kỳ tìm kiếm vector nào, không bao giờ là một hậu-lọc và không bao giờ là một đầu vào xếp hạng.
 - Xác minh rằng định danh phụ lục (Phụ lục I xuất khẩu so với Phụ lục II nhập khẩu) là một phần của khóa chính, không phải được suy ra. **1.520 mã HS xuất hiện trong cả hai phụ lục của ND 26/2023 và 1.329 mã mang mức thuế suất khác nhau** — một bộ phân tích mù phụ lục trả về mức thuế xuất khẩu cho một câu hỏi nhập khẩu ở tỷ lệ thành công biểu kiến 94% (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 12). Xem [Hệ thống Biểu thuế](../concepts/tariff-system.md).
 - Xác minh rằng bảng `jobs` ghi lại số lần thử và kết quả một cách bền vững đủ để trả lời "lần cuối chúng ta nạp thành công X là khi nào, và từ số công báo nào?"
@@ -118,7 +118,7 @@ Chỉ áp dụng cho v1 — hai tính năng được nêu tên trong [Bối cả
 
 ## Chưa xác minh / Không được dựa vào
 
-- **Xung đột về API customs.gov.vn chưa được giải quyết** (báo cáo 10 so với 12). Đừng coi bất kỳ tường thuật nào là đã ngã ngũ. Được tái hiện đầy đủ trong [Nguồn Dữ liệu](../concepts/data-sources.md).
+- **Xung đột về API customs.gov.vn đã được giải quyết (2026-07-18)**: chủ dự án quan sát trực tiếp trên trình duyệt (tab Network) rằng cổng gọi endpoint "bridge" và nhận về dữ liệu (xác nhận báo cáo 10, bác giả thuyết "vỏ JS chết" của báo cáo 12). Đây là quan sát trên tab Network — **chưa** tái hiện bằng bare curl từ mạng công ty, **chưa** bắt mẫu response cho một HS đã biết để đối chiếu với bộ phận khai báo, và **chưa** dò giới hạn tốc độ; các việc này còn tồn đọng nhưng không chặn thiết kế. Được tái hiện đầy đủ trong [Nguồn Dữ liệu](../concepts/data-sources.md).
 - **Postgres FTS như một vật thay thế BM25 là chưa được đo lường** — xem Rủi ro. Đây là giả định của chúng ta, không phải của nghiên cứu.
 - **Việc liệu đồ thị cấp điều khoản của vbpl có được điền dữ liệu hay không là câu hỏi mở có giá trị cao nhất** và là trigger được nêu tên duy nhất để cân nhắc lại Neo4j. Cả `provisionTree` và `referenceProvisions` đều `null` trên mọi văn bản được lấy mẫu; thông cáo tái ra mắt tháng 4 năm 2026 tuyên bố có mô hình hóa ở cấp điều khoản, nhưng không ai xác nhận được điều đó (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 04).
 - **Đóng góp đồ thị của SBV-LawGraph là chưa được chính các tác giả của nó chứng minh** (không ablation, tập đánh giá 100 cặp hỏi–đáp). Đừng trích dẫn điểm 0.69 R@1 của nó làm bằng chứng rằng một cơ sở dữ liệu đồ thị sẽ giúp ích cho chúng ta.

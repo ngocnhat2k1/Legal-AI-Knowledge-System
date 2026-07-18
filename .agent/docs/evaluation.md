@@ -1,7 +1,7 @@
 ---
 type: doc
 status: active
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - ../concepts/hs-classification.md
   - ../concepts/tariff-system.md
@@ -354,9 +354,9 @@ Thay vào đó, đã tìm thấy:
 
 Tái lập từ nghiên cứu với các cờ gốc của chúng. **Đừng nâng bất kỳ cái nào trong số này thành một tuyên bố tự tin mà không có xác minh độc lập.**
 
-### Còn tranh cãi — hai agent nghiên cứu trực tiếp mâu thuẫn nhau
+### Đã giải quyết (2026-07-18) — hai agent từng mâu thuẫn, nay xác nhận endpoint "bridge" hoạt động
 
-**API biểu thuế customs.gov.vn. Xung đột CHƯA ĐƯỢC GIẢI QUYẾT.** Điều này quan trọng với việc đánh giá một cách cụ thể vì customs.gov.vn là một trong hai nguồn đối chiếu được đề xuất cho cổng Giai đoạn 1 §3.1. Nếu API không tiếp cận được, cổng phải chạy dựa trên riêng ECUS hoặc dựa trên văn bản nghị định.
+**API biểu thuế customs.gov.vn. Xung đột ĐÃ ĐƯỢC GIẢI QUYẾT (2026-07-18).** Chủ sở hữu quan sát trực tiếp trên trình duyệt (tab Network của devtools) rằng cổng biểu thuế customs.gov.vn thực sự gọi endpoint "bridge" (`POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`) và nhận dữ liệu trả về. Điều này bác bỏ giả thuyết của research 12 rằng cổng là một vỏ JS chết mà backend duy nhất là IP thô `123.30.210.236:8080` (vốn hết thời gian chờ), và xác nhận research 10 rằng "bridge" là endpoint sống. Hai báo cáo mô tả hai endpoint KHÁC nhau — cả hai đều có thể đúng — nhưng với dự án này, backend IP thô cố ý KHÔNG được theo đuổi. Quyết định của chủ sở hữu: dùng "bridge"; không đuổi theo backend IP thô. Cần trung thực về bản chất bằng chứng: đây là một quan sát trên tab trình duyệt, KHÔNG phải một lần tái lập bằng `curl` thuần và cũng chưa bắt được một sample response — các mục đó (tái lập bằng `curl` thuần từ mạng công ty, bắt một sample response cho một HS đã biết để đối chiếu chéo với bộ phận khai báo, và dò rate-limit) vẫn còn phải làm, tuy không chặn thiết kế. Điều này quan trọng với việc đánh giá một cách cụ thể vì customs.gov.vn là một trong hai nguồn đối chiếu được đề xuất cho cổng Giai đoạn 1 §3.1; kể cả khi API không tiếp cận được, cổng vẫn phải chạy được dựa trên riêng ECUS hoặc dựa trên văn bản nghị định. Trạng thái của API không đổi: nó vẫn là một lớp ĐỐI CHIẾU tiện lợi, KHÔNG phải nguồn chân lý pháp lý — không quyết định thiết kế nào phụ thuộc vào "bridge", và pipeline `.doc` Công báo vẫn là đường đi chịu tải.
 
 | Research 10 khẳng định | Research 12 khẳng định |
 |---|---|
@@ -364,7 +364,7 @@ Tái lập từ nghiên cứu với các cờ gốc của chúng. **Đừng nân
 
 Cả hai agent đồng ý ở hai điểm: `www.customs.gov.vn/robots.txt` trả về `User-agent: *` với **không dòng `Disallow` nào**; và **customs.gov.vn không phải nguồn chân lý pháp lý — Nghị định mới là.** Research 10 thêm các lưu ý của riêng nó: danh sách biểu thuế **không có VIFTA và không có CEPA (UAE)** và các giá trị `THOI_GIAN_CAP_NHAT` là 2019-2020; nó trả về **chỉ mức thuế năm hiện tại**, không có chuỗi năm tương lai; và nó không tài liệu, không phiên bản, không SLA và không cấp phép ToS — nó có thể biến mất hoặc bắt đầu áp captcha bất cứ lúc nào.
 
-**Đừng thiết kế cổng Giai đoạn 1 phụ thuộc vào việc API có sẵn. Tự xác minh khả năng tiếp cận trước khi dựa vào bất kỳ tường thuật nào.**
+**Đừng thiết kế cổng Giai đoạn 1 phụ thuộc vào việc API có sẵn.** Khả năng tiếp cận nay đã được xác nhận qua quan sát trực tiếp trên trình duyệt (tab Network), nhưng hãy tái lập bằng `curl` thuần từ mạng công ty trước khi dựa vào endpoint trong bất kỳ luồng tự động nào.
 
 ### Các tuyên bố chưa xác minh tái lập kèm cờ của chúng
 

@@ -1,7 +1,7 @@
 ---
 type: index
 status: active
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - AGENTS.md
   - project-context.md
@@ -77,7 +77,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 
 ## Xuất xứ và độ cũ (Provenance And Staleness)
 
-Các ghi chú về nghiệp vụ và nguồn dữ liệu được viết vào ngày 2026-07-17 từ mười hai báo cáo nghiên cứu đã truy xuất các nguồn trực tiếp (live), bao gồm ba lượt xác minh đối kháng (adversarial). Ở những nơi hai báo cáo mâu thuẫn với nhau — đáng chú ý là về việc liệu API biểu thuế customs.gov.vn có thể truy cập và không có captcha hay không — **cả hai đều được ghi lại và mâu thuẫn được đánh dấu là chưa giải quyết** thay vì âm thầm giải quyết. Xem `Xung đột chưa giải quyết` trong [Nguồn dữ liệu](concepts/data-sources.md).
+Các ghi chú về nghiệp vụ và nguồn dữ liệu được viết vào ngày 2026-07-17 từ mười hai báo cáo nghiên cứu đã truy xuất các nguồn trực tiếp (live), bao gồm ba lượt xác minh đối kháng (adversarial). Ở những nơi hai báo cáo mâu thuẫn với nhau, **cả hai đều được ghi lại và mâu thuẫn được đánh dấu công khai** thay vì âm thầm giải quyết, và nhiều xung đột vẫn còn để ngỏ. Ngoại lệ đáng chú ý: xung đột về việc liệu API biểu thuế customs.gov.vn có thể truy cập và không có captcha hay không **đã được giải quyết ngày 2026-07-18** (TASK-002) — chủ dự án **quan sát trực tiếp trên trình duyệt (tab Network)** thấy cổng thông tin gọi endpoint `bridge` (`POST .../bridge?url=/customs/servletws/bieuthue/APIBieuThue`) và nhận về dữ liệu, xác nhận research 10 và bác giả thuyết "vỏ JS chết chỉ trỏ tới IP-thô đã timeout" của research 12; dự án dùng `bridge`, không theo đuổi backend IP-thô. Đây là quan sát trên tab trình duyệt — **chưa** tái lập bằng `curl` trần, **chưa** bắt mẫu phản hồi, **chưa** thăm dò rate-limit (vẫn còn to-do, không chặn thiết kế). API vẫn chỉ là một lớp kiểm chứng chéo tiện lợi, **không phải nguồn chân lý pháp lý**. Xem `Xung đột đã giải quyết` trong [Nguồn dữ liệu](concepts/data-sources.md).
 
 Luật Việt Nam thay đổi hằng tháng, và kho tư liệu này biến động một cách bất thường: một nghị định có thể được ban hành, có hiệu lực cùng ngày, được đăng Công báo hai tuần sau đó, và hết hiệu lực tám tuần sau nữa. **Mỗi khẳng định thực tế trong các ghi chú này đều kèm theo một ngày xác minh.** Hãy coi bất kỳ khẳng định nào cũ hơn vài tháng là một manh mối, không phải một sự thật, và hãy xác minh lại trước khi dựa vào nó.
 

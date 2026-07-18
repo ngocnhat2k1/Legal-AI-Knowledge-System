@@ -1,7 +1,7 @@
 ---
 type: architecture-decision
 status: approved
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - ../concepts/tariff-system.md
   - ../concepts/vietnamese-legal-documents.md
@@ -249,8 +249,8 @@ văn bản nghị định.
 
 ## Chưa xác minh / Không được dựa vào
 
-- **API biểu thuế của customs.gov.vn — hai tác nhân nghiên cứu mâu thuẫn với nhau,
-  và xung đột chưa được giải quyết.** Báo cáo 10 nêu rằng nó đã xác minh
+- **API biểu thuế của customs.gov.vn — hai tác nhân nghiên cứu mô tả hai endpoint KHÁC
+  nhau, và xung đột đã được giải quyết (2026-07-18).** Báo cáo 10 nêu rằng nó đã xác minh
   `POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`
   bằng `curl` trần trụi: không xác thực, không cookie, không captcha, trả về MFN + tất cả các cột
   FTA cho mỗi dòng HS (ví dụ `87031010` → `NK_uu_dai: 70, EVFTA_NK: 28.3`).
@@ -258,10 +258,22 @@ văn bản nghị định.
   `http://123.30.210.236:8080/hqcustomsapi/`, một IP thô qua HTTP thuần,
   bao gồm `.../captcha/CheckCaptcha` — và **IP đó bị timeout**; báo cáo 12
   không thể phân biệt rào chặn địa lý với việc chặn lối ra của sandbox và đã tường minh
-  từ chối tuyên bố rằng nó không thể tiếp cận. **Cả hai báo cáo được tái hiện ở đây như đã
-  nộp. ADR này không phụ thuộc vào việc giải quyết** — văn bản nghị định là
-  nguồn chân lý dù thế nào đi nữa, và §Các phương án đã cân nhắc giải thích vì sao API không thể
-  chống đỡ một kho song thời gian ngay cả khi báo cáo 10 đúng.
+  từ chối tuyên bố rằng nó không thể tiếp cận. **Giải quyết (2026-07-18):** chủ dự án đã
+  **quan sát trực tiếp trên trình duyệt (tab Network của devtools)** rằng cổng biểu thuế
+  customs.gov.vn GỌI endpoint "bridge"
+  (`POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`)
+  và nhận dữ liệu trả về. Điều này bác giả thuyết của báo cáo 12 rằng cổng chỉ là một vỏ JS
+  chết mà backend duy nhất là IP thô `123.30.210.236:8080` (vốn bị timeout), và xác nhận
+  báo cáo 10 rằng "bridge" là endpoint sống. Hai báo cáo mô tả hai endpoint khác nhau — cả
+  hai đều có thể đúng — nhưng dự án này **cố ý KHÔNG theo đuổi backend IP thô**. Lưu ý đây
+  mới chỉ là **quan sát trên tab trình duyệt**: chưa tái hiện bằng `curl` trần trụi từ mạng
+  công ty, chưa bắt một mẫu response cho một mã HS đã biết để đối chiếu với phòng khai báo,
+  và chưa thăm dò giới hạn tốc độ — các mục này vẫn còn phải làm nhưng không chặn thiết kế.
+  **Trạng thái của API không đổi: nó vẫn chỉ là một lớp ĐỐI CHIẾU tiện lợi, KHÔNG phải nguồn
+  chân lý pháp lý.** ADR này không phụ thuộc vào việc giải quyết này — văn bản nghị định là
+  nguồn chân lý dù thế nào đi nữa, đường ống `.doc` Công báo vẫn là lối chịu tải, và §Các
+  phương án đã cân nhắc giải thích vì sao API không thể chống đỡ một kho song thời gian ngay
+  cả khi báo cáo 10 đúng.
 - **Vực thẳm FTA 31/12/2027 một phần là suy diễn.** Báo cáo 10 nêu rằng lô 2022 bao trùm
   2022–2027 (với AJCEP NĐ 120/2022 và VJEPA NĐ 124/2022 chạy đến 2028). Báo cáo 12 tường minh
   đánh dấu "tất cả chúng đều hết hiệu lực cùng nhau, đòi hỏi một bộ kế nhiệm đầy đủ" là

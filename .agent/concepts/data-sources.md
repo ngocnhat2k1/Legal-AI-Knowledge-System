@@ -1,7 +1,7 @@
 ---
 type: concept
 status: active
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - tariff-system.md
   - hs-classification.md
@@ -17,9 +17,9 @@ Dữ liệu của Customs Assistant đến từ đâu, và — quan trọng khô
 
 ---
 
-## ⚠️ XUNG ĐỘT CHƯA GIẢI QUYẾT — API biểu thuế customs.gov.vn
+## ✅ XUNG ĐỘT ĐÃ GIẢI QUYẾT — API biểu thuế customs.gov.vn
 
-Hai agent nghiên cứu điều tra cùng một cổng thông tin và đi đến các kết luận không tương thích. **Xung đột này chưa được giải quyết.** Cả hai bản tường trình đều được tái hiện; đừng thiết kế dựa trên bên nào cho đến khi Phase 0 kiểm thử cả hai.
+Hai agent nghiên cứu điều tra cùng một cổng thông tin và đi đến các kết luận không tương thích. **Xung đột này đã được giải quyết (2026-07-18).** Chủ dự án **quan sát trực tiếp trên trình duyệt (tab Network của devtools)** thấy cổng tra cứu biểu thuế customs.gov.vn **gọi endpoint `bridge`** (`POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`) và **nhận về dữ liệu**. Điều này **xác nhận research 10** rằng `bridge` là endpoint sống, và **bác bỏ giả thuyết của research 12** rằng cổng chỉ là một vỏ JS chết mà backend duy nhất là IP thô `123.30.210.236:8080` (vốn bị timeout). Hai bản tường trình mô tả **các endpoint khác nhau** — cả hai đều có thể đúng — nhưng **quyết định của chủ dự án là dùng `bridge` và KHÔNG theo đuổi backend IP thô.** Lưu ý trung thực: đây là **quan sát trên tab trình duyệt**, *chưa* tái hiện bằng `curl` thuần từ mạng công ty và *chưa* bắt được một mẫu response để đối chiếu — các mục nghiệm thu này của TASK-002 **vẫn còn để làm** (nhưng không chặn thiết kế). Trạng thái của API **không đổi**: nó vẫn là một lớp **đối chiếu tiện lợi**, KHÔNG phải nguồn chân lý pháp lý — không quyết định thiết kế nào phụ thuộc vào `bridge`; luồng `.doc` của Công báo vẫn là con đường chịu lực.
 
 ### Quan điểm A — research 10: một API JSON hoạt động, không cần xác thực (đã xác minh bằng curl thuần)
 
@@ -56,9 +56,9 @@ Trích xuất hàng loạt ≈ **1.228 lệnh POST** (một cho mỗi nhóm 4 ch
 - **IP đó bị timeout** từ môi trường nghiên cứu. Agent đã dứt khoát **từ chối khẳng định là không thể tiếp cận** — nó không thể phân biệt việc chặn theo địa lý với việc chặn egress của sandbox.
 - `www.customs.gov.vn/robots.txt` trả về `User-agent: *` với **không có dòng `Disallow` nào cả** (đã xác minh 2026-07-17, nguồn: https://www.customs.gov.vn/robots.txt). Không có sitemap; `/sitemap.xml` → 404.
 
-### Kết luận: chưa giải quyết
+### Kết luận: đã giải quyết (2026-07-18)
 
-Đây **có lẽ là các endpoint khác nhau** — đường dẫn reverse-proxy `/bridge` (Position A) vs IP backend thô được hardcode trong JS của trang (Position B). Điều đó sẽ khiến cả hai bản tường trình đều đúng cùng lúc. Nhưng đây là một giả thuyết, không phải một sự thật đã xác minh. **Kiểm thử cả hai trong Phase 0 trước khi thiết kế dựa trên bên nào.** Đừng để một kế hoạch giả định rằng API tồn tại, và đừng để một kế hoạch giả định rằng nó không tồn tại.
+Giả thuyết "**các endpoint khác nhau**" nay được xác nhận: đường dẫn reverse-proxy `/bridge` (Quan điểm A) là endpoint sống — chủ dự án **quan sát trực tiếp trên trình duyệt (tab Network)** thấy cổng gọi `/bridge` và nhận về dữ liệu — còn IP backend thô hardcode trong JS (Quan điểm B) là **một endpoint khác, cố ý KHÔNG theo đuổi**. Cả hai bản tường trình đều có thể đúng cùng lúc; chỉ khác là dự án chọn `bridge`. **Quyết định: dùng `bridge`.** Lưu ý: đây là quan sát trên tab trình duyệt — tái hiện bằng `curl` thuần từ mạng công ty, bắt một mẫu response cho một HS đã biết để đối chiếu với bộ phận khai báo, và dò giới hạn tốc độ **vẫn còn là việc cần làm** (TASK-002, không chặn thiết kế). API vẫn chỉ là lớp đối chiếu tiện lợi, không phải nguồn chân lý pháp lý.
 
 ### Những lưu ý đúng bất kể quan điểm nào thắng
 
@@ -267,9 +267,9 @@ Nghiên cứu chỉ thực hiện **~40 yêu cầu** tới vbpl và quan sát th
 
 Tái hiện từ chính các cảnh báo trung thực của các agent nghiên cứu. **Đừng tẩy trắng bất kỳ điều nào trong số này thành một khẳng định chắc chắn.**
 
-- **customs.gov.vn API — bản thân xung đột 10-vs-12 là CHƯA GIẢI QUYẾT.** Giải thích "các endpoint khác nhau" (proxy `/bridge` vs IP backend thô `123.30.210.236:8080`) là một **giả thuyết**, không phải một phát hiện. Kiểm thử cả hai trong Phase 0.
+- **customs.gov.vn API — xung đột 10-vs-12 ĐÃ GIẢI QUYẾT (2026-07-18).** Chủ dự án quan sát trực tiếp trên trình duyệt (tab Network) thấy cổng gọi endpoint `/bridge` và nhận về dữ liệu → xác nhận research 10, bác giả thuyết research 12 rằng cổng là vỏ JS chết. Giải thích "các endpoint khác nhau" (proxy `/bridge` vs IP thô `123.30.210.236:8080`) nay được xác nhận; **quyết định dùng `/bridge`, không theo đuổi IP thô.** (Còn để làm, không chặn thiết kế: tái hiện bằng `curl` thuần từ mạng công ty, bắt mẫu response, dò giới hạn tốc độ.)
 - **Liệu `APIBieuThue` có giới hạn tốc độ hay không** — nghiên cứu 10 không dò một cách quyết liệt.
-- **Liệu `123.30.210.236:8080` có thực sự không thể tiếp cận hay không** — nghiên cứu 12 dứt khoát từ chối khẳng định điều này; nó không thể phân biệt chặn theo địa lý với chặn egress của sandbox.
+- **Liệu `123.30.210.236:8080` có thực sự không thể tiếp cận hay không** — nghiên cứu 12 dứt khoát từ chối khẳng định điều này; nó không thể phân biệt chặn theo địa lý với chặn egress của sandbox. Theo quyết định 2026-07-18, IP thô này **không còn được theo đuổi** (dự án dùng `bridge`), nên câu hỏi này không còn liên quan đến dự án — dù bản thân tính tiếp cận chưa từng được xác minh.
 - **Các route gateway của vbpl** — `https://vbpl-bientap-gateway.moj.gov.vn/api` được **tìm thấy và tiếp cận được nhưng CHƯA ĐƯỢC ÁNH XẠ**. Đó là một Spring Cloud Gateway, tiếp cận được công khai và không xác thực ở biên, nhưng mọi đường dẫn được dò đều 404, `/actuator` chỉ phơi ra `health`, và không có Swagger. Frontend gọi nó **phía server qua Next.js Server Actions**, nên các route không bao giờ xuất hiện phía client. Đáng thêm ~30 phút: một API có tài liệu sẽ xóa bỏ toàn bộ bước headless-browser.
 - **Ánh xạ `referenceType` int → nhãn** — quan sát được các giá trị `3` và `12`; chúng ta có 27 nhãn nhưng **không có phép join**.
 - **Liệu `provisionTree` / `referenceProvisions` có BAO GIỜ được điền hay không** — `null` trên cả hai văn bản được lấy mẫu. **Đây là câu hỏi mở có giá trị cao nhất.** Nếu được điền trên toàn site, nó là một **đồ thị pháp luật ở cấp điều khoản**, đúng là thứ mà thông cáo relaunch tháng Tư tuyên bố ("quản lý chi tiết đến từng điều, khoản, điểm... máy có thể tự động đọc, hiểu") — và nó sẽ định hình lại schema truy xuất. **Kiểm thử 10–20 văn bản gần đây trước khi thiết kế schema.**

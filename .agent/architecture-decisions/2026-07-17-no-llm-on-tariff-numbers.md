@@ -1,7 +1,7 @@
 ---
 type: architecture-decision
 status: approved
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - ../concepts/tariff-system.md
   - ../concepts/hs-classification.md
@@ -199,7 +199,7 @@ ADR này: bất kể nguồn là gì, con số được tra cứu theo khóa và
 
 ## Chưa xác minh / Không được dựa vào
 
-- **BỊ MÂU THUẪN — điểm cuối `APIBieuThue` của customs.gov.vn.** Báo cáo nghiên cứu 10
+- **ĐÃ GIẢI QUYẾT — điểm cuối `APIBieuThue` của customs.gov.vn.** Báo cáo nghiên cứu 10
   tuyên bố đó là một JSON API không có tài liệu, không xác thực, không captcha, được tái tạo
   bằng `curl` thuần (`POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`),
   trả về MFN + tất cả thuế suất FTA cho mỗi dòng HS, ví dụ `87031010 → {NK_uu_dai: 70,
@@ -208,8 +208,19 @@ ADR này: bất kể nguồn là gì, con số được tra cứu theo khóa và
   backend khác tại `http://123.30.210.236:8080/hqcustomsapi/` **bao gồm một
   route `/captcha/CheckCaptcha`**, và hoàn toàn không thể tiếp cận IP đó — nó
   đã tường minh từ chối tuyên bố là không thể tiếp cận, không thể phân biệt được rào chặn địa lý
-  với việc chặn lối ra của sandbox. **Xung đột này chưa được giải quyết.** Đừng xây dựng
-  đường nạp dữ liệu trên API này cho đến khi có người tái tạo được lời gọi. Dù thế nào đi nữa nó
+  với việc chặn lối ra của sandbox. **Xung đột này đã được giải quyết (2026-07-18).** Chủ dự án
+  đã quan sát trực tiếp trên trình duyệt (tab Network của devtools) rằng cổng biểu thuế
+  customs.gov.vn GỌI điểm cuối `bridge`
+  (`POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`) và nhận
+  dữ liệu trả về — xác nhận báo cáo 10 rằng `bridge` là điểm cuối sống, và bác bỏ giả thuyết của
+  báo cáo 12 rằng cổng chỉ là một vỏ JS chết mà backend duy nhất là IP thô `123.30.210.236:8080`
+  (vốn đã timeout). Hai báo cáo mô tả HAI điểm cuối khác nhau — cả hai đều có thể đúng — nhưng dự
+  án cố ý KHÔNG theo đuổi backend IP thô. Đây mới là quan sát trên tab trình duyệt, CHƯA phải tái
+  tạo bằng `curl` thuần và CHƯA bắt được phản hồi mẫu; vẫn còn phải làm (không chặn thiết kế): tái
+  tạo bằng `curl` thuần từ mạng công ty, bắt một phản hồi mẫu cho một HS đã biết để đối chiếu với
+  bộ phận khai báo, và dò giới hạn tốc độ. `bridge` vẫn chỉ là lớp đối chiếu tiện lợi, không phải
+  nguồn chân lý — đừng đặt đường nạp dữ liệu chịu tải lên nó; đường Công báo (.doc) vẫn là đường
+  chịu tải. Dù thế nào đi nữa nó
   cũng không thay đổi gì trong ADR này: bản thân báo cáo 10 đã đánh dấu điểm cuối này là
   không có tài liệu, không có phiên bản, với độ phủ FTA lỗi thời (không có VIFTA, không có CEPA;
   các giá trị `THOI_GIAN_CAP_NHAT` là 2019–2020), chỉ có thuế suất của năm hiện tại, và không có
@@ -257,7 +268,7 @@ ADR này: bất kể nguồn là gì, con số được tra cứu theo khóa và
 - [Phân loại mã HS](../concepts/hs-classification.md) — trật tự GRI, hợp đồng
   top-3 + bằng chứng, "Error but Valid".
 - [Nguồn dữ liệu](../concepts/data-sources.md) — Công báo với chinhphu.vn với
-  API customs.gov.vn đang tranh cãi.
+  API customs.gov.vn làm lớp đối chiếu.
 - [Truy xuất RAG pháp lý](../concepts/legal-rag-retrieval.md) — nơi embedding
   *là* công cụ đúng.
 - [Quy tắc nghiệp vụ](../business-rules.md) — quy tắc con-người-quyết-định, yêu cầu

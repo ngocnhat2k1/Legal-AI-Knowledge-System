@@ -23,7 +23,7 @@ thực sự đã xảy ra**, thường khác đi.
 | | |
 |---|---|
 | **Giai đoạn hiện tại** | Giai đoạn 0 — Nền móng |
-| **Công việc tiếp theo** | TASK-001 + TASK-003 xong. Tiếp: TASK-006 (khung repo) / TASK-007 (schema, gồm CBPG) hoặc TASK-002/004 (điều tra) |
+| **Công việc tiếp theo** | TASK-001 + TASK-002 + TASK-003 xong. Tiếp: TASK-006 (khung repo) / TASK-007 (schema, gồm CBPG) hoặc TASK-004 (điều tra) |
 | **Đang bị chặn bởi** | Không có. TASK-001 đã đóng (confidence = uncertain toàn bộ; xác minh để lúc dùng qua Zalo). |
 | **Code đã viết** | Chưa có code ứng dụng (cố ý). Đã có fixtures golden set `fixtures/golden-set/`. |
 | **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
@@ -58,7 +58,7 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | Công việc | Trạng thái | Ghi chú |
 |---|---|---|
 | TASK-001 — Golden set | ✅ xong 2026-07-18 | 55 case + 259 corpus, cross-check 249/249, chấm tay 15/15; confidence = uncertain toàn bộ (xác minh qua Zalo lúc dùng) |
-| TASK-002 — Giải quyết xung đột API customs.gov.vn | 🔲 chưa làm | Research 10 và 12 mâu thuẫn; chưa giải quyết |
+| TASK-002 — Giải quyết xung đột API customs.gov.vn | ✅ xong 2026-07-18 | Quan sát trực tiếp trên trình duyệt (tab Network): portal gọi `/bridge` và nhận dữ liệu → xác nhận research 10, bác research 12; dùng `/bridge`, không đuổi IP-thô. Vẫn chỉ là lớp cross-check, không phải nguồn pháp lý. Còn tồn (không chặn thiết kế): bare-curl từ mạng công ty, lưu sample response, dò rate-limit |
 | TASK-003 — Chứng minh phân tích DOCX nhận biết bảng | ✅ xong 2026-07-18 | Lỗ hổng GIẢ: cells ngăn bởi `\x07`/`\n`, research không thấy delimiter. Parse được → GĐ1 gồm EVFTA+RCEP |
 | TASK-004 — Kiểm tra provisionTree của vbpl có được điền không | 🔲 chưa làm | Câu hỏi mở giá trị cao nhất cho giai đoạn RAG |
 | TASK-005 — Viết các ghi chú kiến thức .agent | ✅ xong 2026-07-17 | Đã kiểm toán; xem Nhật ký phiên làm việc |
@@ -90,9 +90,16 @@ bối cảnh đã được ghi lại. Đọc ADR trước; chỉ mở lại vớ
 Mang theo từ nghiên cứu. **Mỗi cái là một ẩn số thật, không phải một thủ tục hình thức.** Trả lời chúng ở Giai đoạn 0 —
 vài cái thay đổi thiết kế.
 
-1. **API biểu thuế customs.gov.vn có tiếp cận được và không captcha không?** Research 10 nói có (xác minh bằng curl
-   qua `/bridge`); research 12 tìm thấy một backend IP-thô bị captcha chặn mà nó không thể tiếp cận. Có lẽ
-   là các endpoint khác nhau. **Chưa giải quyết.** → TASK-002
+1. ✅ **ĐÃ GIẢI QUYẾT 2026-07-18 (TASK-002):** Chủ dự án **quan sát trực tiếp trên trình duyệt (tab Network)**
+   thấy portal biểu thuế customs.gov.vn gọi endpoint `/bridge`
+   (`POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`) và nhận dữ liệu về.
+   Điều này **xác nhận research 10** (`/bridge` là endpoint sống) và **bác giả thuyết research 12** (rằng portal
+   chỉ là vỏ JS chết, backend duy nhất là IP-thô `123.30.210.236:8080` — vốn timeout). Hai báo cáo mô tả **hai
+   endpoint khác nhau**, có thể cả hai đều đúng; dự án **cố ý không đuổi** backend IP-thô. Đây vẫn chỉ là **lớp
+   cross-check tiện lợi, KHÔNG phải nguồn sự thật pháp lý** — không quyết định thiết kế nào phụ thuộc `/bridge`;
+   pipeline `.doc` Công báo vẫn là đường chịu tải. Lưu ý trung thực: đây là **quan sát trên tab trình duyệt**, chưa
+   phải bare-curl. Các mục nghiệm thu TASK-002 còn tồn (không chặn thiết kế): tái hiện bằng bare-curl từ mạng công
+   ty, lưu một sample response cho một HS đã biết để đối chiếu với bộ phận khai báo, và dò rate-limit. → TASK-002
 2. ✅ **ĐÃ GIẢI QUYẾT 2026-07-18 (TASK-003):** CÓ — parse được (cells ngăn bởi dấu ô Word `\x07`/`\n`, không cần LibreOffice, không heuristic); GĐ1 gồm EVFTA + RCEP. Xem [research/task-003-evfta-parser](../../research/task-003-evfta-parser/README.md). ~~Câu hỏi gốc:~~ **Một bộ phân tích DOCX nhận biết bảng có khôi phục các cột sáu-mức-thuế EVFTA không?** Research 12 suy luận nó
    sẽ khôi phục được nhưng không thể chứng minh (không có LibreOffice/python-docx khả dụng). Khoảng trống này phải khép lại trước
    khi bất kỳ dữ liệu thuế nào được tin. → TASK-003

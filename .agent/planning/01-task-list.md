@@ -68,9 +68,10 @@ Ghi chú:
 
 Status: done (2026-07-18)
 
-> **Kết quả:** endpoint `bridge` của research 10
-> (`POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`) **có phản hồi**
-> → dùng `bridge`. Backend IP-thô `http://123.30.210.236:8080/hqcustomsapi/` của research 12 **bỏ qua có
+> **Kết quả:** chủ dự án **quan sát trực tiếp trên trình duyệt (tab Network)** thấy cổng tra cứu biểu thuế
+> customs.gov.vn gọi endpoint `bridge` của research 10
+> (`POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`) và **nhận dữ liệu
+> trả về** → dùng `bridge`. Backend IP-thô `http://123.30.210.236:8080/hqcustomsapi/` của research 12 **bỏ qua có
 > chủ đích** (quyết định chủ dự án 2026-07-18). Hai research mô tả hai endpoint khác nhau nên cả hai đều
 > có thể đúng; dự án chỉ dùng `bridge`. Ghi lại trong
 > [tariff-system.md](../concepts/tariff-system.md#xung-đột-đã-giải-quyết).
@@ -78,16 +79,18 @@ Status: done (2026-07-18)
 > **API vẫn KHÔNG phải nguồn chân lý** — chỉ là lớp kiểm chứng chéo. Không quyết định thiết kế nào phụ
 > thuộc vào việc `bridge` hoạt động; nếu nó biến mất, pipeline `.doc` Công báo vẫn chịu tải. Cảnh báo còn
 > nguyên: thiếu VIFTA/CEPA, `THOI_GIAN_CAP_NHAT` 2019–2020, chỉ có thuế suất năm hiện tại, rate-limit
-> chưa thăm dò.
+> chưa thăm dò. **Còn to-do (không chặn thiết kế):** tái hiện bằng `curl` trần từ mạng công ty và bắt một
+> phản hồi mẫu cho một mã HS đã biết để đối chiếu với bộ phận khai báo — hiện mới là quan sát trên tab
+> Network, **chưa** tái hiện bằng curl, **chưa** lưu phản hồi mẫu.
 
 Mục tiêu: xác lập, bằng thực nghiệm, liệu một API JSON dùng được có tồn tại trên customs.gov.vn hay không — bởi vì hai báo cáo nghiên cứu mâu thuẫn trực tiếp với nhau và câu trả lời làm thay đổi bản chất của bước kiểm chứng chéo ở Giai đoạn 1.
 
-**Mâu thuẫn, cả hai phía, chưa được giải quyết:**
+**Mâu thuẫn, cả hai phía (nay đã giải quyết — xem Kết quả ở trên):**
 
 - **Research 10** báo cáo đã điều khiển trang "Tra cứu biểu thuế" trong Chrome, bắt được XHR, và tái tạo lại nó bằng `curl` trần: `POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`, body `{"l_class":"TIM_KIEM","l_action":"GET","l_param":"8703","l_bieu_thue":"NK_uu_dai"}`. Nó khẳng định: không xác thực, không JSESSIONID, không captcha, không kiểm tra Referer/Origin; captcha trên trang là **chỉ phía client**; `l_param` là tiền tố HS với tối thiểu 4 chữ số (`"87"` trả về rỗng, `"8703"` trả về 510 dòng); một dòng cho mỗi dòng HS với một cột cho mỗi chế độ thuế (đã xác minh 2026-07-17, nguồn: research 10).
 - **Research 12** báo cáo cổng thông tin là một lớp vỏ JS — trang chủ và URL tra cứu thuế trả về phản hồi giống hệt từng byte 12.013 byte — và rằng `/scripts/main.js` mã hóa cứng một backend **khác**: `http://123.30.210.236:8080/hqcustomsapi/`, IP thô, HTTP thuần, cổng 8080, bao gồm `.../hqcustomsapi/captcha/CheckCaptcha`. **IP đó bị timeout.** Research 12 dứt khoát từ chối tuyên bố rằng nó không thể truy cập được, nói rằng nó không thể phân biệt việc chặn theo địa lý với việc chặn egress của sandbox của chính nó (đã xác minh 2026-07-17, nguồn: research 12).
 
-Chúng mô tả **các endpoint khác nhau**, nên cả hai lời tường thuật đều có thể chính xác. Chưa ai kiểm tra.
+Chúng mô tả **các endpoint khác nhau**, nên cả hai lời tường thuật đều có thể chính xác. **Đã giải quyết 2026-07-18:** chủ dự án quan sát trực tiếp trên trình duyệt (tab Network) thấy cổng gọi `bridge` và nhận dữ liệu về — xác nhận research 10; IP-thô bỏ qua có chủ đích.
 
 Đầu ra kỳ vọng:
 
@@ -461,7 +464,7 @@ Ghi chú:
 
 Mang theo từ nghiên cứu; cũng có trong [00-bootstrap.md](00-bootstrap.md).
 
-- **API customs.gov.vn: research 10 và 12 MÂU THUẪN → ĐÃ GIẢI QUYẾT (2026-07-18, TASK-002).** `bridge` (research 10) có phản hồi và là endpoint được dùng; backend IP-thô (research 12) bỏ qua có chủ đích. Cả hai mô tả endpoint khác nhau nên đều có thể đúng. API vẫn chỉ là lớp kiểm chứng chéo, không phải nguồn chân lý; rate-limit vẫn chưa thăm dò.
+- **API customs.gov.vn: research 10 và 12 MÂU THUẪN → ĐÃ GIẢI QUYẾT (2026-07-18, TASK-002).** Chủ dự án quan sát trực tiếp trên trình duyệt (tab Network) thấy cổng gọi `bridge` (research 10) và nhận dữ liệu về → là endpoint được dùng; backend IP-thô (research 12) bỏ qua có chủ đích. Cả hai mô tả endpoint khác nhau nên đều có thể đúng. API vẫn chỉ là lớp kiểm chứng chéo, không phải nguồn chân lý; tái hiện bằng curl trần, phản hồi mẫu và rate-limit vẫn chưa làm.
 - **Việc nối liền EVFTA là một tạo phẩm của `textutil` được SUY LUẬN, không phải chứng minh** (research 12 không có parser nhận biết bảng khả dụng). TASK-003.
 - **Chuỗi sửa đổi MFN khác nhau giữa research 10 và 12** và không cái nào được xác nhận là đầy đủ. TASK-009.
 - **Cách diễn đạt "các nghị định FTA đợt 2022 đều hết hiệu lực cùng nhau vào 2027-12-31" được SUY LUẬN** bởi research 12; research 10 xác minh các ngày riêng lẻ từ hai nguồn độc lập nhưng cũng lưu ý **AJCEP và VJEPA kéo dài đến 2028** — nên "cùng nhau" vốn đã thiếu chính xác.

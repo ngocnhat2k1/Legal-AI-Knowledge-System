@@ -1,7 +1,7 @@
 ---
 type: concept
 status: active
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - data-sources.md
   - hs-classification.md
@@ -19,7 +19,7 @@ bộ phân tích cú pháp hay bất kỳ lược đồ nào.
 Mọi thứ dưới đây đều mang một ngày xác minh và một nguồn. Ở những chỗ nghiên cứu không chắc chắn hay
 tự-mâu-thuẫn, điều đó được giữ nguyên chứ không được làm phẳng đi. Xem
 [Chưa xác minh / Không được dựa vào](#chưa-xác-minh--không-được-dựa-vào) và
-[Xung đột chưa giải quyết](#xung-đột-chưa-giải-quyết).
+[Xung đột đã giải quyết](#xung-đột-đã-giải-quyết).
 
 ---
 
@@ -372,13 +372,29 @@ khẳng định đầy tự tin.
 
 ---
 
-## Xung đột chưa giải quyết
+## Xung đột đã giải quyết
 
-### API customs.gov.vn: research 10 so với research 12 — CHƯA GIẢI QUYẾT
+### API customs.gov.vn: research 10 so với research 12 — ĐÃ GIẢI QUYẾT (2026-07-18, TASK-002)
+
+**Kết quả (2026-07-18, quyết định chủ dự án):** endpoint `bridge` của nghiên cứu 10
+(`POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`) **có phản hồi** —
+đây là endpoint được dùng. Backend IP-thô `http://123.30.210.236:8080/hqcustomsapi/` của nghiên cứu 12
+**bị bỏ qua một cách có chủ đích** (không theo đuổi). Cả hai lời tường thuật đều có thể đúng — chúng mô
+tả *các endpoint khác nhau*, đúng như phần hòa giải bên dưới dự đoán — nhưng đối với dự án này, `bridge`
+là con đường và IP thô không cần thiết.
+
+Điều này **không** làm thay đổi vị thế của API: nó vẫn là một lớp kiểm chứng chéo tiện lợi, **không phải
+nguồn của sự thật pháp lý** (bốn điểm đồng thuận bên dưới vẫn đứng vững nguyên vẹn). **Không quyết định
+thiết kế nào phụ thuộc vào việc `bridge` hoạt động** — nếu nó biến mất hoặc bắt đầu thực thi captcha,
+pipeline `.doc` Công báo vẫn là con đường chịu tải. Rate-limit của `bridge` vẫn chưa được thăm dò.
+
+Bản ghi xung đột gốc được giữ nguyên bên dưới làm lịch sử.
+
+---
 
 Hai agent nghiên cứu đạt đến **những kết luận khác nhau về bản chất đối với cùng một hệ thống**. Cả hai
-đều được tái tạo. **Xung đột này chưa được giải quyết và phải được dàn xếp bằng kiểm thử trực tiếp trước
-khi bất kỳ thiết kế nào phụ thuộc vào nó.**
+đều được tái tạo. Xung đột đã được dàn xếp bằng quan sát trực tiếp trên trình duyệt (tab Network,
+TASK-002, 2026-07-18): `bridge` phản hồi, IP thô bị bỏ qua.
 
 | | **Nghiên cứu 10** | **Nghiên cứu 12** |
 |---|---|---|
@@ -388,10 +404,11 @@ khi bất kỳ thiết kế nào phụ thuộc vào nó.**
 | Khả năng tiếp cận | Tái lập với `curl` trần; `"8703"` trả về **510 dòng** | Không thể tiếp cận IP; nói rõ *"Tôi không thể phân biệt giữa chặn theo địa lý và chặn lối ra của sandbox, nên tôi không khẳng định là nó không thể tiếp cận"* |
 | Tính khả thi | ~1,228 POST (mỗi nhóm 4 chữ số một lần) tái dựng 11,414 dòng × 26 biểu thuế — *"vài giờ cào lịch sự"* | *"Việc liệt kê ~11k mã qua một endpoint không có tài liệu, được che bởi CAPTCHA trên một IP thô là mong manh và đối kháng"* |
 
-**Cách hòa giải khả dĩ (CHƯA được xác minh — đừng coi là đã ngã ngũ):** hai bên có thể đã tìm thấy
-*những endpoint khác nhau* — một đường dẫn được proxy qua `bridge` trên host công khai so với một backend
-IP-thô — và captcha có thể chặn cái này mà không chặn cái kia. Không ai kiểm thử cả hai. Hãy coi là còn
-để ngỏ.
+**Cách hòa giải — nay ĐÃ được xác nhận (2026-07-18, TASK-002):** đúng như dự đoán, hai bên tìm thấy
+*những endpoint khác nhau* — đường dẫn được proxy qua `bridge` trên host công khai so với một backend
+IP-thô. Chủ dự án quan sát trực tiếp trên trình duyệt (tab Network) thấy cổng gọi `bridge` và nhận dữ liệu
+→ `bridge` là endpoint sống (Quan điểm A đúng); backend IP-thô **cố ý không theo đuổi**. Còn to-do (không
+chặn thiết kế): tái hiện bằng `curl` trần từ mạng công ty và bắt một mẫu response cho một HS đã biết.
 
 **Những gì cả hai agent đồng thuận, và do đó đứng vững bất kể xung đột được giải quyết ra sao:**
 
