@@ -14,7 +14,6 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import qrcode from 'qrcode-terminal';
 import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 
 const API = process.env.API_URL || 'http://api:3000';
@@ -33,12 +32,8 @@ const saveSession = (data) => {
 
 function onQrEvent(ev) {
   if (ev.type === LoginQRCallbackEventType.QRCodeGenerated) {
-    try {
-      qrcode.generate(ev.data.code, { small: true });
-    } catch {
-      /* nếu ASCII lỗi, dùng file /session/qr.png */
-    }
-    // Lưu ảnh QR nét (PNG) để quét dễ hơn ASCII terminal.
+    // QR đăng nhập THẬT do Zalo tạo nằm ở ev.data.image (ghi ra /session/qr.png).
+    // KHÔNG vẽ QR từ ev.data.code — đó chỉ là mã polling nội bộ, Zalo đọc ra text.
     try {
       const b64 = String(ev.data.image || '').replace(/^data:image\/\w+;base64,/, '');
       if (b64) {
@@ -48,7 +43,7 @@ function onQrEvent(ev) {
     } catch {
       /* ignore */
     }
-    console.log('[zalo] Ảnh QR nét: /session/qr.png. Mã sống ~90s, tự làm mới. QUÉT BẰNG CHỨC NĂNG QUÉT QR TRONG APP ZALO.');
+    console.log('[zalo] QR MỚI tại /session/qr.png (mã sống ~90s). Mở ẢNH này và quét bằng app Zalo — ĐỪNG quét QR trong terminal.');
   } else if (ev.type === LoginQRCallbackEventType.QRCodeScanned) {
     console.log('[zalo] đã quét — xác nhận trên điện thoại…');
   } else if (ev.type === LoginQRCallbackEventType.GotLoginInfo) {
