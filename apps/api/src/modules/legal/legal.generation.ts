@@ -9,13 +9,35 @@
  * never from the model's own legal knowledge (the "training data overrides the
  * retrieved context" failure mode), and abstain when they don't support an answer.
  */
-import { execFile } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { promisify } from 'node:util';
 
 import type { RetrievedArticle } from './legal.retrieval';
 
-const run = promisify(execFile);
+/**
+ * Run `claude -p` with the prompt piped via STDIN, not as an argv. The grounded
+ * prompt (several verbatim provisions) easily exceeds the OS per-argument limit
+ * (MAX_ARG_STRLEN, 128 KB) — passing it as an argument fails with spawn E2BIG.
+ * stdin has no such limit.
+ */
+function runClaude(prompt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('claude', ['-p'], {
+      env: { ...process.env, HOME: tmpdir() },
+      timeout: 45_000,
+    });
+    let out = '';
+    let err = '';
+    child.stdout.on('data', (d) => (out += d));
+    child.stderr.on('data', (d) => (err += d));
+    child.on('error', reject);
+    child.on('close', (code) =>
+      code === 0 ? resolve(out) : reject(new Error(err || `claude exited ${code}`)),
+    );
+    child.stdin.on('error', () => {}); // ignore EPIPE if claude exits early
+    child.stdin.end(prompt);
+  });
+}
 
 export interface GenerationResult {
   answer: string;
@@ -54,11 +76,7 @@ export async function generate(
   if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) return null;
   const prompt = buildPrompt(query, asOf, articles);
   try {
-    const { stdout } = await run('claude', ['-p', prompt], {
-      timeout: 45_000,
-      maxBuffer: 1024 * 1024,
-      env: { ...process.env, HOME: tmpdir() },
-    });
+    const stdout = await runClaude(prompt);
     const m = stdout.match(/\{[\s\S]*\}/);
     if (!m) return null;
     const j = JSON.parse(m[0]) as {
