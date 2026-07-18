@@ -423,7 +423,11 @@ Ghi chú:
 
 ## TASK-012: Chấp nhận Giai đoạn 1 — đối chiếu với thực tế
 
-Status: todo
+Status: doing (2026-07-18) — MFN xong 100%, FTA chờ nạp biểu FTA
+
+> **Kết quả (MFN):** ([research/task-012-acceptance](../../research/task-012-acceptance/README.md)) golden set curated **27/27 MFN khớp (100%)**; full corpus **192/192 MFN khớp (100%)**; **0 mismatch** — pipeline base tái hiện **219 dòng tờ khai thật** hoàn hảo. **Mẫu ngẫu nhiên 20/20** khớp verbatim ô nguồn Công báo (`source_cell_text`). → phần MFN của Giai đoạn 1 đối chiếu được với thực tế.
+>
+> **Còn lại (không phải điểm một phần — dữ liệu còn thiếu):** **77 dòng FTA** (ACFTA 34/AANZFTA 34/ATIGA 5/EVFTA 4) chờ nạp 4 biểu FTA + RCEP (cùng pipeline TASK-008/003); sau đó `preferential[]` của API có dữ liệu, validate ca "0% nếu có C/O".
 
 Depends on: TASK-001, TASK-011.
 
