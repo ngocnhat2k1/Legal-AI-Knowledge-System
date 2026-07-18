@@ -1,7 +1,7 @@
 ---
 type: planning
 status: active
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - 00-bootstrap.md
   - 01-task-list.md
@@ -23,12 +23,18 @@ thực sự đã xảy ra**, thường khác đi.
 | | |
 |---|---|
 | **Giai đoạn hiện tại** | Giai đoạn 0 — Nền móng |
-| **Công việc tiếp theo** | [TASK-001 — Xây golden set](01-task-list.md) |
-| **Đang bị chặn bởi** | TASK-001 cần **chủ sở hữu**, không phải một agent (xem bên dưới) |
-| **Code đã viết** | Chưa có. Điều này là cố ý — xem [Kế hoạch khởi động](00-bootstrap.md). |
-| **Phiên gần nhất** | 2026-07-17 (xem nhật ký bên dưới) |
+| **Công việc tiếp theo** | Đóng nốt [TASK-001](01-task-list.md) (confidence từ bộ phận khai báo); có thể chạy song song TASK-002/003/004 |
+| **Đang bị chặn bởi** | TASK-001 chỉ còn chờ bộ phận khai báo tick confidence 55 case + gửi lại 1 file rỗng — không còn chặn toàn bộ |
+| **Code đã viết** | Chưa có code ứng dụng (cố ý). Đã có fixtures golden set `fixtures/golden-set/`. |
+| **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
 
-### ⚠️ Công việc tiếp theo không thể do một agent làm
+### ⚠️ TASK-001 — phần còn lại cần con người, không phải agent
+
+**Cập nhật 2026-07-18:** chủ sở hữu đã đưa 117 tờ khai nhập khẩu thật; agent đã bóc thành golden set
+(55 case tinh tuyển + 259 dòng corpus) và cross-check 249/249 với biểu thuế thương mại. Xem
+[company-data-assets.md](../concepts/company-data-assets.md). Phần DUY NHẤT còn lại là cờ `confidence`
+(tự tin / không chắc) do **bộ phận khai báo** tự đánh dấu — agent KHÔNG được tự quyết. Cảnh báo gốc bên
+dưới vẫn đúng về nguyên tắc; chỉ khác một điều: golden set nay đã tồn tại, chỉ chờ được đánh dấu.
 
 **TASK-001 là golden set: 30–50 câu hỏi từ chính các tờ khai của chủ sở hữu, với các đáp án mà
 chủ sở hữu đã biết là đúng.** Không agent nào có thể viết nó. Không agent nào nên bịa ra nó.
@@ -49,7 +55,7 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 
 | Công việc | Trạng thái | Ghi chú |
 |---|---|---|
-| TASK-001 — Golden set | ⛔ bị chặn (chủ sở hữu) | Phải có trước bất kỳ code truy xuất nào |
+| TASK-001 — Golden set | 🟡 đang tiến hành | 55 case thật + 259 corpus, cross-check 249/249 khớp; chờ bộ phận khai báo tick confidence + 1 file rỗng gửi lại |
 | TASK-002 — Giải quyết xung đột API customs.gov.vn | 🔲 chưa làm | Research 10 và 12 mâu thuẫn; chưa giải quyết |
 | TASK-003 — Chứng minh phân tích DOCX nhận biết bảng | 🔲 chưa làm | Research 12 để lại khoảng trống này một cách tường minh |
 | TASK-004 — Kiểm tra provisionTree của vbpl có được điền không | 🔲 chưa làm | Câu hỏi mở giá trị cao nhất cho giai đoạn RAG |
@@ -99,6 +105,28 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-07-18 — Golden set từ tờ khai thật + cross-check 249/249
+
+**Đã làm**
+- Chủ sở hữu đưa 137 tờ khai PDF (Google Drive) + biểu thuế thương mại (`BIEU THUE XNK 2026.04.05`, 19.901 dòng × 109 cột) + 2 file SOP khai báo nội bộ.
+- Bóc song song 117 tờ nhập khẩu bằng workflow (14 agent) → 100 tờ đọc được, 259 dòng hàng; 18 tờ xuất khẩu → 41 dòng (thuế XK = 0).
+- Dựng golden set: `fixtures/golden-set/cases.yaml` (55 tinh tuyển) + `import-corpus.yaml` (259, pool TASK-012). Ghi chú `concepts/company-data-assets.md` (5 nguồn dữ liệu).
+- Cross-check tự động 259 dòng với biểu thuế thương mại: **249/249 khớp** (map đúng form C/O → cột FTA).
+
+**Đã học — bất ngờ / địa hình thật**
+- **Đính kèm chat bị cắt; file phải nằm trên đĩa để subagent đọc.** Dán 100+ PDF vào chat chỉ tới ~35 tờ; subagent không mở được đính kèm chat, chỉ đọc file theo path. Danh sách file cố định → hard-code path vào script workflow, đừng nhờ list-agent (nó trả rỗng dù `find` chạy tay ra đủ — flaky).
+- **Đừng khái quát từ mẫu nhỏ.** Lô 35 tờ chỉ thấy ACFTA → kết luận sai "công ty chỉ dùng ACFTA". Full 117 lộ **4 FTA**: AANZFTA, ACFTA, ATIGA, EVFTA (REX). Đã sửa note.
+- **CBPG (chống bán phá giá) là khoản riêng, có thật.** Có dòng bị áp CBPG 35,58% chồng lên thuế NK (thu thật ~9,4tr VND), có dòng được miễn. Schema TASK-007 phải tách CBPG khỏi thuế NK — bề mặt trách nhiệm pháp lý mới.
+- **Cross-check 249/249 là validation thật.** Tờ khai thật (oracle độc lập) đồng thuận 100% với biểu thuế thương mại (nguồn thứ cấp). Nhưng cả hai đều phái sinh từ nghị định; **Công báo mới là thẩm quyền** (TASK-008 vẫn phải đối chiếu văn bản gốc).
+- **Bẫy xuất xứ ≠ nước người bán phổ biến (36/259).** Baosteel Singapore → xuất xứ CN, Bossard Malaysia → CN, Webcontrol Đài Loan → DE. Đọc "Nước xuất xứ" theo dòng.
+
+**Tiếp theo**
+- Bộ phận khai báo tick confidence 55 case (bảng review `confidence-review.csv` đã xuất).
+- Gửi lại file rỗng `108337700001` (0-byte).
+- Chấm mẫu tay ~5 tờ. Có thể chạy song song TASK-002/003/004 (điều tra độc lập).
 
 ---
 

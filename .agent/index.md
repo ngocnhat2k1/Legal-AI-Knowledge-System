@@ -41,6 +41,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Hệ thống biểu thuế](concepts/tariff-system.md) — MFN, các biểu thuế FTA, cái bẫy phụ lục, vách đá 2027
 - [Văn bản pháp luật Việt Nam](concepts/vietnamese-legal-documents.md) — thứ bậc, hiệu lực, văn bản hợp nhất, cuộc tái cấu trúc các bộ năm 2025
 - [Nguồn dữ liệu](concepts/data-sources.md) — dữ liệu đến từ đâu, và cái gì không bao giờ được scrape
+- [Tài sản dữ liệu nội bộ của công ty](concepts/company-data-assets.md) — tờ khai lịch sử (golden oracle), SOP nội bộ, biểu thuế thương mại: vai trò + cross-check 249/249
 - [Truy xuất RAG pháp lý](concepts/legal-rag-retrieval.md) — giai đoạn tương lai; được ghi lại ngay bây giờ khi bằng chứng còn mới
 
 ## Quy trình (Workflows)

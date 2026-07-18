@@ -1,7 +1,7 @@
 ---
 type: planning
 status: active
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - 00-bootstrap.md
   - ../project-context.md
@@ -30,7 +30,9 @@ Phạm vi của ghi chú này: Giai đoạn 0 (Nền tảng) và Giai đoạn 1 
 
 ## TASK-001: Xây dựng bộ golden set
 
-Status: todo
+Status: doing
+
+> **Cập nhật 2026-07-18:** 55 case thật + 259 dòng corpus đã dựng trong `fixtures/golden-set/` (nguồn: 117 tờ khai nhập khẩu của chủ sở hữu), cross-check **249/249 khớp** với biểu thuế thương mại. **Còn lại để chuyển `done`:** (1) bộ phận khai báo tick cờ `confidence` (tự tin/không chắc) cho 55 case; (2) gửi lại 1 file rỗng `108337700001`. Xem [company-data-assets.md](../concepts/company-data-assets.md) và [fixtures/golden-set](../../fixtures/golden-set/README.md).
 
 **Công việc này đến trước tiên. Trước repo, trước parser, trước bất kỳ đoạn mã truy xuất nào.**
 

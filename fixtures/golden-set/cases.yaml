@@ -1,0 +1,1325 @@
+# Golden set — curated cases from real cleared import declarations (TASK-001).
+# Rebuilt 2026-07-18 from the 117-declaration extraction (supersedes the earlier 26 hand-done cases,
+# which are a subset of this). Full pool for random sampling is import-corpus.yaml.
+#
+# RULES (full version in README.md):
+#   - Only real cleared declarations here. applied_rate = statutory NK rate as declared.
+#   - confidence: unmarked = pending declaration-staff review; they set confident|uncertain (TASK-001).
+#   - has_co=true → applied_rate is CONDITIONAL on a valid C/O (see conditions); else MFN applies.
+#   - cbpg = anti-dumping duty, a SEPARATE charge on top of NK duty; may be applied or exempted.
+#   - selected_for = why this case is in the golden set (coverage tag).
+# Cross-check: 247/249 lines agree with the commercial biểu thuế (BIEU THUE XNK 2026.04.05), 2026-07-18.
+---
+cases:
+- id: gs-001
+  source: declaration
+  declaration_ref: '108320312550'
+  declaration_date: '2026-06-09'
+  regime: E31
+  goods_description: Thép không hợp kim cán phẳng (sơn sau khi mạ kẽm), dày 0.55mm
+    x rộng 1360mm, carbon <0.6%, NPL sx bình nước nóng
+  hs_code: 7210.70.12
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: ACFTA
+  has_co: true
+  co_form: form E
+  conditions: Ưu đãi ACFTA 0% chỉ khi có C/O form E hợp lệ; nếu không, áp MFN.
+  cbpg: CBPG 34.27% (được miễn)
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - anti-dumping (CBPG)
+  - FTA ACFTA (có C/O)
+  note: C/O form E (ACFTA) E266316963822702; ưu đãi đặc biệt 0% (mã C); có thuế chống
+    bán phá giá CBPG 34,27% mã G061 nhưng được miễn (GM); exporter Baosteel Singapore
+    PTE nhưng mã nước CN; E31 SXXK, VAT miễn VK120
+- id: gs-002
+  source: declaration
+  declaration_ref: '108326239230'
+  declaration_date: '2026-06-11'
+  regime: A12
+  goods_description: Nhôm không hợp kim dạng thanh, 620x90mm, phụ tùng máy làm túi
+    - Cooling holder insertion bar
+  hs_code: 7604.10.10
+  origin: JP
+  exporter_country: JP
+  applied_rate: 5%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: CBPG 35.58% (áp dụng)
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - anti-dumping (CBPG)
+  note: Thuế chống bán phá giá CBPG 35,58% (mã G088) được áp dụng (9.409.606 VND)
+- id: gs-003
+  source: declaration
+  declaration_ref: '108341270440'
+  declaration_date: '2026-06-16'
+  regime: E31
+  goods_description: Thép không hợp kim cán phẳng 0.8x80mm, mạ kẽm nhúng nóng, dạng
+    cuộn
+  hs_code: 7212.30.13
+  origin: AU
+  exporter_country: AU
+  applied_rate: 5%
+  rate_type: conditional
+  schedule: AANZFTA
+  has_co: true
+  co_form: form AANZ
+  conditions: Ưu đãi AANZFTA 5% chỉ khi có C/O form AANZ hợp lệ; nếu không, áp MFN.
+  cbpg: CBPG (được miễn)
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - anti-dumping (CBPG)
+  - FTA AANZFTA (có C/O)
+  note: C/O AANZ (B07, áp dụng mục 8); thuế CBPG - thuộc đối tượng KHÔNG chịu (mã
+    GK); E31 NK miễn/GTGT không thu
+- id: gs-004
+  source: declaration
+  declaration_ref: '108334418950'
+  declaration_date: '2026-06-12'
+  regime: E31
+  goods_description: Men sứ PE RTU HWT Enamel EMP6555 (dạng bột, NPL sản xuất bình
+    nước nóng), mới 100%
+  hs_code: 3207.20.90
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: ACFTA
+  has_co: true
+  co_form: form E
+  conditions: Ưu đãi ACFTA 0% chỉ khi có C/O form E hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA ACFTA (có C/O)
+  note: C/O form E E267222820460026 ngày 10/06/2026 (ACFTA) -> thuế NK ưu đãi đặc
+    biệt 0% (letter C). NL nhập SXXK (E31, XN210), VAT không chịu (VK120). Phụ phí
+    LSS 1.883.209 VND (khoản điều chỉnh mã AD). Khai CAS không thuộc phụ lục II/III
+    NĐ 24 & 28/2026/NĐ-CP.
+- id: gs-005
+  source: declaration
+  declaration_ref: '108341162860'
+  declaration_date: '2026-06-17'
+  regime: A12
+  goods_description: Bộ phận máy thổi màng nhựa - cụm trục lăn sợi carbon Phi22xL460mm
+    (CFRP-roller)
+  hs_code: 8477.90.39
+  origin: DE
+  exporter_country: DE
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: EVFTA
+  has_co: true
+  co_form: EVFTA self-certified origin (REX)
+  conditions: Ưu đãi EVFTA 0% chỉ khi có C/O EVFTA self-certified origin (REX) hợp
+    lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA EVFTA (có C/O)
+  note: Ưu đãi đặc biệt EVFTA (mã biểu thuế B25); C/O tự chứng nhận REX theo TT 14/2026/TT-BCT
+- id: gs-006
+  source: declaration
+  declaration_ref: '108341162860'
+  declaration_date: '2026-06-17'
+  regime: A12
+  goods_description: Vòng đệm cách nhiệt bằng nhựa Phi742xT2mm (Insulating plate)
+  hs_code: 3926.90.99
+  origin: DE
+  exporter_country: DE
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: EVFTA
+  has_co: true
+  co_form: EVFTA self-certified origin (REX)
+  conditions: Ưu đãi EVFTA 0% chỉ khi có C/O EVFTA self-certified origin (REX) hợp
+    lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA EVFTA (có C/O)
+  note: Ưu đãi đặc biệt EVFTA (mã biểu thuế B25); MFN cho HS này là 12% -> 0% nhờ
+    C/O REX
+- id: gs-007
+  source: declaration
+  declaration_ref: '108341270440'
+  declaration_date: '2026-06-16'
+  regime: E31
+  goods_description: Đáy bằng thép của bình nước nóng, dày 2.5mm, Phi576mm, cao 185mm
+  hs_code: 7326.90.99
+  origin: AU
+  exporter_country: AU
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: AANZFTA
+  has_co: true
+  co_form: form AANZ
+  conditions: Ưu đãi AANZFTA 0% chỉ khi có C/O form AANZ hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA AANZFTA (có C/O)
+  note: C/O AANZ EC1326132800 (áp dụng mục 1,2,8,15), mã biểu thuế B07; E31 nhập SXXK
+    NK miễn/GTGT không thu; nhập chung Cont/BL/INV với TK 108341376250/H11
+- id: gs-008
+  source: declaration
+  declaration_ref: '108350611460'
+  declaration_date: '2026-06-18'
+  regime: E31
+  goods_description: Kính phẳng tôi nhiệt (kính an toàn), dày 3.2mm, KT 1955x1002mm,
+    NPL sản xuất tấm năng lượng mặt trời
+  hs_code: 7007.19.90
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: ACFTA
+  has_co: true
+  co_form: form E
+  conditions: Ưu đãi ACFTA 0% chỉ khi có C/O form E hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA ACFTA (có C/O)
+  note: C/O form E (ACFTA) E265693661700030 ngày 17/06/2026, ưu đãi 0% (mã C); exporter
+    FLAT (Hong Kong) khai mã nước CN
+- id: gs-009
+  source: declaration
+  declaration_ref: '108353250240'
+  declaration_date: '2026-06-18'
+  regime: E31
+  goods_description: Ống đồng (đồng tinh luyện, phi 7.94mm x 0.71mm), NPL sản xuất
+    bộ phận làm nóng bình nước nóng điện, hiệu JINTIAN
+  hs_code: 7411.10.00
+  origin: VN
+  exporter_country: VN
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: ATIGA
+  has_co: true
+  co_form: form D
+  conditions: Ưu đãi ATIGA 0% chỉ khi có C/O form D hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA ATIGA (có C/O)
+  note: Nhập khẩu tại chỗ (NKTC) VN-VN; exporter & origin đều VN; C/O form D điện
+    tử VN-VN, mã C 0%; hóa đơn bằng VND
+- id: gs-010
+  source: declaration
+  declaration_ref: '108354699020'
+  declaration_date: '2026-06-22'
+  regime: E31
+  goods_description: Chi tiết ghép nối ống hình chữ T có ren R3/4M-DN15, dài 63mm,
+    bằng đồng thau
+  hs_code: 7412.20.91
+  origin: AU
+  exporter_country: AU
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: AANZFTA
+  has_co: true
+  co_form: form AANZ
+  conditions: Ưu đãi AANZFTA 0% chỉ khi có C/O form AANZ hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA AANZFTA (có C/O)
+  note: E31 nhập SXXK; C/O AANZ EC1426331571 (01/06/2026); VAT không chịu thuế (để
+    trống)
+- id: gs-011
+  source: declaration
+  declaration_ref: '108354699020'
+  declaration_date: '2026-06-22'
+  regime: E31
+  goods_description: Van giảm áp PR254, bằng đồng thau, đường kính trong ≤2,5cm
+  hs_code: 8481.10.21
+  origin: AU
+  exporter_country: AU
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: AANZFTA
+  has_co: true
+  co_form: form AANZ
+  conditions: Ưu đãi AANZFTA 0% chỉ khi có C/O form AANZ hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA AANZFTA (có C/O)
+  note: E31 nhập SXXK; C/O AANZ; VAT không chịu thuế
+- id: gs-012
+  source: declaration
+  declaration_ref: '108354699020'
+  declaration_date: '2026-06-22'
+  regime: E31
+  goods_description: Van an toàn nhiệt độ và áp lực 1/2x1000 HTEX1507, bằng đồng thau,
+    dài 163mm
+  hs_code: 8481.40.10
+  origin: AU
+  exporter_country: AU
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: AANZFTA
+  has_co: true
+  co_form: form AANZ
+  conditions: Ưu đãi AANZFTA 0% chỉ khi có C/O form AANZ hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA AANZFTA (có C/O)
+  note: E31 nhập SXXK; C/O AANZ; VAT không chịu thuế
+- id: gs-013
+  source: declaration
+  declaration_ref: '108360951420'
+  declaration_date: '2026-06-22'
+  regime: E31
+  goods_description: Cuộn cảm bằng đồng, 3.12W, 12V/46Ohm/0.26A, đóng ngắt van tiết
+    lưu
+  hs_code: 8504.50.93
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: ACFTA
+  has_co: true
+  co_form: form E
+  conditions: Ưu đãi ACFTA 0% chỉ khi có C/O form E hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA ACFTA (có C/O)
+  note: E31 nhập SXXK; C/O form E E26MA2JQDRA90049 (16/06/2026); VAT không chịu thuế
+- id: gs-014
+  source: declaration
+  declaration_ref: '108360951420'
+  declaration_date: '2026-06-22'
+  regime: E31
+  goods_description: Van tiết lưu bằng đồng, đường kính trong ≤2,5cm, phi 17.35mm,
+    cao 78mm
+  hs_code: 8481.80.99
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: ACFTA
+  has_co: true
+  co_form: form E
+  conditions: Ưu đãi ACFTA 0% chỉ khi có C/O form E hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA ACFTA (có C/O)
+  - cặp minh chứng C/O 8481.80.99
+  note: E31 nhập SXXK; C/O form E; VAT không chịu thuế
+- id: gs-015
+  source: declaration
+  declaration_ref: '108360951420'
+  declaration_date: '2026-06-22'
+  regime: E31
+  goods_description: Van điều khiển bằng khí nén, bằng kim loại, 4 ngõ, KT 94.4x105mm
+  hs_code: 8481.80.82
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: ACFTA
+  has_co: true
+  co_form: form E
+  conditions: Ưu đãi ACFTA 0% chỉ khi có C/O form E hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA ACFTA (có C/O)
+  note: E31 nhập SXXK; C/O form E; VAT không chịu thuế
+- id: gs-016
+  source: declaration
+  declaration_ref: '108364401460'
+  declaration_date: '2026-06-23'
+  regime: E31
+  goods_description: Bộ ổn nhiệt tự động (hoạt động bằng điện 220V), dùng cho bình
+    nước nóng
+  hs_code: 9032.10.00
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: ACFTA
+  has_co: true
+  co_form: form E
+  conditions: Ưu đãi ACFTA 0% chỉ khi có C/O form E hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA ACFTA (có C/O)
+  note: C/O form E (ACFTA) E266143234370006 mục 1 → NK 0% ưu đãi đặc biệt (ký hiệu
+    C, mã B05). Người XK ghi ROBERTSHAW (THAILAND) LTD nhưng Mã nước = CN, xếp hàng
+    Qingdao/CN. E31, VAT trống.
+- id: gs-017
+  source: declaration
+  declaration_ref: '108401022440'
+  declaration_date: '2026-07-04'
+  regime: E31
+  goods_description: Điện trở đốt nóng bằng điện (120V/1440W), NPL để sản xuất bình
+    nước nóng
+  hs_code: 8516.80.30
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: ACFTA
+  has_co: true
+  co_form: form E
+  conditions: Ưu đãi ACFTA 0% chỉ khi có C/O form E hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA ACFTA (có C/O)
+  note: E31 nhập SXXK; ưu đãi ACFTA theo C/O form E E267377927780139 ngày 30/06/2026
+    (mã áp thuế C, biểu thuế B05) → thuế NK 0%; VAT được miễn (VK120).
+- id: gs-018
+  source: declaration
+  declaration_ref: '108401191400'
+  declaration_date: '2026-07-04'
+  regime: A41
+  goods_description: Bơm nhiệt dùng môi chất lạnh R290 (hiệu Solahart, Model 180559,
+    5Kw 220-240Vac/50Hz)
+  hs_code: 8418.61.00
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: ACFTA
+  has_co: true
+  co_form: form E
+  conditions: Ưu đãi ACFTA 0% chỉ khi có C/O form E hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA ACFTA (có C/O)
+  note: A41; ưu đãi ACFTA theo C/O form E 02261416650002040 ngày 29/06/2026 (mã áp
+    thuế C, biểu thuế B05) → thuế NK 0%; VAT 10% (78.124.900 VND).
+- id: gs-019
+  source: declaration
+  declaration_ref: '108407661610'
+  declaration_date: '2026-07-06'
+  regime: A41
+  goods_description: Bình chứa nước sinh hoạt bằng thép tráng men sứ, 325 lít, cách
+    nhiệt PU, model T32SHER05, Solahart
+  hs_code: 7309.00.91
+  origin: AU
+  exporter_country: AU
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: AANZFTA
+  has_co: true
+  co_form: form AANZ
+  conditions: Ưu đãi AANZFTA 0% chỉ khi có C/O form AANZ hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA AANZFTA (có C/O)
+  note: Ưu đãi đặc biệt AANZFTA (mã C, 0%); C/O form AANZ EC1326133605 (18/06/2026)
+- id: gs-020
+  source: declaration
+  declaration_ref: '108407661610'
+  declaration_date: '2026-07-06'
+  regime: A41
+  goods_description: Bơm nhiệt (heat pump) Solahart SHW010KS-JEV-1, 10kW R407C 1PH
+    240V
+  hs_code: 8418.61.00
+  origin: AU
+  exporter_country: AU
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: AANZFTA
+  has_co: true
+  co_form: form AANZ
+  conditions: Ưu đãi AANZFTA 0% chỉ khi có C/O form AANZ hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA AANZFTA (có C/O)
+  note: Ưu đãi AANZFTA (mã C, 0%); C/O form AANZ
+- id: gs-021
+  source: declaration
+  declaration_ref: '108410428710'
+  declaration_date: '2026-07-07'
+  regime: E31
+  goods_description: Van đóng mở cảm biến nhiệt độ (bằng đồng thau, đường kính trong
+    ≤2,5cm)
+  hs_code: 8481.80.99
+  origin: AU
+  exporter_country: AU
+  applied_rate: 0%
+  rate_type: conditional
+  schedule: AANZFTA
+  has_co: true
+  co_form: form AANZ
+  conditions: Ưu đãi AANZFTA 0% chỉ khi có C/O form AANZ hợp lệ; nếu không, áp MFN.
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - FTA AANZFTA (có C/O)
+  - cặp minh chứng C/O 8481.80.99
+  note: E31 SXXK không chịu VAT; ưu đãi AANZFTA mã C 0%; C/O form AANZ
+- id: gs-022
+  source: declaration
+  declaration_ref: '108322041111'
+  declaration_date: '2026-06-10'
+  regime: E13
+  goods_description: Máy ép ủi túi, NGAI SHING DEVELOPMENT model NS-5502, 380V 3PH,
+    SX 2016, đã qua sử dụng
+  hs_code: 8451.30.90
+  origin: CN
+  exporter_country: VN
+  applied_rate: miễn (M)
+  rate_type: exempt
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế miễn/không phải %
+  - bẫy xuất xứ ≠ người bán
+  note: E13 chuyển hàng giữa 2 khu phi thuế quan (PTQ→PTQ, XNK33); exporter là DN
+    VN (Tessellation Hoà Bình) nhưng origin CN; máy đã qua sử dụng; ô Thuế suất NK
+    hiển thị 'M' không có %, thuế NK & VAT được miễn (VK130); người mua-bán có quan
+    hệ đặc biệt
+- id: gs-023
+  source: declaration
+  declaration_ref: '108328876460'
+  declaration_date: '2026-06-13'
+  regime: E13
+  goods_description: Máy in phun nhiệt đơn màu (mực đen), Model P260E, 100-240VAC,
+    mới 100%
+  hs_code: 8443.32.29
+  origin: CN
+  exporter_country: HK
+  applied_rate: miễn (M)
+  rate_type: exempt
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế miễn/không phải %
+  note: 'DNCX (Detmold Packaging) nhập tạo TSCĐ E13: KHÔNG chịu thuế NK (mã miễn XNK32,
+    ô thuế suất ghi ''M''/miễn, mã biểu thuế B30) và KHÔNG chịu VAT (VK130), không
+    có % rate. Origin CN != exporter HK (Wuhan Phezer, mã nước HK, xếp hàng Hong Kong).
+    Lưu ý: ''C/O'' trên ký hiệu là ''care-of'' YFHEX Logistics, KHÔNG phải C/O ưu
+    đãi.'
+- id: gs-024
+  source: declaration
+  declaration_ref: '108342507120'
+  declaration_date: '2026-06-15'
+  regime: E13
+  goods_description: Máy kiểm tra điện trở của bo mạch điện tử, kèm thiết bị ghi,
+    hiệu ATG, Code A9, 230V 50Hz 10kA
+  hs_code: 9030.39.00
+  origin: DE
+  exporter_country: DE
+  applied_rate: miễn (M)
+  rate_type: exempt
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế miễn/không phải %
+  note: Nhập vào DNCX/khu phi thuế quan từ nước ngoài (E13, XNK32); Thuế suất NK để
+    trống, mã M = không chịu thuế NK & GTGT; không có mức thuế in ra
+- id: gs-025
+  source: declaration
+  declaration_ref: '108347363940'
+  declaration_date: '2026-06-17'
+  regime: E13
+  goods_description: Máy tính để bàn HP Pro Tower 280 G9 PCI, Core i5-13500, 16GB
+    RAM, 512GB SSD (serial 4CE545CZX7)
+  hs_code: 8471.41.10
+  origin: CN
+  exporter_country: VN
+  applied_rate: miễn (M)
+  rate_type: exempt
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế miễn/không phải %
+  note: Nhập vào DNCX (E13); người XK là NCC nội địa 'CN NETMARKS VN' mã nước VN nhưng
+    xuất xứ hàng CN → origin≠exporter; mã M = không chịu thuế NK & GTGT (VK900/XNK90);
+    'IT-CO0089' là mã tài sản nội bộ, không phải C/O
+- id: gs-026
+  source: declaration
+  declaration_ref: '108371497840'
+  declaration_date: '2026-06-25'
+  regime: E13
+  goods_description: Máy tính xách tay Lenovo ThinkPad T14s Gen 6, Core Ultra 7 258V,
+    RAM 32GB, SSD 1TB, 14 inch (Model 21QX00LEVA)
+  hs_code: 8471.30.20
+  origin: CN
+  exporter_country: VN
+  applied_rate: miễn (M)
+  rate_type: exempt
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế miễn/không phải %
+  note: DNCX/EPE import (E13) - hàng không chịu thuế NK & GTGT (XNK90/VK900); Thuế
+    suất fields blank. Origin CN but Người xuất khẩu is a Vietnamese domestic supplier
+    (mã nước VN) -> origin != exporter.
+- id: gs-027
+  source: declaration
+  declaration_ref: '108371497840'
+  declaration_date: '2026-06-25'
+  regime: E13
+  goods_description: Màn hình máy tính LViewsonic 18.5" VA1903H-2
+  hs_code: 8528.52.00
+  origin: CN
+  exporter_country: VN
+  applied_rate: miễn (M)
+  rate_type: exempt
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế miễn/không phải %
+  note: DNCX/EPE import (E13) - không chịu thuế NK & GTGT (XNK90/VK900); rate blank.
+    Origin CN vs exporter VN.
+- id: gs-028
+  source: declaration
+  declaration_ref: '108371497840'
+  declaration_date: '2026-06-25'
+  regime: E13
+  goods_description: Chuột vi tính không dây Bluetooth Logitech M650, màu đen
+  hs_code: 8471.60.40
+  origin: CN
+  exporter_country: VN
+  applied_rate: miễn (M)
+  rate_type: exempt
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế miễn/không phải %
+  note: DNCX/EPE import (E13) - không chịu thuế NK & GTGT (XNK90/VK900); rate blank.
+    Origin CN vs exporter VN.
+- id: gs-029
+  source: declaration
+  declaration_ref: '108371497840'
+  declaration_date: '2026-06-25'
+  regime: E13
+  goods_description: Dây cáp dữ liệu bằng đồng, bọc cách điện cao su, có đầu nối,
+    lõi 0.5cm, dài 5m
+  hs_code: 8544.11.90
+  origin: CN
+  exporter_country: VN
+  applied_rate: miễn (M)
+  rate_type: exempt
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế miễn/không phải %
+  note: DNCX/EPE import (E13) - không chịu thuế NK & GTGT (XNK90/VK900); rate blank.
+    Origin CN vs exporter VN.
+- id: gs-030
+  source: declaration
+  declaration_ref: '108318295740'
+  declaration_date: '2026-06-08'
+  regime: E31
+  goods_description: Đinh rút, bằng nhôm hợp kim, kích thước đầu rút 13.6mm, NPL sản
+    xuất tấm hấp thụ năng lượng mặt trời
+  hs_code: 7616.10.90
+  origin: CN
+  exporter_country: MY
+  applied_rate: 20%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế cao 20%
+  - bẫy xuất xứ ≠ người bán
+  - MFN đa dạng
+  note: origin CN ≠ exporter MY (Bossard Malaysia); E31 nhập SXXK, thuế NK 20% và
+    VAT được miễn (XN210/VK120)
+- id: gs-031
+  source: declaration
+  declaration_ref: '108336397520'
+  declaration_date: '2026-06-15'
+  regime: E31
+  goods_description: Dây cáp điện đã gắn đầu nối, vỏ nhựa, lõi đồng (mỗi lõi 0.25mm),
+    dài 1200mm, 12VDC 0.2A, mới 100%
+  hs_code: 8544.42.94
+  origin: CN
+  exporter_country: CN
+  applied_rate: 17%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế cao 17%
+  - MFN đa dạng
+  note: 'E31 NL nhập SXXK: thuế NK 17% (letter A, MFN) được MIỄN (mã XN210); VAT không
+    chịu (VK120). Chung bill/invoice với TK 108339558830/A12. Không có C/O ưu đãi.'
+- id: gs-032
+  source: declaration
+  declaration_ref: '108339558830'
+  declaration_date: '2026-06-15'
+  regime: A12
+  goods_description: Đầu cos bằng thép nối đầu dây cảm biến/dây điện, 250V, 3A (SXA-001T-P0.6)
+  hs_code: 8536.90.94
+  origin: CN
+  exporter_country: CN
+  applied_rate: 25%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế cao 25%
+  - MFN đa dạng
+  note: 
+- id: gs-033
+  source: declaration
+  declaration_ref: '108353419860'
+  declaration_date: '2026-06-18'
+  regime: H11
+  goods_description: Thanh sứ của bộ phận phóng điện làm sạch bề mặt vật liệu in,
+    220V (Ceramic electrode TW460 TL524), phụ tùng thay thế máy in
+  hs_code: 6914.10.00
+  origin: DK
+  exporter_country: DK
+  applied_rate: 30%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế cao 30%
+  note: 'Importer khác: Công ty TNHH Kyodo Printing (Việt Nam), không phải Rheem;
+    HQ Biên Hòa Đồng Nai; H11 hàng mẫu không thanh toán; MFN 30%, VAT mã VB245 8%;
+    origin DK = exporter DK (Vetaphone A/S)'
+- id: gs-034
+  source: declaration
+  declaration_ref: '108361587130'
+  declaration_date: '2026-06-22'
+  regime: H11
+  goods_description: Ống dẫn nước bằng nhựa PSU cứng, dài 550mm, phi 18mm, không có
+    phụ kiện ghép nối
+  hs_code: 3917.29.29
+  origin: JP
+  exporter_country: JP
+  applied_rate: 17%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế cao 17%
+  note: H11 nhập khác; hàng không có giá trị thương mại, trị giá 20 USD, PTTT KHONGTT
+    (không thanh toán)
+- id: gs-035
+  source: declaration
+  declaration_ref: '108396844620'
+  declaration_date: '2026-07-02'
+  regime: E31
+  goods_description: Motor dùng cho cánh quạt (động cơ xoay chiều 1 pha, Model YKT-40-6-248,
+    hiệu Welling, 34W/240V/50Hz/6 cực)
+  hs_code: 8501.40.19
+  origin: CN
+  exporter_country: CN
+  applied_rate: 20%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế cao 20%
+  note: 'E31 nhập SXXK: thuế NK & VAT được miễn (mã VK120/XN210), tỷ lệ 20% là mức
+    MFN danh nghĩa. Người XK Welling International Hongkong Ltd (địa chỉ Hong Kong)
+    khai mã nước = CN, trùng xuất xứ.'
+- id: gs-036
+  source: declaration
+  declaration_ref: '108398341550'
+  declaration_date: '2026-07-03'
+  regime: H11
+  goods_description: Điện trở đốt nóng bằng điện, 220V, 2000W (NPL để sx bình nước
+    nóng)
+  hs_code: 8516.80.30
+  origin: CN
+  exporter_country: CN
+  applied_rate: 20%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế cao 20%
+  note: 'H11 (nhập khác): hàng mẫu không có giá trị thương mại, PTTT = KHONGTT. Thuế
+    NK 20% + VAT 10% có nộp thực.'
+- id: gs-037
+  source: declaration
+  declaration_ref: '108428970861'
+  declaration_date: '2026-07-13'
+  regime: A12
+  goods_description: Trục truyền động lõi thép, bề mặt phủ gốm công nghiệp, ĐK 165.30mm
+    dài 1263.50mm, PTTT máy tráng phủ, mới 100%
+  hs_code: 8483.10.90
+  origin: CN
+  exporter_country: CN
+  applied_rate: 20%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - thuế cao 20%
+  note: 
+- id: gs-038
+  source: declaration
+  declaration_ref: '108324648940'
+  declaration_date: '2026-06-13'
+  regime: A12
+  goods_description: Bo mạch điều khiển, model HE-812071, 24VDC, điều khiển bộ sàng
+    biên - E+L PC BOARD
+  hs_code: 8537.10.19
+  origin: DE
+  exporter_country: TW
+  applied_rate: 15%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - bẫy xuất xứ ≠ người bán
+  - MFN đa dạng
+  note: origin DE ≠ exporter TW (Webcontrol Machinery, Taiwan)
+- id: gs-039
+  source: declaration
+  declaration_ref: '108327977811'
+  declaration_date: '2026-06-10'
+  regime: A21
+  goods_description: Thiết bị kiểm tra tín hiệu điện của bơm nhiệt (đo điện áp, dòng
+    điện), 240V 10A, PN:EOLT035 (Jumbuck)
+  hs_code: 9030.33.90
+  origin: AU
+  exporter_country: VN
+  applied_rate: 0%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - bẫy xuất xứ ≠ người bán
+  - MFN đa dạng
+  note: A21 chuyển mục đích sử dụng từ TK G12 107798602661 (file 1) mục 1; người XK
+    = người NK (Rheem VN, mã nước VN) nhưng xuất xứ hàng AU; nay nộp VAT 10%
+- id: gs-040
+  source: declaration
+  declaration_ref: '108327977811'
+  declaration_date: '2026-06-10'
+  regime: A21
+  goods_description: Thiết bị biến trở kiểu dây quấn, 2500W 240V 10A, PN:EOLT036 (2500W
+    Load Bank)
+  hs_code: 8533.39.00
+  origin: AU
+  exporter_country: VN
+  applied_rate: 0%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - bẫy xuất xứ ≠ người bán
+  - MFN đa dạng
+  note: A21 chuyển mục đích sử dụng từ TK G12 107798602661 mục 2; XK=NK Rheem VN,
+    xuất xứ AU
+- id: gs-041
+  source: declaration
+  declaration_ref: '108328747440'
+  declaration_date: '2026-06-11'
+  regime: H11
+  goods_description: Máy đọc mã vạch cầm tay (Unitech), Model MS339, 5VDC 300mA, mới
+    100%
+  hs_code: 8471.90.10
+  origin: CN
+  exporter_country: ES
+  applied_rate: 0%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - bẫy xuất xứ ≠ người bán
+  - MFN đa dạng
+  note: Origin CN != exporter ES (Keonn Technologies, Tây Ban Nha; NSX Unitech-TQ).
+    Hàng mẫu không thanh toán (H11). Chung bill với TK 108328742650/A41. Letter A
+    = thuế suất ưu đãi/MFN 0%; VAT 10% có nộp (533.485 VND).
+- id: gs-042
+  source: declaration
+  declaration_ref: '108432724150'
+  declaration_date: '2026-07-14'
+  regime: A12
+  goods_description: Van tiết lưu bằng đồng (ĐK trong ≤2,5cm; 17.35mm, cao 77mm),
+    NPL sản xuất bộ phận làm nóng bình nước nóng, mới 100%
+  hs_code: 8481.80.99
+  origin: CN
+  exporter_country: CN
+  applied_rate: 10%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - cặp minh chứng C/O 8481.80.99
+  note: 
+- id: gs-043
+  source: declaration
+  declaration_ref: '108324648940'
+  declaration_date: '2026-06-13'
+  regime: A12
+  goods_description: Xi lanh thủy lực bằng thép không gỉ, model HOB-63x35x150ST+CB+Y
+    (HY-030), Oil cylinder cho máy ghép khô
+  hs_code: 8412.21.00
+  origin: TW
+  exporter_country: TW
+  applied_rate: 0%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: 
+- id: gs-044
+  source: declaration
+  declaration_ref: '108324648940'
+  declaration_date: '2026-06-13'
+  regime: A12
+  goods_description: Hộp số motor, thép không gỉ, Model AE120-3/SVM90M, Reducer cho
+    máy ghép khô
+  hs_code: 8483.40.90
+  origin: TW
+  exporter_country: TW
+  applied_rate: 10%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: 
+- id: gs-045
+  source: declaration
+  declaration_ref: '108324648940'
+  declaration_date: '2026-06-13'
+  regime: A12
+  goods_description: Màn hình hiển thị thông số, đơn sắc, model WCH-610D, 24VDC, Multi
+    Display Meter cho máy ghép khô
+  hs_code: 8528.59.20
+  origin: TW
+  exporter_country: TW
+  applied_rate: 10%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: 
+- id: gs-046
+  source: declaration
+  declaration_ref: '108324648940'
+  declaration_date: '2026-06-13'
+  regime: A12
+  goods_description: Bo mạch điều khiển, model WT-009, 24VDC, điều khiển quạt hút
+    - Circuit board cho máy ghép khô
+  hs_code: 8537.10.19
+  origin: TW
+  exporter_country: TW
+  applied_rate: 15%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: 
+- id: gs-047
+  source: declaration
+  declaration_ref: '108326239230'
+  declaration_date: '2026-06-11'
+  regime: A12
+  goods_description: Thanh chèn bằng sắt dạng dẹt, 620x50mm, phụ tùng máy làm túi
+    - Cooling insertion bar
+  hs_code: 7326.90.99
+  origin: JP
+  exporter_country: JP
+  applied_rate: 10%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: 
+- id: gs-048
+  source: declaration
+  declaration_ref: '108327253310'
+  declaration_date: '2026-06-12'
+  regime: A12
+  goods_description: Máy cắt tem vải siêu âm (cắt nóng và lạnh), Model WS-348LR, 220V
+    50/60HZ 0.75KW, Shenzhen Wing Singa
+  hs_code: 8451.50.00
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: exporter Wing Singa Machinery (HK) Limited, địa chỉ Kowloon HK nhưng mã nước
+    CN; origin CN; MFN 0% (B01)
+- id: gs-049
+  source: declaration
+  declaration_ref: '108332132200'
+  declaration_date: '2026-06-12'
+  regime: A12
+  goods_description: Thiết bị kiểm tra/đo lường bằng đầu quét cảm biến ánh sáng (quang
+    học), căn chỉnh vị trí bản in cho máy in màng phim, mới 100%
+  hs_code: 9031.49.90
+  origin: DE
+  exporter_country: DE
+  applied_rate: 0%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: 
+- id: gs-050
+  source: declaration
+  declaration_ref: '108333611740'
+  declaration_date: '2026-06-12'
+  regime: A12
+  goods_description: Máy pha mực dung môi GOLDEN COLOR-24V (Solvent Based Ink Dispenser),
+    Model GC-YL-YM24E, 220V/1.5KW, mới 100%, đồng bộ tháo rời
+  hs_code: 8479.82.10
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: 
+- id: gs-051
+  source: declaration
+  declaration_ref: '108339558830'
+  declaration_date: '2026-06-15'
+  regime: A12
+  goods_description: Đầu bảo vệ cos bằng nhựa PA66, màu trắng, L10xW10xH7mm (XAP-04V-1)
+  hs_code: 3926.90.99
+  origin: CN
+  exporter_country: CN
+  applied_rate: 12%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: Nhập chung bill/invoice với TK 108336397520/E31 (B01 MFN)
+- id: gs-052
+  source: declaration
+  declaration_ref: '108339558830'
+  declaration_date: '2026-06-15'
+  regime: A12
+  goods_description: Dây cảm biến nhiệt độ 2m dùng cho module bơm nhiệt (AHC3.782.669-4A)
+  hs_code: 9025.80.00
+  origin: CN
+  exporter_country: CN
+  applied_rate: 0%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: 
+- id: gs-053
+  source: declaration
+  declaration_ref: '108340115810'
+  declaration_date: '2026-06-16'
+  regime: A12
+  goods_description: Vòng đệm cao su lưu hóa D38x2.5mm, làm kín khớp nối hệ thống
+    tiệt trùng phô mai
+  hs_code: 4016.93.90
+  origin: AU
+  exporter_country: AU
+  applied_rate: 3%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: VAT 8% (mã VB245); B01 MFN dù xuất xứ AU
+- id: gs-054
+  source: declaration
+  declaration_ref: '108340358600'
+  declaration_date: '2026-06-15'
+  regime: A12
+  goods_description: Bộ đếm số vòng quay động cơ (Encoder H209921B-600), 5-24VDC
+  hs_code: 9029.10.90
+  origin: US
+  exporter_country: KR
+  applied_rate: 0%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: Xuất xứ US khác nước người XK (KR); hàng gửi từ Korea
+- id: gs-055
+  source: declaration
+  declaration_ref: '108340358600'
+  declaration_date: '2026-06-15'
+  regime: A12
+  goods_description: Ống lót trục vòng bi bằng thép Phi90x200mm (Sleeve Housing)
+  hs_code: 8482.99.00
+  origin: KR
+  exporter_country: KR
+  applied_rate: 0%
+  rate_type: percent
+  schedule: MFN
+  has_co: false
+  co_form: 
+  conditions: 
+  cbpg: 
+  decree: 
+  cleared: true
+  confidence: unmarked
+  selected_for:
+  - MFN đa dạng
+  note: 
