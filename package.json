@@ -17,7 +17,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx db/migrate.ts"
+    "db:migrate": "tsx db/migrate.ts",
+    "db:seed": "tsx db/seed/index.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",

@@ -84,7 +84,7 @@ python3 parse_nd26.py doc/ --emit out/
 # (3) load (hoặc bỏ qua (1)(2), dùng out/ đã commit)
 docker compose up -d --wait db
 DATABASE_URL="postgres://app:app@localhost:5433/customs_assistant" corepack yarn db:migrate
-DATABASE_URL="postgres://app:app@localhost:5433/customs_assistant" node_modules/.bin/tsx research/task-008-congbao-loader/load.ts
+DATABASE_URL="postgres://app:app@localhost:5433/customs_assistant" corepack yarn db:seed   # loader production (thay cho load.ts cũ)
 ```
 
 ## Liên quan

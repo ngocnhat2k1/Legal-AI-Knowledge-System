@@ -47,8 +47,7 @@ bẫy phụ lục. Không mã nào bị hỏng rate.
 ```bash
 docker compose up -d --wait db
 DATABASE_URL="postgres://app:app@localhost:5433/customs_assistant" corepack yarn db:migrate
-DATABASE_URL="postgres://app:app@localhost:5433/customs_assistant" node_modules/.bin/tsx research/task-008-congbao-loader/load.ts
-DATABASE_URL="postgres://app:app@localhost:5433/customs_assistant" node_modules/.bin/tsx research/task-009-amendment-chain/apply_amendments.ts
+DATABASE_URL="postgres://app:app@localhost:5433/customs_assistant" corepack yarn db:seed   # nạp toàn bộ (ND26 + amendments + 4 FTA)
 DATABASE_URL="postgres://app:app@localhost:5433/customs_assistant" node_modules/.bin/tsx research/task-012-acceptance/validate.ts
 ```
 

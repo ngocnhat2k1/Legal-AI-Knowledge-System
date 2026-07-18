@@ -43,10 +43,8 @@ EVFTA **0%** (form EUR.1/REX) — tất cả có điều kiện C/O.
 for k in acfta atiga evfta aanzfta; do
   python3 research/fta-loader/parse_fta.py research/fta-loader/$k/doc/ --emit research/fta-loader/$k/rows.ndjson
 done
-# hoặc dùng rows.ndjson đã commit; rồi (sau base + amendments):
-for k in acfta atiga evfta aanzfta; do
-  DATABASE_URL=... node_modules/.bin/tsx research/fta-loader/load_fta.ts $k
-done
+# Nạp production (ND26 + amendments + 4 FTA trong một lệnh):
+DATABASE_URL=... corepack yarn db:seed
 ```
 
 ## Liên quan

@@ -46,3 +46,9 @@ research/task-008-congbao-loader/page.html
 # The parsed extracts (research/fta-loader/*/rows.ndjson) are committed instead.
 research/fta-loader/*/doc/
 research/fta-loader/*/page.html
+
+# Research extract outputs are regeneratable via the parsers; the CANONICAL,
+# committed copies live in db/seed/data/. Keep the proof code + READMEs, not the
+# large regenerated .ndjson under research/.
+research/task-008-congbao-loader/out/
+research/fta-loader/*/rows.ndjson
