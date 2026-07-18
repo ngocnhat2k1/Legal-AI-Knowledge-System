@@ -35,3 +35,9 @@ coverage/
 *.zip
 *.tar
 *.tar.gz
+
+# TASK-008 raw Công báo downloads: 36MB of `.doc` binaries + the tokened landing
+# page. The parsed, durable extract under research/task-008-congbao-loader/out/ is
+# committed instead, so the loader runs offline even after the download tokens expire.
+research/task-008-congbao-loader/doc/
+research/task-008-congbao-loader/page.html

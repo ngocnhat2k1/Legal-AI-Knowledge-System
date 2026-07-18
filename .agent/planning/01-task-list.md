@@ -283,7 +283,11 @@ Ghi chú:
 
 ## TASK-008: Nạp Công báo — parser nhận biết phụ lục
 
-Status: todo
+Status: done (2026-07-18)
+
+> **Kết quả:** nạp ND 26/2023 từ 14 phần `.doc` Công báo, **nhận biết phụ lục hạng nhất**, **13/13 acceptance PASS** trên Postgres thật ([research/task-008-congbao-loader](../../research/task-008-congbao-loader/README.md)). Tổng **13.161 dòng**: Annex I export 1.520 · Mục I MFN **11.150** có thuế · Chương 98 (Mục II) **460** (schedule riêng `NK_uu_dai_98`, mã tương ứng ở `conditions`) · Annex IV ngoài hạn ngạch 31 (+ đánh dấu `trq`). **Khớp research 12**: nomenclature Annex II **11.874** unique. Assertion phụ lục: `0301.11.10` = 15 (NK) & 0 (XK); `0306.15.00` MFN = 10 (không phải dòng-giả Ch.98 = 27); `2710.12.21/.22/.24/.25` = 10. **0 dòng thiếu phụ lục.**
+>
+> **3 cạm bẫy đã lộ khi kiểm chứng** (không nuốt im): mô tả tách nhiều ô làm sót rate; **Chương 98 4-cột** làm cột "mã tương ứng" bị đọc thành 551 dòng HS8 giả (đã tách schedule riêng); 264 dòng "Theo hướng dẫn Chương 98" không-số thật (bỏ qua có log). **Phụ lục III (xe cũ)** không nạp — theo nhóm 87.02/87.03 + công thức USD, giữ verbatim, ghi rõ lý do.
 
 Depends on: TASK-003, TASK-007.
 

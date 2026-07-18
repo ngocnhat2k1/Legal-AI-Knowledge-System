@@ -1,0 +1,460 @@
+{"annex": "II", "chapter98": true, "hs": "98041500", "hs_dotted": "9804.15.00", "desc": "- - Tôm hùm Na Uy (Nephrops norvegicus)", "rate": "27", "corresponding": "03061500"}
+{"annex": "II", "chapter98": true, "hs": "98041600", "hs_dotted": "9804.16.00", "desc": "- - Tôm shrimps và tôm prawn nước lạnh (Pandalus spp., Crangon crangon)", "rate": "27", "corresponding": "03061600"}
+{"annex": "II", "chapter98": true, "hs": "98041711", "hs_dotted": "9804.17.11", "desc": "- - - - Đã bỏ đầu", "rate": "27", "corresponding": "03061711"}
+{"annex": "II", "chapter98": true, "hs": "98041719", "hs_dotted": "9804.17.19", "desc": "- - - - Loại khác", "rate": "27", "corresponding": "03061719"}
+{"annex": "II", "chapter98": true, "hs": "98041721", "hs_dotted": "9804.17.21", "desc": "- - - - Đã bỏ đầu, còn đuôi", "rate": "27", "corresponding": "03061721"}
+{"annex": "II", "chapter98": true, "hs": "98041722", "hs_dotted": "9804.17.22", "desc": "- - - - Đã bỏ đầu, bỏ đuôi", "rate": "27", "corresponding": "03061722"}
+{"annex": "II", "chapter98": true, "hs": "98041729", "hs_dotted": "9804.17.29", "desc": "- - - - Loại khác", "rate": "27", "corresponding": "03061729"}
+{"annex": "II", "chapter98": true, "hs": "98041730", "hs_dotted": "9804.17.30", "desc": "- - - Tôm càng xanh (Macrobrachium rosenbergii)", "rate": "27", "corresponding": "03061730"}
+{"annex": "II", "chapter98": true, "hs": "98041790", "hs_dotted": "9804.17.90", "desc": "- - - Loại khác", "rate": "27", "corresponding": "03061790"}
+{"annex": "II", "chapter98": true, "hs": "98041900", "hs_dotted": "9804.19.00", "desc": "- - Loại khác, kể cả bột thô, bột mịn và viên của động vật giáp xác, thích hợp dùng làm thức ăn cho người", "rate": "27", "corresponding": "03061900"}
+{"annex": "II", "chapter98": true, "hs": "98042811", "hs_dotted": "9804.28.11", "desc": "- - - - Còn vỏ, đã hấp chín hoặc luộc chín trong nước", "rate": "27", "corresponding": "03069521"}
+{"annex": "II", "chapter98": true, "hs": "98042819", "hs_dotted": "9804.28.19", "desc": "- - - - Loại khác", "rate": "27", "corresponding": "03069529"}
+{"annex": "II", "chapter98": true, "hs": "98042890", "hs_dotted": "9804.28.90", "desc": "- - - Loại khác", "rate": "27", "corresponding": "03069530"}
+{"annex": "II", "chapter98": true, "hs": "98050000", "hs_dotted": "9805.00.00", "desc": "Quả và hạt có dầu để làm giống", "rate": "0", "corresponding": "12073000"}
+{"annex": "II", "chapter98": true, "hs": "98080010", "hs_dotted": "9808.00.10", "desc": "- - Vải canvas đã được ngâm tẩm, tráng, phủ hoặc ép với nylon hoặc các polyamit khác", "rate": "0", "corresponding": "59039010"}
+{"annex": "II", "chapter98": true, "hs": "98080090", "hs_dotted": "9808.00.90", "desc": "- - Loại khác", "rate": "0", "corresponding": "59039090"}
+{"annex": "II", "chapter98": true, "hs": "98100010", "hs_dotted": "9810.00.10", "desc": "- Sắt hoặc thép không hợp kim, dạng thanh và que, ở dạng cuộn cuốn không đều, được cán nóng, có đường kính mặt cắt ngang hình tròn dưới 14 mm để sản xuất tanh lốp xe", "rate": "0", "corresponding": "72139130"}
+{"annex": "II", "chapter98": true, "hs": "98100090", "hs_dotted": "9810.00.90", "desc": "- Sản phẩm bằng dây sắt hoặc thép để sản xuất tanh lốp xe", "rate": "0", "corresponding": "73262090"}
+{"annex": "II", "chapter98": true, "hs": "98110010", "hs_dotted": "9811.00.10", "desc": "- Thép hợp kim có chứa nguyên tố Bo và/hoặc Crôm và/hoặc Titan trừ chủng loại thép cán phẳng được cán nóng", "rate": "10", "corresponding": null}
+{"annex": "II", "chapter98": true, "hs": "98110090", "hs_dotted": "9811.00.90", "desc": "- Thép hợp kim có chứa nguyên tố Bo và/hoặc Crôm và/hoặc Titan trừ chủng loại thép cán phẳng được cán nóng", "rate": "3", "corresponding": null}
+{"annex": "II", "chapter98": true, "hs": "98120010", "hs_dotted": "9812.00.10", "desc": "- Đã lắp ráp hoàn chỉnh", "rate": "5", "corresponding": "84082010"}
+{"annex": "II", "chapter98": true, "hs": "98120090", "hs_dotted": "9812.00.90", "desc": "- Loại khác, dùng cho xe thuộc phân nhóm 8701.10", "rate": "5", "corresponding": "84082093"}
+{"annex": "II", "chapter98": true, "hs": "98160000", "hs_dotted": "9816.00.00", "desc": "Khung đèn thợ mỏ hoặc thợ khai thác đá; bộ phận khác dùng cho đèn thợ mỏ, đèn mổ", "rate": "0", "corresponding": "94059950"}
+{"annex": "II", "chapter98": true, "hs": "98172000", "hs_dotted": "9817.20.00", "desc": "- Khoan búa cầm tay phòng nổ dùng trong hầm lò", "rate": "3", "corresponding": "84672100"}
+{"annex": "II", "chapter98": true, "hs": "98173010", "hs_dotted": "9817.30.10", "desc": "- - Biến áp thích ứng", "rate": "3", "corresponding": "85043311"}
+{"annex": "II", "chapter98": true, "hs": "98173090", "hs_dotted": "9817.30.90", "desc": "- - Loại khác", "rate": "3", "corresponding": "85043319"}
+{"annex": "II", "chapter98": true, "hs": "98181110", "hs_dotted": "9818.11.10", "desc": "- - Nắp chụp cách điện", "rate": "0", "corresponding": "40169953"}
+{"annex": "II", "chapter98": true, "hs": "98181190", "hs_dotted": "9818.11.90", "desc": "- - Loại khác", "rate": "0", "corresponding": "40169959"}
+{"annex": "II", "chapter98": true, "hs": "98181211", "hs_dotted": "9818.12.11", "desc": "- - - Có hàm lượng carbon từ 0,6% trở lên tính theo trọng lượng", "rate": "0", "corresponding": "72163110"}
+{"annex": "II", "chapter98": true, "hs": "98181219", "hs_dotted": "9818.12.19", "desc": "- - - Loại khác", "rate": "0", "corresponding": "72163190"}
+{"annex": "II", "chapter98": true, "hs": "98181291", "hs_dotted": "9818.12.91", "desc": "- - - Chiều dày từ 5 mm trở xuống", "rate": "0", "corresponding": "72163210"}
+{"annex": "II", "chapter98": true, "hs": "98181299", "hs_dotted": "9818.12.99", "desc": "- - - Loại khác", "rate": "0", "corresponding": "72163290"}
+{"annex": "II", "chapter98": true, "hs": "98181310", "hs_dotted": "9818.13.10", "desc": "- - Vít cho kim loại", "rate": "0", "corresponding": "73181510"}
+{"annex": "II", "chapter98": true, "hs": "98181390", "hs_dotted": "9818.13.90", "desc": "- - Chốt hãm và chốt định vị", "rate": "0", "corresponding": "73182400"}
+{"annex": "II", "chapter98": true, "hs": "98181410", "hs_dotted": "9818.14.10", "desc": "- - Lò xo lá và các lá lò xo", "rate": "0", "corresponding": "73201090"}
+{"annex": "II", "chapter98": true, "hs": "98181490", "hs_dotted": "9818.14.90", "desc": "- - Lò xo cuộn", "rate": "0", "corresponding": "73202090"}
+{"annex": "II", "chapter98": true, "hs": "98181500", "hs_dotted": "9818.15.00", "desc": "- Thiết bị làm nóng không khí và bộ phận phân phối khí nóng (kể cả loại có khả năng phân phối không khí tự nhiên hoặc khí điều hòa), không sử dụng năng lượng điện, có lắp quạt chạy bằng mô tơ hoặc quạt gió, và bộ phận của chúng, bằng sắt hoặc thép", "rate": "10", "corresponding": "73229000"}
+{"annex": "II", "chapter98": true, "hs": "98181600", "hs_dotted": "9818.16.00", "desc": "- Các sản phẩm đúc khác bằng sắt hoặc thép, trừ loại bằng gang đúc không dẻo", "rate": "0", "corresponding": "73259990"}
+{"annex": "II", "chapter98": true, "hs": "98181700", "hs_dotted": "9818.17.00", "desc": "- Cơ cấu đóng cửa tự động", "rate": "10", "corresponding": "83026000"}
+{"annex": "II", "chapter98": true, "hs": "98181910", "hs_dotted": "9818.19.10", "desc": "- - Chế hòa khí và bộ phận của chúng", "rate": "0", "corresponding": "84099971"}
+{"annex": "II", "chapter98": true, "hs": "98181920", "hs_dotted": "9818.19.20", "desc": "- - Thân động cơ (cylinder block)", "rate": "0", "corresponding": "84099972"}
+{"annex": "II", "chapter98": true, "hs": "98181930", "hs_dotted": "9818.19.30", "desc": "- - Ống xi lanh, có đường kính trong từ 50 mm trở lên, nhưng không quá 155 mm", "rate": "0", "corresponding": "84099973"}
+{"annex": "II", "chapter98": true, "hs": "98181940", "hs_dotted": "9818.19.40", "desc": "- - Ống xi lanh khác", "rate": "0", "corresponding": "84099974"}
+{"annex": "II", "chapter98": true, "hs": "98181950", "hs_dotted": "9818.19.50", "desc": "- - Quy lát và nắp quy lát", "rate": "0", "corresponding": "84099975"}
+{"annex": "II", "chapter98": true, "hs": "98181960", "hs_dotted": "9818.19.60", "desc": "- - Piston, có đường kính ngoài từ 50 mm trở lên nhưng không quá 155 mm", "rate": "0", "corresponding": "84099976"}
+{"annex": "II", "chapter98": true, "hs": "98181970", "hs_dotted": "9818.19.70", "desc": "- - Piston khác", "rate": "0", "corresponding": "84099977"}
+{"annex": "II", "chapter98": true, "hs": "98181990", "hs_dotted": "9818.19.90", "desc": "- - Loại khác", "rate": "0", "corresponding": "84099979"}
+{"annex": "II", "chapter98": true, "hs": "98182010", "hs_dotted": "9818.20.10", "desc": "- - Bơm nước bằng tay", "rate": "0", "corresponding": "84132010"}
+{"annex": "II", "chapter98": true, "hs": "98182021", "hs_dotted": "9818.20.21", "desc": "- - Loại ly tâm", "rate": "0", "corresponding": "84133051"}
+{"annex": "II", "chapter98": true, "hs": "98182029", "hs_dotted": "9818.20.29", "desc": "- - Loại khác, trừ loại chuyển động tịnh tiến hoặc chuyển động quay", "rate": "0", "corresponding": "84133090"}
+{"annex": "II", "chapter98": true, "hs": "98182031", "hs_dotted": "9818.20.31", "desc": "- - - Với đường kính cửa hút không quá 200mm", "rate": "0", "corresponding": "84137011"}
+{"annex": "II", "chapter98": true, "hs": "98182039", "hs_dotted": "9818.20.39", "desc": "- - - Loại khác", "rate": "0", "corresponding": "84137019"}
+{"annex": "II", "chapter98": true, "hs": "98182090", "hs_dotted": "9818.20.90", "desc": "- Bộ phận của bơm thuộc phân nhóm 8413.70.11 và 8413.70.19", "rate": "0", "corresponding": "84139130"}
+{"annex": "II", "chapter98": true, "hs": "98182110", "hs_dotted": "9818.21.10", "desc": "- - Máy thổi khí", "rate": "0", "corresponding": "84145950"}
+{"annex": "II", "chapter98": true, "hs": "98182121", "hs_dotted": "9818.21.21", "desc": "- - - Có lưới bảo vệ", "rate": "0", "corresponding": "84145991"}
+{"annex": "II", "chapter98": true, "hs": "98182129", "hs_dotted": "9818.21.29", "desc": "- - - Loại khác", "rate": "0", "corresponding": "84145999"}
+{"annex": "II", "chapter98": true, "hs": "98182211", "hs_dotted": "9818.22.11", "desc": "- - - Công suất làm mát không quá 26,38 kW", "rate": "0", "corresponding": "84158121"}
+{"annex": "II", "chapter98": true, "hs": "98182219", "hs_dotted": "9818.22.19", "desc": "- - - Loại khác", "rate": "0", "corresponding": "84158129"}
+{"annex": "II", "chapter98": true, "hs": "98182220", "hs_dotted": "9818.22.20", "desc": "- - Máy điều hòa không khí, loại khác, có kèm theo bộ phận làm lạnh, sử dụng cho xe chạy trên đường ray, có công suất làm mát trên 26,38 kW", "rate": "0", "corresponding": "84158229"}
+{"annex": "II", "chapter98": true, "hs": "98182231", "hs_dotted": "9818.22.31", "desc": "- - - Của máy có công suất làm lạnh trên 26,38 kW nhưng không quá 52,75 kW, có tốc độ dòng khí đi qua mối dàn bay hơi không quá 67,96 m3/phút", "rate": "0", "corresponding": "84159036"}
+{"annex": "II", "chapter98": true, "hs": "98182239", "hs_dotted": "9818.22.39", "desc": "- - - Của máy có công suất làm lạnh trên 52,75 kW, có tốc độ dòng khí đi qua mối dàn bay hơi không quá 67,96 m3/phút", "rate": "0", "corresponding": "84159046"}
+{"annex": "II", "chapter98": true, "hs": "98182300", "hs_dotted": "9818.23.00", "desc": "- Thiết bị làm lạnh hoặc đông lạnh khác, trừ: thiết bị làm lạnh đồ uống, nước uống, thiết bị làm lạnh nước có công suất trên 21,10 kW và thiết bị sản xuất đá vảy", "rate": "0", "corresponding": "84186990"}
+{"annex": "II", "chapter98": true, "hs": "98182410", "hs_dotted": "9818.24.10", "desc": "- - - Hoạt động bằng điện", "rate": "0", "corresponding": "84195091"}
+{"annex": "II", "chapter98": true, "hs": "98182490", "hs_dotted": "9818.24.90", "desc": "- - - Không hoạt động bằng điện", "rate": "0", "corresponding": "84195020"}
+{"annex": "II", "chapter98": true, "hs": "98182500", "hs_dotted": "9818.25.00", "desc": "- Máy xử lý dữ liệu tự động khác, trừ máy tính cá nhân, máy tính xách tay", "rate": "0", "corresponding": "84714190"}
+{"annex": "II", "chapter98": true, "hs": "98182610", "hs_dotted": "9818.26.10", "desc": "- - Bằng plastic, có đường kính trong từ 1cm đến 2,5 cm", "rate": "0", "corresponding": "84814030"}
+{"annex": "II", "chapter98": true, "hs": "98182690", "hs_dotted": "9818.26.90", "desc": "- - Loại khác, trừ loại bằng đồng hoặc hợp kim đồng với đường kính trong từ 2,5 cm trở xuống", "rate": "0", "corresponding": "84814090"}
+{"annex": "II", "chapter98": true, "hs": "98182700", "hs_dotted": "9818.27.00", "desc": "- Ổ đũa côn, kể cả cụm linh kiện vành côn và đũa côn", "rate": "0", "corresponding": "84822000"}
+{"annex": "II", "chapter98": true, "hs": "98182800", "hs_dotted": "9818.28.00", "desc": "- Trục truyền động (kể cả trục cam và trục khuỷu) và tay biên khác", "rate": "0", "corresponding": "84831090"}
+{"annex": "II", "chapter98": true, "hs": "98182900", "hs_dotted": "9818.29.00", "desc": "- Bộ bánh răng và cụm bánh răng ăn khớp khác, trừ bánh xe có răng, đĩa xích và các bộ phận truyền chuyển động ở dạng riêng biệt; vít bi hoặc vít đũa; hộp số và các cơ cấu điều tốc khác, kể cả bộ biến đổi mô men xoắn", "rate": "0", "corresponding": "84834090"}
+{"annex": "II", "chapter98": true, "hs": "98183000", "hs_dotted": "9818.30.00", "desc": "- Đệm và gioăng tương tự làm bằng tấm kim loại mỏng kết hợp với các vật liệu dệt khác hoặc bằng hai hay nhiều lớp kim loại", "rate": "0", "corresponding": "84841000"}
+{"annex": "II", "chapter98": true, "hs": "98183100", "hs_dotted": "9818.31.00", "desc": "- Tổ máy phát điện với động cơ đốt trong kiểu piston đốt cháy bằng tia lửa điện, công suất trên 100 kVA nhưng không quá 10.000 kVA", "rate": "0", "corresponding": "85022030"}
+{"annex": "II", "chapter98": true, "hs": "98183200", "hs_dotted": "9818.32.00", "desc": "- Bộ phận kể cả tấm mạch in đã lắp ráp của phích cắm điện thoại; đầu nối và các bộ phận dùng để nối cho dây và cáp; đầu dò dẹt dưới dạng miếng lát nhiều lớp (wafer prober), dùng cho điện áp không quá 1.000 V", "rate": "0", "corresponding": "85389011"}
+{"annex": "II", "chapter98": true, "hs": "98183300", "hs_dotted": "9818.33.00", "desc": "- Chổi than", "rate": "0", "corresponding": "85452000"}
+{"annex": "II", "chapter98": true, "hs": "98190000", "hs_dotted": "9819.00.00", "desc": "Vật tư, thiết bị nhập khẩu để sản xuất sản phẩm cơ khí trọng điểm", "rate": "0", "corresponding": null}
+{"annex": "II", "chapter98": true, "hs": "98200000", "hs_dotted": "9820.00.00", "desc": "Các phụ tùng và vật tư dùng cho máy bay", "rate": "0", "corresponding": null}
+{"annex": "II", "chapter98": true, "hs": "98213014", "hs_dotted": "9821.30.14", "desc": "- - - Khối lượng toàn bộ theo thiết kế trên 20 tấn nhưng không quá 24 tấn", "rate": "7", "corresponding": "87041034"}
+{"annex": "II", "chapter98": true, "hs": "98213015", "hs_dotted": "9821.30.15", "desc": "- - - Khối lượng toàn bộ theo thiết kế trên 24 tấn nhưng không quá 45 tấn", "rate": "7", "corresponding": "87041035"}
+{"annex": "II", "chapter98": true, "hs": "98213025", "hs_dotted": "9821.30.25", "desc": "- - - Khối lượng toàn bộ theo thiết kế trên 20 tấn nhưng không quá 24 tấn", "rate": "7", "corresponding": "87042329"}
+{"annex": "II", "chapter98": true, "hs": "98213026", "hs_dotted": "9821.30.26", "desc": "- - - Khối lượng toàn bộ theo thiết kế trên 24 tấn nhưng không quá 45 tấn", "rate": "7", "corresponding": "87042366"}
+{"annex": "II", "chapter98": true, "hs": "98213035", "hs_dotted": "9821.30.35", "desc": "- - - Khối lượng toàn bộ theo thiết kế trên 20 tấn nhưng không quá 24 tấn", "rate": "7", "corresponding": "87043269"}
+{"annex": "II", "chapter98": true, "hs": "98213036", "hs_dotted": "9821.30.36", "desc": "- - - Khối lượng toàn bộ theo thiết kế trên 24 tấn nhưng không quá 45 tấn", "rate": "7", "corresponding": "87043286"}
+{"annex": "II", "chapter98": true, "hs": "98213094", "hs_dotted": "9821.30.94", "desc": "- - - Khối lượng toàn bộ theo thiết kế trên 20 tấn nhưng không quá 24 tấn", "rate": "7", "corresponding": "87049094"}
+{"annex": "II", "chapter98": true, "hs": "98221000", "hs_dotted": "9822.10.00", "desc": "- Xe nâng, xe xúc lật", "rate": "0", "corresponding": null}
+{"annex": "II", "chapter98": true, "hs": "98222000", "hs_dotted": "9822.20.00", "desc": "- Máy ép thủy lực", "rate": "0", "corresponding": null}
+{"annex": "II", "chapter98": true, "hs": "98223000", "hs_dotted": "9822.30.00", "desc": "- Máy cắt", "rate": "0", "corresponding": null}
+{"annex": "II", "chapter98": true, "hs": "98224000", "hs_dotted": "9822.40.00", "desc": "- Thiết bị chưng áp", "rate": "0", "corresponding": null}
+{"annex": "II", "chapter98": true, "hs": "98225000", "hs_dotted": "9822.50.00", "desc": "- Máy dỡ gạch", "rate": "0", "corresponding": null}
+{"annex": "II", "chapter98": true, "hs": "98229000", "hs_dotted": "9822.90.00", "desc": "- Bột nhôm (hàm lượng Al>85%)", "rate": "0", "corresponding": null}
+{"annex": "II", "chapter98": true, "hs": "98230000", "hs_dotted": "9823.00.00", "desc": "Xe thiết kế chở tiền", "rate": "10", "corresponding": "87059090"}
+{"annex": "II", "chapter98": true, "hs": "98250000", "hs_dotted": "9825.00.00", "desc": "Chất làm đầy da; Kem hỗ trợ chức năng bảo vệ da, gel làm giảm sẹo", "rate": "10", "corresponding": "33049990"}
+{"annex": "II", "chapter98": true, "hs": "98260000", "hs_dotted": "9826.00.00", "desc": "Vải mành nylon 1680 D/2 và 1890 D/2", "rate": "3", "corresponding": "59021091"}
+{"annex": "II", "chapter98": true, "hs": "98271010", "hs_dotted": "9827.10.10", "desc": "- - - Ống chống và ống có giới hạn chảy dưới 80.000 psi và không có ren ở đầu ống", "rate": "5", "corresponding": "73042410"}
+{"annex": "II", "chapter98": true, "hs": "98271090", "hs_dotted": "9827.10.90", "desc": "- - - Loại khác", "rate": "5", "corresponding": "73042420"}
+{"annex": "II", "chapter98": true, "hs": "98279010", "hs_dotted": "9827.90.10", "desc": "- - - Ống chống và ống có giới hạn chảy dưới 80.000 psi và không có ren ở đầu ống", "rate": "5", "corresponding": "73042910"}
+{"annex": "II", "chapter98": true, "hs": "98279090", "hs_dotted": "9827.90.90", "desc": "- - - Loại khác", "rate": "5", "corresponding": "73042920"}
+{"annex": "II", "chapter98": true, "hs": "98280000", "hs_dotted": "9828.00.00", "desc": "Ống chống bằng thép hàn có đầu nối đi kèm, đường kính từ 20 inch đến 36 inch, sử dụng cho khoan dầu hoặc khí", "rate": "10", "corresponding": "73052000"}
+{"annex": "II", "chapter98": true, "hs": "98291000", "hs_dotted": "9829.10.00", "desc": "- Hàn, bằng thép không gỉ", "rate": "10", "corresponding": "73062100"}
+{"annex": "II", "chapter98": true, "hs": "98292000", "hs_dotted": "9829.20.00", "desc": "- Loại khác", "rate": "10", "corresponding": "73062900"}
+{"annex": "II", "chapter98": true, "hs": "98300000", "hs_dotted": "9830.00.00", "desc": "Dây đồng có kích thước mặt cắt ngang tối đa trên 6 mm nhưng không quá 8mm", "rate": "0", "corresponding": "74081120"}
+{"annex": "II", "chapter98": true, "hs": "98321000", "hs_dotted": "9832.10.00", "desc": "- Loại có động cơ đốt trong kiểu piston đốt cháy bằng sức nén (diesel hoặc bán diesel)", "rate": "15", "corresponding": "87042129"}
+{"annex": "II", "chapter98": true, "hs": "98329000", "hs_dotted": "9832.90.00", "desc": "- Loại có động cơ đốt trong kiểu piston đốt cháy bằng tia lửa điện", "rate": "15", "corresponding": "87043129"}
+{"annex": "II", "chapter98": true, "hs": "98330000", "hs_dotted": "9833.00.00", "desc": "Bộ quầy tủ để làm thủ tục tại sân bay, nhà ga", "rate": "10", "corresponding": "94036090"}
+{"annex": "II", "chapter98": true, "hs": "98341100", "hs_dotted": "9834.11.00", "desc": "- Bàn phím làm bằng cao su, khắc lase, phủ PU, nhiệt độ chịu đựng 150 độ C", "rate": "0", "corresponding": "40169999"}
+{"annex": "II", "chapter98": true, "hs": "98341210", "hs_dotted": "9834.12.10", "desc": "- - Ốc vít bằng thép, INOX 304, ren tiêu chuẩn 1, mạ chống rỉ, đường kính dưới 1.4 mm", "rate": "0", "corresponding": "73181510"}
+{"annex": "II", "chapter98": true, "hs": "98341290", "hs_dotted": "9834.12.90", "desc": "- - Nguyên liệu, vật tư, linh kiện và bộ phận phụ trợ để sản xuất các sản phẩm CNTT trọng điểm", "rate": "0", "corresponding": "73269020"}
+{"annex": "II", "chapter98": true, "hs": "98341300", "hs_dotted": "9834.13.00", "desc": "- Thiếc hàn dạng thanh, không chì, phù hợp với tiêu chuẩn RoHS", "rate": "0", "corresponding": "80030010"}
+{"annex": "II", "chapter98": true, "hs": "98341400", "hs_dotted": "9834.14.00", "desc": "- Thiếc hàn dạng dây, không chì, có lõi bằng chất dễ chảy, đường kính nhỏ hơn hoặc bằng 1.2 mm, phù hợp với tiêu chuẩn RoHS", "rate": "0", "corresponding": "83119000"}
+{"annex": "II", "chapter98": true, "hs": "98341500", "hs_dotted": "9834.15.00", "desc": "- Môtơ rung cho điện thoại, đường kính ≤ 30mm, công suất ≤ 0.5 W", "rate": "0", "corresponding": "85011049"}
+{"annex": "II", "chapter98": true, "hs": "98341600", "hs_dotted": "9834.16.00", "desc": "- Mô tơ, công suất không quá 5 W", "rate": "0", "corresponding": "85011022"}
+{"annex": "II", "chapter98": true, "hs": "98341700", "hs_dotted": "9834.17.00", "desc": "- Cuộn biến áp dùng cho các thiết bị điện tử, viễn thông, công suất danh định nhỏ hơn 0,1 kVA", "rate": "0", "corresponding": "85043193"}
+{"annex": "II", "chapter98": true, "hs": "98341800", "hs_dotted": "9834.18.00", "desc": "- Pin lithium dày ≤ 7 mm, dài ≤ 100 mm, rộng ≤ 100 mm", "rate": "0", "corresponding": "85065000"}
+{"annex": "II", "chapter98": true, "hs": "98341900", "hs_dotted": "9834.19.00", "desc": "- Màn hiển thị tinh thể có kích thước ≤ 7 inch", "rate": "0", "corresponding": "85177932"}
+{"annex": "II", "chapter98": true, "hs": "98342000", "hs_dotted": "9834.20.00", "desc": "- Đầu kết nối USB mini, sử dụng cho nạp pin và truyền dữ liệu từ điện thoại đến máy tính PC", "rate": "0", "corresponding": "85369093"}
+{"annex": "II", "chapter98": true, "hs": "98342100", "hs_dotted": "9834.21.00", "desc": "- Cầu chì dùng cho các thiết bị điện tử, có giới hạn dòng danh định không quá 1,5 A", "rate": "0", "corresponding": "85361012"}
+{"annex": "II", "chapter98": true, "hs": "98342200", "hs_dotted": "9834.22.00", "desc": "- Rơ le bán dẫn/Rơle điện từ có điện áp không quá 28 V", "rate": "0", "corresponding": "85364191"}
+{"annex": "II", "chapter98": true, "hs": "98342300", "hs_dotted": "9834.23.00", "desc": "- Đầu cắm tín hiệu hình, tiếng, đầu cắm đèn chân không dùng cho máy thu hình, có dòng điện nhỏ hơn hoặc bằng 1,5 A", "rate": "0", "corresponding": "85366923"}
+{"annex": "II", "chapter98": true, "hs": "98342400", "hs_dotted": "9834.24.00", "desc": "- Giắc cắm, đầu nối cổng nối USB, giắc mạng để nối dây dẫn tín hiệu", "rate": "0", "corresponding": "85369099"}
+{"annex": "II", "chapter98": true, "hs": "98342500", "hs_dotted": "9834.25.00", "desc": "- Dây nguồn điện bọc nhựa có đầu nối, có đường kính lõi nhỏ hơn hoặc bằng 5 mm", "rate": "0", "corresponding": "85444294"}
+{"annex": "II", "chapter98": true, "hs": "98342600", "hs_dotted": "9834.26.00", "desc": "- Cáp nối truyền dữ liệu dạng dẹt từ 2 sợi trở lên", "rate": "0", "corresponding": "85444291"}
+{"annex": "II", "chapter98": true, "hs": "98342700", "hs_dotted": "9834.27.00", "desc": "- Cáp dùng cho máy thông tin", "rate": "0", "corresponding": "85444929"}
+{"annex": "II", "chapter98": true, "hs": "98342800", "hs_dotted": "9834.28.00", "desc": "- Biến áp nguồn, biến áp tín hiệu, biến áp cao áp để sản xuất các sản phẩm CNTT trọng điểm", "rate": "0", "corresponding": "85043429"}
+{"annex": "II", "chapter98": true, "hs": "98342900", "hs_dotted": "9834.29.00", "desc": "- Pin và bộ pin bằng liti để sản xuất các sản phẩm CNTT trọng điểm", "rate": "0", "corresponding": "85065000"}
+{"annex": "II", "chapter98": true, "hs": "98343000", "hs_dotted": "9834.30.00", "desc": "- Nguyên liệu, vật tư, linh kiện và bộ phận phụ trợ để sản xuất các sản phẩm CNTT trọng điểm", "rate": "0", "corresponding": "85366999"}
+{"annex": "II", "chapter98": true, "hs": "98343100", "hs_dotted": "9834.31.00", "desc": "- Bàn điều khiển camera", "rate": "0", "corresponding": "85371019"}
+{"annex": "II", "chapter98": true, "hs": "98343200", "hs_dotted": "9834.32.00", "desc": "- Cáp nguồn đã gắn đấu nối cho mạch điện tử 220 V, bọc plastic", "rate": "0", "corresponding": "85444296"}
+{"annex": "II", "chapter98": true, "hs": "98343300", "hs_dotted": "9834.33.00", "desc": "- Bộ phận khác, trừ bộ phận của bộ điều khiển, bộ thích ứng, thiết bị truyền dẫn, tấm mạch in, ăng ten", "rate": "0", "corresponding": "85177992"}
+{"annex": "II", "chapter98": true, "hs": "98343400", "hs_dotted": "9834.34.00", "desc": "- Micro", "rate": "0", "corresponding": "85181090"}
+{"annex": "II", "chapter98": true, "hs": "98343500", "hs_dotted": "9834.35.00", "desc": "- Tai nghe có hoặc không nối với một bộ micro, và các bộ gồm một micro và một hoặc nhiều loa", "rate": "0", "corresponding": "85183020"}
+{"annex": "II", "chapter98": true, "hs": "98343600", "hs_dotted": "9834.36.00", "desc": "- Bộ micro, loa kết hợp trừ của điện thoại di động hoặc điện thoại dùng cho mạng không dây khác", "rate": "0", "corresponding": "85183059"}
+{"annex": "II", "chapter98": true, "hs": "98343700", "hs_dotted": "9834.37.00", "desc": "- Đèn Flash", "rate": "0", "corresponding": "90066900"}
+{"annex": "II", "chapter98": true, "hs": "98343800", "hs_dotted": "9834.38.00", "desc": "- Tấm, phiến, màng, lá và dải khác, bằng plastic dùng để sản xuất sản phẩm công nghệ thông tin", "rate": "0", "corresponding": "39219041"}
+{"annex": "II", "chapter98": true, "hs": "98343900", "hs_dotted": "9834.39.00", "desc": "- Các sản phẩm bằng plastic và các sản phẩm bằng các vật liệu khác của các nhóm từ 39.01 đến 39.14 dùng để sản xuất sản phẩm công nghệ thông tin", "rate": "0", "corresponding": "39269059"}
+{"annex": "II", "chapter98": true, "hs": "98344000", "hs_dotted": "9834.40.00", "desc": "- Dây bện tao, thừng và cáp dùng để sản xuất sản phẩm công nghệ thông tin", "rate": "0", "corresponding": "73121030"}
+{"annex": "II", "chapter98": true, "hs": "98344100", "hs_dotted": "9834.41.00", "desc": "- Các loại đầu nối, giắc nối có 1 đầu là các chân cắm được dùng để cắm trực tiếp lên tấm mạch in, 1 đầu là đầu chờ để tiếp nối với các dây dẫn tín hiệu, dùng cho dòng điện dưới 16A", "rate": "0", "corresponding": "85366992"}
+{"annex": "II", "chapter98": true, "hs": "98350000", "hs_dotted": "9835.00.00", "desc": "Natri hydroxit dạng dung dịch nước có hàm lượng NaOH > 42%", "rate": "3", "corresponding": "28151200"}
+{"annex": "II", "chapter98": true, "hs": "98361010", "hs_dotted": "9836.10.10", "desc": "- - - Khối lượng toàn bộ theo thiết kế trên 20 tấn nhưng không quá 24 tấn", "rate": "40", "corresponding": "87041034"}
+{"annex": "II", "chapter98": true, "hs": "98361090", "hs_dotted": "9836.10.90", "desc": "- - - Khối lượng toàn bộ theo thiết kế trên 24 tấn nhưng không quá 45 tấn", "rate": "10", "corresponding": "87041035"}
+{"annex": "II", "chapter98": true, "hs": "98362010", "hs_dotted": "9836.20.10", "desc": "- - - - Ô tô đông lạnh", "rate": "18", "corresponding": "87042321"}
+{"annex": "II", "chapter98": true, "hs": "98362020", "hs_dotted": "9836.20.20", "desc": "- - - - Ô tô thu gom phế thải có bộ phận nén phế thải", "rate": "18", "corresponding": "87042322"}
+{"annex": "II", "chapter98": true, "hs": "98362030", "hs_dotted": "9836.20.30", "desc": "- - - - Ô tô xi téc; ô tô chở xi măng kiểu bồn", "rate": "18", "corresponding": "87042323"}
+{"annex": "II", "chapter98": true, "hs": "98362040", "hs_dotted": "9836.20.40", "desc": "- - - - Ô tô bọc thép để chở hàng hóa có giá trị", "rate": "10", "corresponding": "87042324"}
+{"annex": "II", "chapter98": true, "hs": "98362050", "hs_dotted": "9836.20.50", "desc": "- - - - Ô tô chở bùn có thùng rời nâng hạ được", "rate": "18", "corresponding": "87042325"}
+{"annex": "II", "chapter98": true, "hs": "98362090", "hs_dotted": "9836.20.90", "desc": "- - - - Loại khác", "rate": "24", "corresponding": "87042329"}
+{"annex": "II", "chapter98": true, "hs": "98363010", "hs_dotted": "9836.30.10", "desc": "- - - - Ô tô đông lạnh", "rate": "18", "corresponding": "87042361"}
+{"annex": "II", "chapter98": true, "hs": "98363020", "hs_dotted": "9836.30.20", "desc": "- - - - Ô tô thu gom phế thải có bộ phận nén phế thải", "rate": "18", "corresponding": "87042362"}
+{"annex": "II", "chapter98": true, "hs": "98363030", "hs_dotted": "9836.30.30", "desc": "- - - - Ô tô xi téc; ô tô chở xi măng kiểu bồn", "rate": "18", "corresponding": "87042363"}
+{"annex": "II", "chapter98": true, "hs": "98363040", "hs_dotted": "9836.30.40", "desc": "- - - - Ô tô bọc thép để chở hàng hóa có giá trị", "rate": "10", "corresponding": "87042364"}
+{"annex": "II", "chapter98": true, "hs": "98363050", "hs_dotted": "9836.30.50", "desc": "- - - - Ô tô chở bùn có thùng rời nâng hạ được", "rate": "18", "corresponding": "87042365"}
+{"annex": "II", "chapter98": true, "hs": "98363060", "hs_dotted": "9836.30.60", "desc": "- - - - Ô tô tự đổ", "rate": "24", "corresponding": "87042366"}
+{"annex": "II", "chapter98": true, "hs": "98363090", "hs_dotted": "9836.30.90", "desc": "- - - - Loại khác", "rate": "24", "corresponding": "87042369"}
+{"annex": "II", "chapter98": true, "hs": "98364010", "hs_dotted": "9836.40.10", "desc": "- - - - Ô tô đông lạnh", "rate": "18", "corresponding": "87043261"}
+{"annex": "II", "chapter98": true, "hs": "98364020", "hs_dotted": "9836.40.20", "desc": "- - - - Ô tô thu gom phế thải có bộ phận nén phế thải", "rate": "18", "corresponding": "87043262"}
+{"annex": "II", "chapter98": true, "hs": "98364030", "hs_dotted": "9836.40.30", "desc": "- - - - Ô tô xi téc; ô tô chở xi măng kiểu bồn", "rate": "18", "corresponding": "87043263"}
+{"annex": "II", "chapter98": true, "hs": "98364040", "hs_dotted": "9836.40.40", "desc": "- - - - Ô tô bọc thép để chở hàng hóa có giá trị", "rate": "10", "corresponding": "87043264"}
+{"annex": "II", "chapter98": true, "hs": "98364050", "hs_dotted": "9836.40.50", "desc": "- - - - Ô tô chở bùn có thùng rời nâng hạ được", "rate": "18", "corresponding": "87043265"}
+{"annex": "II", "chapter98": true, "hs": "98364090", "hs_dotted": "9836.40.90", "desc": "- - - - Loại khác", "rate": "30", "corresponding": "87043269"}
+{"annex": "II", "chapter98": true, "hs": "98365010", "hs_dotted": "9836.50.10", "desc": "- - - - Ô tô đông lạnh", "rate": "18", "corresponding": "87043281"}
+{"annex": "II", "chapter98": true, "hs": "98365020", "hs_dotted": "9836.50.20", "desc": "- - - - Ô tô thu gom phế thải có bộ phận nén phế thải", "rate": "18", "corresponding": "87043282"}
+{"annex": "II", "chapter98": true, "hs": "98365030", "hs_dotted": "9836.50.30", "desc": "- - - - Ô tô xi téc; ô tô chở xi măng kiểu bồn", "rate": "18", "corresponding": "87043283"}
+{"annex": "II", "chapter98": true, "hs": "98365040", "hs_dotted": "9836.50.40", "desc": "- - - - Ô tô bọc thép để chở hàng hóa có giá trị", "rate": "10", "corresponding": "87043284"}
+{"annex": "II", "chapter98": true, "hs": "98365050", "hs_dotted": "9836.50.50", "desc": "- - - - Ô tô chở bùn có thùng rời nâng hạ được", "rate": "18", "corresponding": "87043285"}
+{"annex": "II", "chapter98": true, "hs": "98365060", "hs_dotted": "9836.50.60", "desc": "- - - - Ô tô tự đổ", "rate": "24", "corresponding": "87043286"}
+{"annex": "II", "chapter98": true, "hs": "98365090", "hs_dotted": "9836.50.90", "desc": "- - - - Loại khác", "rate": "24", "corresponding": "87043289"}
+{"annex": "II", "chapter98": true, "hs": "98369000", "hs_dotted": "9836.90.00", "desc": "- - - Khối lượng toàn bộ theo thiết kế trên 20 tấn nhưng không quá 45 tấn", "rate": "24", "corresponding": "87049094"}
+{"annex": "II", "chapter98": true, "hs": "98370000", "hs_dotted": "9837.00.00", "desc": "Hạt nhựa PolyPropylene dạng nguyên sinh", "rate": "0", "corresponding": "39021040"}
+{"annex": "II", "chapter98": true, "hs": "98380000", "hs_dotted": "9838.00.00", "desc": "Dầu diesel sinh học (B5, B10)", "rate": "7", "corresponding": "27102000"}
+{"annex": "II", "chapter98": true, "hs": "98391000", "hs_dotted": "9839.10.00", "desc": "- Dạng thanh và cuộn, loại có đường kính mặt cắt ngang hình tròn dưới 14 mm", "rate": "0", "corresponding": "72139190"}
+{"annex": "II", "chapter98": true, "hs": "98392000", "hs_dotted": "9839.20.00", "desc": "- Dạng thanh và cuộn, loại khác", "rate": "0", "corresponding": "72139990"}
+{"annex": "II", "chapter98": true, "hs": "98401100", "hs_dotted": "9840.11.00", "desc": "- Lõi kim loại thép Metal segment (14 x 24) mm", "rate": "0", "corresponding": "73182910"}
+{"annex": "II", "chapter98": true, "hs": "98401200", "hs_dotted": "9840.12.00", "desc": "- Vòng kim loại thép", "rate": "0", "corresponding": "73182200"}
+{"annex": "II", "chapter98": true, "hs": "98401300", "hs_dotted": "9840.13.00", "desc": "- Vòng đệm bằng đồng dùng gắn vào sản phẩm cao su (10,13 x 0,8) mm", "rate": "10", "corresponding": "74152100"}
+{"annex": "II", "chapter98": true, "hs": "98401400", "hs_dotted": "9840.14.00", "desc": "- Lõi nhôm lót trong mạ niken (85 x 38) mm dùng trong công nghiệp sản xuất chuỗi cách điện", "rate": "0", "corresponding": "76169990"}
+{"annex": "II", "chapter98": true, "hs": "98401500", "hs_dotted": "9840.15.00", "desc": "- Keo dán adhesive chemlok 205", "rate": "5", "corresponding": "35069900"}
+{"annex": "II", "chapter98": true, "hs": "98401600", "hs_dotted": "9840.16.00", "desc": "- Vòng đệm thép #304 dùng để gắn vào sản phẩm cao su", "rate": "0", "corresponding": "73182200"}
+{"annex": "II", "chapter98": true, "hs": "98401700", "hs_dotted": "9840.17.00", "desc": "- Vòng đệm vênh bằng thép #304-S dùng để gắn vào sản phẩm cao su", "rate": "0", "corresponding": "73182100"}
+{"annex": "II", "chapter98": true, "hs": "98401800", "hs_dotted": "9840.18.00", "desc": "- Vòng nhôm 3077 (Mini) (99,71 x 84,73 x 14,30) mm dùng sản xuất sản phẩm cao su", "rate": "0", "corresponding": "76169990"}
+{"annex": "II", "chapter98": true, "hs": "98401900", "hs_dotted": "9840.19.00", "desc": "- Axit stearic", "rate": "0", "corresponding": "38231100"}
+{"annex": "II", "chapter98": true, "hs": "98402000", "hs_dotted": "9840.20.00", "desc": "- Cao lanh (bột đá) dùng sản xuất sản phẩm cao su", "rate": "0", "corresponding": "68041000"}
+{"annex": "II", "chapter98": true, "hs": "98402100", "hs_dotted": "9840.21.00", "desc": "- Đệm cao su 0-35 b dùng gắn vào chụp đệm cao su dùng trên mái nhà", "rate": "0", "corresponding": "40169390"}
+{"annex": "II", "chapter98": true, "hs": "98402200", "hs_dotted": "9840.22.00", "desc": "- Cao su lưu hóa dạng tấm", "rate": "0", "corresponding": "40081900"}
+{"annex": "II", "chapter98": true, "hs": "98402300", "hs_dotted": "9840.23.00", "desc": "- Muội carbon black N330,770,660 dạng hạt, dùng để sản xuất sản phẩm cao su", "rate": "0", "corresponding": "28030090"}
+{"annex": "II", "chapter98": true, "hs": "98402400", "hs_dotted": "9840.24.00", "desc": "- Tấm lưới bằng nhôm phủ cao su (410 x 490) mm", "rate": "0", "corresponding": "76169990"}
+{"annex": "II", "chapter98": true, "hs": "98402500", "hs_dotted": "9840.25.00", "desc": "- Dầu Parafin - Paraffinic Oil dùng trong sản xuất sản phẩm cao su", "rate": "0", "corresponding": "27101990"}
+{"annex": "II", "chapter98": true, "hs": "98402600", "hs_dotted": "9840.26.00", "desc": "- Hợp chất hóa dẻo Sunthene 480 dạng lỏng dùng để sản xuất sản phẩm cao su", "rate": "0", "corresponding": "38122000"}
+{"annex": "II", "chapter98": true, "hs": "98402700", "hs_dotted": "9840.27.00", "desc": "- Oxít Kẽm Zinc Oxide white seal 99.8% (ZNO) dạng bột màu trắng dùng để sản xuất sản phẩm cao su", "rate": "0", "corresponding": "28170020"}
+{"annex": "II", "chapter98": true, "hs": "98402800", "hs_dotted": "9840.28.00", "desc": "- Vòng kim lọai thép (129.8 x 2.8) mm dùng để gắn vào sản phẩm cao su", "rate": "0", "corresponding": "73182200"}
+{"annex": "II", "chapter98": true, "hs": "98411000", "hs_dotted": "9841.10.00", "desc": "- Bằng gỗ", "rate": "5", "corresponding": "94061090"}
+{"annex": "II", "chapter98": true, "hs": "98412000", "hs_dotted": "9841.20.00", "desc": "- Bằng sắt hoặc thép", "rate": "5", "corresponding": "94069030"}
+{"annex": "II", "chapter98": true, "hs": "98413000", "hs_dotted": "9841.30.00", "desc": "- Bằng plastic hoặc bằng nhôm", "rate": "5", "corresponding": "94069020"}
+{"annex": "II", "chapter98": true, "hs": "98414000", "hs_dotted": "9841.40.00", "desc": "- Bằng xi măng, bằng bê tông hoặc đá nhân tạo", "rate": "5", "corresponding": "94069040"}
+{"annex": "II", "chapter98": true, "hs": "98415000", "hs_dotted": "9841.50.00", "desc": "- Loại khác", "rate": "5", "corresponding": "94069090"}
+{"annex": "II", "chapter98": true, "hs": "98420000", "hs_dotted": "9842.00.00", "desc": "Dung môi N-Hexan dùng trong sản xuất khô dầu đậu tương và dầu thực vật, cám gạo trích ly và dầu cám", "rate": "2", "corresponding": "27101270"}
+{"annex": "II", "chapter98": true, "hs": "98441090", "hs_dotted": "9844.10.90", "desc": "- - - Loại khác", "rate": "0", "corresponding": "87019190"}
+{"annex": "II", "chapter98": true, "hs": "98442010", "hs_dotted": "9844.20.10", "desc": "- - Rơ-moóc và sơ mi rơ-moóc loại nhà lưu động, dùng làm nhà ở hoặc cắm trại", "rate": "0", "corresponding": "87161000"}
+{"annex": "II", "chapter98": true, "hs": "98442020", "hs_dotted": "9844.20.20", "desc": "- - Rơ-moóc và sơ mi rơ-moóc loại tự bốc hoặc dỡ hàng dùng trong nông nghiệp", "rate": "0", "corresponding": "87162000"}
+{"annex": "II", "chapter98": true, "hs": "98442031", "hs_dotted": "9844.20.31", "desc": "- - - Rơ-moóc và sơ mi rơ-moóc gắn xi téc", "rate": "0", "corresponding": "87163100"}
+{"annex": "II", "chapter98": true, "hs": "98442032", "hs_dotted": "9844.20.32", "desc": "- - - - Rơ-moóc và sơ mi rơ-moóc dùng trong nông nghiệp", "rate": "0", "corresponding": "87163940"}
+{"annex": "II", "chapter98": true, "hs": "98442033", "hs_dotted": "9844.20.33", "desc": "- - - - - Có khối lượng hàng chuyên chở theo thiết kế (payload) trên 200 tấn", "rate": "0", "corresponding": "87163991"}
+{"annex": "II", "chapter98": true, "hs": "98442039", "hs_dotted": "9844.20.39", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "87163999"}
+{"annex": "II", "chapter98": true, "hs": "98442090", "hs_dotted": "9844.20.90", "desc": "- - Rơ-moóc và sơ mi rơ-moóc khác", "rate": "0", "corresponding": "87164000"}
+{"annex": "II", "chapter98": true, "hs": "98452000", "hs_dotted": "9845.20.00", "desc": "- Kính an toàn, kính dán an toàn (dày từ 6 đến 12 mm/kính dán nhiều lớp để tăng độ bền, có thể hạn chế tia UV), loại dùng cho ô tô tải và ô tô chở khách thuộc nhóm 87.02 và 87.04", "rate": "25", "corresponding": "70072110"}
+{"annex": "II", "chapter98": true, "hs": "98453000", "hs_dotted": "9845.30.00", "desc": "- Ống xi lanh sử dụng cho dẫn dầu hộp số ô tô", "rate": "15", "corresponding": "84099944"}
+{"annex": "II", "chapter98": true, "hs": "98454000", "hs_dotted": "9845.40.00", "desc": "- Bạc nhíp dùng cho xe từ 1,25 tấn trở lên", "rate": "15", "corresponding": "84833030"}
+{"annex": "II", "chapter98": true, "hs": "98455000", "hs_dotted": "9845.50.00", "desc": "- Bạc phụ tùng dùng cho bộ bánh răng và cụm bánh răng khớp, trừ bánh xe có răng, đĩa xích và các bộ phận truyền chuyển động ở dạng riêng biệt; vít bi hoặc vít đũa; hộp số và các cơ cấu điều tốc khác, kể cả bộ biến đổi mô men xoắn", "rate": "15", "corresponding": "84834040"}
+{"annex": "II", "chapter98": true, "hs": "98456000", "hs_dotted": "9845.60.00", "desc": "- Ống dầu phanh", "rate": "15", "corresponding": "87083029"}
+{"annex": "II", "chapter98": true, "hs": "98458000", "hs_dotted": "9845.80.00", "desc": "- Hộp giảm tốc trục vít - bánh vít", "rate": "20", "corresponding": "87084029"}
+{"annex": "II", "chapter98": true, "hs": "98459010", "hs_dotted": "9845.90.10", "desc": "- - Ống dẫn sử dụng cho dẫn dầu hộp số ô tô", "rate": "15", "corresponding": "87084092"}
+{"annex": "II", "chapter98": true, "hs": "98459020", "hs_dotted": "9845.90.20", "desc": "- - Vành bánh xe", "rate": "25", "corresponding": "87087032"}
+{"annex": "II", "chapter98": true, "hs": "98459090", "hs_dotted": "9845.90.90", "desc": "- - Ống xả", "rate": "25", "corresponding": "87089220"}
+{"annex": "II", "chapter98": true, "hs": "98460010", "hs_dotted": "9846.00.10", "desc": "- Hoạt động bằng nguồn điện lưới", "rate": "0", "corresponding": "85287191"}
+{"annex": "II", "chapter98": true, "hs": "98460090", "hs_dotted": "9846.00.90", "desc": "- Loại khác", "rate": "0", "corresponding": "85287199"}
+{"annex": "II", "chapter98": true, "hs": "98470000", "hs_dotted": "9847.00.00", "desc": "Ô ngăn hình mạng làm từ vật liệu Nano-composite Polymeric Alloy (Neoweb)", "rate": "0", "corresponding": "39269099"}
+{"annex": "II", "chapter98": true, "hs": "98480000", "hs_dotted": "9848.00.00", "desc": "Kính quang học, chưa được gia công về mặt quang học", "rate": "5", "corresponding": "70053010"}
+{"annex": "II", "chapter98": true, "hs": "98491110", "hs_dotted": "9849.11.10", "desc": "- - Ống dẫn nhiên liệu, ống dẫn nhiệt và ống dẫn nước, dùng cho xe gắn động cơ thuộc nhóm 87.02, 87.03, 87.04 hoặc 87.11", "rate": "0", "corresponding": "40093191"}
+{"annex": "II", "chapter98": true, "hs": "98491210", "hs_dotted": "9849.12.10", "desc": "- - Loại sử dụng cho ô tô con (motor car) (kể cả loại ô tô chở người có khoang chở hành lý chung (station wagons) và ô tô đua)", "rate": "0", "corresponding": "40111000"}
+{"annex": "II", "chapter98": true, "hs": "98491211", "hs_dotted": "9849.12.11", "desc": "- - - Chiều rộng không quá 450 mm", "rate": "0", "corresponding": "40112011"}
+{"annex": "II", "chapter98": true, "hs": "98491219", "hs_dotted": "9849.12.19", "desc": "- - - Loại khác", "rate": "0", "corresponding": "40112090"}
+{"annex": "II", "chapter98": true, "hs": "98491290", "hs_dotted": "9849.12.90", "desc": "- - - Loại dùng cho xe thuộc Chương 87", "rate": "0", "corresponding": "40119010"}
+{"annex": "II", "chapter98": true, "hs": "98491310", "hs_dotted": "9849.13.10", "desc": "- - Loại sử dụng cho ô tô con (motor car) (kể cả loại ô tô chở người có khoang chở hành lý chung (station wagons) và ô tô đua)", "rate": "0", "corresponding": "40121100"}
+{"annex": "II", "chapter98": true, "hs": "98491311", "hs_dotted": "9849.13.11", "desc": "- - - Chiều rộng không quá 450 mm", "rate": "0", "corresponding": "40121210"}
+{"annex": "II", "chapter98": true, "hs": "98491319", "hs_dotted": "9849.13.19", "desc": "- - - Loại khác", "rate": "0", "corresponding": "40121290"}
+{"annex": "II", "chapter98": true, "hs": "98491411", "hs_dotted": "9849.14.11", "desc": "- - - - Dùng cho loại lốp có chiều rộng không quá 450 mm", "rate": "0", "corresponding": "40131011"}
+{"annex": "II", "chapter98": true, "hs": "98491419", "hs_dotted": "9849.14.19", "desc": "- - - - Dùng cho loại lốp có chiều rộng trên 450 mm", "rate": "0", "corresponding": "40131019"}
+{"annex": "II", "chapter98": true, "hs": "98491421", "hs_dotted": "9849.14.21", "desc": "- - - - Dùng cho loại lốp có chiều rộng không quá 450 mm", "rate": "0", "corresponding": "40131021"}
+{"annex": "II", "chapter98": true, "hs": "98491429", "hs_dotted": "9849.14.29", "desc": "- - - - Dùng cho loại lốp có chiều rộng trên 450 mm", "rate": "0", "corresponding": "40131029"}
+{"annex": "II", "chapter98": true, "hs": "98491431", "hs_dotted": "9849.14.31", "desc": "- - - - Phù hợp lắp cho loại lốp có chiều rộng không quá 450 mm", "rate": "0", "corresponding": "40139031"}
+{"annex": "II", "chapter98": true, "hs": "98491439", "hs_dotted": "9849.14.39", "desc": "- - - - Phù hợp lắp cho loại lốp có chiều rộng trên 450 mm", "rate": "0", "corresponding": "40139039"}
+{"annex": "II", "chapter98": true, "hs": "98491510", "hs_dotted": "9849.15.10", "desc": "- - - Miếng đệm và vành khung tròn, loại dùng cho xe có động cơ thuộc nhóm 87.02, 87.03, 87.04", "rate": "0", "corresponding": "40169320"}
+{"annex": "II", "chapter98": true, "hs": "98491521", "hs_dotted": "9849.15.21", "desc": "- - - - - Dùng cho xe thuộc nhóm 87.02, 87.03, 87.04 hoặc 87.05, trừ viền cao su quanh kính cửa", "rate": "0", "corresponding": "40169911"}
+{"annex": "II", "chapter98": true, "hs": "98491529", "hs_dotted": "9849.15.29", "desc": "- - - - - Viền cao su quanh kính cửa, dùng cho xe có động cơ thuộc nhóm 87.02, 87.03 hoặc 87.04", "rate": "0", "corresponding": "40169913"}
+{"annex": "II", "chapter98": true, "hs": "98491610", "hs_dotted": "9849.16.10", "desc": "- - - - Phù hợp dùng cho xe thuộc Chương 87", "rate": "0", "corresponding": "70071110"}
+{"annex": "II", "chapter98": true, "hs": "98491690", "hs_dotted": "9849.16.90", "desc": "- - - - Phù hợp dùng cho xe thuộc Chương 87", "rate": "0", "corresponding": "70072110"}
+{"annex": "II", "chapter98": true, "hs": "98491710", "hs_dotted": "9849.17.10", "desc": "- - Gương chiếu hậu dùng cho xe", "rate": "0", "corresponding": "70091000"}
+{"annex": "II", "chapter98": true, "hs": "98491720", "hs_dotted": "9849.17.20", "desc": "- - - Chưa có khung", "rate": "0", "corresponding": "70099100"}
+{"annex": "II", "chapter98": true, "hs": "98491790", "hs_dotted": "9849.17.90", "desc": "- - - Có khung", "rate": "0", "corresponding": "70099200"}
+{"annex": "II", "chapter98": true, "hs": "98491810", "hs_dotted": "9849.18.10", "desc": "- - - Dùng cho xe có động cơ thuộc nhóm 87.02, 87.03 hoặc 87.04", "rate": "0", "corresponding": "73201011"}
+{"annex": "II", "chapter98": true, "hs": "98491820", "hs_dotted": "9849.18.20", "desc": "- - - Dùng cho xe có động cơ khác", "rate": "0", "corresponding": "73201012"}
+{"annex": "II", "chapter98": true, "hs": "98491830", "hs_dotted": "9849.18.30", "desc": "- - - Dùng cho xe có động cơ", "rate": "0", "corresponding": "73202011"}
+{"annex": "II", "chapter98": true, "hs": "98491890", "hs_dotted": "9849.18.90", "desc": "- - - Dùng cho xe có động cơ", "rate": "0", "corresponding": "73209010"}
+{"annex": "II", "chapter98": true, "hs": "98491910", "hs_dotted": "9849.19.10", "desc": "- - Ổ khóa thuộc loại sử dụng cho xe có động cơ", "rate": "0", "corresponding": "83012000"}
+{"annex": "II", "chapter98": true, "hs": "98492011", "hs_dotted": "9849.20.11", "desc": "- - - Dung tích xi lanh không quá 50 cc", "rate": "0", "corresponding": "84073100"}
+{"annex": "II", "chapter98": true, "hs": "98492012", "hs_dotted": "9849.20.12", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "84073219"}
+{"annex": "II", "chapter98": true, "hs": "98492013", "hs_dotted": "9849.20.13", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "84073229"}
+{"annex": "II", "chapter98": true, "hs": "98492014", "hs_dotted": "9849.20.14", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "84073390"}
+{"annex": "II", "chapter98": true, "hs": "98492015", "hs_dotted": "9849.20.15", "desc": "- - - - - - Dung tích xi lanh không quá 2.000 cc", "rate": "0", "corresponding": "84073471"}
+{"annex": "II", "chapter98": true, "hs": "98492016", "hs_dotted": "9849.20.16", "desc": "- - - - - - Dung tích xi lanh trên 2.000 cc nhưng không quá 3.000 cc", "rate": "0", "corresponding": "84073472"}
+{"annex": "II", "chapter98": true, "hs": "98492017", "hs_dotted": "9849.20.17", "desc": "- - - - - - Dung tích xi lanh trên 3.000 cc", "rate": "0", "corresponding": "84073473"}
+{"annex": "II", "chapter98": true, "hs": "98492018", "hs_dotted": "9849.20.18", "desc": "- - - - - Dung tích xi lanh không quá 2.000 cc", "rate": "0", "corresponding": "84073494"}
+{"annex": "II", "chapter98": true, "hs": "98492019", "hs_dotted": "9849.20.19", "desc": "- - - - - Dung tích xi lanh trên 2.000 cc nhưng không quá 3.000 cc", "rate": "0", "corresponding": "84073495"}
+{"annex": "II", "chapter98": true, "hs": "98492020", "hs_dotted": "9849.20.20", "desc": "- - - - - Dung tích xi lanh trên 3.000 cc", "rate": "0", "corresponding": "84073499"}
+{"annex": "II", "chapter98": true, "hs": "98492111", "hs_dotted": "9849.21.11", "desc": "- - - - Dung tích xi lanh không quá 2.000 cc", "rate": "0", "corresponding": "84082021"}
+{"annex": "II", "chapter98": true, "hs": "98492112", "hs_dotted": "9849.21.12", "desc": "- - - - Dung tích xi lanh trên 2.000 cc nhưng không quá 3.500 cc", "rate": "0", "corresponding": "84082022"}
+{"annex": "II", "chapter98": true, "hs": "98492113", "hs_dotted": "9849.21.13", "desc": "- - - - Dung tích xi lanh trên 3.500 cc", "rate": "0", "corresponding": "84082023"}
+{"annex": "II", "chapter98": true, "hs": "98492114", "hs_dotted": "9849.21.14", "desc": "- - - - Dung tích xi lanh không quá 2.000 cc", "rate": "0", "corresponding": "84082094"}
+{"annex": "II", "chapter98": true, "hs": "98492115", "hs_dotted": "9849.21.15", "desc": "- - - - Dung tích xi lanh trên 2.000 cc nhưng không quá 3.500 cc", "rate": "0", "corresponding": "84082095"}
+{"annex": "II", "chapter98": true, "hs": "98492119", "hs_dotted": "9849.21.19", "desc": "- - - - Dung tích xi lanh trên 3.500 cc", "rate": "0", "corresponding": "84082096"}
+{"annex": "II", "chapter98": true, "hs": "98492211", "hs_dotted": "9849.22.11", "desc": "- - - - Chế hòa khí và bộ phận của chúng", "rate": "0", "corresponding": "84099141"}
+{"annex": "II", "chapter98": true, "hs": "98492212", "hs_dotted": "9849.22.12", "desc": "- - - - Thân động cơ (cylinder block); hộp trục khuỷu", "rate": "0", "corresponding": "84099142"}
+{"annex": "II", "chapter98": true, "hs": "98492213", "hs_dotted": "9849.22.13", "desc": "- - - - Ống xi lanh, có đường kính trong từ 50 mm trở lên, nhưng không quá 155 mm", "rate": "0", "corresponding": "84099143"}
+{"annex": "II", "chapter98": true, "hs": "98492214", "hs_dotted": "9849.22.14", "desc": "- - - - Ống xi lanh khác", "rate": "0", "corresponding": "84099144"}
+{"annex": "II", "chapter98": true, "hs": "98492215", "hs_dotted": "9849.22.15", "desc": "- - - - Quy lát và nắp quy lát", "rate": "0", "corresponding": "84099145"}
+{"annex": "II", "chapter98": true, "hs": "98492216", "hs_dotted": "9849.22.16", "desc": "- - - - Piston, có đường kính ngoài từ 50 mm trở lên, nhưng không quá 155 mm", "rate": "0", "corresponding": "84099146"}
+{"annex": "II", "chapter98": true, "hs": "98492217", "hs_dotted": "9849.22.17", "desc": "- - - - Piston khác", "rate": "0", "corresponding": "84099147"}
+{"annex": "II", "chapter98": true, "hs": "98492218", "hs_dotted": "9849.22.18", "desc": "- - - - Bạc piston và chốt piston", "rate": "0", "corresponding": "84099148"}
+{"annex": "II", "chapter98": true, "hs": "98492219", "hs_dotted": "9849.22.19", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "84099149"}
+{"annex": "II", "chapter98": true, "hs": "98492221", "hs_dotted": "9849.22.21", "desc": "- - - - Chế hòa khí và bộ phận của chúng", "rate": "0", "corresponding": "84099941"}
+{"annex": "II", "chapter98": true, "hs": "98492222", "hs_dotted": "9849.22.22", "desc": "- - - - Thân động cơ (cylinder block); hộp trục khuỷu", "rate": "0", "corresponding": "84099942"}
+{"annex": "II", "chapter98": true, "hs": "98492223", "hs_dotted": "9849.22.23", "desc": "- - - - Ống xi lanh, có đường kính trong từ 50 mm trở lên, nhưng không quá 155 mm", "rate": "0", "corresponding": "84099943"}
+{"annex": "II", "chapter98": true, "hs": "98492224", "hs_dotted": "9849.22.24", "desc": "- - - - Ống xi lanh khác", "rate": "0", "corresponding": "84099944"}
+{"annex": "II", "chapter98": true, "hs": "98492225", "hs_dotted": "9849.22.25", "desc": "- - - - Quy lát và nắp quy lát", "rate": "0", "corresponding": "84099945"}
+{"annex": "II", "chapter98": true, "hs": "98492226", "hs_dotted": "9849.22.26", "desc": "- - - - Piston, có đường kính ngoài từ 50 mm trở lên, nhưng không quá 155 mm", "rate": "0", "corresponding": "84099946"}
+{"annex": "II", "chapter98": true, "hs": "98492227", "hs_dotted": "9849.22.27", "desc": "- - - - Piston khác", "rate": "0", "corresponding": "84099947"}
+{"annex": "II", "chapter98": true, "hs": "98492228", "hs_dotted": "9849.22.28", "desc": "- - - - Bạc piston và chốt piston", "rate": "0", "corresponding": "84099948"}
+{"annex": "II", "chapter98": true, "hs": "98492229", "hs_dotted": "9849.22.29", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "84099949"}
+{"annex": "II", "chapter98": true, "hs": "98492311", "hs_dotted": "9849.23.11", "desc": "- - - Bơm nhiên liệu loại sử dụng cho động cơ của xe có động cơ thuộc nhóm 87.02, 87.03 hoặc 87.04", "rate": "0", "corresponding": "84133030"}
+{"annex": "II", "chapter98": true, "hs": "98492319", "hs_dotted": "9849.23.19", "desc": "- - - Bơm nước loại được sử dụng cho động cơ của xe có động cơ thuộc nhóm 87.02, 87.03 hoặc 87.04", "rate": "0", "corresponding": "84133040"}
+{"annex": "II", "chapter98": true, "hs": "98492400", "hs_dotted": "9849.24.00", "desc": "- - - Dùng cho máy điều hòa không khí của ô tô", "rate": "0", "corresponding": "84148042"}
+{"annex": "II", "chapter98": true, "hs": "98492511", "hs_dotted": "9849.25.11", "desc": "- - - Công suất làm mát không quá 26,38 kW", "rate": "0", "corresponding": "84152010"}
+{"annex": "II", "chapter98": true, "hs": "98492519", "hs_dotted": "9849.25.19", "desc": "- - - Loại khác", "rate": "0", "corresponding": "84152090"}
+{"annex": "II", "chapter98": true, "hs": "98492521", "hs_dotted": "9849.25.21", "desc": "- - - - - Công suất làm mát không quá 26,38 kW", "rate": "0", "corresponding": "84158131"}
+{"annex": "II", "chapter98": true, "hs": "98492529", "hs_dotted": "9849.25.29", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "84158139"}
+{"annex": "II", "chapter98": true, "hs": "98492531", "hs_dotted": "9849.25.31", "desc": "- - - - - Công suất làm mát không quá 26,38 kW", "rate": "0", "corresponding": "84158231"}
+{"annex": "II", "chapter98": true, "hs": "98492539", "hs_dotted": "9849.25.39", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "84158239"}
+{"annex": "II", "chapter98": true, "hs": "98492541", "hs_dotted": "9849.25.41", "desc": "- - - - - Công suất làm mát không quá 26,38 kW", "rate": "0", "corresponding": "84158331"}
+{"annex": "II", "chapter98": true, "hs": "98492549", "hs_dotted": "9849.25.49", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "84158339"}
+{"annex": "II", "chapter98": true, "hs": "98492590", "hs_dotted": "9849.25.90", "desc": "- - - - Thiết bị làm bay hơi hoặc ngưng tụ dùng cho máy điều hòa không khí lắp trên xe có động cơ", "rate": "0", "corresponding": "84159014"}
+{"annex": "II", "chapter98": true, "hs": "98492611", "hs_dotted": "9849.26.11", "desc": "- - - - - Bộ lọc dầu", "rate": "0", "corresponding": "84212321"}
+{"annex": "II", "chapter98": true, "hs": "98492619", "hs_dotted": "9849.26.19", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "84212329"}
+{"annex": "II", "chapter98": true, "hs": "98492621", "hs_dotted": "9849.26.21", "desc": "- - - - Loại khác, thiết bị lọc xăng", "rate": "0", "corresponding": "84212940"}
+{"annex": "II", "chapter98": true, "hs": "98492629", "hs_dotted": "9849.26.29", "desc": "- - - - Loại khác, thiết bị lọc dầu", "rate": "0", "corresponding": "84212950"}
+{"annex": "II", "chapter98": true, "hs": "98492630", "hs_dotted": "9849.26.30", "desc": "- - - - Dùng cho xe có động cơ thuộc Chương 87", "rate": "0", "corresponding": "84213120"}
+{"annex": "II", "chapter98": true, "hs": "98492640", "hs_dotted": "9849.26.40", "desc": "- - - Của hàng hóa thuộc phân nhóm 8421.31", "rate": "0", "corresponding": "84219930"}
+{"annex": "II", "chapter98": true, "hs": "98492690", "hs_dotted": "9849.26.90", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "84219999"}
+{"annex": "II", "chapter98": true, "hs": "98492710", "hs_dotted": "9849.27.10", "desc": "- - Van ngắt nhiên liệu dùng cho xe thuộc nhóm 87.02, 87.03 hoặc 87.04", "rate": "0", "corresponding": "84818083"}
+{"annex": "II", "chapter98": true, "hs": "98492790", "hs_dotted": "9849.27.90", "desc": "- - Van ngắt nhiên liệu dùng cho xe thuộc nhóm 87.02, 87.03 hoặc 87.04", "rate": "0", "corresponding": "84818093"}
+{"annex": "II", "chapter98": true, "hs": "98492811", "hs_dotted": "9849.28.11", "desc": "- - - - - Cho xe có dung tích xi lanh không quá 2.000 cc", "rate": "0", "corresponding": "84831025"}
+{"annex": "II", "chapter98": true, "hs": "98492812", "hs_dotted": "9849.28.12", "desc": "- - - - - Cho xe có dung tích xi lanh trên 2.000 cc đến 3.000 cc", "rate": "0", "corresponding": "84831026"}
+{"annex": "II", "chapter98": true, "hs": "98492813", "hs_dotted": "9849.28.13", "desc": "- - - - - Cho xe có dung tích xi lanh trên 3.000 cc", "rate": "0", "corresponding": "84831027"}
+{"annex": "II", "chapter98": true, "hs": "98492820", "hs_dotted": "9849.28.20", "desc": "- - - Dùng cho động cơ xe của Chương 87", "rate": "0", "corresponding": "84832030"}
+{"annex": "II", "chapter98": true, "hs": "98492830", "hs_dotted": "9849.28.30", "desc": "- - - Dùng cho động cơ xe của Chương 87", "rate": "0", "corresponding": "84833030"}
+{"annex": "II", "chapter98": true, "hs": "98492840", "hs_dotted": "9849.28.40", "desc": "- - - Dùng cho xe thuộc Chương 87", "rate": "0", "corresponding": "84834040"}
+{"annex": "II", "chapter98": true, "hs": "98492850", "hs_dotted": "9849.28.50", "desc": "- - Bánh đà và ròng rọc, kể cả khối pu li", "rate": "0", "corresponding": "84835000"}
+{"annex": "II", "chapter98": true, "hs": "98492860", "hs_dotted": "9849.28.60", "desc": "- - Ly hợp và khớp nối trục (kể cả khớp nối vạn năng)", "rate": "0", "corresponding": "84836000"}
+{"annex": "II", "chapter98": true, "hs": "98492891", "hs_dotted": "9849.28.91", "desc": "- - - Dùng cho hàng hóa khác thuộc Chương 87", "rate": "0", "corresponding": "84839015"}
+{"annex": "II", "chapter98": true, "hs": "98492899", "hs_dotted": "9849.28.99", "desc": "- - - Dùng cho hàng hóa khác thuộc Chương 87", "rate": "0", "corresponding": "84839095"}
+{"annex": "II", "chapter98": true, "hs": "98492910", "hs_dotted": "9849.29.10", "desc": "- - - Sử dụng cho động cơ ô tô", "rate": "0", "corresponding": "85111020"}
+{"annex": "II", "chapter98": true, "hs": "98492921", "hs_dotted": "9849.29.21", "desc": "- - - - Loại chưa được lắp ráp", "rate": "0", "corresponding": "85112021"}
+{"annex": "II", "chapter98": true, "hs": "98492929", "hs_dotted": "9849.29.29", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "85112029"}
+{"annex": "II", "chapter98": true, "hs": "98492931", "hs_dotted": "9849.29.31", "desc": "- - - - Loại chưa được lắp ráp", "rate": "0", "corresponding": "85113041"}
+{"annex": "II", "chapter98": true, "hs": "98492939", "hs_dotted": "9849.29.39", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "85113049"}
+{"annex": "II", "chapter98": true, "hs": "98492941", "hs_dotted": "9849.29.41", "desc": "- - - - Sử dụng cho động cơ của nhóm 87.02, 87.03, 87.04 hoặc 87.05", "rate": "0", "corresponding": "85114021"}
+{"annex": "II", "chapter98": true, "hs": "98492942", "hs_dotted": "9849.29.42", "desc": "- - - - Sử dụng cho động cơ của các nhóm 87.02, 87.03 hoặc 87.04", "rate": "0", "corresponding": "85114032"}
+{"annex": "II", "chapter98": true, "hs": "98492943", "hs_dotted": "9849.29.43", "desc": "- - - - Sử dụng cho động cơ của nhóm 87.05", "rate": "0", "corresponding": "85114033"}
+{"annex": "II", "chapter98": true, "hs": "98492949", "hs_dotted": "9849.29.49", "desc": "- - - - Sử dụng cho động cơ của các nhóm 87.02, 87.03, 87.04 hoặc 87.05", "rate": "0", "corresponding": "85114091"}
+{"annex": "II", "chapter98": true, "hs": "98492950", "hs_dotted": "9849.29.50", "desc": "- - - - Sử dụng cho động cơ của các nhóm 87.02, 87.03, 87.04 hoặc 87.05", "rate": "0", "corresponding": "85115021"}
+{"annex": "II", "chapter98": true, "hs": "98492961", "hs_dotted": "9849.29.61", "desc": "- - - - Sử dụng cho động cơ của các nhóm 87.02, 87.03 hoặc 87.04", "rate": "0", "corresponding": "85115032"}
+{"annex": "II", "chapter98": true, "hs": "98492969", "hs_dotted": "9849.29.69", "desc": "- - - - Sử dụng cho động cơ của nhóm 87.05", "rate": "0", "corresponding": "85115033"}
+{"annex": "II", "chapter98": true, "hs": "98492971", "hs_dotted": "9849.29.71", "desc": "- - - - Sử dụng cho động cơ của nhóm 87.02, 87.03, 87.04 hoặc 87.05", "rate": "0", "corresponding": "85115091"}
+{"annex": "II", "chapter98": true, "hs": "98492979", "hs_dotted": "9849.29.79", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "85115099"}
+{"annex": "II", "chapter98": true, "hs": "98492980", "hs_dotted": "9849.29.80", "desc": "- - - Sử dụng cho động cơ ô tô", "rate": "0", "corresponding": "85118020"}
+{"annex": "II", "chapter98": true, "hs": "98492990", "hs_dotted": "9849.29.90", "desc": "- - - Sử dụng cho động cơ ô tô", "rate": "0", "corresponding": "85119020"}
+{"annex": "II", "chapter98": true, "hs": "98493010", "hs_dotted": "9849.30.10", "desc": "- - - Thiết bị chiếu sáng hoặc tạo tín hiệu trực quan chưa lắp ráp", "rate": "0", "corresponding": "85122020"}
+{"annex": "II", "chapter98": true, "hs": "98493020", "hs_dotted": "9849.30.20", "desc": "- - - Loại khác", "rate": "0", "corresponding": "85122099"}
+{"annex": "II", "chapter98": true, "hs": "98493031", "hs_dotted": "9849.30.31", "desc": "- - - Còi, đã lắp ráp", "rate": "0", "corresponding": "85123010"}
+{"annex": "II", "chapter98": true, "hs": "98493032", "hs_dotted": "9849.30.32", "desc": "- - - Thiết bị tín hiệu âm thanh chưa lắp ráp", "rate": "0", "corresponding": "85123020"}
+{"annex": "II", "chapter98": true, "hs": "98493033", "hs_dotted": "9849.30.33", "desc": "- - - - Thiết bị dò chướng ngại vật (cảnh báo) cho xe cộ", "rate": "0", "corresponding": "85123091"}
+{"annex": "II", "chapter98": true, "hs": "98493039", "hs_dotted": "9849.30.39", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "85123099"}
+{"annex": "II", "chapter98": true, "hs": "98493040", "hs_dotted": "9849.30.40", "desc": "- - Cái gạt nước, gạt và chống tạo sương và tuyết", "rate": "0", "corresponding": "85124000"}
+{"annex": "II", "chapter98": true, "hs": "98493050", "hs_dotted": "9849.30.50", "desc": "- - - Của hàng hóa thuộc phân nhóm 8512.20, 8512.30 hoặc 8512.40", "rate": "0", "corresponding": "85129020"}
+{"annex": "II", "chapter98": true, "hs": "98493110", "hs_dotted": "9849.31.10", "desc": "- - - - Khối cầu chì, loại sử dụng cho xe có động cơ", "rate": "0", "corresponding": "85361013"}
+{"annex": "II", "chapter98": true, "hs": "98493190", "hs_dotted": "9849.31.90", "desc": "- - - - Khối cầu chì, loại sử dụng cho xe có động cơ", "rate": "0", "corresponding": "85361093"}
+{"annex": "II", "chapter98": true, "hs": "98493210", "hs_dotted": "9849.32.10", "desc": "- - - Dùng cho xe có động cơ thuộc Chương 87", "rate": "0", "corresponding": "85391010"}
+{"annex": "II", "chapter98": true, "hs": "98493220", "hs_dotted": "9849.32.20", "desc": "- - - - Dùng cho xe có động cơ", "rate": "0", "corresponding": "85392130"}
+{"annex": "II", "chapter98": true, "hs": "98493230", "hs_dotted": "9849.32.30", "desc": "- - - - Dùng cho xe có động cơ", "rate": "0", "corresponding": "85392920"}
+{"annex": "II", "chapter98": true, "hs": "98493290", "hs_dotted": "9849.32.90", "desc": "- - - Loại khác, dùng cho đèn của xe có động cơ", "rate": "0", "corresponding": "85399020"}
+{"annex": "II", "chapter98": true, "hs": "98493310", "hs_dotted": "9849.33.10", "desc": "- - - - - Loại dùng cho xe thuộc nhóm 87.02, 87.03, 87.04", "rate": "0", "corresponding": "85443012"}
+{"annex": "II", "chapter98": true, "hs": "98493320", "hs_dotted": "9849.33.20", "desc": "- - - - - Loại dùng cho xe thuộc nhóm 87.02, 87.03, 87.04", "rate": "0", "corresponding": "85443014"}
+{"annex": "II", "chapter98": true, "hs": "98493330", "hs_dotted": "9849.33.30", "desc": "- - - - - - Cho xe thuộc nhóm 87.02, 87.03, 87.04", "rate": "0", "corresponding": "85444232"}
+{"annex": "II", "chapter98": true, "hs": "98493340", "hs_dotted": "9849.33.40", "desc": "- - - - - - Cho xe thuộc nhóm 87.02, 87.03, 87.04", "rate": "0", "corresponding": "85444234"}
+{"annex": "II", "chapter98": true, "hs": "98493411", "hs_dotted": "9849.34.11", "desc": "- - - Loại khác", "rate": "0", "corresponding": "87081090"}
+{"annex": "II", "chapter98": true, "hs": "98493412", "hs_dotted": "9849.34.12", "desc": "- - - Dây đai an toàn", "rate": "0", "corresponding": "87082100"}
+{"annex": "II", "chapter98": true, "hs": "98493413", "hs_dotted": "9849.34.13", "desc": "- - - - - Đỡ tay trên cửa xe dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87082915"}
+{"annex": "II", "chapter98": true, "hs": "98493414", "hs_dotted": "9849.34.14", "desc": "- - - - - Loại khác, dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87082916"}
+{"annex": "II", "chapter98": true, "hs": "98493415", "hs_dotted": "9849.34.15", "desc": "- - - - - Dùng cho xe thuộc phân nhóm 8704.10", "rate": "0", "corresponding": "87082917"}
+{"annex": "II", "chapter98": true, "hs": "98493416", "hs_dotted": "9849.34.16", "desc": "- - - - - Dùng cho xe thuộc nhóm 87.02 hoặc xe khác thuộc nhóm 87.04", "rate": "0", "corresponding": "87082918"}
+{"annex": "II", "chapter98": true, "hs": "98493417", "hs_dotted": "9849.34.17", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "87082919"}
+{"annex": "II", "chapter98": true, "hs": "98493418", "hs_dotted": "9849.34.18", "desc": "- - - - Bộ phận của dây đai an toàn", "rate": "0", "corresponding": "87082920"}
+{"annex": "II", "chapter98": true, "hs": "98493419", "hs_dotted": "9849.34.19", "desc": "- - - - - - Phụ kiện trang trí nội thất; chắn bùn", "rate": "0", "corresponding": "87082993"}
+{"annex": "II", "chapter98": true, "hs": "98493420", "hs_dotted": "9849.34.20", "desc": "- - - - - - Thanh chống nắp ca pô", "rate": "0", "corresponding": "87082994"}
+{"annex": "II", "chapter98": true, "hs": "98493421", "hs_dotted": "9849.34.21", "desc": "- - - - - - Loại khác", "rate": "0", "corresponding": "87082995"}
+{"annex": "II", "chapter98": true, "hs": "98493422", "hs_dotted": "9849.34.22", "desc": "- - - - - - Phụ kiện trang trí nội thất; chắn bùn", "rate": "0", "corresponding": "87082996"}
+{"annex": "II", "chapter98": true, "hs": "98493423", "hs_dotted": "9849.34.23", "desc": "- - - - - - Thanh chống nắp ca pô", "rate": "0", "corresponding": "87082997"}
+{"annex": "II", "chapter98": true, "hs": "98493424", "hs_dotted": "9849.34.24", "desc": "- - - - - - Loại khác", "rate": "0", "corresponding": "87082998"}
+{"annex": "II", "chapter98": true, "hs": "98493429", "hs_dotted": "9849.34.29", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "87082999"}
+{"annex": "II", "chapter98": true, "hs": "98493431", "hs_dotted": "9849.34.31", "desc": "- - - - Phanh trống, phanh đĩa hoặc phanh hơi", "rate": "0", "corresponding": "87083021"}
+{"annex": "II", "chapter98": true, "hs": "98493432", "hs_dotted": "9849.34.32", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87083029"}
+{"annex": "II", "chapter98": true, "hs": "98493433", "hs_dotted": "9849.34.33", "desc": "- - - Phanh trống, phanh đĩa hoặc phanh hơi cho xe thuộc nhóm 87.02 hoặc 87.04", "rate": "0", "corresponding": "87083030"}
+{"annex": "II", "chapter98": true, "hs": "98493439", "hs_dotted": "9849.34.39", "desc": "- - - Loại khác", "rate": "0", "corresponding": "87083090"}
+{"annex": "II", "chapter98": true, "hs": "98493441", "hs_dotted": "9849.34.41", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87084011"}
+{"annex": "II", "chapter98": true, "hs": "98493442", "hs_dotted": "9849.34.42", "desc": "- - - - Dùng cho xe thuộc nhóm 87.04 hoặc 87.05", "rate": "0", "corresponding": "87084013"}
+{"annex": "II", "chapter98": true, "hs": "98493443", "hs_dotted": "9849.34.43", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87084019"}
+{"annex": "II", "chapter98": true, "hs": "98493444", "hs_dotted": "9849.34.44", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87084026"}
+{"annex": "II", "chapter98": true, "hs": "98493445", "hs_dotted": "9849.34.45", "desc": "- - - - Dùng cho xe thuộc nhóm 87.04 hoặc 87.05", "rate": "0", "corresponding": "87084027"}
+{"annex": "II", "chapter98": true, "hs": "98493446", "hs_dotted": "9849.34.46", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87084029"}
+{"annex": "II", "chapter98": true, "hs": "98493447", "hs_dotted": "9849.34.47", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87084092"}
+{"annex": "II", "chapter98": true, "hs": "98493449", "hs_dotted": "9849.34.49", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87084099"}
+{"annex": "II", "chapter98": true, "hs": "98493451", "hs_dotted": "9849.34.51", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87085011"}
+{"annex": "II", "chapter98": true, "hs": "98493452", "hs_dotted": "9849.34.52", "desc": "- - - - Dùng cho xe thuộc nhóm 87.04 hoặc nhóm 87.05", "rate": "0", "corresponding": "87085013"}
+{"annex": "II", "chapter98": true, "hs": "98493453", "hs_dotted": "9849.34.53", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87085019"}
+{"annex": "II", "chapter98": true, "hs": "98493454", "hs_dotted": "9849.34.54", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87085026"}
+{"annex": "II", "chapter98": true, "hs": "98493455", "hs_dotted": "9849.34.55", "desc": "- - - - Dùng cho xe thuộc nhóm 87.04 hoặc nhóm 87.05", "rate": "0", "corresponding": "87085027"}
+{"annex": "II", "chapter98": true, "hs": "98493456", "hs_dotted": "9849.34.56", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87085029"}
+{"annex": "II", "chapter98": true, "hs": "98493457", "hs_dotted": "9849.34.57", "desc": "- - - - - Bánh răng vành khăn và bánh răng quả dứa", "rate": "0", "corresponding": "87085094"}
+{"annex": "II", "chapter98": true, "hs": "98493458", "hs_dotted": "9849.34.58", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "87085095"}
+{"annex": "II", "chapter98": true, "hs": "98493459", "hs_dotted": "9849.34.59", "desc": "- - - - Bánh răng vành khăn và bánh răng quả dứa", "rate": "0", "corresponding": "87085096"}
+{"annex": "II", "chapter98": true, "hs": "98493460", "hs_dotted": "9849.34.60", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87085099"}
+{"annex": "II", "chapter98": true, "hs": "98493471", "hs_dotted": "9849.34.71", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87087016"}
+{"annex": "II", "chapter98": true, "hs": "98493472", "hs_dotted": "9849.34.72", "desc": "- - - - - Dùng cho xe thuộc phân nhóm 8704.10", "rate": "0", "corresponding": "87087017"}
+{"annex": "II", "chapter98": true, "hs": "98493473", "hs_dotted": "9849.34.73", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "87087018"}
+{"annex": "II", "chapter98": true, "hs": "98493474", "hs_dotted": "9849.34.74", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87087019"}
+{"annex": "II", "chapter98": true, "hs": "98493475", "hs_dotted": "9849.34.75", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87087022"}
+{"annex": "II", "chapter98": true, "hs": "98493476", "hs_dotted": "9849.34.76", "desc": "- - - - Dùng cho xe thuộc nhóm 87.02 hoặc 87.04 (trừ phân nhóm 8704.10)", "rate": "0", "corresponding": "87087023"}
+{"annex": "II", "chapter98": true, "hs": "98493477", "hs_dotted": "9849.34.77", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87087029"}
+{"annex": "II", "chapter98": true, "hs": "98493478", "hs_dotted": "9849.34.78", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87087032"}
+{"annex": "II", "chapter98": true, "hs": "98493479", "hs_dotted": "9849.34.79", "desc": "- - - - Dùng cho xe tự đổ được thiết kế để sử dụng trên các loại đường không phải đường quốc lộ có khối lượng toàn bộ theo thiết kế trên 45 tấn", "rate": "0", "corresponding": "87087033"}
+{"annex": "II", "chapter98": true, "hs": "98493480", "hs_dotted": "9849.34.80", "desc": "- - - - Dùng cho xe thuộc nhóm 87.02 hoặc xe khác thuộc nhóm 87.04", "rate": "0", "corresponding": "87087034"}
+{"annex": "II", "chapter98": true, "hs": "98493481", "hs_dotted": "9849.34.81", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87087039"}
+{"annex": "II", "chapter98": true, "hs": "98493482", "hs_dotted": "9849.34.82", "desc": "- - - - Dùng cho xe thuộc nhóm 87.02 hoặc 87.04", "rate": "0", "corresponding": "87087096"}
+{"annex": "II", "chapter98": true, "hs": "98493483", "hs_dotted": "9849.34.83", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87087097"}
+{"annex": "II", "chapter98": true, "hs": "98493489", "hs_dotted": "9849.34.89", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87087099"}
+{"annex": "II", "chapter98": true, "hs": "98493491", "hs_dotted": "9849.34.91", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87088016"}
+{"annex": "II", "chapter98": true, "hs": "98493492", "hs_dotted": "9849.34.92", "desc": "- - - - Dùng cho xe thuộc phân nhóm 8704.10 hoặc nhóm 87.05", "rate": "0", "corresponding": "87088017"}
+{"annex": "II", "chapter98": true, "hs": "98493493", "hs_dotted": "9849.34.93", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87088019"}
+{"annex": "II", "chapter98": true, "hs": "98493494", "hs_dotted": "9849.34.94", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87088092"}
+{"annex": "II", "chapter98": true, "hs": "98493499", "hs_dotted": "9849.34.99", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87088099"}
+{"annex": "II", "chapter98": true, "hs": "98493510", "hs_dotted": "9849.35.10", "desc": "- - - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87089116"}
+{"annex": "II", "chapter98": true, "hs": "98493521", "hs_dotted": "9849.35.21", "desc": "- - - - - - Dùng cho xe thuộc phân nhóm 8704.10", "rate": "0", "corresponding": "87089117"}
+{"annex": "II", "chapter98": true, "hs": "98493522", "hs_dotted": "9849.35.22", "desc": "- - - - - - Loại khác", "rate": "0", "corresponding": "87089118"}
+{"annex": "II", "chapter98": true, "hs": "98493529", "hs_dotted": "9849.35.29", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "87089119"}
+{"annex": "II", "chapter98": true, "hs": "98493531", "hs_dotted": "9849.35.31", "desc": "- - - - - Nút xả dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87089193"}
+{"annex": "II", "chapter98": true, "hs": "98493532", "hs_dotted": "9849.35.32", "desc": "- - - - - Nút xả dùng cho xe thuộc nhóm 87.02 hoặc 87.04 (trừ loại thuộc phân nhóm 8704.10)", "rate": "0", "corresponding": "87089194"}
+{"annex": "II", "chapter98": true, "hs": "98493533", "hs_dotted": "9849.35.33", "desc": "- - - - - Loại khác, dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87089195"}
+{"annex": "II", "chapter98": true, "hs": "98493539", "hs_dotted": "9849.35.39", "desc": "- - - - - Loại khác", "rate": "0", "corresponding": "87089199"}
+{"annex": "II", "chapter98": true, "hs": "98493541", "hs_dotted": "9849.35.41", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87089220"}
+{"annex": "II", "chapter98": true, "hs": "98493542", "hs_dotted": "9849.35.42", "desc": "- - - - - Ống xả và bộ giảm thanh", "rate": "0", "corresponding": "87089251"}
+{"annex": "II", "chapter98": true, "hs": "98493543", "hs_dotted": "9849.35.43", "desc": "- - - - - Bộ phận", "rate": "0", "corresponding": "87089252"}
+{"annex": "II", "chapter98": true, "hs": "98493544", "hs_dotted": "9849.35.44", "desc": "- - - - - Ống xả và bộ giảm thanh", "rate": "0", "corresponding": "87089261"}
+{"annex": "II", "chapter98": true, "hs": "98493545", "hs_dotted": "9849.35.45", "desc": "- - - - - Bộ phận", "rate": "0", "corresponding": "87089262"}
+{"annex": "II", "chapter98": true, "hs": "98493549", "hs_dotted": "9849.35.49", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87089290"}
+{"annex": "II", "chapter98": true, "hs": "98493551", "hs_dotted": "9849.35.51", "desc": "- - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87089360"}
+{"annex": "II", "chapter98": true, "hs": "98493552", "hs_dotted": "9849.35.52", "desc": "- - - Dùng cho xe thuộc nhóm 87.04 hoặc 87.05", "rate": "0", "corresponding": "87089370"}
+{"annex": "II", "chapter98": true, "hs": "98493559", "hs_dotted": "9849.35.59", "desc": "- - - Loại khác", "rate": "0", "corresponding": "87089390"}
+{"annex": "II", "chapter98": true, "hs": "98493561", "hs_dotted": "9849.35.61", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87089419"}
+{"annex": "II", "chapter98": true, "hs": "98493562", "hs_dotted": "9849.35.62", "desc": "- - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87089495"}
+{"annex": "II", "chapter98": true, "hs": "98493569", "hs_dotted": "9849.35.69", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87089499"}
+{"annex": "II", "chapter98": true, "hs": "98493571", "hs_dotted": "9849.35.71", "desc": "- - - Túi khí an toàn lắp với hệ thống bơm phồng", "rate": "0", "corresponding": "87089510"}
+{"annex": "II", "chapter98": true, "hs": "98493579", "hs_dotted": "9849.35.79", "desc": "- - - Bộ phận", "rate": "0", "corresponding": "87089590"}
+{"annex": "II", "chapter98": true, "hs": "98493581", "hs_dotted": "9849.35.81", "desc": "- - - - - Thùng nhiên liệu", "rate": "0", "corresponding": "87089921"}
+{"annex": "II", "chapter98": true, "hs": "98493582", "hs_dotted": "9849.35.82", "desc": "- - - - - Nửa dưới của thùng nhiên liệu; nắp đậy thùng nhiên liệu; ống dẫn của thùng nhiên liệu (filler pipes); ống dẫn hướng có đầu nối với bình nhiên liệu (filler hose); đai giữ bình nhiên liệu", "rate": "0", "corresponding": "87089924"}
+{"annex": "II", "chapter98": true, "hs": "98493583", "hs_dotted": "9849.35.83", "desc": "- - - - - Các bộ phận khác", "rate": "0", "corresponding": "87089925"}
+{"annex": "II", "chapter98": true, "hs": "98493584", "hs_dotted": "9849.35.84", "desc": "- - - - Chân ga (bàn đạp ga), chân phanh (bàn đạp phanh) hoặc chân côn (bàn đạp côn)", "rate": "0", "corresponding": "87089930"}
+{"annex": "II", "chapter98": true, "hs": "98493585", "hs_dotted": "9849.35.85", "desc": "- - - - Giá đỡ hoặc khay đỡ bình ắc qui và khung của nó", "rate": "0", "corresponding": "87089940"}
+{"annex": "II", "chapter98": true, "hs": "98493586", "hs_dotted": "9849.35.86", "desc": "- - - - Tấm hướng luồng khí tản nhiệt", "rate": "0", "corresponding": "87089950"}
+{"annex": "II", "chapter98": true, "hs": "98493587", "hs_dotted": "9849.35.87", "desc": "- - - - - Dùng cho xe thuộc nhóm 87.02", "rate": "0", "corresponding": "87089961"}
+{"annex": "II", "chapter98": true, "hs": "98493588", "hs_dotted": "9849.35.88", "desc": "- - - - - Dùng cho xe thuộc nhóm 87.03", "rate": "0", "corresponding": "87089962"}
+{"annex": "II", "chapter98": true, "hs": "98493589", "hs_dotted": "9849.35.89", "desc": "- - - - - Dùng cho xe thuộc nhóm 87.04", "rate": "0", "corresponding": "87089963"}
+{"annex": "II", "chapter98": true, "hs": "98493590", "hs_dotted": "9849.35.90", "desc": "- - - - Khung giá đỡ động cơ", "rate": "0", "corresponding": "87089970"}
+{"annex": "II", "chapter98": true, "hs": "98493591", "hs_dotted": "9849.35.91", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87089980"}
+{"annex": "II", "chapter98": true, "hs": "98493592", "hs_dotted": "9849.35.92", "desc": "- - - - Thùng nhiên liệu chưa lắp ráp; khung giá đỡ động cơ", "rate": "0", "corresponding": "87089991"}
+{"annex": "II", "chapter98": true, "hs": "98493599", "hs_dotted": "9849.35.99", "desc": "- - - - Loại khác", "rate": "0", "corresponding": "87089999"}
+{"annex": "II", "chapter98": true, "hs": "98493600", "hs_dotted": "9849.36.00", "desc": "- - - - Máy đo nhiệt độ dùng cho xe có động cơ", "rate": "0", "corresponding": "90251911"}
+{"annex": "II", "chapter98": true, "hs": "98493711", "hs_dotted": "9849.37.11", "desc": "- - - Dụng cụ đo mức sử dụng cho xe có động cơ, hoạt động bằng điện", "rate": "0", "corresponding": "90261050"}
+{"annex": "II", "chapter98": true, "hs": "98493719", "hs_dotted": "9849.37.19", "desc": "- - - Dụng cụ đo mức sử dụng cho xe có động cơ, không hoạt động bằng điện", "rate": "0", "corresponding": "90261050"}
+{"annex": "II", "chapter98": true, "hs": "98493790", "hs_dotted": "9849.37.90", "desc": "- - - Máy đo áp suất sử dụng cho xe có động cơ, không hoạt động bằng điện", "rate": "0", "corresponding": "90262050"}
+{"annex": "II", "chapter98": true, "hs": "98493810", "hs_dotted": "9849.38.10", "desc": "- - - Đồng hồ tốc độ dùng cho xe có động cơ", "rate": "0", "corresponding": "90292010"}
+{"annex": "II", "chapter98": true, "hs": "98493890", "hs_dotted": "9849.38.90", "desc": "- - - Máy đo tốc độ góc cho xe có động cơ", "rate": "0", "corresponding": "90292020"}
+{"annex": "II", "chapter98": true, "hs": "98493910", "hs_dotted": "9849.39.10", "desc": "- - Dùng cho xe cộ", "rate": "0", "corresponding": "91040010"}
+{"annex": "II", "chapter98": true, "hs": "98493990", "hs_dotted": "9849.39.90", "desc": "- - Loại khác", "rate": "0", "corresponding": "91040090"}
+{"annex": "II", "chapter98": true, "hs": "98494011", "hs_dotted": "9849.40.11", "desc": "- - - Của xe thuộc nhóm 87.02, 87.03 hoặc 87.04", "rate": "0", "corresponding": "94012010"}
+{"annex": "II", "chapter98": true, "hs": "98494019", "hs_dotted": "9849.40.19", "desc": "- - - Loại khác", "rate": "0", "corresponding": "94012090"}
+{"annex": "II", "chapter98": true, "hs": "98494021", "hs_dotted": "9849.40.21", "desc": "- - - Miếng lót cho tựa đầu của ghế thuộc phân nhóm 9401.20.10", "rate": "0", "corresponding": "94019921"}
+{"annex": "II", "chapter98": true, "hs": "98494022", "hs_dotted": "9849.40.22", "desc": "- - - Loại khác", "rate": "0", "corresponding": "94019921"}
+{"annex": "II", "chapter98": true, "hs": "98494110", "hs_dotted": "9849.41.10", "desc": "- - Kết hợp với thiết bị ghi hoặc tái tạo âm thanh", "rate": "0", "corresponding": "85272110"}
+{"annex": "II", "chapter98": true, "hs": "98494190", "hs_dotted": "9849.41.90", "desc": "- - Loại khác", "rate": "0", "corresponding": "85272900"}
+{"annex": "II", "chapter98": true, "hs": "98494210", "hs_dotted": "9849.42.10", "desc": "- - Động cơ vạn năng một chiều/xoay chiều có công suất trên 1 kW", "rate": "0", "corresponding": "85012029"}
+{"annex": "II", "chapter98": true, "hs": "98494221", "hs_dotted": "9849.42.21", "desc": "- - - Công suất trên 750 W nhưng không quá 37,5 kW", "rate": "0", "corresponding": "85013224"}
+{"annex": "II", "chapter98": true, "hs": "98494222", "hs_dotted": "9849.42.22", "desc": "- - - Công suất trên 37,5 kW nhưng không quá 75 kW", "rate": "0", "corresponding": "85013232"}
+{"annex": "II", "chapter98": true, "hs": "98494230", "hs_dotted": "9849.42.30", "desc": "- - Động cơ xoay chiều khác, một pha, công suất trên 1 kW", "rate": "0", "corresponding": "85014029"}
+{"annex": "II", "chapter98": true, "hs": "98494240", "hs_dotted": "9849.42.40", "desc": "- - Động cơ xoay chiều khác, đa pha, công suất trên 1 kW nhưng không quá 37,5 kW", "rate": "0", "corresponding": "85015222"}
+{"annex": "II", "chapter98": true, "hs": "98494310", "hs_dotted": "9849.43.10", "desc": "- - Bằng liti", "rate": "0", "corresponding": "85065000"}
+{"annex": "II", "chapter98": true, "hs": "98494321", "hs_dotted": "9849.43.21", "desc": "- - - Có thể tích ngoài không quá 300 cm3", "rate": "0", "corresponding": "85068030"}
+{"annex": "II", "chapter98": true, "hs": "98494329", "hs_dotted": "9849.43.29", "desc": "- - - Loại khác", "rate": "0", "corresponding": "85068090"}
+{"annex": "II", "chapter98": true, "hs": "98494390", "hs_dotted": "9849.43.90", "desc": "- - Bộ phận", "rate": "0", "corresponding": "85069000"}
+{"annex": "II", "chapter98": true, "hs": "98494400", "hs_dotted": "9849.44.00", "desc": "- Phụ kiện lắp trên thân xe (coachwork) trừ các mặt hàng vít, bu lông, đai ốc, vít đầu vuông, vít treo, đinh tán, chốt hãm, chốt định vị, vòng đệm bằng plastic", "rate": "0", "corresponding": "39263000"}
+{"annex": "II", "chapter98": true, "hs": "98494500", "hs_dotted": "9849.45.00", "desc": "- Bản lề để móc khóa (Hasps) dùng cho xe có động cơ", "rate": "0", "corresponding": "83023010"}
+{"annex": "II", "chapter98": true, "hs": "98494600", "hs_dotted": "9849.46.00", "desc": "- Engine ECU và các bộ điều khiển khác, được sử dụng cho xe có động cơ", "rate": "0", "corresponding": "85371099"}
+{"annex": "II", "chapter98": true, "hs": "98500000", "hs_dotted": "9850.00.00", "desc": "Thuốc trị mụn trứng cá", "rate": "5", "corresponding": "30049099"}
+{"annex": "II", "chapter98": true, "hs": "98510000", "hs_dotted": "9851.00.00", "desc": "Trứng cá dùng làm giống", "rate": "0", "corresponding": "05119190"}
+{"annex": "II", "chapter98": true, "hs": "98520000", "hs_dotted": "9852.00.00", "desc": "Bột đậu nành lên men", "rate": "2", "corresponding": "23099020"}

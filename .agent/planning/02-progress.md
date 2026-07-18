@@ -23,9 +23,9 @@ thực sự đã xảy ra**, thường khác đi.
 | | |
 |---|---|
 | **Giai đoạn hiện tại** | Giai đoạn 0 — Nền móng |
-| **Công việc tiếp theo** | TASK-001..007 xong. Tiếp: TASK-008 (nạp Công báo ND 26/2023, parser nhận biết phụ lục) |
-| **Đang bị chặn bởi** | Không có. Mạng tới Công báo + CDN `.doc` + `bridge` customs.gov.vn đều thông từ môi trường agent (kiểm chứng 2026-07-18). TASK-008 tự tải + parse được; chỉ chờ 1 quyết định phạm vi (nạp thêm biểu FTA nào). |
-| **Code đã viết** | TASK-006 khung repo + **TASK-007 schema biểu thuế** (`db/schema/index.ts`, migration `0001`+`0002`; bitemporal, annex-in-PK, EXCLUDE chống chồng khoảng, trigger append-only, CBPG tách bảng). Chứng minh live 17/17. Fixtures golden set `fixtures/golden-set/`. |
+| **Công việc tiếp theo** | TASK-001..008 xong. Tiếp: TASK-009 (chuỗi sửa đổi MFN 2026 từ Công báo) — và nạp các biểu FTA (ACFTA/AANZFTA/ATIGA/EVFTA/RCEP) bằng cùng parser để phục vụ TASK-011/012 |
+| **Đang bị chặn bởi** | Không có. Chủ dự án đã chốt: FTA scope = MFN + 4 FTA đang dùng + RCEP; oracle TASK-012 = corpus 117 tờ khai sẵn có. |
+| **Code đã viết** | TASK-006 khung repo + **TASK-007 schema** (migration `0001`+`0002`) + **TASK-008 loader ND 26/2023** (`research/task-008-congbao-loader/`: fetch_doc.py, parse_nd26.py, load.ts; 13.161 dòng nạp, 13/13 verify). Fixtures golden set `fixtures/golden-set/`. |
 | **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
 
 ### ⚠️ TASK-001 — phần còn lại cần con người, không phải agent
@@ -64,7 +64,7 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | TASK-005 — Viết các ghi chú kiến thức .agent | ✅ xong 2026-07-17 | Đã kiểm toán; xem Nhật ký phiên làm việc |
 | TASK-006 — Khung sườn repository | ✅ xong 2026-07-18 | NestJS monorepo + Docker + Drizzle + Yarn 4; migration `0000` bật pgvector. Verify: clean-clone → `docker compose up` → `/health` ok (pgvector 0.8.5). db host cổng **5433**. Xem [ADR công cụ repo](../architecture-decisions/2026-07-18-repo-tooling-drizzle-yarn.md) |
 | TASK-007 — Schema biểu thuế (thời gian + nhận biết phụ lục) | ✅ xong 2026-07-18 | Drizzle + migration `0001`/`0002`; annex NOT NULL, EXCLUDE chống chồng khoảng, trigger append-only, CBPG tách bảng. Chứng minh live **17/17** (6 ca khó + DB chối shape sai). Xem [research/task-007-schema](../../research/task-007-schema/README.md) |
-| TASK-008 — Nạp Công báo (bộ phân tích nhận biết phụ lục) | 🔲 chưa làm | Phụ thuộc TASK-003 |
+| TASK-008 — Nạp Công báo (bộ phân tích nhận biết phụ lục) | ✅ xong 2026-07-18 | ND 26/2023, 13.161 dòng, 13/13 verify; annex-aware; Chương 98 tách schedule; khớp research 12 (11.874/11.150). Xem [research/task-008-congbao-loader](../../research/task-008-congbao-loader/README.md) |
 | TASK-009 — Xác lập chuỗi sửa đổi MFN 2026 | 🔲 chưa làm | **Đừng** gộp research 10 + 12 và giả định hợp của chúng |
 | TASK-010 — Phát hiện độ cũ | 🔲 chưa làm | |
 | TASK-011 — API tra cứu | 🔲 chưa làm | |
@@ -113,6 +113,24 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-07-18 — TASK-008: nạp ND 26/2023 (parser nhận biết phụ lục), 13/13 live
+
+**Đã làm**
+- Tải 14 phần `.doc` ND 26/2023 từ Công báo (link g7 có token). Parser `parse_nd26.py`: textutil → tách ô `\x07` → **gán phụ lục hạng nhất** (marker tiến-một-chiều) → `load.ts` nạp `tariff_rate`. **13/13 acceptance** trên Postgres thật. Tổng 13.161 dòng.
+- Kết quả: Annex I 1.520 · Mục I MFN 11.150 · Chương 98 460 (schedule riêng) · Annex IV 31 (+ đánh dấu trq). Nomenclature Annex II 11.874 unique — **khớp research 12**. `0301.11.10`=15(NK)/0(XK); `0306.15.00`=10(MFN, không phải 27 của Ch.98); `2710.12.21`=10.
+
+**Đã học — địa hình thật (3 cạm bẫy)**
+- **Bẫy chữ HOA phá annex detection.** `.upper()` cả ô rồi so → tiêu đề nghị định "Biểu thuế nhập khẩu" (thường) khớp → lật sang Annex II **trước bảng xuất khẩu**, nuốt trọn Annex I. Sửa: so **case gốc** (header thật viết HOA). Bài học: đừng normalize case khi chính case là tín hiệu.
+- **Chương 98 (Mục II) là bảng 4 cột** `98xx | mô tả | mã tương ứng Mục I | thuế`. Cột "mã tương ứng" (vd `0306.15.00`) bị đọc thành **551 dòng HS8 giả** mang thuế Chương 98 (27%), chồng lên MFN thật (10%). "Keep first" tình cờ cứu (Mục I đứng trước), nhưng phải sửa gốc: nhận diện `98xx`, **tiêu thụ** mã tương ứng làm cross-ref. Bài học: **cùng một mã HS mang nghĩa khác nhau theo cột/mục** — phải hiểu layout, không quét mù.
+- **Mô tả soft-break thành nhiều ô** làm parser một-ô bỏ sót rate (`2903.91.00`). Sửa: quét tới RATE đầu tiên, dừng ở HS8 kế. Sau sửa khớp research 12 chính xác.
+- **Số đếm là oracle thật.** 11.874/11.160 của research 12 (tạo độc lập) khớp → xác nhận trích đúng nomenclature. Chênh 10 (11.150 vs 11.160) truy được: mã cross-ref Ch.98 mà parse ngây thơ đếm nhầm vào Mục I.
+
+**Tiếp theo**
+- Nạp các biểu FTA (ACFTA/AANZFTA/ATIGA/EVFTA/RCEP) — nghị định riêng, cùng parser. Cần cho star-case 8481.80.99 (0% ACFTA) ở TASK-011/012.
+- TASK-009: xác lập chuỗi sửa đổi MFN 2026 từ Công báo (144/2024, 199/2025, 72/2026…); **cắt khoảng** hiệu lực để thỏa EXCLUDE (ND 72/2026 hết 30/04/2026 → hồi quy ND 26/2023).
 
 ---
 

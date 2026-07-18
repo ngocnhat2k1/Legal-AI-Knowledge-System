@@ -1,0 +1,49 @@
+Phụ lục III
+DANH MỤC HÀNG HÓA VÀ MỨC THUẾ TUYỆT ĐỐI, THUẾ HỖN HỢP ĐỐI VỚI MẶT HÀNG XE Ô TÔ CHỞ NGƯỜI TỪ 15 CHỖ NGỒI
+TRỞ XUỐNG, ĐÃ QUA SỬ DỤNG
+(Kèm theo Nghị định số 26/2023/NĐ-CP
+ngày 31 tháng 5 năm 2023 của Chính phủ)
+1. Mức thuế tuyệt đối:
+Đối với xe ô tô chở người từ 09 chỗ ngồi trở xuống có dung tích xi lanh không quá 1.000cc:
+Mô tả mặt hàng
+Thuộc nhóm mã số trong Biểu thuế nhập khẩu ưu đãi
+Đơn vị tính
+Mức thuế (USD)
+- Loại dung tích xi lanh không quá 1.000 cc
+87.03
+Chiếc
+10.000
+2. Mức thuế hỗn hợp đối với xe ô tô chở người từ 09 chỗ ngồi trở xuống có dung tích xi lanh trên 1.000cc thuộc nhóm 87.03 và xe ô tô chở người từ 10 đến 15 chỗ ngồi thuộc nhóm 87.02 trong Biểu thuế nhập khẩu ưu đãi được xác định như sau:
+a) Đối với xe ô tô chở người từ 09 chỗ ngồi trở xuống có dung tích xi lanh trên 1.000cc:
+Mô tả mặt hàng
+Thuộc nhóm mã hàng trong Biểu thuế nhập khẩu ưu đãi
+Đơn vị tính
+Mức thuế (USD)
+- Ô tô trừ ô tô van, ô tô cứu thương, ô tô tang lễ, ô tô chở phạm nhân, ô tô nhà ở lưu động
+87.03
+Chiếc
+200% hoặc 150% + 10.000USD, lấy theo mức thấp nhất
+- Loại khác:
++ Trên 1.000 cc nhưng không quá 2.500cc:
+87.03
+Chiếc
+X + 10.000USD
++ Trên 2.500cc:
+87.03
+Chiếc
+X + 15.000USD
+b) Đối với xe ô tô từ 10 đến 15 chỗ ngồi:
+Mô tả mặt hàng
+Thuộc nhóm mã số trong Biểu thuế nhập khẩu ưu đãi
+Đơn vị tính
+Mức thuế (USD)
+- Dưới 2.500cc:
+87.02
+Chiếc
+X + 10.000
+- Từ 2.500cc trở lên:
+87.02
+Chiếc
+X + 15.000
+c) X nêu tại điểm a, điểm b nêu trên được xác định như sau:
+X = Giá tính thuế xe ô tô đã qua sử dụng nhân (x) với mức thuế suất của dòng thuế xe ô tô mới cùng loại thuộc Chương 87 trong mục I Phụ lục II - Biểu thuế nhập khẩu ưu đãi theo Danh mục mặt hàng chịu thuế ban hành kèm theo Nghị định này tại thời điểm đăng ký tờ khai hải quan.
