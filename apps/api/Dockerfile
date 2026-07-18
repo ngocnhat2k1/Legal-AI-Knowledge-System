@@ -13,6 +13,7 @@ RUN corepack yarn install --immutable
 COPY tsconfig.json nest-cli.json drizzle.config.ts ./
 COPY apps ./apps
 COPY db ./db
+COPY public ./public
 RUN corepack yarn build
 
 # --- runtime: shared by the `migrate` and `api` services ---
@@ -23,8 +24,10 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/db ./db
+COPY --from=build /app/public ./public
+COPY --from=build /app/apps/zalo-bot ./apps/zalo-bot
 COPY --from=build /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=build /app/package.json ./package.json
 EXPOSE 3000
-# Default command; the `migrate` service overrides it in docker-compose.yml.
+# Default command; the `migrate`, `seed`, and `zalo-bot` services override it in docker-compose.
 CMD ["node", "dist/apps/api/main.js"]

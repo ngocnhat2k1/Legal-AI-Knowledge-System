@@ -25,10 +25,13 @@
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.1.28",
     "@nestjs/platform-express": "^11.1.28",
+    "@nestjs/serve-static": "^5.0.5",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.9",
+    "qrcode-terminal": "^0.12.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "zca-js": "^2.1.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",
@@ -36,6 +39,7 @@
     "@nestjs/testing": "^11.1.28",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.20.1",
+    "@types/qrcode-terminal": "^0",
     "drizzle-kit": "^0.31.10",
     "jest": "^30.4.2",
     "prettier": "^3.9.5",

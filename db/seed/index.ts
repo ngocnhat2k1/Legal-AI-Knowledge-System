@@ -69,6 +69,16 @@ function dedupe(rows: Nd26Row[]): Nd26Row[] {
 
 async function main(): Promise<void> {
   console.log('db:seed — Phase 1 tariff dataset\n' + '='.repeat(56));
+  // Skip if already populated, unless forced — so `docker compose up` is safe to
+  // re-run without re-seeding 172k rows (or wiping confirmations) on every restart.
+  if (process.env.FORCE_RESEED !== '1') {
+    const [{ n }] = await sql`SELECT count(*)::int AS n FROM tariff_rate WHERE superseded_at IS NULL`;
+    if (n > 0) {
+      console.log(`  already seeded (${n} live rates) — skipping. Set FORCE_RESEED=1 to reload.`);
+      await sql.end({ timeout: 5 });
+      return;
+    }
+  }
   await sql`TRUNCATE tariff_rate, anti_dumping_duty, annex, tariff_schedule, decree, hs_version RESTART IDENTITY CASCADE`;
 
   // --- Reference: HS version, decrees, schedules -----------------------------

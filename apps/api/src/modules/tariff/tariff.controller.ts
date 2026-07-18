@@ -1,18 +1,20 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 
+import { ConfirmationService, type ConfirmationSummary } from './confirmation.service';
 import { TariffService } from './tariff.service';
 import type { TariffResponse } from './tariff.types';
 
 /**
- * GET /tariff?hs=<8-digit>&origin=<country>&date=<YYYY-MM-DD>
- *
- * Deterministic tariff lookup: rate + governing decree + as-of date + conditions
- * + a data-freshness verdict. `origin` selects which FTA schedules apply (once
- * loaded) and scopes anti-dumping duty; it is optional (MFN needs no origin).
+ * GET  /tariff?hs=&origin=&date=      — deterministic tariff lookup (rate + decree + as-of + conditions + staleness)
+ * POST /tariff/confirm                — record a point-of-use verdict (verify loop)
+ * GET  /tariff/confirmations?hs=&origin= — prior verdicts on an HS
  */
 @Controller('tariff')
 export class TariffController {
-  constructor(private readonly tariff: TariffService) {}
+  constructor(
+    private readonly tariff: TariffService,
+    private readonly confirmations: ConfirmationService,
+  ) {}
 
   @Get()
   lookup(
@@ -21,5 +23,30 @@ export class TariffController {
     @Query('origin') origin?: string,
   ): Promise<TariffResponse> {
     return this.tariff.lookup(hs, origin, date);
+  }
+
+  @Get('confirmations')
+  confirmationsFor(
+    @Query('hs') hs: string,
+    @Query('origin') origin?: string,
+  ): Promise<ConfirmationSummary> {
+    return this.confirmations.summary(hs, origin);
+  }
+
+  @Post('confirm')
+  confirm(
+    @Body()
+    body: {
+      hs: string;
+      origin?: string;
+      date: string;
+      schedule?: string;
+      verdict: string;
+      staffName: string;
+      note?: string;
+      snapshot?: unknown;
+    },
+  ): Promise<{ id: number; createdAt: string }> {
+    return this.confirmations.record(body);
   }
 }

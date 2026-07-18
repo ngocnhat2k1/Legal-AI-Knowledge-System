@@ -1,10 +1,11 @@
-# Local development stack for Customs Assistant.
+# Self-contained stack for Customs Assistant.
 #
-# One command brings up the whole thing:
-#   docker compose up --build
+#   docker compose up --build          # db → migrate → seed → api (web UI) → zalo-bot
 #
-# Order is enforced: db (healthy) -> migrate (runs to completion) -> api (boots).
-# PostgreSQL is the only stateful service in v1 (see the postgres-only ADR).
+# Everything the tool needs is here: Postgres, the schema migration, the tariff
+# data seed, the API + web UI, and the Zalo bot. Moving to another server is just
+# `docker compose up` again — no external agent, no bespoke setup. PostgreSQL is
+# the only stateful service in v1 (see the postgres-only ADR).
 
 services:
   db:
@@ -14,9 +15,8 @@ services:
       POSTGRES_PASSWORD: app
       POSTGRES_DB: customs_assistant
     ports:
-      # Published on host 5433 to avoid colliding with a Postgres already running
-      # on the developer's 5432. Inside the compose network the API still uses db:5432.
-      - "5433:5432"
+      # Bound to localhost only: reached inside the compose network as db:5432.
+      - "127.0.0.1:5433:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -37,19 +37,46 @@ services:
       db:
         condition: service_healthy
 
-  api:
+  seed:
     image: customs-assistant:local
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    command: ["node_modules/.bin/tsx", "db/seed/index.ts"]
     environment:
       DATABASE_URL: postgres://app:app@db:5432/customs_assistant
-      PORT: 3000
-    ports:
-      - "3000:3000"
+      # Set FORCE_RESEED=1 to reload from scratch; otherwise it skips if populated.
+      FORCE_RESEED: "${FORCE_RESEED:-}"
     depends_on:
       migrate:
         condition: service_completed_successfully
 
+  api:
+    image: customs-assistant:local
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/customs_assistant
+      PORT: 3000
+      # How stale is the loaded data? Defaults to max(recorded_at); override when known.
+      DATA_SNAPSHOT_DATE: "${DATA_SNAPSHOT_DATE:-}"
+    ports:
+      # Localhost only — a reverse proxy (Caddy) fronts it with TLS on the server.
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
+  zalo-bot:
+    image: customs-assistant:local
+    command: ["node", "apps/zalo-bot/index.mjs"]
+    environment:
+      API_URL: http://api:3000
+      ZALO_SESSION_PATH: /session/zalo-session.json
+      # Comma-separated Zalo threadIds allowed to query (empty = answer everyone).
+      ALLOWED_THREADS: "${ALLOWED_THREADS:-}"
+    volumes:
+      - zalo_session:/session
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   db_data:
+  zalo_session:

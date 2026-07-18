@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tra cứu biểu thuế</title>
+    <style>
+      :root { --bg:#0f172a; --card:#1e293b; --ink:#e2e8f0; --mut:#94a3b8; --line:#334155;
+--ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --accent:#38bdf8; }
+      * { box-sizing:border-box; }
+      body { margin:0; font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+background:#f1f5f9; color:#0f172a; }
+      header { background:#0f172a; color:#e2e8f0; padding:14px 18px; }
+      header b { font-size:17px; } header span { color:#94a3b8; font-size:13px; }
+      main { max-width:760px; margin:0 auto; padding:18px; }
+      form { display:grid; grid-template-columns:1fr 150px 150px auto; gap:10px; align-items:end;
+background:#fff; padding:16px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+      @media(max-width:640px){ form{ grid-template-columns:1fr 1fr; } }
+      label { display:block; font-size:12px; color:#64748b; margin-bottom:4px; font-weight:600; }
+      input,select,button { font:inherit; padding:9px 11px; border:1px solid #cbd5e1; border-radius:8px; width:100%; }
+      button { background:#0284c7; color:#fff; border:none; font-weight:600; cursor:pointer; }
+      button:hover { background:#0369a1; }
+      .card { background:#fff; border-radius:12px; padding:18px; margin-top:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+      .hs { font-size:20px; font-weight:700; } .sub { color:#64748b; font-size:13px; }
+      .rate { font-size:15px; padding:10px 12px; border-radius:8px; margin-top:8px; background:#f8fafc; border:1px solid #e2e8f0; }
+      .rate b { font-size:16px; } .rate .decree { color:#64748b; font-size:12px; }
+      .pref { border-left:3px solid #38bdf8; }
+      .warn { background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:10px 12px; border-radius:8px; margin-top:10px; }
+      .cbpg { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:10px 12px; border-radius:8px; margin-top:8px; }
+      .note { color:#475569; font-size:13px; margin-top:6px; }
+      .confirm { margin-top:16px; padding-top:14px; border-top:1px dashed #cbd5e1; }
+      .confirm .btns button { width:auto; display:inline-block; margin-right:8px; }
+      .b-ok { background:#16a34a; } .b-bad { background:#dc2626; } .b-uns { background:#64748b; }
+      .tally { font-size:13px; color:#475569; margin-top:8px; }
+      .err { color:#b91c1c; } .muted { color:#94a3b8; }
+      footer { text-align:center; color:#94a3b8; font-size:12px; padding:24px; }
+    </style>
+  </head>
+  <body>
+    <header><b>Tra cứu biểu thuế</b> &nbsp; <span>MFN + FTA · nghị định điều chỉnh · điều kiện C/O · độ cũ dữ liệu</span></header>
+    <main>
+      <form id="f">
+        <div><label>Mã HS (8 số)</label><input id="hs" placeholder="8481.80.99" required /></div>
+        <div><label>Xuất xứ</label><input id="origin" placeholder="CN" /></div>
+        <div><label>Ngày</label><input id="date" type="date" /></div>
+        <div><label>&nbsp;</label><button type="submit">Tra cứu</button></div>
+      </form>
+      <div id="out"></div>
+    </main>
+    <footer>Công cụ nội bộ · mọi con số kèm nghị định + ngày hiệu lực; con số không nguồn là lời nói dối.</footer>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      $('date').value = new Date().toISOString().slice(0, 10);
+      const esc = (s) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+      let lastQuery = null, lastResp = null;
+
+      $('f').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const hs = $('hs').value.trim(), origin = $('origin').value.trim(), date = $('date').value;
+        $('out').innerHTML = '<p class="muted">Đang tra…</p>';
+        const qs = new URLSearchParams({ hs, date });
+        if (origin) qs.set('origin', origin);
+        try {
+          const res = await fetch('/tariff?' + qs);
+          const data = await res.json();
+          if (!res.ok) { $('out').innerHTML = `<div class="card err">${esc(data.message || 'Không tìm thấy')}</div>`; return; }
+          lastQuery = { hs, origin, date }; lastResp = data;
+          render(data);
+        } catch (err) { $('out').innerHTML = `<div class="card err">Lỗi: ${esc(err.message)}</div>`; }
+      });
+
+      function rateRow(r, cls) {
+        return `<div class="rate ${cls || ''}"><b>${esc(r.statement)}</b> <span class="decree">${esc(r.schedule)}${r.decree ? ' · ' + esc(r.decree) : ''}${r.effectiveFrom ? ' · từ ' + esc(r.effectiveFrom) + (r.effectiveTo ? '→' + esc(r.effectiveTo) : '') : ''}</span></div>`;
+      }
+
+      function render(d) {
+        let h = `<div class="card"><div class="hs">${esc(d.hs.replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3'))}</div>`;
+        h += `<div class="sub">${d.origin ? 'xuất xứ ' + esc(d.origin) + ' · ' : ''}ngày ${esc(d.date)}</div>`;
+        if (d.staleness?.stale) h += `<div class="warn">⚠️ ${esc(d.staleness.warning)}</div>`;
+        if (d.import?.mfn) h += rateRow(d.import.mfn);
+        (d.import?.preferential || []).forEach((p) => (h += rateRow(p, 'pref')));
+        (d.import?.chapter98 || []).forEach((p) => (h += rateRow(p, 'pref')));
+        if (d.import?.outOfQuota) h += rateRow(d.import.outOfQuota);
+        if (d.export) h += rateRow(d.export);
+        (d.antiDumping || []).forEach((c) => (h += `<div class="cbpg">⚠️ ${esc(c.statement)}</div>`));
+        (d.notes || []).forEach((n) => (h += `<div class="note">ℹ️ ${esc(n)}</div>`));
+        h += confirmBlock();
+        h += '</div>';
+        $('out').innerHTML = h;
+        loadTally();
+        wireConfirm();
+      }
+
+      function confirmBlock() {
+        return `<div class="confirm"><div style="font-size:13px;color:#475569">Kết quả này đúng với tờ khai của bạn?</div>
+          <input id="staff" placeholder="Tên nhân viên (bắt buộc)" style="margin:8px 0;max-width:260px"/>
+          <input id="cnote" placeholder="Ghi chú (tùy chọn)" style="margin-bottom:8px"/>
+          <div class="btns">
+            <button class="b-ok" data-v="correct">✓ Đúng</button>
+            <button class="b-bad" data-v="wrong">✗ Sai</button>
+            <button class="b-uns" data-v="unsure">? Không chắc</button>
+          </div><div class="tally" id="tally"></div></div>`;
+      }
+
+      async function loadTally() {
+        try {
+          const qs = new URLSearchParams({ hs: lastQuery.hs });
+          if (lastQuery.origin) qs.set('origin', lastQuery.origin);
+          const s = await (await fetch('/tariff/confirmations?' + qs)).json();
+          const t = $('tally');
+          if (t) t.innerHTML = `Đã xác nhận: <b style="color:#16a34a">${s.correct} đúng</b> · <b style="color:#dc2626">${s.wrong} sai</b> · ${s.unsure} không chắc`;
+        } catch {}
+      }
+
+      function wireConfirm() {
+        document.querySelectorAll('.btns button').forEach((b) =>
+          b.addEventListener('click', async () => {
+            const staff = $('staff').value.trim();
+            if (!staff) { $('staff').focus(); $('staff').style.borderColor = '#dc2626'; return; }
+            b.disabled = true;
+            try {
+              await fetch('/tariff/confirm', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hs: lastQuery.hs, origin: lastQuery.origin || null, date: lastQuery.date,
+                  verdict: b.dataset.v, staffName: staff, note: $('cnote').value.trim() || null, snapshot: lastResp }),
+              });
+              $('tally').innerHTML = '✓ Đã ghi nhận. Cảm ơn ' + esc(staff) + '.';
+              loadTally();
+            } catch (e) { $('tally').innerHTML = '<span class="err">Lỗi ghi xác nhận.</span>'; }
+          }),
+        );
+      }
+    </script>
+  </body>
+</html>

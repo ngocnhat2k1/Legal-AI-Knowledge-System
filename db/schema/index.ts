@@ -77,6 +77,9 @@ export const tradeDirection = pgEnum('trade_direction', ['import', 'export']);
 /** Anti-dumping duties are either a percentage or an absolute amount per unit. */
 export const dutyKind = pgEnum('duty_kind', ['percent', 'specific']);
 
+/** A declarant's verdict on a looked-up rate at point of use (Phase 3 verify loop). */
+export const confirmationVerdict = pgEnum('confirmation_verdict', ['correct', 'wrong', 'unsure']);
+
 // --- HS nomenclature version (a dimension, not a hardcoded constant) ---------
 
 /**
@@ -258,5 +261,34 @@ export const antiDumpingDuty = pgTable(
         ELSE false
       END`,
     ),
+  ],
+);
+
+// --- Lookup confirmation (Phase 3 verify-on-use loop) -----------------------
+
+/**
+ * A declarant's verdict, at point of use, on a rate the tool returned. This is
+ * the correctness model for the golden set's `uncertain` data: rather than
+ * certifying rates up front, staff confirm (or flag) them as they actually use
+ * them, and the confirmations accumulate into a real, per-person audit trail.
+ * Append-by-nature event log — never updated.
+ */
+export const lookupConfirmation = pgTable(
+  'lookup_confirmation',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    hsCode: varchar('hs_code', { length: 8 }).notNull(),
+    origin: varchar('origin', { length: 8 }),
+    asOfDate: date('as_of_date').notNull(), // the query date the staff looked up
+    schedule: varchar('schedule', { length: 24 }), // which rate they judged (MFN/ACFTA/…)
+    verdict: confirmationVerdict('verdict').notNull(),
+    staffName: varchar('staff_name', { length: 64 }).notNull(),
+    note: text('note'),
+    responseSnapshot: jsonb('response_snapshot'), // the /tariff answer they saw, verbatim
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('confirmation_lookup_idx').on(t.hsCode, t.origin),
+    check('confirmation_hs_format', sql`${t.hsCode} ~ '^[0-9]{8}$'`),
   ],
 );
