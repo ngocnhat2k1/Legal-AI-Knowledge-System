@@ -237,18 +237,46 @@ async function answer(text) {
   return formatCandidates(effKw, list, origin);
 }
 
+/** Bỏ các đoạn @tag khỏi nội dung (dùng pos/len của mentions, an toàn từ cuối lên). */
+function stripMentions(content, mentions) {
+  if (!Array.isArray(mentions) || !mentions.length) return content;
+  let s = content;
+  for (const m of [...mentions].sort((a, b) => b.pos - a.pos)) {
+    if (typeof m.pos === 'number' && typeof m.len === 'number' && m.pos >= 0 && m.pos + m.len <= s.length) {
+      s = s.slice(0, m.pos) + s.slice(m.pos + m.len);
+    }
+  }
+  return s.replace(/\s+/g, ' ').trim();
+}
+
 // --- Main -------------------------------------------------------------------
 async function main() {
   const api = await connect();
-  const me = await api.getOwnId?.().catch?.(() => null);
-  console.log(`[zalo] đăng nhập OK${me ? ` (id ${me})` : ''}. API=${API}. Allowlist=${ALLOWED.length ? ALLOWED.join(',') : '(mở — nên đặt ALLOWED_THREADS)'}`);
+  let myId = '';
+  try {
+    const own = await api.getOwnId();
+    myId = String(own?.uid ?? own ?? '');
+  } catch {
+    /* không lấy được uid → group vẫn lọc theo tên d/dName không có; sẽ yêu cầu tag */
+  }
+  console.log(`[zalo] đăng nhập OK${myId ? ` (id ${myId})` : ''}. API=${API}. Group: chỉ trả lời khi được @tag. Allowlist=${ALLOWED.length ? ALLOWED.join(',') : '(mở)'}`);
 
   api.listener.on('message', async (msg) => {
     try {
       if (msg.isSelf) return;
       if (ALLOWED.length && !ALLOWED.includes(msg.threadId)) return;
-      const content = msg.data?.content;
+      let content = msg.data?.content;
       if (typeof content !== 'string' || !content.trim()) return;
+
+      // Trong NHÓM: chỉ trả lời khi bot được @tag (tránh trả lời mọi tin).
+      if (msg.type === ThreadType.Group) {
+        const mentions = msg.data?.mentions || [];
+        const tagged = myId && mentions.some((m) => String(m.uid) === myId);
+        if (!tagged) return;
+        content = stripMentions(content, mentions);
+        if (!content.trim()) return;
+      }
+
       const reply = await answer(content);
       await api.sendMessage({ msg: reply, quote: msg.data }, msg.threadId, msg.type);
     } catch (e) {
