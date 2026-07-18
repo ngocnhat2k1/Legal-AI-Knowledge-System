@@ -66,7 +66,19 @@ Ghi chú:
 
 ## TASK-002: Giải quyết mâu thuẫn về API customs.gov.vn
 
-Status: todo
+Status: done (2026-07-18)
+
+> **Kết quả:** endpoint `bridge` của research 10
+> (`POST https://www.customs.gov.vn/bridge?url=/customs/servletws/bieuthue/APIBieuThue`) **có phản hồi**
+> → dùng `bridge`. Backend IP-thô `http://123.30.210.236:8080/hqcustomsapi/` của research 12 **bỏ qua có
+> chủ đích** (quyết định chủ dự án 2026-07-18). Hai research mô tả hai endpoint khác nhau nên cả hai đều
+> có thể đúng; dự án chỉ dùng `bridge`. Ghi lại trong
+> [tariff-system.md](../concepts/tariff-system.md#xung-đột-đã-giải-quyết).
+>
+> **API vẫn KHÔNG phải nguồn chân lý** — chỉ là lớp kiểm chứng chéo. Không quyết định thiết kế nào phụ
+> thuộc vào việc `bridge` hoạt động; nếu nó biến mất, pipeline `.doc` Công báo vẫn chịu tải. Cảnh báo còn
+> nguyên: thiếu VIFTA/CEPA, `THOI_GIAN_CAP_NHAT` 2019–2020, chỉ có thuế suất năm hiện tại, rate-limit
+> chưa thăm dò.
 
 Mục tiêu: xác lập, bằng thực nghiệm, liệu một API JSON dùng được có tồn tại trên customs.gov.vn hay không — bởi vì hai báo cáo nghiên cứu mâu thuẫn trực tiếp với nhau và câu trả lời làm thay đổi bản chất của bước kiểm chứng chéo ở Giai đoạn 1.
 
@@ -98,7 +110,9 @@ Ghi chú:
 
 ## TASK-003: Chứng minh phân tích DOCX nhận biết bảng trên dòng EVFTA
 
-Status: todo
+Status: done (2026-07-18)
+
+> **Kết quả:** lỗ hổng là GIẢ — `2925,421,818,114,510,9` không dính; sáu thuế suất ngăn bởi `\x07` (dấu ô Word vô hình) mà research không thấy. `textutil -convert txt` giữ ranh giới ô; tách theo `\x07` (EVFTA) / `\n` (RCEP) ra đủ 6 ô, **không cần LibreOffice, không heuristic**. Xác minh: EVFTA `2101.11.11` → `29/25,4/21,8/18,1/14,5/10,9` (773/773 dòng đúng 6 cột); RCEP `0101.21.00` → sáu ô `0` (không hồi quy). Parser tái dùng cho TASK-008: [research/task-003-evfta-parser](../../research/task-003-evfta-parser/README.md). **→ Giai đoạn 1 gồm được EVFTA + RCEP, không chỉ MFN.**
 
 Mục tiêu: bịt lỗ hổng duy nhất mà research 12 nêu ra là điểm nghẽn. **Điều này quyết định phạm vi FTA của Giai đoạn 1.**
 
@@ -417,8 +431,8 @@ Ghi chú:
 
 ## Câu hỏi mở
 
-1. **API customs.gov.vn** — research 10 và 12 mâu thuẫn. TASK-002. Chưa giải quyết.
-2. **Phân tích sáu-thuế-suất EVFTA** — TASK-003. Quyết định phạm vi FTA của Giai đoạn 1.
+1. **API customs.gov.vn** — research 10 và 12 mâu thuẫn. TASK-002. **Đã giải quyết (2026-07-18): dùng `bridge`, bỏ qua IP-thô.**
+2. ✅ **Phân tích sáu-thuế-suất EVFTA** — TASK-003 **ĐÃ GIẢI QUYẾT 2026-07-18**: parse được (dấu ô `\x07`/`\n`, không cần LibreOffice); Giai đoạn 1 gồm EVFTA + RCEP. Xem [research/task-003-evfta-parser](../../research/task-003-evfta-parser/README.md).
 3. **`provisionTree` / `referenceProvisions` của vbpl** — TASK-004. Quyết định schema của Giai đoạn 5.
 4. **Chuỗi sửa đổi MFN thực** — TASK-009. Research 10 và 12 đưa ra các danh sách không khớp.
 5. **Công ty này thực sự dùng những biểu thuế FTA nào?** Cuộc gọi khám phá của research 10 trả về 26 mã biểu thuế nhập khẩu (`NK_uu_dai, ATIGA, ACFTA, AJCEP, AKFTA, AHKFTA, AANZFTA, AIFTA, VJEPA, VKFTA, VN-EAEU, EVFTA_NK, UKVFTA_NK, VCFTA, VNL, VNCB, CPTPP_NK, CPTPP_NK_MEX, RCEP_ASEAN, RCEP_AU, RCEP_CN, RCEP_JP, RCEP_KR, RCEP_NZ, NK_TT`) (đã xác minh 2026-07-17, nguồn: research 10). Bộ phận này sẽ dùng một số ít. **Hỏi chủ sở hữu** — nạp toàn bộ 26 là hàng tuần công việc cho các biểu thuế không ai truy vấn.
@@ -447,7 +461,7 @@ Ghi chú:
 
 Mang theo từ nghiên cứu; cũng có trong [00-bootstrap.md](00-bootstrap.md).
 
-- **API customs.gov.vn: research 10 và 12 MÂU THUẪN.** Research 10 báo cáo một endpoint `bridge` đã xác minh hoạt động không có captcha. Research 12 báo cáo một backend IP-thô khác với một đường dẫn `CheckCaptcha` bị timeout, và dứt khoát từ chối tuyên bố không thể truy cập. Các endpoint khác nhau — có thể cả hai đều đúng, có thể một sai. **Chưa giải quyết.** Trình bày cả hai. TASK-002.
+- **API customs.gov.vn: research 10 và 12 MÂU THUẪN → ĐÃ GIẢI QUYẾT (2026-07-18, TASK-002).** `bridge` (research 10) có phản hồi và là endpoint được dùng; backend IP-thô (research 12) bỏ qua có chủ đích. Cả hai mô tả endpoint khác nhau nên đều có thể đúng. API vẫn chỉ là lớp kiểm chứng chéo, không phải nguồn chân lý; rate-limit vẫn chưa thăm dò.
 - **Việc nối liền EVFTA là một tạo phẩm của `textutil` được SUY LUẬN, không phải chứng minh** (research 12 không có parser nhận biết bảng khả dụng). TASK-003.
 - **Chuỗi sửa đổi MFN khác nhau giữa research 10 và 12** và không cái nào được xác nhận là đầy đủ. TASK-009.
 - **Cách diễn đạt "các nghị định FTA đợt 2022 đều hết hiệu lực cùng nhau vào 2027-12-31" được SUY LUẬN** bởi research 12; research 10 xác minh các ngày riêng lẻ từ hai nguồn độc lập nhưng cũng lưu ý **AJCEP và VJEPA kéo dài đến 2028** — nên "cùng nhau" vốn đã thiếu chính xác.

@@ -23,7 +23,7 @@ thực sự đã xảy ra**, thường khác đi.
 | | |
 |---|---|
 | **Giai đoạn hiện tại** | Giai đoạn 0 — Nền móng |
-| **Công việc tiếp theo** | TASK-001 đã xong. Tiếp: TASK-002/003/004 (điều tra độc lập) hoặc TASK-006 (khung repo) |
+| **Công việc tiếp theo** | TASK-001 + TASK-003 xong. Tiếp: TASK-006 (khung repo) / TASK-007 (schema, gồm CBPG) hoặc TASK-002/004 (điều tra) |
 | **Đang bị chặn bởi** | Không có. TASK-001 đã đóng (confidence = uncertain toàn bộ; xác minh để lúc dùng qua Zalo). |
 | **Code đã viết** | Chưa có code ứng dụng (cố ý). Đã có fixtures golden set `fixtures/golden-set/`. |
 | **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
@@ -59,7 +59,7 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 |---|---|---|
 | TASK-001 — Golden set | ✅ xong 2026-07-18 | 55 case + 259 corpus, cross-check 249/249, chấm tay 15/15; confidence = uncertain toàn bộ (xác minh qua Zalo lúc dùng) |
 | TASK-002 — Giải quyết xung đột API customs.gov.vn | 🔲 chưa làm | Research 10 và 12 mâu thuẫn; chưa giải quyết |
-| TASK-003 — Chứng minh phân tích DOCX nhận biết bảng | 🔲 chưa làm | Research 12 để lại khoảng trống này một cách tường minh |
+| TASK-003 — Chứng minh phân tích DOCX nhận biết bảng | ✅ xong 2026-07-18 | Lỗ hổng GIẢ: cells ngăn bởi `\x07`/`\n`, research không thấy delimiter. Parse được → GĐ1 gồm EVFTA+RCEP |
 | TASK-004 — Kiểm tra provisionTree của vbpl có được điền không | 🔲 chưa làm | Câu hỏi mở giá trị cao nhất cho giai đoạn RAG |
 | TASK-005 — Viết các ghi chú kiến thức .agent | ✅ xong 2026-07-17 | Đã kiểm toán; xem Nhật ký phiên làm việc |
 | TASK-006 — Khung sườn repository | 🔲 chưa làm | |
@@ -93,7 +93,7 @@ vài cái thay đổi thiết kế.
 1. **API biểu thuế customs.gov.vn có tiếp cận được và không captcha không?** Research 10 nói có (xác minh bằng curl
    qua `/bridge`); research 12 tìm thấy một backend IP-thô bị captcha chặn mà nó không thể tiếp cận. Có lẽ
    là các endpoint khác nhau. **Chưa giải quyết.** → TASK-002
-2. **Một bộ phân tích DOCX nhận biết bảng có khôi phục các cột sáu-mức-thuế EVFTA không?** Research 12 suy luận nó
+2. ✅ **ĐÃ GIẢI QUYẾT 2026-07-18 (TASK-003):** CÓ — parse được (cells ngăn bởi dấu ô Word `\x07`/`\n`, không cần LibreOffice, không heuristic); GĐ1 gồm EVFTA + RCEP. Xem [research/task-003-evfta-parser](../../research/task-003-evfta-parser/README.md). ~~Câu hỏi gốc:~~ **Một bộ phân tích DOCX nhận biết bảng có khôi phục các cột sáu-mức-thuế EVFTA không?** Research 12 suy luận nó
    sẽ khôi phục được nhưng không thể chứng minh (không có LibreOffice/python-docx khả dụng). Khoảng trống này phải khép lại trước
    khi bất kỳ dữ liệu thuế nào được tin. → TASK-003
 3. **`provisionTree` / `referenceProvisions` của vbpl có bao giờ được điền không?** `null` trên cả hai mẫu. Nếu
@@ -107,6 +107,23 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-07-18 — TASK-003: parser EVFTA ("lỗ hổng" hóa ra là giả)
+
+**Đã làm**
+- Chứng minh dòng sáu-thuế-suất EVFTA parse được. Tải ND 116/2022 (EVFTA) + ND 129/2022 (RCEP) từ Công báo (link `.doc` g7 có token), `textutil -convert txt` → tách theo dấu ô Word.
+- EVFTA `2101.11.11` → 6 ô `29/25,4/21,8/18,1/14,5/10,9` (773/773 dòng đúng 6 cột). RCEP `0101.21.00` → 6 ô `0` (không hồi quy; 9 dòng có `*` loại trừ).
+- Parser lưu `research/task-003-evfta-parser/` cho TASK-008.
+
+**Đã học — bất ngờ lớn**
+- **"Lỗ hổng EVFTA" là GIẢ.** `2925,421,818,114,510,9` không dính — sáu ô ngăn bởi `\x07` (BEL, dấu ô Word, KHÔNG hiển thị). Research tưởng dính chỉ vì không thấy `\x07`. Bài học: **ký tự điều khiển vô hình giả làm "dữ liệu hỏng"** — `repr()` bytes trước khi kết luận không parse được.
+- **Delimiter khác theo văn bản:** EVFTA `\x07`; RCEP mỗi ô một dòng `\n`. Parser phải tách cả hai VÀ kiểm tra bề rộng dòng (6 cột) + gắn cờ ngoại lệ (15 dòng 0-cột + 9 dòng `*` của RCEP lộ ra, không bị nuốt).
+- **Không cần LibreOffice.** textutil (macOS) đủ; LibreOffice→`w:tbl` nặng hơn, giữ làm dự phòng.
+
+**Tiếp theo**
+- Giai đoạn 1 gồm được EVFTA + RCEP (không chỉ MFN). Tiếp: TASK-006 (khung repo) / TASK-007 (schema).
 
 ---
 

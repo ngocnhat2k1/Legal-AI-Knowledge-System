@@ -98,6 +98,10 @@ Các nghị định FTA có cùng hình dạng:
 
 **Điểm yếu.** Được tổ chức theo *số* công báo, không theo định danh văn bản. **Không có trạng thái hiệu lực, không có metadata quan hệ** — theo thiết kế, nó là một ấn phẩm tại một thời điểm. **Hãy ghép nó với vbpl; đừng dùng nó một mình.** Không tìm thấy API hay endpoint hàng loạt. Và giới hạn cơ bản là **độ trễ công báo** — xem [Hệ thống biểu thuế](tariff-system.md).
 
+> ### ✅ ĐÃ GIẢI QUYẾT (2026-07-18, TASK-003)
+>
+> Chuỗi `2925,421,818,114,510,9` **không hề dính**. Sáu thuế suất được ngăn bởi `\x07` (dấu ô của Word, ký tự **không hiển thị**) — research chỉ không thấy delimiter nên tưởng là một số. `textutil -convert txt` (macOS, có sẵn) giữ nguyên ranh giới ô; tách theo `\x07` (EVFTA) hoặc `\n` (RCEP) khôi phục đủ **6 ô**, **không cần LibreOffice** và **không** dùng heuristic đoán chỗ cắt số (đọc delimiter thật). Xác minh: EVFTA `2101.11.11` → 6 ô `29/25,4/21,8/18,1/14,5/10,9` (773/773 dòng đúng 6 cột); RCEP `0101.21.00` → 6 ô `0` (không hồi quy). Parser + chi tiết: [research/task-003-evfta-parser](../../research/task-003-evfta-parser/README.md). **→ Giai đoạn 1 có thể gồm EVFTA + RCEP, không chỉ MFN.** Cảnh báo lịch sử bên dưới giữ nguyên để tham chiếu; premise của nó đã sai.
+
 ### ⚠️ Cảnh báo về parser — khoảng trống đầu tiên mà người xây dựng phải khắc phục
 
 Nghiên cứu 12 đã đánh dấu điều này một cách trung thực, ngược lại kết luận của chính nó. `textutil` gộp bảng EVFTA thành một dòng duy nhất, tạo ra:
