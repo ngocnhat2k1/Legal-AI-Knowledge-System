@@ -116,6 +116,21 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 
 ---
 
+### 2026-07-18 — Đóng gói Giai đoạn 1 cho production (seed + test CI + dọn nit)
+
+**Đã làm** (chủ dự án chọn hướng "đóng gói production" sau khi 12 task xong)
+- **A — Seed hợp nhất:** gộp 3 load script research thành **`yarn db:seed`** (`db/seed/index.ts` + `db/seed/data/`). Idempotent (TRUNCATE + nạp), **portable (không textutil)**, đọc extract JSON đã commit. Verify fresh: 172.962 dòng, golden 249/249. Extract canonical chuyển về `db/seed/data/`; bản research regenerate gitignored; xoá 3 load script cũ.
+- **B — Golden set thành test CI:** `db/seed/golden.spec.ts` (jest) — corpus 249/249 + hồi quy xăng (10→0→10) + star-case (MFN 10% + 4 FTA 0%). Guard `DATABASE_URL`: có DB → 4/4 (giờ 5/5 với health 503); không DB → skip sạch (CI không fail).
+- **C — Dọn nit review scaffold:** bỏ alias `@app/database` chết (tsconfig+jest; không ai dùng, footgun runtime); `/health` trả **503** khi degraded; `engines.node` `>=22`→`22.x`; drizzle fallback URL đúng (5433); doc: README 7→10 ADR + db/, code-organization bỏ ngụ ý `shared/kernel/` tồn tại + ghi `db/seed/`.
+
+**Đã học**
+- **Tách "nạp" khỏi "parse".** Parse `.doc` cần `textutil` (macOS) → giữ ở `research/` như bước vận hành host. Seed chỉ chèn JSON → portable, chạy trong container. Extract `.ndjson` commit là ranh giới bền giữa hai bên.
+- **Golden set = cổng hồi quy thật.** Giờ đổi schema/loader mà làm lệch dữ liệu là `yarn test` đỏ.
+
+**Tiếp theo** — Giai đoạn 1 đã shippable. Mở rộng: RCEP, mức 144/108/199 từng dòng, NQ 25/2026. Rồi Giai đoạn 2 (gợi ý HS) / Giai đoạn 3 (UI + vòng Zalo).
+
+---
+
 ### 2026-07-18 — Nạp 4 biểu FTA + TASK-012 nghiệm thu: Giai đoạn 1 HOÀN TẤT
 
 **Đã làm**
