@@ -88,12 +88,13 @@ mang tính chịu lực (load-bearing) — đừng dọn dẹp chúng thành vă
   concepts/                domain knowledge: HS classification, tariffs, VN legal system,
                            data sources, legal RAG
   workflows/               the declarant's real daily loop
-  architecture-decisions/  7 ADRs
+  architecture-decisions/  10 ADRs
   planning/                roadmap, task list, progress log
   docs/evaluation.md       the golden set and the ship gates
 AGENTS.md, CLAUDE.md       thin bridges to .agent/AGENTS.md — keep them thin
 apps/api/                  the NestJS application (monorepo workspace, one app)
-  src/modules/             feature modules (health now; tariff-lookup in TASK-007+)
+  src/modules/             feature modules (health, tariff lookup)
+db/                        schema, migrations, and the production seed (yarn db:seed)
   src/shared/adapters/     infrastructure adapters (database: Drizzle client)
 db/                        Drizzle schema, SQL migrations, migrate runner
 docker-compose.yml         db + migrate + api, one-command local bring-up

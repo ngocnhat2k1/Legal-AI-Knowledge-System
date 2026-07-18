@@ -12,6 +12,8 @@ export default defineConfig({
   schema: './db/schema/index.ts',
   out: './db/migrations',
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? 'postgres://localhost:5432/postgres',
+    // `db:generate` diffs offline and does not connect; this fallback only matters
+    // for commands that do. Point it at the local Docker DB (published on 5433).
+    url: process.env.DATABASE_URL ?? 'postgres://app:app@localhost:5433/customs_assistant',
   },
 });

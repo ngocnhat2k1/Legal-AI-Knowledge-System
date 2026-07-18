@@ -70,23 +70,24 @@ Dự án dùng **NestJS ở chế độ monorepo workspace** (quy ước framewo
 apps/api/src/
   main.ts                          # điểm vào, listen PORT
   app.module.ts                    # composition root
-  modules/<feature>/               # module tính năng NestJS (controller/service/module)
+  modules/health/, modules/tariff/ # module tính năng NestJS (controller/service/module)
   shared/
-    kernel/                        # primitive trung lập lĩnh vực (rỗng bây giờ)
     adapters/database/             # DatabaseModule: Drizzle client, đóng kết nối khi shutdown
+    # kernel/ CHƯA tạo — thêm khi có primitive dùng chung đầu tiên (như libs/, xem trên)
 db/
-  schema/                          # lược đồ Drizzle (gần rỗng ở TASK-006; TASK-007 điền)
+  schema/                          # lược đồ Drizzle biểu thuế (bitemporal, annex-in-PK — TASK-007)
   migrations/                      # migration SQL đọc được + journal Drizzle
   migrate.ts                       # runner áp dụng migration (service `migrate`)
+  seed/                            # loader production `yarn db:seed` + extract canonical trong data/
 ```
 
 | Trách nhiệm | Vị trí trong Dự án | Ghi chú |
 |---|---|---|
 | Điểm vào và kết hợp ứng dụng | `apps/api/src/main.ts`, `apps/api/src/app.module.ts` | Composition root; `enableShutdownHooks` để đóng DB sạch. |
 | Logic feature/module | `apps/api/src/modules/<feature>/` | Module NestJS. Đường **tra cứu biểu thuế** không được có phụ thuộc LLM/embedding/retrieval ([no-llm ADR](../architecture-decisions/2026-07-17-no-llm-on-tariff-numbers.md)). |
-| Primitive trung lập về lĩnh vực dùng chung | `apps/api/src/shared/kernel/` | Rỗng bây giờ; giữ nhỏ và trung lập. |
+| Primitive trung lập về lĩnh vực dùng chung | `apps/api/src/shared/kernel/` | **Chưa tạo** — thêm khi có primitive dùng chung đầu tiên (như `libs/`); giữ nhỏ và trung lập. |
 | Adapter hạ tầng dùng chung | `apps/api/src/shared/adapters/database/` | DatabaseModule cấp Drizzle client qua token `DATABASE_CONNECTION`; import từ `index.ts` công khai. |
-| Lược đồ + migration DB | `db/schema/`, `db/migrations/`, `db/migrate.ts` | Artifact ops; áp dụng chỉ-nối-thêm (TASK-007). Chạy bằng `tsx`/`drizzle-kit`, không qua nest build. |
+| Lược đồ + migration + seed DB | `db/schema/`, `db/migrations/`, `db/migrate.ts`, `db/seed/` | Artifact ops; áp dụng chỉ-nối-thêm (TASK-007). Seed `yarn db:seed` nạp dữ liệu từ `db/seed/data/`. Chạy bằng `tsx`/`drizzle-kit`, không qua nest build. |
 | Tích hợp bên ngoài | `apps/api/src/integrations/<name>/` (chưa có) | Tạo khi cần client hệ thống ngoài đầu tiên (vd Công báo). |
 | Test helper | `apps/api` cạnh code, `*.spec.ts` (Jest) | Chưa có thư mục `tests/helpers/` dùng chung; thêm khi tái sử dụng được chứng minh. |
 

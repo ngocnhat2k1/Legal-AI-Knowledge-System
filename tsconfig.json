@@ -17,10 +17,6 @@
     "strict": true,
     "strictPropertyInitialization": false,
     "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "paths": {
-      "@app/database": ["apps/api/src/shared/adapters/database"],
-      "@app/database/*": ["apps/api/src/shared/adapters/database/*"]
-    }
+    "noFallthroughCasesInSwitch": true
   }
 }

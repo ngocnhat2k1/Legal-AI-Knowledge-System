@@ -6,7 +6,7 @@
   "license": "UNLICENSED",
   "packageManager": "yarn@4.17.1",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "build": "nest build",
@@ -61,10 +61,6 @@
       "apps/**/*.(t|j)s"
     ],
     "coverageDirectory": "./coverage",
-    "testEnvironment": "node",
-    "moduleNameMapper": {
-      "^@app/database(|/.*)$": "<rootDir>/apps/api/src/shared/adapters/database$1",
-      "^@db/schema(|/.*)$": "<rootDir>/db/schema$1"
-    }
+    "testEnvironment": "node"
   }
 }
