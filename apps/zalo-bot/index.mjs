@@ -141,7 +141,7 @@ function claudeExtract(text) {
       '"hs_hints":["<0-3 nhóm HS 4 hoặc 6 chữ số phù hợp theo kiến thức phân loại, vd 8523.52>"],' +
       '"origin":"<mã nước 2 chữ ISO HOA hoặc null>",' +
       '"date":"<YYYY-MM-DD hoặc null>",' +
-      '"note":"<1 câu ngắn giải thích phân loại, vd: Thẻ RFID thường phân loại là thẻ thông minh nhóm 8523.52>"}\n' +
+      '"note":"<MỘT câu NGẮN tối đa 22 từ giải thích phân loại, vd: Thẻ RFID thường là thẻ thông minh nhóm 8523.52>"}\n' +
       `Câu: "${String(text).replace(/["\n]/g, ' ').slice(0, 400)}"`;
     execFile(
       'claude',
@@ -159,7 +159,7 @@ function claudeExtract(text) {
             hsHints: arr(o.hs_hints).map((s) => s.replace(/\D/g, '')).filter((s) => s.length >= 4),
             origin: /^[A-Za-z]{2}$/.test(o.origin || '') ? String(o.origin).toUpperCase() : null,
             date: /^\d{4}-\d{2}-\d{2}$/.test(o.date || '') ? o.date : null,
-            note: o.note && String(o.note).trim() ? String(o.note).trim() : null,
+            note: o.note && String(o.note).trim() ? String(o.note).trim().slice(0, 200) : null,
           });
         } catch {
           resolve(null);
