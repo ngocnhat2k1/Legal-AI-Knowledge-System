@@ -264,6 +264,28 @@ export const antiDumpingDuty = pgTable(
   ],
 );
 
+// --- HS nomenclature description (reference — what a code actually is) -------
+
+/**
+ * Human-readable goods description per HS8, reconstructed from the Công báo
+ * nomenclature hierarchy (heading title + the dash-level path down to the leaf).
+ * Plain reference data — no time dimension. Lets the UI/bot say what "8481.80.99"
+ * is ("Vòi, van…") and lets a user search by product name instead of a code.
+ */
+export const hsDescription = pgTable(
+  'hs_description',
+  {
+    hsCode: varchar('hs_code', { length: 8 }).primaryKey(),
+    heading: text('heading'), // tiêu đề nhóm 4 số ("Vòi, van và các thiết bị…")
+    description: text('description'), // mô tả lá ("Loại khác")
+    path: text('path').notNull(), // đường dẫn đầy đủ, dùng để tìm kiếm
+  },
+  (t) => [
+    check('hs_description_hs_format', sql`${t.hsCode} ~ '^[0-9]{8}$'`),
+    index('hs_description_path_trgm').using('gin', sql`${t.path} gin_trgm_ops`),
+  ],
+);
+
 // --- Lookup confirmation (Phase 3 verify-on-use loop) -----------------------
 
 /**

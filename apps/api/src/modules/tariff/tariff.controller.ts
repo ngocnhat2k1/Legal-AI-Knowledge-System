@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 
 import { ConfirmationService, type ConfirmationSummary } from './confirmation.service';
 import { TariffService } from './tariff.service';
-import type { TariffResponse } from './tariff.types';
+import type { SearchCandidate, TariffResponse } from './tariff.types';
 
 /**
  * GET  /tariff?hs=&origin=&date=      — deterministic tariff lookup (rate + decree + as-of + conditions + staleness)
@@ -23,6 +23,11 @@ export class TariffController {
     @Query('origin') origin?: string,
   ): Promise<TariffResponse> {
     return this.tariff.lookup(hs, origin, date);
+  }
+
+  @Get('search')
+  search(@Query('q') q: string): Promise<SearchCandidate[]> {
+    return this.tariff.search(q);
   }
 
   @Get('confirmations')

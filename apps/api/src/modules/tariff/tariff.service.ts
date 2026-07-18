@@ -5,8 +5,10 @@ import { sql } from 'drizzle-orm';
 import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/database';
 import type {
   AntiDumpingView,
+  GoodsView,
   PreferentialView,
   RateView,
+  SearchCandidate,
   StalenessView,
   TariffResponse,
 } from './tariff.types';
@@ -148,6 +150,7 @@ export class TariffService {
       hs,
       origin,
       date: dateRaw,
+      goods: await this.goods(hs),
       import: {
         mfn,
         preferential,
@@ -239,6 +242,50 @@ export class TariffService {
         r.duty_kind === 'percent'
           ? `Chống bán phá giá ${r.rate_percent}% (cộng thêm thuế NK), xuất xứ ${r.origin_country}`
           : `Chống bán phá giá ${r.amount} ${r.amount_currency}/${r.amount_unit} (cộng thêm thuế NK), xuất xứ ${r.origin_country}`,
+    }));
+  }
+
+  /** What a code is, from the nomenclature. */
+  private async goods(hs: string): Promise<GoodsView | null> {
+    const rows = (await this.db.execute(
+      sql`SELECT heading, path FROM hs_description WHERE hs_code = ${hs} LIMIT 1`,
+    )) as unknown as Array<{ heading: string | null; path: string }>;
+    return rows[0] ? { heading: rows[0].heading, path: rows[0].path } : null;
+  }
+
+  /**
+   * Search by product name — "van" → candidate valve HS codes with their current
+   * MFN rate. Candidates whose 4-digit heading matches rank first. This returns a
+   * MENU for a human to choose from — never a single auto-picked code, because a
+   * wrong HS looks exactly like a right one (research 09).
+   */
+  async search(qRaw: string): Promise<SearchCandidate[]> {
+    const q = (qRaw ?? '').trim();
+    if (q.length < 2) throw new BadRequestException('q (từ khoá) cần ít nhất 2 ký tự');
+    // WHOLE-WORD match, not substring: "van" (valve) must not drag in "vani"
+    // (vanilla) or "rượu vang" (wine). \y is a POSIX word boundary.
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = `\\y${escaped}\\y`;
+    const rows = (await this.db.execute(sql`
+      SELECT d.hs_code, d.heading, d.path,
+             (SELECT r.rate_percent FROM tariff_rate r JOIN tariff_schedule s ON s.id = r.schedule_id
+              WHERE r.hs_code = d.hs_code AND s.code = 'NK_uu_dai' AND r.superseded_at IS NULL
+                AND r.effective_from <= CURRENT_DATE AND (r.effective_to IS NULL OR CURRENT_DATE <= r.effective_to)
+              LIMIT 1) AS mfn
+      FROM hs_description d
+      WHERE d.path ~* ${rx}
+      ORDER BY
+        (CASE WHEN d.heading ~* ${rx} THEN 0 ELSE 1 END),
+        (CASE WHEN d.heading ~* ${rx} THEN position(lower(${q}) in lower(d.heading)) ELSE 9999 END),
+        d.hs_code
+      LIMIT 25
+    `)) as unknown as Array<{ hs_code: string; heading: string | null; path: string; mfn: string | null }>;
+    return rows.map((r) => ({
+      hs: r.hs_code,
+      hsDotted: r.hs_code.replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3'),
+      heading: r.heading,
+      path: r.path,
+      mfn: r.mfn,
     }));
   }
 

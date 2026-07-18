@@ -91,27 +91,54 @@ const ORIGIN = {
   'ấn': 'IN', 'ấn độ': 'IN', india: 'IN', in: 'IN',
 };
 
+function detectOrigin(t) {
+  for (const [k, v] of Object.entries(ORIGIN)) if (t.includes(k)) return v;
+  return null;
+}
+
 function parseQuery(text) {
   const t = text.toLowerCase().trim();
   const m = t.match(HS_RE);
   if (!m) return null;
-  const hs = m[1] + m[2] + m[3];
-  let origin = null;
-  for (const [k, v] of Object.entries(ORIGIN)) {
-    if (t.includes(k)) {
-      origin = v;
-      break;
-    }
-  }
-  // ISO date if present, else today
   const dm = t.match(/(\d{4}-\d{2}-\d{2})/);
-  const date = dm ? dm[1] : new Date().toISOString().slice(0, 10);
-  return { hs, origin, date, dotted: `${m[1]}.${m[2]}.${m[3]}` };
+  return {
+    hs: m[1] + m[2] + m[3],
+    origin: detectOrigin(t),
+    date: dm ? dm[1] : new Date().toISOString().slice(0, 10),
+    dotted: `${m[1]}.${m[2]}.${m[3]}`,
+  };
+}
+
+/** Strip origin/date/filler from a sentence to get the product keyword ("van từ TQ" → "van"). */
+function keywordFrom(text, origin) {
+  let t = text.toLowerCase().replace(/\d{4}-\d{2}-\d{2}/g, ' ');
+  for (const [k, v] of Object.entries(ORIGIN)) if (v === origin && t.includes(k)) { t = t.split(k).join(' '); break; }
+  for (const w of ['nhập khẩu', 'thuế suất', 'hôm nay', 'xuất xứ', 'bao nhiêu', 'là gì', 'từ ', 'nhập ', 'thuế', 'cái ', 'con ', 'chiếc ', 'ngày', 'giá', 'mã hs', ' hs ']) {
+    t = t.split(w).join(' ');
+  }
+  return t.replace(/[?.,!:]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+async function searchGoods(kw) {
+  const res = await fetch(`${API}/tariff/search?q=${encodeURIComponent(kw)}`);
+  return res.ok ? res.json() : [];
+}
+
+function formatCandidates(kw, list) {
+  const lines = [`🔎 "${kw}" — ${list.length} mã phù hợp. Nhắn MÃ (kèm xuất xứ) để xem thuế đầy đủ:`];
+  for (const c of list.slice(0, 8)) {
+    const tail = (c.path || '').split(' › ').slice(-2).join(' › ');
+    lines.push(`• ${c.hsDotted}  ·  MFN ${c.mfn != null ? Number(c.mfn) + '%' : '—'}  ·  ${tail}`);
+  }
+  if (list.length > 8) lines.push(`…và ${list.length - 8} mã nữa — gõ cụ thể hơn để thu hẹp.`);
+  lines.push('Ví dụ: "8481.10.11 TQ".');
+  return lines.join('\n');
 }
 
 // --- Format the /tariff answer for chat ------------------------------------
 function formatAnswer(q, r) {
   const lines = [`📋 ${q.dotted}${q.origin ? ` · ${q.origin}` : ''} · ${q.date}`];
+  if (r.goods?.heading) lines.push(`📦 ${r.goods.heading}`);
   const mfn = r.import?.mfn;
   if (mfn) lines.push(`MFN: ${mfn.statement}  (${mfn.decree})`);
   const pref = r.import?.preferential ?? [];
@@ -131,19 +158,28 @@ function formatAnswer(q, r) {
 
 async function answer(text) {
   const q = parseQuery(text);
-  if (!q) {
-    return 'Nhắn: <mã HS> <xuất xứ>. Ví dụ: "8481.80.99 TQ" hoặc "0301.11.10 nhật 2026-06-01".';
+  if (q) {
+    // Có mã HS → tra cứu thuế đầy đủ.
+    const url = `${API}/tariff?hs=${q.hs}&date=${q.date}${q.origin ? `&origin=${q.origin}` : ''}`;
+    const res = await fetch(url);
+    if (res.status === 404) {
+      return `Không tìm thấy thuế cho HS ${q.dotted} (ngày ${q.date}). Có thể là dòng không mang thuế, dòng đặc biệt, hoặc ngoài dữ liệu đã nạp.`;
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return `Lỗi tra cứu: ${body.message || res.status}. Thử "8481.80.99 TQ".`;
+    }
+    return formatAnswer(q, await res.json());
   }
-  const url = `${API}/tariff?hs=${q.hs}&date=${q.date}${q.origin ? `&origin=${q.origin}` : ''}`;
-  const res = await fetch(url);
-  if (res.status === 404) {
-    return `Không tìm thấy thuế cho HS ${q.dotted} (ngày ${q.date}). Có thể là dòng không mang thuế, dòng đặc biệt, hoặc ngoài dữ liệu đã nạp.`;
+  // Không có mã HS → tìm theo TÊN HÀNG, trả danh sách ứng viên để chọn.
+  const origin = detectOrigin(text.toLowerCase());
+  const kw = keywordFrom(text, origin);
+  if (kw.length < 2) {
+    return 'Nhắn TÊN HÀNG (van, xăng, thép, ô tô…) hoặc MÃ HS (vd "8481.80.99 TQ"). Ví dụ: "van từ Trung Quốc".';
   }
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    return `Lỗi tra cứu: ${body.message || res.status}. Thử "8481.80.99 TQ".`;
-  }
-  return formatAnswer(q, await res.json());
+  const list = await searchGoods(kw);
+  if (!list.length) return `Không thấy mã HS nào cho "${kw}". Thử từ khoá khác, hoặc gõ thẳng mã HS.`;
+  return formatCandidates(kw, list);
 }
 
 // --- Main -------------------------------------------------------------------

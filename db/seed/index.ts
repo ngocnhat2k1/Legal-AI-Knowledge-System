@@ -67,14 +67,27 @@ function dedupe(rows: Nd26Row[]): Nd26Row[] {
   return [...by.values()];
 }
 
+/** Reference goods descriptions (idempotent, runs even when tariff seed is skipped). */
+async function loadDescriptions(): Promise<void> {
+  const rows = readNdjson<{ hs: string; heading: string | null; desc: string | null; path: string }>('hs-descriptions.ndjson');
+  await sql`TRUNCATE hs_description`;
+  const recs = rows.map((r) => ({ hs_code: r.hs, heading: r.heading, description: r.desc, path: r.path }));
+  for (let i = 0; i < recs.length; i += 1000) {
+    await sql`INSERT INTO hs_description ${sql(recs.slice(i, i + 1000))}`;
+  }
+  console.log(`  + ${recs.length} hs_description (mô tả hàng hoá)`);
+}
+
 async function main(): Promise<void> {
   console.log('db:seed — Phase 1 tariff dataset\n' + '='.repeat(56));
-  // Skip if already populated, unless forced — so `docker compose up` is safe to
-  // re-run without re-seeding 172k rows (or wiping confirmations) on every restart.
+  // Skip the tariff reseed if already populated, unless forced — so `docker compose
+  // up` is safe to re-run without re-seeding 172k rows (or wiping confirmations).
+  // Descriptions are (re)loaded regardless (cheap, and lets an existing deploy gain them).
   if (process.env.FORCE_RESEED !== '1') {
     const [{ n }] = await sql`SELECT count(*)::int AS n FROM tariff_rate WHERE superseded_at IS NULL`;
     if (n > 0) {
-      console.log(`  already seeded (${n} live rates) — skipping. Set FORCE_RESEED=1 to reload.`);
+      console.log(`  tariff already seeded (${n} live rates) — skipping rates.`);
+      await loadDescriptions();
       await sql.end({ timeout: 5 });
       return;
     }
@@ -204,6 +217,8 @@ async function main(): Promise<void> {
     }
     await insertRates(inserts, `${f.schedule} (${seen.size} HS)`);
   }
+
+  await loadDescriptions();
 
   const [{ total }] = await sql`SELECT count(*)::int AS total FROM tariff_rate WHERE superseded_at IS NULL`;
   console.log('='.repeat(56) + `\nSeed complete: ${total} live tariff rates.`);

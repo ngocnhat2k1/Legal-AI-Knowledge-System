@@ -22,6 +22,12 @@ background:#fff; padding:16px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0
       button:hover { background:#0369a1; }
       .card { background:#fff; border-radius:12px; padding:18px; margin-top:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
       .hs { font-size:20px; font-weight:700; } .sub { color:#64748b; font-size:13px; }
+      .goods { margin-top:6px; font-size:14px; color:#0f172a; background:#eff6ff; border:1px solid #dbeafe; border-radius:8px; padding:8px 10px; }
+      .goods b { color:#1e3a8a; }
+      .searchbox { background:#fff; border-radius:12px; padding:12px 16px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+      .cands { margin-top:8px; }
+      .cand { padding:8px 10px; border:1px solid #e2e8f0; border-radius:8px; margin-top:6px; cursor:pointer; font-size:13px; }
+      .cand:hover { background:#f0f9ff; border-color:#38bdf8; } .cand b { color:#0369a1; }
       .rate { font-size:15px; padding:10px 12px; border-radius:8px; margin-top:8px; background:#f8fafc; border:1px solid #e2e8f0; }
       .rate b { font-size:16px; } .rate .decree { color:#64748b; font-size:12px; }
       .pref { border-left:3px solid #38bdf8; }
@@ -39,6 +45,11 @@ background:#fff; padding:16px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0
   <body>
     <header><b>Tra cứu biểu thuế</b> &nbsp; <span>MFN + FTA · nghị định điều chỉnh · điều kiện C/O · độ cũ dữ liệu</span></header>
     <main>
+      <div class="searchbox">
+        <label>Không nhớ mã HS? Gõ tên hàng</label>
+        <input id="q" placeholder="ví dụ: van, xăng, ô tô, thép, cá… rồi Enter" />
+        <div class="cands" id="cands"></div>
+      </div>
       <form id="f">
         <div><label>Mã HS (8 số)</label><input id="hs" placeholder="8481.80.99" required /></div>
         <div><label>Xuất xứ</label><input id="origin" placeholder="CN" /></div>
@@ -69,6 +80,24 @@ background:#fff; padding:16px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0
         } catch (err) { $('out').innerHTML = `<div class="card err">Lỗi: ${esc(err.message)}</div>`; }
       });
 
+      const qEl = $('q'), candsEl = $('cands');
+      qEl.addEventListener('keydown', async (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const q = qEl.value.trim();
+        if (q.length < 2) return;
+        candsEl.innerHTML = '<p class="muted">Đang tìm…</p>';
+        try {
+          const list = await (await fetch('/tariff/search?q=' + encodeURIComponent(q))).json();
+          if (!Array.isArray(list) || !list.length) { candsEl.innerHTML = `<p class="muted">Không thấy mã nào khớp "${esc(q)}". Thử từ khác (van, xăng, thép…).</p>`; return; }
+          candsEl.innerHTML = `<p class="muted" style="margin:6px 0">${list.length} mã phù hợp — bấm để tra thuế:</p>` + list.map((c) =>
+            `<div class="cand" data-hs="${esc(c.hsDotted)}"><b>${esc(c.hsDotted)}</b> · MFN ${c.mfn != null ? esc(String(Number(c.mfn))) + '%' : '—'} · ${esc(c.path)}</div>`).join('');
+          candsEl.querySelectorAll('.cand').forEach((el) => el.addEventListener('click', () => {
+            $('hs').value = el.dataset.hs; candsEl.innerHTML = ''; qEl.value = ''; $('f').requestSubmit();
+          }));
+        } catch (err) { candsEl.innerHTML = '<p class="err">Lỗi tìm kiếm.</p>'; }
+      });
+
       function rateRow(r, cls) {
         return `<div class="rate ${cls || ''}"><b>${esc(r.statement)}</b> <span class="decree">${esc(r.schedule)}${r.decree ? ' · ' + esc(r.decree) : ''}${r.effectiveFrom ? ' · từ ' + esc(r.effectiveFrom) + (r.effectiveTo ? '→' + esc(r.effectiveTo) : '') : ''}</span></div>`;
       }
@@ -76,6 +105,10 @@ background:#fff; padding:16px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0
       function render(d) {
         let h = `<div class="card"><div class="hs">${esc(d.hs.replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3'))}</div>`;
         h += `<div class="sub">${d.origin ? 'xuất xứ ' + esc(d.origin) + ' · ' : ''}ngày ${esc(d.date)}</div>`;
+        if (d.goods) {
+          const rest = (d.goods.path || '').split(' › ').slice(1).join(' › ');
+          h += `<div class="goods"><b>${esc(d.goods.heading || d.goods.path)}</b>${rest ? ' <span class="muted">› ' + esc(rest) + '</span>' : ''}</div>`;
+        }
         if (d.staleness?.stale) h += `<div class="warn">⚠️ ${esc(d.staleness.warning)}</div>`;
         if (d.import?.mfn) h += rateRow(d.import.mfn);
         (d.import?.preferential || []).forEach((p) => (h += rateRow(p, 'pref')));

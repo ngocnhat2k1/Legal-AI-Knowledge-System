@@ -60,10 +60,26 @@ export interface StalenessView {
   warning: string | null;
 }
 
+/** What a code actually is, from the nomenclature (Phase 3 descriptions). */
+export interface GoodsView {
+  heading: string | null; // tiêu đề nhóm 4 số ("Vòi, van và các thiết bị…")
+  path: string; // đường dẫn đầy đủ
+}
+
+/** A candidate returned by product-name search: HS + what it is + its MFN rate. */
+export interface SearchCandidate {
+  hs: string;
+  hsDotted: string;
+  heading: string | null;
+  path: string;
+  mfn: string | null; // % MFN hiện hành, để hiển thị nhanh
+}
+
 export interface TariffResponse {
   hs: string;
   origin: string | null;
   date: string;
+  goods: GoodsView | null;
   import: {
     mfn: RateView | null;
     preferential: PreferentialView[];
