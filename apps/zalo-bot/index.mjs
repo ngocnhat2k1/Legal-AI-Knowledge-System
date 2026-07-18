@@ -12,6 +12,7 @@
  * Env: API_URL, ZALO_SESSION_PATH, ALLOWED_THREADS (danh sách threadId được phép,
  * rỗng = trả lời tất cả), ZALO_USER_AGENT.
  */
+import { execFile } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
@@ -124,14 +125,54 @@ async function searchGoods(kw) {
   return res.ok ? res.json() : [];
 }
 
-function formatCandidates(kw, list) {
-  const lines = [`🔎 "${kw}" — ${list.length} mã phù hợp. Nhắn MÃ (kèm xuất xứ) để xem thuế đầy đủ:`];
+/**
+ * Hiểu câu tự nhiên bằng Claude (subscription trên VPS, qua CLAUDE_CODE_OAUTH_TOKEN).
+ * CHỈ bóc ý {hàng, xuất xứ, ngày} — KHÔNG dùng để tính thuế (thuế luôn tất định).
+ * Không có token/CLI → trả null để answer() rơi về tách-từ đơn giản.
+ */
+function claudeExtract(text) {
+  return new Promise((resolve) => {
+    if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) return resolve(null);
+    const prompt =
+      'Trích thông tin tra cứu thuế nhập khẩu Việt Nam từ câu người dùng. ' +
+      'CHỈ trả JSON một dòng, không giải thích, không markdown: ' +
+      '{"product":"<tên hàng ngắn gọn để tìm mã HS, ví dụ van, xăng, ô tô, thép, cá>",' +
+      '"origin":"<mã nước 2 chữ ISO viết HOA như CN JP KR AU NZ TH MY SG ID PH DE US GB IN, hoặc null nếu không nêu>",' +
+      '"date":"<YYYY-MM-DD hoặc null>"}. ' +
+      `Câu: "${String(text).replace(/["\n]/g, ' ').slice(0, 300)}"`;
+    execFile(
+      'claude',
+      ['-p', prompt],
+      { timeout: 35000, env: { ...process.env, HOME: process.env.HOME || '/tmp' } },
+      (err, stdout) => {
+        if (err) return resolve(null);
+        try {
+          const m = String(stdout).match(/\{[\s\S]*?\}/);
+          if (!m) return resolve(null);
+          const o = JSON.parse(m[0]);
+          resolve({
+            product: o.product && String(o.product).trim() ? String(o.product).trim() : null,
+            origin: /^[A-Za-z]{2}$/.test(o.origin || '') ? String(o.origin).toUpperCase() : null,
+            date: /^\d{4}-\d{2}-\d{2}$/.test(o.date || '') ? o.date : null,
+          });
+        } catch {
+          resolve(null);
+        }
+      },
+    );
+  });
+}
+
+function formatCandidates(kw, list, origin) {
+  const lines = [
+    `🔎 "${kw}"${origin ? ` · xuất xứ ${origin}` : ''} — ${list.length} mã phù hợp. Nhắn MÃ${origin ? '' : ' kèm xuất xứ'} để xem thuế đầy đủ:`,
+  ];
   for (const c of list.slice(0, 8)) {
     const tail = (c.path || '').split(' › ').slice(-2).join(' › ');
     lines.push(`• ${c.hsDotted}  ·  MFN ${c.mfn != null ? Number(c.mfn) + '%' : '—'}  ·  ${tail}`);
   }
   if (list.length > 8) lines.push(`…và ${list.length - 8} mã nữa — gõ cụ thể hơn để thu hẹp.`);
-  lines.push('Ví dụ: "8481.10.11 TQ".');
+  lines.push(`Ví dụ: "${list[0]?.hsDotted || '8481.10.11'} ${origin || 'TQ'}".`);
   return lines.join('\n');
 }
 
@@ -171,15 +212,17 @@ async function answer(text) {
     }
     return formatAnswer(q, await res.json());
   }
-  // Không có mã HS → tìm theo TÊN HÀNG, trả danh sách ứng viên để chọn.
-  const origin = detectOrigin(text.toLowerCase());
-  const kw = keywordFrom(text, origin);
-  if (kw.length < 2) {
-    return 'Nhắn TÊN HÀNG (van, xăng, thép, ô tô…) hoặc MÃ HS (vd "8481.80.99 TQ"). Ví dụ: "van từ Trung Quốc".';
+  // Không có mã HS → hiểu câu bằng Claude (subscription), fallback tách-từ đơn giản.
+  const lower = text.toLowerCase();
+  const nlu = await claudeExtract(text);
+  const kw = nlu?.product || keywordFrom(text, detectOrigin(lower));
+  const origin = nlu?.origin || detectOrigin(lower);
+  if (!kw || kw.length < 2) {
+    return 'Nhắn TÊN HÀNG (van, xăng, thép, ô tô…) hoặc MÃ HS (vd "8481.80.99 TQ"). Ví dụ: "nhập cái van từ Trung Quốc".';
   }
   const list = await searchGoods(kw);
   if (!list.length) return `Không thấy mã HS nào cho "${kw}". Thử từ khoá khác, hoặc gõ thẳng mã HS.`;
-  return formatCandidates(kw, list);
+  return formatCandidates(kw, list, origin);
 }
 
 // --- Main -------------------------------------------------------------------
