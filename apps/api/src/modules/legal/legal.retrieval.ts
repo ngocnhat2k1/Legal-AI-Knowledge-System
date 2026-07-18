@@ -162,9 +162,11 @@ export async function hybridRetrieve(db: Database, opts: RetrieveOpts): Promise<
   `)) as unknown as RawRow[];
 
   return rows.map((r) => ({
-    articleProvisionId: r.article_provision_id,
-    clauseProvisionId: r.clause_provision_id,
-    documentId: r.document_id,
+    // postgres.js returns bigint columns as strings — coerce to Number so id
+    // comparisons downstream (citation validation) don't fail on string-vs-number.
+    articleProvisionId: Number(r.article_provision_id),
+    clauseProvisionId: Number(r.clause_provision_id),
+    documentId: Number(r.document_id),
     documentNumber: r.document_number,
     documentTitle: r.document_title,
     articleCitation: r.article_citation,
