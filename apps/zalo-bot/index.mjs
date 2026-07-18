@@ -220,9 +220,21 @@ async function answer(text) {
   if (!kw || kw.length < 2) {
     return 'Nhắn TÊN HÀNG (van, xăng, thép, ô tô…) hoặc MÃ HS (vd "8481.80.99 TQ"). Ví dụ: "nhập cái van từ Trung Quốc".';
   }
-  const list = await searchGoods(kw);
+  // Thử cả cụm; nếu không ra, thử từng từ (danh từ tiếng Việt thường đứng trước: "van công nghiệp" → "van").
+  let list = await searchGoods(kw);
+  let effKw = kw;
+  if (!list.length && /\s/.test(kw)) {
+    for (const w of kw.split(/\s+/).filter((w) => w.length >= 2)) {
+      const l = await searchGoods(w);
+      if (l.length) {
+        list = l;
+        effKw = w;
+        break;
+      }
+    }
+  }
   if (!list.length) return `Không thấy mã HS nào cho "${kw}". Thử từ khoá khác, hoặc gõ thẳng mã HS.`;
-  return formatCandidates(kw, list, origin);
+  return formatCandidates(effKw, list, origin);
 }
 
 // --- Main -------------------------------------------------------------------
