@@ -58,6 +58,26 @@
     "doc_file": "doc/96-vbhn.docx",
     "domain": "Thuế XNK miễn/giảm/hoàn",
     "expect": { "chuong": 5, "dieu": 22 }
+  },
+  {
+    "number": "46/VBHN-BTC",
+    "doc_type": "vbhn",
+    "short": "Nghị định 08/2015/NĐ-CP về thủ tục hải quan (VBHN 46/VBHN-BTC)",
+    "title": "Hợp nhất Nghị định quy định chi tiết và biện pháp thi hành Luật Hải quan về thủ tục hải quan, kiểm tra, giám sát, kiểm soát hải quan",
+    "issuing_body": "Bộ Tài chính",
+    "signed_date": "2019-09-26",
+    "gazette_date": "2019-10-18",
+    "effective_from": "2015-04-01",
+    "effective_to": null,
+    "effectiveness": "con_hieu_luc",
+    "is_consolidated": true,
+    "consolidates": "08/2015/NĐ-CP",
+    "gazette_issue": "827+828…829+830",
+    "source_url": "https://congbao.chinhphu.vn/noi-dung-van-ban-so-46-vbhn-btc-29794",
+    "summary": "VBHN 46/VBHN-BTC hợp nhất NĐ 08/2015 và 59/2018 về thủ tục hải quan: khai và đăng ký tờ khai, hồ sơ hải quan, kiểm tra/giám sát/kiểm soát, phân luồng, thông quan, gia công/SXXK, quá cảnh, kho ngoại quan, xác định trị giá và xuất xứ.",
+    "doc_files": ["doc/46-vbhn-827.pdf", "doc/46-vbhn-829.pdf"],
+    "domain": "Thủ tục & hồ sơ hải quan",
+    "expect": { "chuong": 9, "dieu": 111 }
   }
 ]
 

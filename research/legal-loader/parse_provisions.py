@@ -31,8 +31,13 @@ import zipfile
 
 CHUONG = re.compile(r'^Chương\s+([IVXLCDM]+)\b', re.IGNORECASE)
 MUC = re.compile(r'^Mục\s+(\d+)\b')
-DIEU = re.compile(r'^Điều\s+(\d+)\.?\s+(.+)$')  # tolerate a missing period ("Điều 71  Thủ tục…")
-KHOAN = re.compile(r'^(\d+)\.\s+(.*)$')
+# A footnote superscript can fuse to the number in a PDF render ("Điều 50.40 …" =
+# Điều 50 + footnote 40; "1.33 …" = khoản 1 + footnote 33). \.?\d* / \.\d* eat the
+# footnote digits (only right after the period, never a space-separated title number).
+# \s* (not \s+) after the number: dropping the reference superscript can leave no
+# space ("Điều 6.⁷Đối" → "Điều 6.Đối").
+DIEU = re.compile(r'^Điều\s+(\d+)\.?\d*\s*(.+)$')  # also tolerates a missing period
+KHOAN = re.compile(r'^(\d+)\.\d*\s+(.+)$')
 DIEM = re.compile(r'^([a-zđ])\)\s+(.*)$')
 # End of the enacting text — signature block / appendix. Everything after is not
 # Điều-structured (forms, tables), so we stop before it.
@@ -49,7 +54,7 @@ FOOTER = re.compile(
     # VBHN footnote annotations (textutil dumps them after each part's articles):
     # "Khoản/Điều/Điểm/Mục/Chương này được (bãi bỏ|sửa đổi|bổ sung|…) theo quy định
     # tại …". Article bodies never begin a line this way, so this is safe.
-    r'|^(Khoản|Điều|Điểm|Mục|Chương|Phần)\s+này\s+được\s+(bãi bỏ|sửa đổi|bổ sung|thay thế|hủy bỏ)'
+    r'|^\d*\s*(Khoản|Điều|Điểm|Mục|Chương|Phần)\s+này\s+được\s+(bãi bỏ|sửa đổi|bổ sung|thay thế|hủy bỏ)'
     r'|^Văn bản này được hợp nhất|^Văn bản hợp nhất này không',
 )
 
@@ -75,11 +80,49 @@ def docx_paragraphs(path: str) -> list[str]:
     return [html.unescape(''.join(run.findall(p))) for p in xml.split('</w:p>')]
 
 
+def pdf_lines(path: str) -> list[str]:
+    """Extract the BODY text from a Công báo signed PDF with pdfplumber.
+
+    Used when a document has no clean .docx and its .doc is a footnote-polluted
+    multi-part (e.g. VBHN of NĐ 08/2015). A signed PDF is a FLAT RENDER: the body is
+    the current consolidated text (no duplicate-Khoản artifact the .doc has).
+
+    The VBHN sets BOTH amendment footnotes AND the amended (in-force) provision text
+    in a smaller font (body 14pt, footnotes/amended 12pt, ref superscripts 8-9pt), so
+    font size alone can't tell them apart — but POSITION can: footnotes always sit
+    BELOW the last body line of the page, while amended 12pt text is inline within the
+    body flow. So per page we keep: body/headings (≥13pt) + inline smaller text (≥11pt
+    at or above the last body line); we drop footnotes (small text below the body) and
+    reference superscripts (<11pt, e.g. the "40" in "Điều 50.40" → "Điều 50.").
+
+    pdfplumber (not pypdf) is required — pypdf inserts mid-word spaces ("n ăm").
+    """
+    import pdfplumber
+
+    out: list[str] = []
+    with pdfplumber.open(path) as pdf:
+        for page in pdf.pages:
+            body_bottom = max((c['top'] for c in page.chars if round(c['size']) >= 13),
+                              default=page.height)
+
+            def keep(o, _bottom=body_bottom):
+                size = o.get('size')
+                if size is None:
+                    return True  # non-char objects don't affect extracted text
+                return size >= 13 or (size >= 11 and o.get('top', 0) <= _bottom + 2)
+
+            out.extend((page.filter(keep).extract_text() or '').split('\n'))
+    return out
+
+
 def doc_lines(path: str) -> list[str]:
-    """.doc → textutil; .docx → direct part read. Split into prose lines; drop
-    footer/empty lines."""
-    if path.lower().endswith('.docx'):
+    """.doc → textutil; .docx → direct part read; .pdf → pdfplumber. Split into
+    prose lines; drop footer/empty/table lines."""
+    low = path.lower()
+    if low.endswith('.docx'):
         raw = docx_paragraphs(path)
+    elif low.endswith('.pdf'):
+        raw = pdf_lines(path)
     else:
         out = subprocess.run(['textutil', '-stdout', '-convert', 'txt', path],
                              capture_output=True, check=True).stdout.decode('utf-8', 'replace')
@@ -197,6 +240,7 @@ def build(doc: dict) -> list[dict]:
     order = 0
     seen_chuong: dict[str, str] = {}   # roman -> key
     seen_muc: dict[str, str] = {}
+    seen_dieu: set[str] = set()
 
     def add(key, parent_key, ptype, number, heading, body, path, citation):
         nonlocal order
@@ -208,6 +252,11 @@ def build(doc: dict) -> list[dict]:
         order += 1
 
     for a in articles:
+        # A VBHN appends the amending decree's own "Điều khoản thi hành" after the
+        # main body — those reuse main article numbers. Keep the FIRST (main body).
+        if a['dieu_num'] in seen_dieu:
+            continue
+        seen_dieu.add(a['dieu_num'])
         cnum, ctitle = a['chuong_num'], a['chuong_title']
         chuong_key = None
         chuong_path = short

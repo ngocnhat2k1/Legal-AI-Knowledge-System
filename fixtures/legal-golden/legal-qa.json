@@ -21,6 +21,12 @@
     { "id": "thue-chongbanphagia", "q": "thuế chống bán phá giá là gì và áp dụng thế nào", "domain": "Thuế", "expect": { "doc": "96/VBHN-VPQH", "dieu": 12 } },
     { "id": "thue-doituongchiuthue", "q": "đối tượng chịu thuế xuất khẩu thuế nhập khẩu gồm những gì", "domain": "Thuế", "expect": { "doc": "96/VBHN-VPQH", "dieu": 2 } },
 
+    { "id": "tt-diadiem", "q": "địa điểm làm thủ tục hải quan ở đâu", "domain": "Thủ tục", "expect": { "doc": "46/VBHN-BTC", "dieu": 4 } },
+    { "id": "tt-khai", "q": "khai hải quan điện tử được thực hiện như thế nào", "domain": "Thủ tục", "expect": { "doc": "46/VBHN-BTC", "dieu": 25 } },
+    { "id": "tt-kiemtrahoso", "q": "kiểm tra hồ sơ hải quan gồm những nội dung gì", "domain": "Thủ tục", "expect": { "doc": "46/VBHN-BTC", "dieu": 27 } },
+    { "id": "tt-thongquan", "q": "điều kiện thông quan hàng hóa xuất nhập khẩu", "domain": "Thủ tục", "expect": { "doc": "46/VBHN-BTC", "dieu": 32 } },
+    { "id": "tt-phanloai", "q": "phân loại hàng hóa để xác định mã số HS thế nào", "domain": "Thủ tục", "expect": { "doc": "46/VBHN-BTC", "dieu": 16 } },
+
     { "id": "oos-pho", "q": "công thức nấu phở bò ngon tại nhà", "should_abstain": true },
     { "id": "oos-bongda", "q": "lịch thi đấu bóng đá ngoại hạng Anh cuối tuần", "should_abstain": true }
   ]
