@@ -31,14 +31,27 @@ import zipfile
 
 CHUONG = re.compile(r'^Chương\s+([IVXLCDM]+)\b', re.IGNORECASE)
 MUC = re.compile(r'^Mục\s+(\d+)\b')
-DIEU = re.compile(r'^Điều\s+(\d+)\.\s*(.*)$')
+DIEU = re.compile(r'^Điều\s+(\d+)\.?\s+(.+)$')  # tolerate a missing period ("Điều 71  Thủ tục…")
 KHOAN = re.compile(r'^(\d+)\.\s+(.*)$')
 DIEM = re.compile(r'^([a-zđ])\)\s+(.*)$')
 # End of the enacting text — signature block / appendix. Everything after is not
 # Điều-structured (forms, tables), so we stop before it.
 TERMINATOR = re.compile(r'^(TM\.|KT\.|Nơi nhận|THỦ TƯỚNG\b|BỘ TRƯỞNG\b|CHỦ TỊCH\b|Phụ lục\b|PHỤ LỤC\b)')
-# Công báo running header/footer artifacts interleaved by textutil.
-FOOTER = re.compile(r'CÔNG BÁO/Số|^\s*PAGE\s+\d+|^\s*\d+\s*$')
+# Công báo running header/footer + VBHN boilerplate that repeats at each part
+# boundary of a multi-part circular (must be dropped so it doesn't pollute the last
+# article of a part). All anchored/specific — none occur in legal prose.
+FOOTER = re.compile(
+    r'CÔNG BÁO/Số|^\s*PAGE\s+\d+|^\s*\d+\s*$'
+    r'|^VĂN BẢN PHÁP LUẬT KHÁC|^VĂN BẢN HỢP NHẤT'
+    r'|^Số\s+\d+\s*\+\s*\d+|^MỤC LỤC$|^Trang$'
+    r'|^Văn bản hợp nhất số\s+\d+/VBHN|^\(Đăng từ Công báo'
+    r'|^\d{1,2}-\d{1,2}-\d{4}\s*-?\s*$'
+    # VBHN footnote annotations (textutil dumps them after each part's articles):
+    # "Khoản/Điều/Điểm/Mục/Chương này được (bãi bỏ|sửa đổi|bổ sung|…) theo quy định
+    # tại …". Article bodies never begin a line this way, so this is safe.
+    r'|^(Khoản|Điều|Điểm|Mục|Chương|Phần)\s+này\s+được\s+(bãi bỏ|sửa đổi|bổ sung|thay thế|hủy bỏ)'
+    r'|^Văn bản này được hợp nhất|^Văn bản hợp nhất này không',
+)
 
 ROMAN = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000}
 
@@ -73,10 +86,31 @@ def doc_lines(path: str) -> list[str]:
         raw = out.split('\n')
     lines = []
     for r in raw:
+        # Word cell mark (\x07) means a TABLE row (a Mẫu/biểu form) — legal prose has
+        # none, so drop it. Keeps form tables out of the article bodies.
+        if '\x07' in r:
+            continue
         s = r.strip()
         if not s or FOOTER.search(s):
             continue
         lines.append(s)
+    return lines
+
+
+def read_doc(doc: dict) -> list[str]:
+    """Concatenate lines from a document's part(s). Multi-part circulars list their
+    ARTICLE parts in order via `doc_files` (TOC/appendix parts are omitted); a single
+    document uses `doc_file`. Chapter context carries across parts (we concatenate,
+    not parse-per-part), but EACH part repeats the VBHN preamble (consolidation note +
+    Căn cứ…) — so from each part we take only from its first Chương/Mục/Điều, dropping
+    that repeated preamble so it can't leak into the previous part's last article."""
+    files = doc.get('doc_files') or [doc['doc_file']]
+    lines: list[str] = []
+    for f in files:
+        pl = doc_lines(f)
+        start = next((i for i, ln in enumerate(pl)
+                      if CHUONG.match(ln) or MUC.match(ln) or DIEU.match(ln)), 0)
+        lines.extend(pl[start:])
     return lines
 
 
@@ -156,7 +190,7 @@ def parse_clauses(body_lines: list[str]) -> tuple[list[str], list[dict]]:
 def build(doc: dict) -> list[dict]:
     """Return provision rows (chương/mục/điều/khoản/điểm) for one document."""
     short = doc['short']
-    lines = doc_lines(doc['doc_file'])
+    lines = read_doc(doc)
     articles = split_articles(lines)
 
     rows: list[dict] = []
@@ -240,7 +274,7 @@ def main() -> None:
                 checks.append(f"{label} {got}/{exp[label]} {'OK' if good else 'CHECK!!'}")
         print(f"{doc['number']}: {n_chuong} chương · {n_dieu} điều · {n_khoan} khoản · "
               f"{n_diem} điểm  [{' · '.join(checks)}]")
-        doc_rows.append({k: v for k, v in doc.items() if k not in ('doc_file', 'expect', 'short')}
+        doc_rows.append({k: v for k, v in doc.items() if k not in ('doc_file', 'doc_files', 'expect', 'short')}
                         | {'short': doc['short']})
         prov_rows.extend(rows)
 
