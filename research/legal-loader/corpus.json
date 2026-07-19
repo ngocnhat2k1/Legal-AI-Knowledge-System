@@ -57,6 +57,6 @@
     "summary": "VBHN 96/VBHN-VPQH hợp nhất Luật Thuế xuất khẩu, thuế nhập khẩu (107/2016, sửa đổi 90/2025, 133/2025): đối tượng chịu thuế, căn cứ tính thuế, thuế chống bán phá giá/trợ cấp/tự vệ, miễn thuế, giảm thuế, hoàn thuế.",
     "doc_file": "doc/96-vbhn.docx",
     "domain": "Thuế XNK miễn/giảm/hoàn",
-    "expect": { "chuong": 5, "dieu": 21 }
+    "expect": { "chuong": 5, "dieu": 22 }
   }
 ]

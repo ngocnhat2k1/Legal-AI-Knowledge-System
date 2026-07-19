@@ -270,7 +270,10 @@ async function tariffByClues(clues, text) {
   }
 
   if (!cands.length) {
-    return `Chưa tìm được mã HS phù hợp${keywords.length ? ` cho "${keywords.join(', ')}"` : ''}.${clues?.note ? ` (${clues.note})` : ''} Thử mô tả rõ hơn, hoặc gõ thẳng mã HS.`;
+    return {
+      text: `Chưa tìm được mã HS phù hợp${keywords.length ? ` cho "${keywords.join(', ')}"` : ''}.${clues?.note ? ` (${clues.note})` : ''} Thử mô tả rõ hơn, hoặc gõ thẳng mã HS.`,
+      lookup: null,
+    };
   }
 
   const top = cands[0];
@@ -284,22 +287,66 @@ async function tariffByClues(clues, text) {
       out.push(`• ${c.hsDotted} · MFN ${c.mfn != null ? Number(c.mfn) + '%' : '—'} · ${(c.path || '').split(' › ').slice(-2).join(' › ')}`);
     }
   }
-  return out.join('\n');
+  const lookup = full
+    ? { hs: top.hsDotted.replace(/\./g, ''), dotted: top.hsDotted, origin, date, snapshot: full }
+    : null;
+  return { text: out.join('\n'), lookup };
 }
 
+// --- Verify-on-use: nhớ kết quả tra cứu gần nhất để xử lý "đúng"/"sai" ------
+// Bot vốn không có ngữ cảnh giữa các tin. Ở đây giữ TẠM kết quả tra thuế cuối
+// của mỗi người (theo thread+uid) để khi họ trả lời "đúng"/"sai"/"không chắc" thì
+// ghi nhận vào /tariff/confirm (giống nút xác nhận trên web), thay vì bị router
+// hiểu nhầm là câu hỏi mới.
+const lastLookup = new Map(); // `${threadId}:${uid}` -> {hs, dotted, origin, date, snapshot, ts}
+const CONFIRM_TTL = 30 * 60 * 1000; // 30 phút
+
+const CONFIRM = {
+  correct: ['đúng', 'dung', 'chuẩn', 'chuan', 'chính xác', 'chinh xac', 'đúng rồi', 'dung roi', 'chuẩn rồi', 'ok', 'oke', 'okie', 'okay', 'đúng vậy', 'chuẩn luôn', 'chính xác rồi'],
+  wrong: ['sai', 'sai rồi', 'sai roi', 'không đúng', 'ko đúng', 'khong dung', 'ko dung', 'không chính xác', 'sai bét', 'sai rồi nhé'],
+  unsure: ['không chắc', 'ko chắc', 'khong chac', 'chưa chắc', 'chua chac', 'không rõ', 'khong ro', 'chưa rõ', 'chưa chắc chắn'],
+};
+
+/** Trả 'correct'|'wrong'|'unsure' nếu CẢ tin nhắn chỉ là một câu xác nhận; else null. */
+function confirmVerdict(text) {
+  const t = String(text).toLowerCase().normalize('NFC').replace(/[.!,?…\s]+$/g, '').trim();
+  for (const [verdict, words] of Object.entries(CONFIRM)) if (words.includes(t)) return verdict;
+  return null;
+}
+
+async function handleConfirm(key, verdict, senderName) {
+  const ctx = lastLookup.get(key);
+  if (!ctx || Date.now() - ctx.ts > CONFIRM_TTL) {
+    return 'Mình chưa có kết quả tra cứu gần đây của bạn để xác nhận. Bạn tra MÃ HS hoặc TÊN HÀNG trước, rồi trả lời "đúng"/"sai"/"không chắc" nhé.';
+  }
+  try {
+    await fetch(`${API}/tariff/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hs: ctx.hs, origin: ctx.origin || null, date: ctx.date, verdict, staffName: senderName, snapshot: ctx.snapshot }),
+    });
+    const label = verdict === 'correct' ? '✓ ĐÚNG' : verdict === 'wrong' ? '✗ SAI' : '? Không chắc';
+    return `Đã ghi nhận: ${label} cho HS ${ctx.dotted}${ctx.origin ? ` · ${ctx.origin}` : ''} (ngày ${ctx.date}). Cảm ơn ${senderName}.`;
+  } catch {
+    return 'Ghi nhận xác nhận bị lỗi, thử lại sau nhé.';
+  }
+}
+
+/** Trả { text, lookup } — lookup≠null khi là kết quả tra thuế (để nhớ cho xác nhận). */
 async function answer(text) {
   // Có mã HS → tra thẳng (không cần router).
   const q = parseQuery(text);
   if (q) {
     const res = await fetch(`${API}/tariff?hs=${q.hs}&date=${q.date}${q.origin ? `&origin=${q.origin}` : ''}`);
     if (res.status === 404) {
-      return `Không tìm thấy thuế cho HS ${q.dotted} (ngày ${q.date}). Có thể là dòng không mang thuế, dòng đặc biệt, hoặc ngoài dữ liệu đã nạp.`;
+      return { text: `Không tìm thấy thuế cho HS ${q.dotted} (ngày ${q.date}). Có thể là dòng không mang thuế, dòng đặc biệt, hoặc ngoài dữ liệu đã nạp.`, lookup: null };
     }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      return `Lỗi tra cứu: ${body.message || res.status}. Thử "8481.80.99 TQ".`;
+      return { text: `Lỗi tra cứu: ${body.message || res.status}. Thử "8481.80.99 TQ".`, lookup: null };
     }
-    return formatAnswer(q, await res.json());
+    const data = await res.json();
+    return { text: formatAnswer(q, data), lookup: { hs: q.hs, dotted: q.dotted, origin: q.origin, date: q.date, snapshot: data } };
   }
 
   // Không có mã HS → BỘ ĐỊNH TUYẾN phân loại ý định.
@@ -310,19 +357,23 @@ async function answer(text) {
     // RAG có trích dẫn: tra CSDL văn bản đã kiểm chứng thay vì kiến thức chung của LLM.
     const la = await legalAnswer(text, r.date);
     if (!la || la.abstained || !(la.citations || []).length) {
-      return (
-        'Mình không tìm thấy điều khoản đủ căn cứ trong CSDL pháp luật hải quan đã kiểm chứng' +
-        (la?.reason ? ` (${la.reason})` : '') +
-        '. Bạn kiểm tra tại congbao.chinhphu.vn hoặc hỏi chuyên viên; cần con số thuế cụ thể thì cho mình TÊN HÀNG + XUẤT XỨ.'
-      );
+      return {
+        text:
+          'Mình không tìm thấy điều khoản đủ căn cứ trong CSDL pháp luật hải quan đã kiểm chứng' +
+          (la?.reason ? ` (${la.reason})` : '') +
+          '. Bạn kiểm tra tại congbao.chinhphu.vn hoặc hỏi chuyên viên; cần con số thuế cụ thể thì cho mình TÊN HÀNG + XUẤT XỨ.',
+        lookup: null,
+      };
     }
-    return formatLegal(la);
+    return { text: formatLegal(la), lookup: null };
   }
   if (r.intent === 'general') {
-    return (
-      r.reply ||
-      'Mình là bot hải quan: gõ TÊN HÀNG (van, xăng…) hoặc MÃ HS để xem thuế; hỏi về thủ tục/C/O/khái niệm cũng được.'
-    );
+    return {
+      text:
+        r.reply ||
+        'Mình là bot hải quan: gõ TÊN HÀNG (van, xăng…) hoặc MÃ HS để xem thuế; hỏi về thủ tục/C/O/khái niệm cũng được.',
+      lookup: null,
+    };
   }
   return tariffByClues(r, text); // intent === tariff
 }
@@ -367,7 +418,19 @@ async function main() {
         if (!content.trim()) return;
       }
 
-      const reply = await answer(content);
+      const key = `${msg.threadId}:${msg.data?.uidFrom || ''}`;
+      const senderName = (msg.data?.dName || '').trim() || 'bạn';
+
+      // "đúng"/"sai"/"không chắc" → xác nhận kết quả tra cứu gần nhất (không route lại).
+      const verdict = confirmVerdict(content);
+      if (verdict) {
+        const reply = await handleConfirm(key, verdict, senderName);
+        await api.sendMessage({ msg: reply, quote: msg.data }, msg.threadId, msg.type);
+        return;
+      }
+
+      const { text: reply, lookup } = await answer(content);
+      if (lookup) lastLookup.set(key, { ...lookup, ts: Date.now() });
       await api.sendMessage({ msg: reply, quote: msg.data }, msg.threadId, msg.type);
     } catch (e) {
       console.error('[zalo] lỗi xử lý tin:', e?.message);

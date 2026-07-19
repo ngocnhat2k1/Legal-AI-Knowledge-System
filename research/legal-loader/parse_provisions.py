@@ -54,10 +54,12 @@ def docx_paragraphs(path: str) -> list[str]:
     z = zipfile.ZipFile(path)
     docname = next(n for n in z.namelist() if n.replace('\\', '/').endswith('word/document.xml'))
     xml = z.read(docname).decode('utf-8', 'replace')
-    return [
-        html.unescape(''.join(re.findall(r'<w:t[^>]*>(.*?)</w:t>', p, re.S)))
-        for p in xml.split('</w:p>')
-    ]
+    # Match ONLY the <w:t> text element — the word boundary after `w:t` (whitespace
+    # for attributes, or immediate `>`) is essential: a bare `<w:t[^>]*>` also
+    # matches <w:tabs>/<w:tab …/>, and then (.*?)</w:t> slurps all the run/paragraph
+    # formatting XML (<w:pBdr>, <w:spacing>, <w:rFonts>…) into the text.
+    run = re.compile(r'<w:t(?:\s[^>]*)?>(.*?)</w:t>', re.S)
+    return [html.unescape(''.join(run.findall(p))) for p in xml.split('</w:p>')]
 
 
 def doc_lines(path: str) -> list[str]:
