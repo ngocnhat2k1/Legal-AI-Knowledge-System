@@ -213,18 +213,29 @@ export class TariffService {
     };
   }
 
+  /**
+   * Display-format a percent: trim trailing zeros from the DB numeric ("10.0000" → "10",
+   * "7.5000" → "7.5", "0.0000" → "0"). VALUE-preserving — the authoritative number is
+   * unchanged, only its rendering. (no-llm-on-tariff-numbers: this is deterministic.)
+   */
+  private pct(v: string | number | null | undefined): string {
+    if (v == null || v === '') return '0';
+    const n = Number(v);
+    return Number.isFinite(n) ? String(n) : String(v);
+  }
+
   private statement(r: RateRow): string {
     switch (r.rate_type) {
       case 'ad_valorem':
-        return `${r.rate_percent}%`;
+        return `${this.pct(r.rate_percent)}%`;
       case 'specific':
         return `${r.amount} ${r.amount_currency}/${r.amount_unit}`;
       case 'compound':
-        return `${r.rate_percent}% + ${r.amount} ${r.amount_currency}/${r.amount_unit}`;
+        return `${this.pct(r.rate_percent)}% + ${r.amount} ${r.amount_currency}/${r.amount_unit}`;
       case 'excluded':
         return 'Loại trừ khỏi biểu (không phải 0%)';
       case 'trq':
-        return `Trong hạn ngạch ${r.rate_percent}%; ngoài hạn ngạch xem biểu ngoài hạn ngạch`;
+        return `Trong hạn ngạch ${this.pct(r.rate_percent)}%; ngoài hạn ngạch xem biểu ngoài hạn ngạch`;
       default:
         return '';
     }
@@ -257,7 +268,7 @@ export class TariffService {
       effectiveTo: r.effective_to,
       statement:
         r.duty_kind === 'percent'
-          ? `Chống bán phá giá ${r.rate_percent}% (cộng thêm thuế NK), xuất xứ ${r.origin_country}`
+          ? `Chống bán phá giá ${this.pct(r.rate_percent)}% (cộng thêm thuế NK), xuất xứ ${r.origin_country}`
           : `Chống bán phá giá ${r.amount} ${r.amount_currency}/${r.amount_unit} (cộng thêm thuế NK), xuất xứ ${r.origin_country}`,
     }));
   }
