@@ -88,6 +88,18 @@ Nhiều tin video/file cũng có `thumbUrl` trên CDN Zalo. `extractImage` bỏ 
 - **Rủi ro duy nhất còn lại**: URL ảnh Zalo có thể cần cookie phiên để tải. Giảm bằng fallback `href → thumb → xin mô tả chữ`. Xác nhận khi test thật.
 - **Đụng chạm**: chỉ [apps/zalo-bot/index.mjs](../../apps/zalo-bot/index.mjs). Không đổi API, schema, Dockerfile.
 
+## Sau test thực tế (2026-07-20) — dò xuất xứ + đính chính
+
+Test thật lộ 2 lỗi:
+
+1. **`detectOrigin` bịa xuất xứ** — nó so khớp **chuỗi con thô**, nên "**Hàng** mới" chứa "hàn" → **KR**; class rộng: "anh"⊂"nhanh"→GB, "in"⊂"inch"→IN, "phi"(Ø)→PH… Sửa: khớp theo **ranh giới từ** (`(?<![\p{L}\d])…(?![\p{L}\d])`), chỉ nhận **tên nước rõ ràng** hoặc **mã ISO viết HOA đứng riêng** ("TQ","KR"). Bỏ các từ ngắn/mập mờ ("hàn","anh","in","phi","úc","đức","tàu"). **Thà null còn hơn sai** (router LLM vẫn bắt xuất xứ ở nhánh kia). `keywordFrom` cũng strip theo ranh giới từ (khỏi cắt "hàng"→"g").
+
+2. **Đính chính không được ghi nhận** — khi staff sửa ("HS đúng là 7326.90.99 + mô tả"), bot chỉ máy móc rút số tra lại. Thêm `handleCorrection`: khi reply/tiếp nối một kết quả gần đây + có tín hiệu sửa (`isCorrection`: "sai","phải là","hs/mã đúng","nhầm","sửa lại"…) →
+   - **Ghi vào sổ verify-on-use**: mã CŨ = `wrong` + **nguyên văn lời sửa** (cột `note` của `/tariff/confirm`, không đổi backend). Mã cũ lấy từ `lastLookup`, hết hạn thì lấy lại từ `quote.msg`.
+   - Tra mã ĐÚNG, hiện thuế, đặt `lastLookup` = mã mới, mời "đúng" để chốt.
+   - "đúng là <đúng mã cũ>" → hiểu là **xác nhận**, ghi `correct` (không phải sửa).
+   - Đơn "đúng"/"sai" vẫn về `confirmVerdict` cũ (correction chỉ bắt tin nhiều chữ).
+
 ## Kế hoạch kiểm chứng
 
 1. Gửi ảnh một mặt hàng rõ ràng + caption "hs code cái này" → bot ack, rồi trả HS đúng nhóm + MFN + nhắc xuất xứ.

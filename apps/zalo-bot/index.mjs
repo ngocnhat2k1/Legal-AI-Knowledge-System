@@ -79,6 +79,7 @@ async function connect() {
 
 // --- Query parsing ----------------------------------------------------------
 const HS_RE = /(\d{4})[.\s]?(\d{2})[.\s]?(\d{2})/;
+// Origin words STRIPPED from a product keyword (best-effort, used by keywordFrom only).
 const ORIGIN = {
   'trung quoc': 'CN', 'trung quốc': 'CN', tq: 'CN', 'tàu': 'CN', china: 'CN', cn: 'CN',
   'nhat': 'JP', 'nhật': 'JP', 'nhật bản': 'JP', japan: 'JP', jp: 'JP',
@@ -92,8 +93,34 @@ const ORIGIN = {
   'ấn': 'IN', 'ấn độ': 'IN', india: 'IN', in: 'IN',
 };
 
-function detectOrigin(t) {
-  for (const [k, v] of Object.entries(ORIGIN)) if (t.includes(k)) return v;
+// Explicit UPPERCASE ISO/shorthand a user types on purpose ("8481.80.99 TQ", "… KR").
+const ORIGIN_CODE = { TQ: 'CN', CN: 'CN', JP: 'JP', KR: 'KR', AU: 'AU', NZ: 'NZ', TH: 'TH', MY: 'MY', SG: 'SG', ID: 'ID', PH: 'PH', DE: 'DE', EU: 'EU', GB: 'GB', UK: 'GB', US: 'US', VN: 'VN' };
+// Unambiguous country NAMES, matched on WORD BOUNDARIES. Short/ambiguous bare words are left
+// out on purpose — "hàn"=hàn (weld), "anh"=anh (you), "in"=in (print), "phi"=Ø, "úc"⊂"phúc",
+// "đức"=name Đức, "hàng"⊂"hàn" — a WRONG origin silently changes the FTA answer, so prefer null.
+const ORIGIN_NAME = [
+  ['trung quốc', 'CN'], ['trung quoc', 'CN'], ['china', 'CN'],
+  ['nhật bản', 'JP'], ['nhật', 'JP'], ['japan', 'JP'],
+  ['hàn quốc', 'KR'], ['korea', 'KR'],
+  ['australia', 'AU'], ['new zealand', 'NZ'],
+  ['thái lan', 'TH'], ['thailand', 'TH'],
+  ['malaysia', 'MY'], ['mã lai', 'MY'], ['singapore', 'SG'], ['indonesia', 'ID'], ['philippines', 'PH'],
+  ['germany', 'DE'], ['châu âu', 'EU'], ['ấn độ', 'IN'], ['india', 'IN'], ['anh quốc', 'GB'],
+];
+
+/**
+ * Detect origin CONSERVATIVELY. Only an explicit uppercase code as a standalone token, or an
+ * unambiguous country name on WORD BOUNDARIES, counts. This is why "Hàng mới" no longer reads
+ * as "hàn"→KR. Miss > false hit: the LLM router also extracts origin on the non-direct path.
+ */
+function detectOrigin(raw) {
+  const s = String(raw || '');
+  const cm = s.match(/(?<![A-Za-z0-9])(TQ|CN|JP|KR|AU|NZ|TH|MY|SG|ID|PH|DE|EU|GB|UK|US|VN)(?![A-Za-z0-9])/);
+  if (cm) return ORIGIN_CODE[cm[1]];
+  const low = s.toLowerCase();
+  for (const [k, v] of ORIGIN_NAME) {
+    if (new RegExp(`(?<![\\p{L}\\d])${k}(?![\\p{L}\\d])`, 'u').test(low)) return v;
+  }
   return null;
 }
 
@@ -113,7 +140,13 @@ function parseQuery(text) {
 /** Strip origin/date/filler from a sentence to get the product keyword ("van từ TQ" → "van"). */
 function keywordFrom(text, origin) {
   let t = text.toLowerCase().replace(/\d{4}-\d{2}-\d{2}/g, ' ');
-  for (const [k, v] of Object.entries(ORIGIN)) if (v === origin && t.includes(k)) { t = t.split(k).join(' '); break; }
+  // Strip the origin word(s) on WORD BOUNDARIES so a match inside a real word
+  // (e.g. "hàn" inside "hàng") doesn't shred the keyword.
+  if (origin) {
+    for (const [k, v] of Object.entries(ORIGIN)) {
+      if (v === origin) t = t.replace(new RegExp(`(?<![\\p{L}\\d])${k}(?![\\p{L}\\d])`, 'gu'), ' ');
+    }
+  }
   for (const w of ['nhập khẩu', 'thuế suất', 'hôm nay', 'xuất xứ', 'bao nhiêu', 'là gì', 'từ ', 'nhập ', 'thuế', 'cái ', 'con ', 'chiếc ', 'ngày', 'giá', 'mã hs', ' hs ']) {
     t = t.split(w).join(' ');
   }
@@ -489,6 +522,69 @@ async function handleConfirm(key, verdict, senderName) {
   }
 }
 
+// --- Correction: staff adjust a recent answer ("sai, HS đúng là …") ----------
+// Distinct from the one-word confirm: this carries a NEW HS and/or a corrected description.
+// Instead of mechanically re-looking-up the number, RECORD it into the verify-on-use trail
+// (old HS = wrong + the staff's exact words), then re-lookup the corrected HS.
+const CORRECTION_CUE =
+  /(?<![\p{L}])(sai|không phải|ko phải|khong phai|phải là|phai la|đúng là|dung la|mã đúng|ma dung|hs đúng|hs dung|không đúng|khong dung|chỉnh lại|chinh lai|sửa lại|sua lai|nhầm|nham|không chính xác|khong chinh xac)(?![\p{L}])/u;
+const isCorrection = (text) => CORRECTION_CUE.test(String(text).toLowerCase());
+
+async function postConfirm(payload) {
+  try {
+    await fetch(`${API}/tariff/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Trả { text, lookup }. `quote` = tin được reply (để lấy lại mã cũ nếu lastLookup hết hạn). */
+async function handleCorrection(key, text, senderName, quote) {
+  const prev = lastLookup.get(key);
+  const fresh = prev && Date.now() - prev.ts <= CONFIRM_TTL;
+  // Mã CŨ (bị coi là sai): ưu tiên kết quả đã nhớ; nếu hết hạn thì lấy lại từ tin được quote.
+  const old = fresh
+    ? { hs: prev.hs, dotted: prev.dotted, origin: prev.origin, date: prev.date, snapshot: prev.snapshot }
+    : parseQuery(String(quote?.msg || ''));
+  const fix = parseQuery(text); // mã đúng người dùng đưa ra (nếu có)
+  const today = new Date().toISOString().slice(0, 10);
+
+  // "đúng là <mã cũ>" = XÁC NHẬN, không phải sửa.
+  if (fix && old?.hs && fix.hs === old.hs) {
+    await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || today, verdict: 'correct', staffName: senderName, note: text.slice(0, 1000), snapshot: old.snapshot || null });
+    return { text: `✓ Đã xác nhận ĐÚNG mã ${old.dotted}${old.origin ? ` · ${old.origin}` : ''}. Cảm ơn ${senderName}.`, lookup: fresh ? { ...old, ts: undefined } : null };
+  }
+
+  // Ghi nhận mã cũ SAI + nguyên văn lời sửa (đây là tín hiệu vàng của verify-on-use).
+  if (old?.hs) {
+    await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || today, verdict: 'wrong', staffName: senderName, note: text.slice(0, 1000), snapshot: old.snapshot || null });
+  }
+
+  if (!fix) {
+    return { text: `📝 Đã ghi nhận: mã${old?.dotted ? ` ${old.dotted}` : ' trước'} chưa đúng (theo ${senderName}). Bạn gửi MÃ HS đúng, hoặc mô tả/ảnh mặt hàng để mình tra lại nhé.`, lookup: null };
+  }
+
+  // Tra mã đúng. Xuất xứ chỉ lấy khi lời sửa nêu rõ (không kéo theo xuất xứ cũ có thể sai).
+  const origin = detectOrigin(text);
+  const head = `📝 Đã ghi nhận đính chính từ ${senderName}: mã${old?.dotted ? ` ${old.dotted}` : ''} chưa đúng → sửa thành ${fix.dotted}.`;
+  const res = await fetch(`${API}/tariff?hs=${fix.hs}&date=${fix.date}${origin ? `&origin=${origin}` : ''}`);
+  if (!res.ok) {
+    const why = res.status === 404 ? 'không có trong dữ liệu đã nạp' : `lỗi ${res.status}`;
+    return { text: `${head}\nNhưng mình chưa tra được thuế cho ${fix.dotted} (${why}). Kiểm tra lại mã giúp mình nhé.`, lookup: null };
+  }
+  const data = await res.json();
+  const body = formatAnswer({ dotted: fix.dotted, origin, date: fix.date }, data);
+  return {
+    text: `${head}\n\n${body}`,
+    lookup: { hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data },
+  };
+}
+
 /**
  * Trả { text, lookup } — lookup≠null khi là kết quả tra thuế (để nhớ cho xác nhận).
  * `text` = câu hỏi MỚI (regex HS chỉ soi cái này); `routerText` = câu hỏi mới ĐÃ GHÉP
@@ -603,6 +699,18 @@ async function main() {
       if (verdict) {
         const reply = await handleConfirm(key, verdict, senderName);
         await api.sendMessage({ msg: reply, quote: msg.data }, msg.threadId, msg.type);
+        return;
+      }
+
+      // ĐÍNH CHÍNH ("sai, HS đúng là …") — chỉ khi đang tiếp nối một kết quả gần đây
+      // (còn nhớ lastLookup) hoặc reply thẳng vào một tin. Ghi nhận thay vì tra máy móc.
+      const prev = lastLookup.get(key);
+      const inContext = (prev && Date.now() - prev.ts <= CONFIRM_TTL) || !!msg.data?.quote;
+      if (!img && inContext && isCorrection(text)) {
+        const result = await handleCorrection(key, text, senderName, msg.data?.quote);
+        if (result.lookup) lastLookup.set(key, { ...result.lookup, ts: Date.now() });
+        else lastLookup.delete(key); // đã ghi nhận sai + chưa có mã mới → quên kết quả cũ
+        await api.sendMessage({ msg: result.text, quote: msg.data }, msg.threadId, msg.type);
         return;
       }
 
