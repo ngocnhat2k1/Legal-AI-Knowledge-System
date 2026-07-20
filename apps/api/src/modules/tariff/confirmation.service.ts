@@ -88,14 +88,16 @@ export class ConfirmationService {
       ),
     ].slice(0, 12);
     if (!tokens.length) return [];
-    // score = number of DISTINCT query tokens present in the note (more overlap = more relevant);
-    // the caller requires an adaptive threshold so a single common word can't promote a ruling.
+    // Match only the PRODUCT-DESCRIPTION half of the note (before " | "), not the citation half:
+    // the citation ("công văn 1234") shares syllables with product words ("công nghiệp") and would
+    // otherwise cause cross-product false matches. score = DISTINCT product tokens present.
+    const notePart = sql`lower(split_part(lc.note, ' | ', 1))`;
     const scoreExpr = sql.join(
-      tokens.map((t) => sql`(CASE WHEN lower(lc.note) LIKE ${'%' + t + '%'} THEN 1 ELSE 0 END)`),
+      tokens.map((t) => sql`(CASE WHEN ${notePart} LIKE ${'%' + t + '%'} THEN 1 ELSE 0 END)`),
       sql` + `,
     );
     const anyExpr = sql.join(
-      tokens.map((t) => sql`lower(lc.note) LIKE ${'%' + t + '%'}`),
+      tokens.map((t) => sql`${notePart} LIKE ${'%' + t + '%'}`),
       sql` OR `,
     );
     // A 'correct' ruling is retracted by a LATER 'wrong' on the same code (verify-loop is how a
