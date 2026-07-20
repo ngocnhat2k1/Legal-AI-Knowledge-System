@@ -58,6 +58,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 
 - [Chỉ mục tài liệu tác nhân](docs/README.md)
 - [Tổ chức mã nguồn](docs/code-organization.md)
+- [Bot Zalo: hiểu ảnh + tin quote](docs/zalo-bot-image-and-quote-context.md) — vision → đường thuế tất định; confine Read chống prompt-injection
 - [Đánh giá](docs/evaluation.md) — bộ vàng (golden set) và các cổng ra mắt (ship gates)
 
 ## Quyết định (Decisions)

@@ -116,6 +116,23 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 
 ---
 
+### 2026-07-20 — Bot Zalo hiểu ẢNH + tin QUOTE (vision → đường thuế tất định)
+
+**Đã làm** — bot cũ bỏ 2 nguồn ngữ cảnh: ảnh (content là object / `quote.attach`) và tin được reply (`quote.msg`). Sửa trong [apps/zalo-bot/index.mjs](../../apps/zalo-bot/index.mjs):
+- **Ảnh** → `claudeVision` đọc ảnh (claude subscription, tool Read) → keywords/hs_hints/origin → `tariffByClues` (DB tất định, **không LLM tính số**). Có ack "🔍 Đang xem ảnh…". Xử lý cả ảnh-gửi-kèm lẫn *reply vào ảnh*. Không xuất xứ → MFN + nhắc gửi xuất xứ.
+- **Reply/quote** → `mergeQuote` ghép ngữ cảnh cho câu hỏi tiếp nối. `answer(text, routerText)`: regex HS chỉ soi câu MỚI, router LLM thấy ngữ cảnh.
+- Thiết kế: [../docs/zalo-bot-image-and-quote-context.md](../docs/zalo-bot-image-and-quote-context.md).
+
+**Đã học — địa hình thật**
+- **🔴 Prompt injection qua caption**: `claude --allowedTools Read` KHÔNG giới hạn = đọc được `/session/zalo-session.json` (credential Zalo bot) rồi tuồn ra qua `note`/`keywords` bot echo. Bịt bằng **confine Read vào thư mục cô lập**: cú pháp path tuyệt đối của Claude Code là **`Read(//tmp/zalo-vision/**)`** (HAI gạch chéo) + `cwd` cô lập. Test VPS: đọc được ảnh staged, `/session` bị chặn. Mẫu tái dùng cho mọi LLM-subprocess trên input người dùng.
+- **`claude -p` cần cấp quyền tool**: mặc định từ chối Read; phải `--allowedTools`, và prompt đẩy qua **stdin** (nếu để sau `--allowedTools` sẽ bị nuốt làm giá trị cờ).
+- **Vision khả thi & miễn phí** qua subscription CLI (~15-30s/ảnh); zca-js 2.1.2 **không** có helper tải ảnh → `fetch(href)`.
+- Video/file cũng có `thumbUrl` zadn → phải lọc theo `msgType` + Content-Type kẻo nhận nhầm là ảnh.
+
+*(Bối cảnh: Giai đoạn 5 — Legal RAG 4 nhóm đã ship 2026-07-19, xem memory `legal-rag`; file này khi đó chưa cập nhật.)*
+
+---
+
 ### 2026-07-18 — Giai đoạn 3: web UI + bot Zalo, deploy VPS Contabo
 
 **Đã làm** (chủ dự án đổi hướng: lật ADR web-app-only, thêm điều khiển Zalo, YÊU CẦU self-contained)
