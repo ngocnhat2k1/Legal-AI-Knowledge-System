@@ -38,6 +38,13 @@ export class TariffController {
     return this.confirmations.summary(hs, origin);
   }
 
+  // HS codes a human already confirmed correct for a product matching these keywords
+  // (comma-separated). Lets a recorded staff ruling resurface on a similar later lookup.
+  @Get('confirmations/match')
+  matchConfirmations(@Query('q') q: string) {
+    return this.confirmations.matchByProduct(q ?? '');
+  }
+
   @Post('confirm')
   confirm(
     @Body()

@@ -404,6 +404,18 @@ async function confirmations(hs, origin) {
   }
 }
 
+/** HS codes a human already confirmed correct for a product matching these keywords (a recorded ruling). */
+async function confirmationsMatch(keywords) {
+  const q = (keywords || []).filter((k) => k && k.length >= 2).slice(0, 8).join(',');
+  if (!q) return [];
+  try {
+    const res = await fetch(`${API}/tariff/confirmations/match?q=${encodeURIComponent(q)}`);
+    return res.ok ? res.json() : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Footer: show what's already been recorded, and DON'T re-ask if it's confirmed correct. */
 function confirmFooter(c) {
   if (!c || !(c.correct || c.wrong || c.unsure)) {
@@ -498,21 +510,75 @@ async function tariffByClues(clues, text) {
     };
   }
 
+  // Chữ ký sản phẩm để (a) tra ruling đã xác nhận, (b) đính kèm khi có đính chính sau này.
+  const productKw = (clues?.keywords?.length ? clues.keywords : keywords).filter((k) => k && k.length >= 2).slice(0, 6);
+  const desc = (clues?.note || productKw.join(', ') || text).replace(/\s+/g, ' ').trim().slice(0, 300);
+
+  // Một ÁP MÃ đã được con người xác nhận cho hàng tương tự > phỏng đoán của LLM (verify-on-use).
+  // Ngưỡng thích nghi: cụm nhiều token cần ≥2 token khớp (chống một từ chung promote nhầm);
+  // tên 1-token cho phép khớp 1. CHỈ ưu tiên lại mã đã có trong ứng viên tra ra của CHÍNH hàng
+  // này — không chèn mã lạ, để một ruling cũ không kéo mã không liên quan lên đầu.
+  const qTokenCount = new Set(productKw.join(' ').toLowerCase().split(/[,\s]+/).map((s) => s.trim()).filter((s) => s.length >= 2)).size;
+  const need = Math.min(2, qTokenCount || 1);
+  let citedRuling = null;
+  for (const r of await confirmationsMatch(productKw)) {
+    if ((r.score || 0) < need) continue;
+    const rhs = String(r.hs).replace(/\D/g, '');
+    if (rhs.length !== 8) continue;
+    const idx = cands.findIndex((c) => c.hs === rhs);
+    if (idx < 0) continue; // mã ruling không nằm trong kết quả tra của hàng này → không phải bằng chứng nó áp cho hàng này
+    if (idx > 0) cands.unshift(cands.splice(idx, 1)[0]);
+    citedRuling = { dotted: `${rhs.slice(0, 4)}.${rhs.slice(4, 6)}.${rhs.slice(6, 8)}`, note: r.note, staffName: r.staffName };
+    break;
+  }
+
+  const grp4 = (hs) => String(hs).replace(/\./g, '').slice(0, 4);
+  const reps = [];
+  const repSeen = new Set();
+  for (const c of cands) { const g = grp4(c.hs); if (!repSeen.has(g)) { repSeen.add(g); reps.push(c); } }
+  // RANH GIỚI theo THỨ HẠNG của LLM: 2 gợi ý ĐẦU rơi khác nhóm 4 số ⇒ mô hình thực sự phân vân.
+  // Prompt cố tình liệt kê nhóm cạnh tranh ở HẠNG THẤP để MỞ RỘNG tra DB — sự có mặt của chúng
+  // KHÔNG phải bằng chứng ranh giới (nếu không "van bi" cũng kèm 7307/7318 sẽ nổ cờ oan). Độc lập
+  // với ruling: kể cả khi có ÁP MÃ vẫn báo hàng nghiêng nhiều nhóm để không bị một ruling cũ "chốt" thay.
+  const hintGroups = (clues?.hsHints || []).map(grp4).filter(Boolean);
+  const borderline = hintGroups.length ? new Set(hintGroups.slice(0, 2)).size >= 2 : reps.length >= 2;
+
   const top = cands[0];
   const full = await lookupFull(top.hsDotted, origin, date);
   const confirm = full ? await confirmations(top.hsDotted, origin) : null;
   const out = [];
   if (clues?.note) out.push(`💡 ${clues.note}`);
-  out.push(full ? formatAnswer({ dotted: top.hsDotted, origin, date }, full, confirm) : `📋 ${top.hsDotted} — ${top.path}`);
-  if (cands.length > 1) {
+  if (citedRuling) {
+    const cite = String(citedRuling.note || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+    out.push(`✅ Đã có ÁP MÃ xác nhận cho hàng tương tự: ${citedRuling.dotted} — theo ${citedRuling.staffName}${cite ? ` (${cite})` : ''}. Ưu tiên mã này; vẫn đối chiếu căn cứ.`);
+    if (borderline) out.push('ℹ️ Mặt hàng nghiêng nhiều nhóm — mã trên là ÁP MÃ đã ghi (không phải bot tự suy).');
+  } else if (borderline) {
+    out.push('⚠️ Mặt hàng NGHIÊNG NHIỀU NHÓM — đây là ỨNG VIÊN, CẦN bạn/chuyên viên chốt (kèm số công văn nếu có); đừng coi mã đầu là chắc chắn.');
+  }
+  out.push(
+    full
+      ? formatAnswer({ dotted: top.hsDotted, origin, date }, full, confirm)
+      : citedRuling
+        ? `📋 ${top.hsDotted} — theo ÁP MÃ đã ghi (${citedRuling.staffName}); chưa có dòng thuế hiệu lực tại ${date}, đối chiếu nguồn trước khi dùng.`
+        : `📋 ${top.hsDotted} — ${top.path}`,
+  );
+
+  if (borderline) {
+    out.push('— Các NHÓM ứng viên khác:');
+    for (const c of reps.filter((c) => c.hs !== top.hs).slice(0, 3)) {
+      out.push(`• ${c.hsDotted} · MFN ${c.mfn != null ? Number(c.mfn) + '%' : '—'} · ${(c.path || '').split(' › ').slice(-2).join(' › ')}`);
+    }
+    out.push(citedRuling ? '— Nếu ÁP MÃ trên chưa đúng cho lô này, nhắn "HS đúng là <mã>" (kèm số công văn).' : '— Chốt mã đúng: nhắn "HS đúng là <mã>" (kèm số công văn nếu có) để mình ghi nhận cho lần sau.');
+  } else if (cands.length > 1) {
     out.push('— Nếu không đúng loại hàng, chọn mã khác:');
     for (const c of cands.slice(1, 6)) {
       out.push(`• ${c.hsDotted} · MFN ${c.mfn != null ? Number(c.mfn) + '%' : '—'} · ${(c.path || '').split(' › ').slice(-2).join(' › ')}`);
     }
   }
-  const lookup = full
-    ? { hs: top.hsDotted.replace(/\./g, ''), dotted: top.hsDotted, origin, date, snapshot: full }
-    : null;
+  const lookup =
+    full || citedRuling
+      ? { hs: top.hsDotted.replace(/\./g, ''), dotted: top.hsDotted, origin, date, snapshot: full || null, desc, keywords: productKw }
+      : null;
   return { text: out.join('\n'), lookup };
 }
 
@@ -546,6 +612,8 @@ async function handleConfirm(key, verdict, senderName) {
     await fetch(`${API}/tariff/confirm`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      // KHÔNG gửi note ở đây: một cú "đúng" chỉ là ĐỒNG Ý với phỏng đoán của bot, KHÔNG phải
+      // ÁP MÃ của con người. note=null → matchByProduct loại (chỉ ruling do người GÕ MÃ mới promote được).
       body: JSON.stringify({ hs: ctx.hs, origin: ctx.origin || null, date: ctx.date, verdict, staffName: senderName, snapshot: ctx.snapshot }),
     });
     const label = verdict === 'correct' ? '✓ ĐÚNG' : verdict === 'wrong' ? '✗ SAI' : '? Không chắc';
@@ -562,6 +630,18 @@ async function handleConfirm(key, verdict, senderName) {
 const CORRECTION_CUE =
   /(?<![\p{L}])(sai|không phải|ko phải|khong phai|phải là|phai la|đúng là|dung la|mã đúng|ma dung|hs đúng|hs dung|không đúng|khong dung|chỉnh lại|chinh lai|sửa lại|sua lai|nhầm|nham|không chính xác|khong chinh xac)(?![\p{L}])/u;
 const isCorrection = (text) => CORRECTION_CUE.test(String(text).toLowerCase());
+
+/**
+ * Trích SỐ CĂN CỨ (công văn/quyết định) từ lời sửa, bỏ phần free-text còn lại. Ta chỉ lưu MÔ TẢ
+ * SẢN PHẨM + số căn cứ vào note (note bị khớp mờ + echo chéo ngữ cảnh), nên KHÔNG được để lọt
+ * free-text người dùng (có thể chứa tên/SĐT/số lô của khách).
+ */
+function citationFrom(text) {
+  // KHÔNG nhận "số" đứng riêng — nó hay đứng trước SĐT/số lô ("số 09…"); chỉ nhận tiền tố
+  // LOẠI VĂN BẢN rõ ràng để tránh bắt nhầm PII làm căn cứ.
+  const m = String(text).match(/((?:công văn|cv|quyết định|qđ|thông báo|tb)\s*(?:số\s*)?[:.]?\s*\d[\dA-Za-z/.\-]*)/i);
+  return m ? m[1].replace(/\s+/g, ' ').trim().slice(0, 80) : '';
+}
 
 async function postConfirm(payload) {
   try {
@@ -586,16 +666,23 @@ async function handleCorrection(key, text, senderName, quote) {
     : parseQuery(String(quote?.msg || ''));
   const fix = parseQuery(text); // mã đúng người dùng đưa ra (nếu có)
   const today = new Date().toISOString().slice(0, 10);
+  // Mô tả hàng đã lưu từ lần phân loại trước — để đính vào bản ghi 'correct' cho mã đúng,
+  // nhờ đó lần sau tra hàng TƯƠNG TỰ mới khớp lại được (matchByProduct).
+  const prodDesc = fresh ? String(prev.desc || '').replace(/\s+/g, ' ').trim() : '';
+  const prevKw = fresh && Array.isArray(prev.keywords) ? prev.keywords : [];
+  // note LƯU vào sổ = MÔ TẢ SẢN PHẨM + SỐ CĂN CỨ (công văn). KHÔNG lưu free-text lời sửa
+  // (có thể chứa tên/SĐT/số lô của khách) vì note bị khớp mờ + echo chéo ngữ cảnh.
+  const rulingNote = [prodDesc, citationFrom(text)].filter(Boolean).join(' | ').slice(0, 300) || null;
 
-  // "đúng là <mã cũ>" = XÁC NHẬN, không phải sửa.
+  // "đúng là <mã cũ>" = XÁC NHẬN (người GÕ MÃ) → ghi correct KÈM mô tả để tra lại được.
   if (fix && old?.hs && fix.hs === old.hs) {
-    await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || today, verdict: 'correct', staffName: senderName, note: text.slice(0, 1000), snapshot: old.snapshot || null });
-    return { text: `✓ Đã xác nhận ĐÚNG mã ${old.dotted}${old.origin ? ` · ${old.origin}` : ''}. Cảm ơn ${senderName}.`, lookup: fresh ? { ...old, ts: undefined } : null };
+    await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || today, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null });
+    return { text: `✓ Đã xác nhận ĐÚNG mã ${old.dotted}${old.origin ? ` · ${old.origin}` : ''}. Cảm ơn ${senderName}.`, lookup: fresh ? { ...old, desc: prodDesc || undefined, keywords: prevKw } : null };
   }
 
-  // Ghi nhận mã cũ SAI + nguyên văn lời sửa (đây là tín hiệu vàng của verify-on-use).
+  // Ghi nhận mã cũ SAI (mô tả + căn cứ, không PII).
   if (old?.hs) {
-    await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || today, verdict: 'wrong', staffName: senderName, note: text.slice(0, 1000), snapshot: old.snapshot || null });
+    await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || today, verdict: 'wrong', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null });
   }
 
   if (!fix) {
@@ -611,11 +698,13 @@ async function handleCorrection(key, text, senderName, quote) {
     return { text: `${head}\nNhưng mình chưa tra được thuế cho ${fix.dotted} (${why}). Kiểm tra lại mã giúp mình nhé.`, lookup: null };
   }
   const data = await res.json();
+  // Ghi mã ĐÚNG = 'correct' KÈM mô tả sản phẩm + số căn cứ (rulingNote, đã lọc PII) → tra lại được sau này.
+  await postConfirm({ hs: fix.hs, origin: origin || null, date: fix.date, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: data });
   const confirm = await confirmations(fix.hs, origin);
   const body = formatAnswer({ dotted: fix.dotted, origin, date: fix.date }, data, confirm);
   return {
     text: `${head}\n\n${body}`,
-    lookup: { hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data },
+    lookup: { hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data, desc: prodDesc || undefined, keywords: prevKw },
   };
 }
 
