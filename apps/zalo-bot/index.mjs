@@ -389,8 +389,37 @@ function formatCandidates(kw, list, origin) {
   return lines.join('\n');
 }
 
+// --- Prior verdicts on this rate (verify-on-use trail) ----------------------
+async function confirmations(hs, origin) {
+  try {
+    const qs = new URLSearchParams({ hs: String(hs).replace(/\./g, '') });
+    if (origin) qs.set('origin', origin);
+    const res = await fetch(`${API}/tariff/confirmations?${qs}`);
+    return res.ok ? res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Footer: show what's already been recorded, and DON'T re-ask if it's confirmed correct. */
+function confirmFooter(c) {
+  if (!c || !(c.correct || c.wrong || c.unsure)) {
+    return '— trả lời "đúng" hoặc "sai" nếu muốn xác nhận kết quả này.';
+  }
+  const recent = Array.isArray(c.recent) ? c.recent : [];
+  const lastOf = (v) => recent.find((r) => r.verdict === v);
+  const parts = [];
+  if (c.correct) { const l = lastOf('correct'); parts.push(`✓ đã xác nhận ĐÚNG ${c.correct} lần${l ? ` (gần nhất: ${l.staffName})` : ''}`); }
+  if (c.wrong) { const l = lastOf('wrong'); parts.push(`✗ từng báo SAI ${c.wrong} lần${l ? ` (${l.staffName}${l.note ? ': ' + String(l.note).replace(/\s+/g, ' ').slice(0, 60) : ''})` : ''}`); }
+  if (c.unsure) parts.push(`? chưa chắc ${c.unsure} lần`);
+  const invite = c.wrong
+    ? '— mã này từng bị đính chính, kiểm tra kỹ. Trả lời "đúng"/"sai" để cập nhật.'
+    : '— nếu chưa đúng, trả lời "sai" hoặc gửi mã đúng để mình sửa.';
+  return `📌 ${parts.join(' · ')}\n${invite}`;
+}
+
 // --- Format the /tariff answer for chat ------------------------------------
-function formatAnswer(q, r) {
+function formatAnswer(q, r, confirm) {
   const lines = [`📋 ${q.dotted}${q.origin ? ` · ${q.origin}` : ''} · ${q.date}`];
   if (r.goods?.heading) lines.push(`📦 ${r.goods.heading}`);
   const mfn = r.import?.mfn;
@@ -406,7 +435,7 @@ function formatAnswer(q, r) {
   for (const c of r.antiDumping ?? []) lines.push(`⚠️ ${c.statement}`);
   if (r.staleness?.stale) lines.push(`⚠️ ${r.staleness.warning}`);
   if (r.notes?.length) lines.push(...r.notes.map((n) => `ℹ️ ${n}`));
-  lines.push('— trả lời "đúng" hoặc "sai" nếu muốn xác nhận kết quả này.');
+  lines.push(confirmFooter(confirm));
   return lines.join('\n');
 }
 
@@ -468,9 +497,10 @@ async function tariffByClues(clues, text) {
 
   const top = cands[0];
   const full = await lookupFull(top.hsDotted, origin, date);
+  const confirm = full ? await confirmations(top.hsDotted, origin) : null;
   const out = [];
   if (clues?.note) out.push(`💡 ${clues.note}`);
-  out.push(full ? formatAnswer({ dotted: top.hsDotted, origin, date }, full) : `📋 ${top.hsDotted} — ${top.path}`);
+  out.push(full ? formatAnswer({ dotted: top.hsDotted, origin, date }, full, confirm) : `📋 ${top.hsDotted} — ${top.path}`);
   if (cands.length > 1) {
     out.push('— Nếu không đúng loại hàng, chọn mã khác:');
     for (const c of cands.slice(1, 6)) {
@@ -578,7 +608,8 @@ async function handleCorrection(key, text, senderName, quote) {
     return { text: `${head}\nNhưng mình chưa tra được thuế cho ${fix.dotted} (${why}). Kiểm tra lại mã giúp mình nhé.`, lookup: null };
   }
   const data = await res.json();
-  const body = formatAnswer({ dotted: fix.dotted, origin, date: fix.date }, data);
+  const confirm = await confirmations(fix.hs, origin);
+  const body = formatAnswer({ dotted: fix.dotted, origin, date: fix.date }, data, confirm);
   return {
     text: `${head}\n\n${body}`,
     lookup: { hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data },
@@ -604,7 +635,8 @@ async function answer(text, routerText = text) {
       return { text: `Lỗi tra cứu: ${body.message || res.status}. Thử "8481.80.99 TQ".`, lookup: null };
     }
     const data = await res.json();
-    return { text: formatAnswer(q, data), lookup: { hs: q.hs, dotted: q.dotted, origin: q.origin, date: q.date, snapshot: data } };
+    const confirm = await confirmations(q.hs, q.origin);
+    return { text: formatAnswer(q, data, confirm), lookup: { hs: q.hs, dotted: q.dotted, origin: q.origin, date: q.date, snapshot: data } };
   }
 
   // Không có mã HS → BỘ ĐỊNH TUYẾN phân loại ý định (thấy cả ngữ cảnh tin được reply).

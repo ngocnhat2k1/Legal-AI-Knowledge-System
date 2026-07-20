@@ -129,6 +129,11 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 - **Vision khả thi & miễn phí** qua subscription CLI (~15-30s/ảnh); zca-js 2.1.2 **không** có helper tải ảnh → `fetch(href)`.
 - Video/file cũng có `thumbUrl` zadn → phải lọc theo `msgType` + Content-Type kẻo nhận nhầm là ảnh.
 
+**Sửa tiếp sau test thật (cùng ngày)** — [chi tiết](../docs/zalo-bot-image-and-quote-context.md):
+- **`detectOrigin` bịa xuất xứ**: "**Hàng** mới"⊃"hàn"→KR (và "anh"⊂"nhanh", "in"⊂"inch", "phi"(Ø)…). Sửa: khớp **ranh giới từ** + chỉ nhận tên nước rõ / mã ISO HOA đứng riêng; thà null còn hơn sai. `keywordFrom` cũng strip theo ranh giới từ.
+- **Đính chính không được ghi nhận**: `handleCorrection` — staff sửa ("HS đúng là X") → ghi mã cũ = `wrong` + nguyên văn lời sửa vào `/tariff/confirm` (cột `note` có sẵn), tra mã đúng, mời "đúng" chốt. "đúng là <mã cũ>" = xác nhận. Đơn "đúng/sai" vẫn về `confirmVerdict`.
+- **Số % thừa "0000"**: thêm `pct()` ở [tariff.service.ts](../../apps/api/src/modules/tariff/tariff.service.ts) rút số 0 đuôi trong `statement` ("10.0000%"→"10%"). Value-preserving; phủ web+bot (cả hai đọc `statement`). Recreate api riêng.
+
 *(Bối cảnh: Giai đoạn 5 — Legal RAG 4 nhóm đã ship 2026-07-19, xem memory `legal-rag`; file này khi đó chưa cập nhật.)*
 
 ---
