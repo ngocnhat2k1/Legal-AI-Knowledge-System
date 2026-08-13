@@ -37,11 +37,20 @@ MUC = re.compile(r'^Mục\s+(\d+)\b')
 # \s* (not \s+) after the number: dropping the reference superscript can leave no
 # space ("Điều 6.⁷Đối" → "Điều 6.Đối").
 DIEU = re.compile(r'^Điều\s+(\d+)\.?\d*\s*(.+)$')  # also tolerates a missing period
+# The same line WITH the period present — the mark of a real heading rather than a
+# cross-reference that happened to wrap onto its own line. See split_articles.
+DIEU_HEADING = re.compile(r'^Điều\s+\d+\.')
 KHOAN = re.compile(r'^(\d+)\.\d*\s+(.+)$')
 DIEM = re.compile(r'^([a-zđ])\)\s+(.*)$')
 # End of the enacting text — signature block / appendix. Everything after is not
 # Điều-structured (forms, tables), so we stop before it.
-TERMINATOR = re.compile(r'^(TM\.|KT\.|Nơi nhận|THỦ TƯỚNG\b|BỘ TRƯỞNG\b|CHỦ TỊCH\b|Phụ lục\b|PHỤ LỤC\b)')
+TERMINATOR = re.compile(r'^(TM\.|KT\.|Nơi nhận|THỦ TƯỚNG\b|BỘ TRƯỞNG\b|CHỦ TỊCH\b|PHỤ LỤC\b)')
+# A mixed-case "Phụ lục …" ends the enacting text ONLY when the line is just the
+# marker (plus a numeral). A procedural circular cites its own appendices in nearly
+# every article ("theo mẫu số 02/… Phụ lục VI ban hành kèm Thông tư này;"), and PDF
+# line-wrapping regularly puts that citation at the head of a line — treating it as
+# the appendix boundary stopped 25/VBHN-BTC after 7 of its 149 articles.
+APPENDIX_HEADING = re.compile(r'^Phụ lục\s*[IVXLCDM\d]*\s*$')
 # Công báo running header/footer + VBHN boilerplate that repeats at each part
 # boundary of a multi-part circular (must be dropped so it doesn't pollute the last
 # article of a part). All anchored/specific — none occur in legal prose.
@@ -158,15 +167,38 @@ def read_doc(doc: dict) -> list[str]:
 
 
 def split_articles(lines: list[str]) -> list[dict]:
-    """Walk lines into articles, each tagged with its chapter/section context."""
+    """Walk lines into articles, each tagged with its chapter/section context.
+
+    A line starting "Điều N" is not necessarily a new article — in a long circular
+    the body is full of CROSS-REFERENCES that happen to wrap onto their own line
+    ("… quy định tại\\nĐiều 7 Nghị định số 08/2015/NĐ-CP …"), and DIEU tolerates a
+    missing period, so they match. Left unchecked, 25/VBHN-BTC parsed as 62 articles
+    in a range that contains 40: the sequence came out 1, 2, *7*, *21*, 3, 4, …
+
+    Two signals separate a heading from a reference, and BOTH are needed:
+
+      * the PERIOD. A heading is "Điều 12. Khai hải quan"; a reference is "Điều 7
+        Nghị định số 08/2015". The period is the reliable mark, but not sufficient
+        on its own — a sentence can end mid-reference.
+      * the ORDER. Article numbers ascend through a document. A match at or below
+        the article we are already inside is a reference.
+
+    Order alone is NOT enough, and assuming it was cost 28 articles of 46/VBHN-BTC
+    on the first attempt: a single spurious HIGH reference ("Điều 50 của Luật Hải
+    quan") would raise the watermark and swallow every real article beneath it. So
+    a jump forward is only believed when the line also carries the period, while the
+    strict successor (N = last + 1) is accepted either way — that is the case the
+    period-optional tolerance exists for (a dropped footnote superscript can eat it).
+    """
     articles: list[dict] = []
     chuong_num = chuong_title = muc_num = muc_title = None
     cur: dict | None = None
+    last_dieu = 0
     started = False
     i, n = 0, len(lines)
     while i < n:
         line = lines[i]
-        if started and TERMINATOR.match(line):
+        if started and (TERMINATOR.match(line) or APPENDIX_HEADING.match(line)):
             break
         m = CHUONG.match(line)
         if m:
@@ -186,8 +218,10 @@ def split_articles(lines: list[str]) -> list[dict]:
             i += 2
             continue
         m = DIEU.match(line)
-        if m:
+        num = int(m.group(1)) if m else 0
+        if m and (num == last_dieu + 1 or (num > last_dieu and DIEU_HEADING.match(line))):
             started = True
+            last_dieu = num
             cur = {
                 'chuong_num': chuong_num, 'chuong_title': chuong_title,
                 'muc_num': muc_num, 'muc_title': muc_title,

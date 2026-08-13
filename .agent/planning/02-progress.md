@@ -22,11 +22,11 @@ thực sự đã xảy ra**, thường khác đi.
 
 | | |
 |---|---|
-| **Giai đoạn hiện tại** | **Giai đoạn 3 — Web UI + bot Zalo: ĐÃ DEPLOY lên VPS (2026-07-18)** (Giai đoạn 1 xong trước đó) |
-| **Công việc tiếp theo** | Chủ dự án: (1) thêm DNS A `bieuthue.ngocnhat.info → 164.68.126.127` cho web HTTPS; (2) quét QR bằng Zalo TÀI KHOẢN BOT để kích hoạt bot. Sau đó tùy chọn: Giai đoạn 2 (gợi ý HS), mở rộng dữ liệu (RCEP/amendments). |
-| **Đang bị chặn bởi** | Không (kỹ thuật). Chờ 2 thao tác chủ dự án ở trên (DNS + quét QR). |
-| **Code đã viết** | Khung repo (006) + schema (007) + loader ND 26/2023 (008) + chuỗi sửa đổi/hồi quy (009) + **API `/tariff` + staleness** (010/011, `apps/api/src/modules/tariff/`) + **loader 4 FTA** (`research/fta-loader/`) + **validator nghiệm thu** (012). Golden set `fixtures/golden-set/`. |
-| **Phiên gần nhất** | 2026-07-18 (xem nhật ký bên dưới) |
+| **Giai đoạn hiện tại** | **Giai đoạn 6 — bot Zalo có bộ nhớ hội thoại + corpus pháp luật 7 văn bản: CODE XONG, CHƯA DEPLOY** (GĐ 1/3/5 đã live trên VPS) |
+| **Công việc tiếp theo** | **Deploy lên VPS**: `docker compose build migrate` → `run --rm --no-deps migrate` (migration 0006) → `FORCE_RESEED=1 … seed-legal` (**embed 1807 chunks ≈ 35-40′**) → `up -d --no-deps --force-recreate api zalo-bot`. **Copy CẢ thư mục `apps/zalo-bot/`** (bot không còn là một file). Rồi diễn lại hội thoại trong ảnh chụp 2026-08-13 để nghiệm thu. |
+| **Đang bị chặn bởi** | Không (kỹ thuật). Một câu hỏi chờ chủ dự án: có nạp NĐ 134/2016 khi Công báo **không có VBHN** hợp nhất nó không (xem nhật ký 2026-08-13). |
+| **Code đã viết** | Khung repo (006) + schema (007) + loader ND 26/2023 (008) + chuỗi sửa đổi/hồi quy (009) + **API `/tariff` + staleness** (010/011) + **loader 4 FTA** + **validator nghiệm thu** (012) + **Legal RAG** (`modules/legal/`) + **bộ nhớ hội thoại** (`modules/conversation/`, migration 0006) + **bot Zalo dạng module** (`apps/zalo-bot/*.mjs`, `yarn test:bot`). |
+| **Phiên gần nhất** | 2026-08-13 (xem nhật ký bên dưới) |
 
 ### ⚠️ TASK-001 — phần còn lại cần con người, không phải agent
 
@@ -68,6 +68,8 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | TASK-009 — Xác lập chuỗi sửa đổi MFN 2026 | ✅ xong 2026-07-18 | Chuỗi xác lập từ nguồn chính thức (R10+R12 bù nhau; 201/2026 là XK; 72/2026 gia hạn NQ 25/2026). Hồi quy 72/2026 nạp bằng cắt-khoảng append-only, live 6/6. Xem [research/task-009-amendment-chain](../../research/task-009-amendment-chain/README.md) |
 | TASK-010 — Phát hiện độ cũ | ✅ xong 2026-07-18 | Trong API: snapshotDate + reliableThrough (−48 ngày lag) + stale/warning. Acceptance PASS (snapshot 2026-03-15/query 2026-03-10 → stale). |
 | TASK-011 — API tra cứu | ✅ xong 2026-07-18 | `GET /tariff` SQL keyed, vị từ khoảng, không LLM; rate có kiểu + statement, FTA/Ch.98 có điều kiện, CBPG riêng, staleness. FTA `preferential[]` chờ nạp biểu FTA. Xem [research/task-010-011-lookup-api](../../research/task-010-011-lookup-api/README.md) |
+| TASK-013 — Bot Zalo: bộ nhớ hội thoại + định tuyến theo chủ đề | ✅ code xong 2026-08-13, ⛔ chưa deploy | Postgres `conversation`/`conversation_turn` (0006) + `/conversation` API; bot tách 8 module; `guardIntent` chặn cả regex lẫn LLM; router thấy transcript + viết lại `search_query`; lead có guard. 20/20 test thuần. Thiết kế: [zalo-bot-conversation-memory](../docs/zalo-bot-conversation-memory.md); quy tắc [R13/R14](../business-rules.md) |
+| TASK-014 — Mở rộng corpus pháp luật 4 → 7 văn bản | ✅ trích xuất xong 2026-08-13, ⛔ chưa embed/deploy | +54/VBHN-VPQH (8/104), +25/VBHN-BTC = TT 38/2015+39/2018 (9/149), +33/2023/TT-BTC (5/23). 4472 provisions · 1807 chunks, 7/7 qua cổng `expect`. Parser thêm 2 luật (dấu chấm+thứ tự; "Phụ lục" viết thường). **NĐ 134/2016 KHÔNG nạp** — không có VBHN công bố, vướng ADR |
 | TASK-012 — Nghiệm thu Giai đoạn 1 | ✅ xong 2026-07-18 | **Corpus 249/249 khớp 100%** (MFN + 4 FTA); random 20/20 khớp source; star-case đủ 4 FTA 0%. Xem [research/task-012-acceptance](../../research/task-012-acceptance/README.md) + [fta-loader](../../research/fta-loader/README.md) |
 
 Chú thích: ✅ xong · 🟡 đang tiến hành · 🔲 chưa làm · ⛔ bị chặn · ❌ bỏ dở (nói lý do)
@@ -113,6 +115,73 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-08-13 — Bot Zalo có BỘ NHỚ HỘI THOẠI + định tuyến theo chủ đề; corpus 4→7 văn bản
+
+**Triệu chứng** — chủ dự án test thật: hỏi về một **Thông tư**, bot trả lệch; reply *"không phải câu
+trả lời tôi muốn. bạn tìm đúng thông tư mà tôi yêu cầu"* → bot đáp *"Đã ghi nhận: mã trước chưa đúng.
+Bạn gửi MÃ HS đúng"*. Bot nhảy từ pháp luật sang đính chính mã HS.
+
+**Nguyên nhân — một vị từ.** Cổng vào luồng đính chính là `(có lastLookup) || !!quote`. **Chỉ cần bấm
+reply là lọt**, rồi cụm "không phải" khớp `CORRECTION_CUE`. Sâu hơn: trạng thái duy nhất bot giữ là
+`lastLookup` (Map trong RAM, chỉ nhớ mã HS gần nhất, TTL 30′) — không lịch sử, không chủ đề, không
+trạng thái pháp luật. Mỗi tin là một phiên độc lập.
+
+**Đã làm**
+- **Bộ nhớ hội thoại trong Postgres** — migration `0006`, bảng `conversation` + `conversation_turn`,
+  module API `/conversation` (GET / POST turn / DELETE). `topic` là cột thật, `state` là jsonb.
+  Quy ước vá: thiếu trường = giữ, `null` = xoá. Dọn ngay khi ghi: 20 lượt/hội thoại, 30 ngày
+  (**[R14](../business-rules.md)** — staff dán tên/SĐT/số lô của khách vào chat).
+- **Tách bot thành module** (873 dòng → 8 file) để phần quyết định là **hàm thuần test được**:
+  `dispatch.mjs` (nhánh), `conversation.mjs`, `router.mjs`, `answer.mjs`, `format.mjs`, `parse.mjs`,
+  `api.mjs`, `images.mjs`. **Deploy đổi: copy CẢ thư mục, không phải một file.**
+- **Tín hiệu tiếp nối đọc theo chủ đề** (**[R13](../business-rules.md)**) — regex đường tắt VÀ kết quả
+  của LLM router đều bị `guardIntent` chặn: "correction"/"confirm" không tới được handler ghi sổ nếu
+  chủ đề không phải tra thuế và không còn kết quả để trỏ tới.
+- **Router thấy hội thoại**: transcript 6 lượt + tóm tắt state + **danh mục văn bản trong kho**; trả
+  thêm `search_query` (**viết lại câu hỏi thành độc lập** — cách chuẩn chữa RAG nhiều lượt), `doc_number`,
+  `article`, `reuse_last_hs`, và `lead`.
+- **Lời dẫn tự nhiên, cưỡng chế bằng code**: `sanitizeLead` bỏ lead chứa `%`; lead trích Điều/Khoản/mã HS
+  chỉ được giữ nếu chuỗi đó CÓ trong khối tất định sắp in ra. Footer/dòng "Trích nguyên văn" thành có
+  điều kiện.
+- **Nhắm đúng văn bản**: `legal.scope.ts` (khớp **từ vựng** trên số hiệu — số hiệu là định danh, không
+  phải văn xuôi; nhánh `consolidates` để "NĐ 08/2015" ra đúng VBHN), hard filter `doc`/`article` trong
+  `hybridRetrieve`, `GET /legal/documents`, `GET /legal/provision`. Kho không có văn bản được hỏi →
+  **liệt kê những gì kho có**, không đưa đoạn gần nhất của văn bản khác.
+- **Corpus 4 → 7 văn bản** (2001 → 4472 provisions, 809 → **1807 chunks**): thêm **54/VBHN-VPQH** (Luật
+  Hải quan, 8/104), **25/VBHN-BTC** (TT 38/2015 + 39/2018 thủ tục HQ, 9/149), **33/2023/TT-BTC** (xuất
+  xứ XNK, 5/23). Cả 7 qua cổng `expect`.
+- Test: `yarn test:bot` (20 ca thuần, gồm **đúng ca trong ảnh chụp**) + 3 ca scope mới trong golden spec.
+
+**Đã học — địa hình thật**
+- **🔴 Thứ tự KHÔNG đủ để nhận diện tiêu đề điều.** Lần đầu tôi lọc "Điều N" theo tính tăng dần —
+  46/VBHN-BTC **mất 28/111 điều**: một tham chiếu chéo số CAO ("Điều 50 của Luật Hải quan") nâng mốc
+  rồi nuốt hết điều thật phía sau. Luật đúng = **dấu chấm** (tiêu đề thật có "Điều 12.") **hoặc** đúng
+  bằng `điều trước + 1`. Cả hai văn bản cũ giữ nguyên chương/điều và 46/VBHN-BTC còn **thu thêm +39
+  khoản/+57 điểm** trước đây bị nuốt.
+- **🔴 "Phụ lục" viết thường KHÔNG phải ranh giới phụ lục.** Thông tư thủ tục dẫn phụ lục ở gần như mọi
+  điều và PDF ngắt dòng ngay đó → 25/VBHN-BTC dừng sau **7/149** điều. Chỉ dòng CHỈ CÓ marker, hoặc
+  `PHỤ LỤC` viết HOA, mới là ranh giới.
+- **🔴 Drizzle không bind mảng JS thành mảng Postgres**: `= ANY(${ids})` → `= ANY($1,$2)` → *malformed
+  array literal*. `inArray()` cần đối tượng cột mà SQL thô có alias thì không có → dùng `inIds()`
+  (`col IN ${inIds(ids)}`), vẫn là tham số bind.
+- **Search của congbao.chinhphu.vn không chạy server-side** (mọi query trả về trang chủ) và slug trong
+  URL **không được kiểm** — `/van-ban/<slug bất kỳ>-<id>.htm` luôn 200. Tìm TT 33/2023 phải quét `id`
+  rồi đọc `<title>` (ra **39571**). Link tải là token g7 hết hạn nhanh → lấy từ chính trang nội dung.
+- **25/VBHN-BTC nằm ở 8 kỳ Công báo** (913+914 → 927+928); chỉ **4 kỳ đầu** chứa điều, phần còn lại là
+  phụ lục/biểu mẫu.
+
+**Còn tồn / quyết định**
+- **NĐ 134/2016 (miễn/giảm/hoàn thuế) KHÔNG nạp.** Chủ dự án có chọn, nhưng Công báo **không có VBHN**
+  hợp nhất nó (NĐ 18/2021 đã sửa rất nhiều), mà [ADR dùng VBHN đã công bố](../architecture-decisions/2026-07-17-use-published-vbhn-not-computed-consolidation.md)
+  cấm tự hợp nhất. Nạp bản gốc = phục vụ điều khoản đã bị sửa — đúng dạng sai âm thầm dự án này sợ
+  nhất. Miễn/giảm/hoàn đã có ở cấp luật qua 96/VBHN-VPQH. **Cần chủ dự án quyết** nếu muốn nạp kèm cảnh
+  báo hiệu lực.
+- **Chưa deploy VPS.** Cần: `docker compose build migrate` → `run --rm migrate` (0006) →
+  `FORCE_RESEED=1 seed-legal` (**embed 1807 chunks ≈ 35-40′** trên VPS) → `up -d --force-recreate api
+  zalo-bot` (copy CẢ thư mục `apps/zalo-bot/`).
 
 ---
 

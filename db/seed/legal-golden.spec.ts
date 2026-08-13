@@ -20,6 +20,7 @@ import postgres, { type Sql } from 'postgres';
 import type { Database } from '../../apps/api/src/shared/adapters/database';
 import { keepRelevant } from '../../apps/api/src/modules/legal/legal.grounding';
 import { hybridRetrieve } from '../../apps/api/src/modules/legal/legal.retrieval';
+import { parseDocRef, resolveArticles, resolveDocuments } from '../../apps/api/src/modules/legal/legal.scope';
 
 interface Case {
   id: string;
@@ -104,4 +105,56 @@ const article = (dieu: number) => new RegExp(`^Điều ${dieu} `);
       expect(kept.length).toBe(0);
     }
   }, 30_000);
+
+  /**
+   * Scoping is a HARD filter, and the reason it has to be is document-relevance
+   * mismatch: several documents in this corpus cover overlapping ground (xuất xứ
+   * appears in NĐ 31/2018 AND in the customs-procedure VBHN), so a question asked
+   * "in document X" must not be answered out of document Y no matter how well Y ranks.
+   */
+  describe('document scoping', () => {
+    const SCOPED_QUERY = 'xuất xứ hàng hóa được xác định thế nào';
+
+    it('restricts retrieval to the named document', async () => {
+      const vec = await embed(SCOPED_QUERY);
+      const unscoped = await hybridRetrieve(db, { queryText: SCOPED_QUERY, queryVec: vec, asOf: golden.asOf, topK: golden.k });
+      const docs = await resolveDocuments(db, parseDocRef('Nghị định 31/2018/NĐ-CP')!);
+      expect(docs.map((d) => d.number)).toContain('31/2018/NĐ-CP');
+
+      const scoped = await hybridRetrieve(db, {
+        queryText: SCOPED_QUERY,
+        queryVec: vec,
+        asOf: golden.asOf,
+        topK: golden.k,
+        documentIds: docs.map((d) => d.id),
+      });
+      expect(scoped.length).toBeGreaterThan(0);
+      expect([...new Set(scoped.map((a) => a.documentNumber))]).toEqual(['31/2018/NĐ-CP']);
+      // The scope must actually be doing work — otherwise this test proves nothing.
+      expect(new Set(unscoped.map((a) => a.documentNumber)).size).toBeGreaterThanOrEqual(1);
+    }, 30_000);
+
+    it('narrows to a named Điều', async () => {
+      const vec = await embed(SCOPED_QUERY);
+      const docs = await resolveDocuments(db, parseDocRef('Nghị định 31/2018/NĐ-CP')!);
+      const articleIds = await resolveArticles(db, docs.map((d) => d.id), '5');
+      expect(articleIds.length).toBe(1);
+
+      const scoped = await hybridRetrieve(db, {
+        queryText: SCOPED_QUERY,
+        queryVec: vec,
+        asOf: golden.asOf,
+        topK: golden.k,
+        documentIds: docs.map((d) => d.id),
+        articleProvisionIds: articleIds,
+      });
+      expect(scoped.map((a) => a.articleCitation)).toEqual([expect.stringMatching(article(5))]);
+    }, 30_000);
+
+    it('a document outside the corpus resolves to nothing (so the caller can say so)', async () => {
+      const ref = parseDocRef('Thông tư 38/2015/TT-BTC')!;
+      expect(ref.confident).toBe(true);
+      expect(await resolveDocuments(db, ref)).toEqual([]);
+    });
+  });
 });

@@ -19,6 +19,7 @@
 import { sql } from 'drizzle-orm';
 
 import { type Database } from '../../shared/adapters/database';
+import { inIds } from './legal.scope';
 
 // Reciprocal-rank-fusion constant. Lower = the top ranks dominate more (a branch's
 // #1 hit is worth much more than its #5). Kept low because a strong heading/semantic
@@ -89,12 +90,26 @@ export interface RetrieveOpts {
   asOf: string; // YYYY-MM-DD
   topK?: number;
   candPerBranch?: number;
+  /** Restrict to these documents (resolved from a user-named số hiệu). Empty/absent = whole corpus. */
+  documentIds?: number[];
+  /** Restrict further to these Điều (resolved from "Điều 18"). Absent = any article. */
+  articleProvisionIds?: number[];
 }
 
 export async function hybridRetrieve(db: Database, opts: RetrieveOpts): Promise<RetrievedArticle[]> {
   const { queryText, queryVec, asOf, topK = 6, candPerBranch = 50 } = opts;
   const vecLiteral = `[${queryVec.join(',')}]`;
   const tsq = toTsQuery(queryText);
+
+  // Scope is a HARD FILTER, applied inside each branch alongside valid-time — never a
+  // ranking boost. When a user names a document ("Điều 18 Thông tư 38/2015"), a merely
+  // higher-ranked passage from ANOTHER document is not a better answer, it is the wrong
+  // answer; DRM (retrieving the right topic from the wrong document) is exactly the
+  // failure this shuts off.
+  const docScope = opts.documentIds?.length ? sql`AND c.document_id IN ${inIds(opts.documentIds)}` : sql``;
+  const artScope = opts.articleProvisionIds?.length
+    ? sql`AND c.article_provision_id IN ${inIds(opts.articleProvisionIds)}`
+    : sql``;
 
   const rows = (await db.execute(sql`
     WITH params AS (
@@ -108,6 +123,7 @@ export async function hybridRetrieve(db: Database, opts: RetrieveOpts): Promise<
       WHERE c.tsv @@ p.q
         AND c.effective_from <= p.d AND (c.effective_to IS NULL OR p.d <= c.effective_to)
         AND c.effectiveness <> 'het_hieu_luc'
+        ${docScope} ${artScope}
       ORDER BY ts_rank_cd(c.tsv, p.q, 1) DESC
       LIMIT ${candPerBranch}
     ),
@@ -119,6 +135,7 @@ export async function hybridRetrieve(db: Database, opts: RetrieveOpts): Promise<
       WHERE c.embedding IS NOT NULL
         AND c.effective_from <= p.d AND (c.effective_to IS NULL OR p.d <= c.effective_to)
         AND c.effectiveness <> 'het_hieu_luc'
+        ${docScope} ${artScope}
       ORDER BY c.embedding <=> p.qv
       LIMIT ${candPerBranch}
     ),

@@ -338,6 +338,44 @@ Các văn bản hợp nhất của họ là **sản phẩm công việc biên t�
 
 ---
 
+## R13 — Tín hiệu tiếp nối trong chat được đọc THEO CHỦ ĐỀ đang bàn
+
+**Quy tắc.** Một tín hiệu đồng ý/phản đối trong hội thoại ("đúng", "sai", "không phải") **chỉ được
+kích hoạt luồng ghi vào sổ kiểm chứng khi chủ đề đang bàn là tra thuế và còn một kết quả tra để trỏ
+tới**. Cùng cụm từ đó trên một luồng pháp luật là phản hồi về *văn bản*, không phải về *mã HS*, và
+phải đi vào nhánh tìm lại — không bao giờ vào `handleCorrection`. Quy tắc áp cho cả regex đường tắt
+lẫn phân loại của LLM: một mô hình nói "correction" trên luồng không có mã HS nào cũng bị chặn.
+
+**Vì sao.** Đã xảy ra (2026-08-13). Chuyên viên hỏi về một Thông tư, không hài lòng, reply *"không
+phải câu trả lời tôi muốn. bạn tìm đúng thông tư mà tôi yêu cầu"*. Bot ghi nhận **"mã HS trước SAI"**
+và xin mã HS đúng. Vị từ gác cổng khi đó là `(có kết quả tra gần đây) || (tin này là reply)` — chỉ cần
+bấm reply là lọt, và cụm "không phải" khớp tín hiệu đính chính.
+
+**Hậu quả của việc phá vỡ nó.** Sổ verify-on-use ([R9](#r9--xác-minh-tại-điểm-sử-dụng-không-chứng-nhận-trước))
+là bộ nhớ dài hạn của hệ thống về áp mã: một bản ghi `wrong` sẽ làm mã đó nổi cảnh báo cho mọi lần tra
+sau, và một bản ghi `correct` có mô tả sẽ được **đẩy lên đầu** cho hàng tương tự. Ghi nhầm từ một câu
+nói về văn bản pháp luật là **đầu độc sổ bằng dữ liệu không liên quan**, âm thầm, và không ai biết để
+đi sửa. Thiết kế: [Bộ nhớ hội thoại bot Zalo](docs/zalo-bot-conversation-memory.md).
+
+---
+
+## R14 — Lưu giữ nội dung chat: 20 lượt / 30 ngày
+
+**Quy tắc.** Bộ nhớ hội thoại (`conversation_turn`) giữ **tối đa 20 lượt mỗi hội thoại** và **xoá
+hội thoại không hoạt động quá 30 ngày** (xoá lan sang lượt nói). Việc dọn chạy ngay trong mỗi lần ghi,
+không phải một job tách rời có thể quên bật.
+
+**Vì sao.** Chuyên viên dán tên khách, số điện thoại, số lô, số tờ khai vào chat. Đó là dữ liệu cá nhân
+của bên thứ ba, đi vào hệ thống chỉ vì nó tình cờ nằm trong một câu hỏi. Nó không phải tri thức của
+sản phẩm và không có lý do tồn tại lâu hơn hội thoại đã dùng nó.
+
+**Liên quan.** Cùng lý do đã có sẵn trong luồng đính chính: `note` lưu vào sổ chỉ nhận **mô tả sản phẩm
++ số căn cứ** (`citationFrom` chỉ bắt tiền tố loại văn bản rõ ràng, cố tình KHÔNG nhận "số" đứng riêng
+vì nó hay đứng trước SĐT/số lô), không bao giờ nhận nguyên văn lời người dùng — vì `note` bị khớp mờ
+và **echo chéo ngữ cảnh** sang hội thoại của người khác.
+
+---
+
 ## Chưa xác minh / Không được dựa vào
 
 Tái tạo từ chính các cờ trung thực của nghiên cứu. **Đừng "tẩy trắng" bất kỳ mục nào trong số này thành một khẳng định tự tin.**

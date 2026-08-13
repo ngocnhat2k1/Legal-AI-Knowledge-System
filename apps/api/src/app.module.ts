@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 
+import { ConversationModule } from './modules/conversation/conversation.module';
 import { HealthModule } from './modules/health/health.module';
 import { LegalModule } from './modules/legal/legal.module';
 import { TariffModule } from './modules/tariff/tariff.module';
@@ -16,12 +17,21 @@ import { DatabaseModule } from './shared/adapters/database';
     // /legal, /health) are matched first; everything else falls through to static.
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'public'),
-      exclude: ['/tariff', '/tariff/{*rest}', '/legal', '/legal/{*rest}', '/health'],
+      exclude: [
+        '/tariff',
+        '/tariff/{*rest}',
+        '/legal',
+        '/legal/{*rest}',
+        '/conversation',
+        '/conversation/{*rest}',
+        '/health',
+      ],
     }),
     DatabaseModule,
     HealthModule,
     TariffModule,
     LegalModule,
+    ConversationModule,
   ],
 })
 export class AppModule {}

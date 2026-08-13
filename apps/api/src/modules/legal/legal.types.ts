@@ -23,9 +23,44 @@ export interface LegalCitation {
   gazetteUrl: string | null;
 }
 
+/** One document in the corpus — the manifest the bot shows when asked for something we lack. */
+export interface LegalDocumentView {
+  number: string; // '46/VBHN-BTC'
+  docType: string; // 'vbhn' | 'nghi_dinh' | 'thong_tu' | …
+  title: string;
+  consolidates: string | null; // the base document a VBHN consolidates
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  effectiveness: string;
+  sourceUrl: string | null;
+}
+
+/** A verbatim provision fetched by citation, with no retrieval and no model in the path. */
+export interface LegalProvisionView {
+  documentNumber: string;
+  documentTitle: string;
+  citationLabel: string;
+  path: string;
+  heading: string | null;
+  body: string;
+  effectiveness: string;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  gazetteUrl: string | null;
+}
+
 export interface LegalAnswer {
   query: string;
   asOf: string; // the as-of date the corpus was filtered to (YYYY-MM-DD)
+  /** The document number the question named, normalised — null when it named none. */
+  requestedDoc: string | null;
+  /**
+   * Set when the question named a document the corpus does not hold. This is a
+   * DIFFERENT failure from "nothing relevant found", and the bot must say so
+   * differently: the honest answer is "we don't carry that document", not a
+   * near-miss from whichever document we happen to carry.
+   */
+  missingDoc: string | null;
   /** True when no provision could ground the question — the honest "I don't know". */
   abstained: boolean;
   /** Present when abstained, or when a prose answer could not be grounded. */

@@ -59,6 +59,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Chỉ mục tài liệu tác nhân](docs/README.md)
 - [Tổ chức mã nguồn](docs/code-organization.md)
 - [Bot Zalo: hiểu ảnh + tin quote](docs/zalo-bot-image-and-quote-context.md) — vision → đường thuế tất định; confine Read chống prompt-injection
+- [Bot Zalo: bộ nhớ hội thoại + định tuyến theo chủ đề](docs/zalo-bot-conversation-memory.md) — vì sao "không phải" trên luồng pháp luật từng bị ghi thành đính chính mã HS
 - [Đánh giá](docs/evaluation.md) — bộ vàng (golden set) và các cổng ra mắt (ship gates)
 
 ## Quyết định (Decisions)

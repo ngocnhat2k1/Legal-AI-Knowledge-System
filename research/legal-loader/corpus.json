@@ -17,7 +17,10 @@
     "summary": "Nghị định 31/2018/NĐ-CP quy định chi tiết Luật Quản lý ngoại thương về xuất xứ hàng hóa: quy tắc xuất xứ ưu đãi/không ưu đãi, hồ sơ và thủ tục cấp/từ chối/kiểm tra C/O, tự chứng nhận xuất xứ.",
     "doc_file": "doc/31-2018.doc",
     "domain": "C/O & xuất xứ",
-    "expect": { "chuong": 6, "dieu": 35 }
+    "expect": {
+      "chuong": 6,
+      "dieu": 35
+    }
   },
   {
     "number": "128/2020/NĐ-CP",
@@ -37,7 +40,10 @@
     "summary": "Nghị định 128/2020/NĐ-CP quy định xử phạt vi phạm hành chính trong lĩnh vực hải quan: hành vi vi phạm, hình thức và mức phạt, biện pháp khắc phục hậu quả, thẩm quyền xử phạt (được sửa đổi bởi NĐ 102/2021).",
     "doc_file": "doc/128-2020.doc",
     "domain": "Xử phạt hải quan",
-    "expect": { "chuong": 3, "dieu": 37 }
+    "expect": {
+      "chuong": 3,
+      "dieu": 37
+    }
   },
   {
     "number": "96/VBHN-VPQH",
@@ -57,7 +63,10 @@
     "summary": "VBHN 96/VBHN-VPQH hợp nhất Luật Thuế xuất khẩu, thuế nhập khẩu (107/2016, sửa đổi 90/2025, 133/2025): đối tượng chịu thuế, căn cứ tính thuế, thuế chống bán phá giá/trợ cấp/tự vệ, miễn thuế, giảm thuế, hoàn thuế.",
     "doc_file": "doc/96-vbhn.docx",
     "domain": "Thuế XNK miễn/giảm/hoàn",
-    "expect": { "chuong": 5, "dieu": 22 }
+    "expect": {
+      "chuong": 5,
+      "dieu": 22
+    }
   },
   {
     "number": "46/VBHN-BTC",
@@ -75,9 +84,88 @@
     "gazette_issue": "827+828…829+830",
     "source_url": "https://congbao.chinhphu.vn/noi-dung-van-ban-so-46-vbhn-btc-29794",
     "summary": "VBHN 46/VBHN-BTC hợp nhất NĐ 08/2015 và 59/2018 về thủ tục hải quan: khai và đăng ký tờ khai, hồ sơ hải quan, kiểm tra/giám sát/kiểm soát, phân luồng, thông quan, gia công/SXXK, quá cảnh, kho ngoại quan, xác định trị giá và xuất xứ.",
-    "doc_files": ["doc/46-vbhn-827.pdf", "doc/46-vbhn-829.pdf"],
+    "doc_files": [
+      "doc/46-vbhn-827.pdf",
+      "doc/46-vbhn-829.pdf"
+    ],
     "domain": "Thủ tục & hồ sơ hải quan",
-    "expect": { "chuong": 9, "dieu": 111 }
+    "expect": {
+      "chuong": 9,
+      "dieu": 111
+    }
+  },
+  {
+    "number": "54/VBHN-VPQH",
+    "doc_type": "vbhn",
+    "short": "Luật Hải quan (VBHN 54/VBHN-VPQH)",
+    "title": "Hợp nhất Luật Hải quan",
+    "issuing_body": "Văn phòng Quốc hội",
+    "signed_date": "2026-03-23",
+    "gazette_date": "2026-04-09",
+    "effective_from": "2015-01-01",
+    "effective_to": null,
+    "effectiveness": "con_hieu_luc",
+    "is_consolidated": true,
+    "consolidates": "54/2014/QH13",
+    "gazette_issue": "192",
+    "source_url": "https://congbao.chinhphu.vn/van-ban/van-ban-hop-nhat-so-54-vbhn-vpqh-469184.htm",
+    "summary": "VBHN 54/VBHN-VPQH hợp nhất Luật Hải quan 54/2014/QH13: nguyên tắc và nhiệm vụ hải quan, quyền và nghĩa vụ người khai hải quan, thủ tục hải quan, kiểm tra và giám sát hải quan, kiểm soát hải quan, tổ chức thu thuế xuất nhập khẩu, phòng chống buôn lậu.",
+    "doc_file": "doc/54-vbhn-luathaiquan.pdf",
+    "domain": "Luật Hải quan (nền)",
+    "expect": {
+      "chuong": 8,
+      "dieu": 104
+    }
+  },
+  {
+    "number": "25/VBHN-BTC",
+    "doc_type": "vbhn",
+    "short": "Thông tư 38/2015/TT-BTC về thủ tục hải quan (VBHN 25/VBHN-BTC)",
+    "title": "Hợp nhất Thông tư quy định về thủ tục hải quan; kiểm tra, giám sát hải quan; thuế xuất khẩu, thuế nhập khẩu và quản lý thuế đối với hàng hóa xuất khẩu, nhập khẩu",
+    "issuing_body": "Bộ Tài chính",
+    "signed_date": "2018-09-06",
+    "gazette_date": "2018-09-20",
+    "effective_from": "2015-04-01",
+    "effective_to": null,
+    "effectiveness": "con_hieu_luc",
+    "is_consolidated": true,
+    "consolidates": "38/2015/TT-BTC",
+    "gazette_issue": "913+914…919+920",
+    "source_url": "https://congbao.chinhphu.vn/van-ban/van-ban-hop-nhat-so-25-vbhn-btc-27261.htm",
+    "summary": "VBHN 25/VBHN-BTC hợp nhất Thông tư 38/2015 và 39/2018 về thủ tục hải quan: khai và đăng ký tờ khai, hồ sơ hải quan, phân luồng và kiểm tra thực tế, thông quan, gia công và sản xuất xuất khẩu, trị giá hải quan, miễn giảm hoàn thuế, quản lý thuế hàng xuất nhập khẩu.",
+    "doc_files": [
+      "doc/25-vbhn-913.pdf",
+      "doc/25-vbhn-915.pdf",
+      "doc/25-vbhn-917.pdf",
+      "doc/25-vbhn-919.pdf"
+    ],
+    "domain": "Thủ tục hải quan (Thông tư 38/2015 + 39/2018)",
+    "expect": {
+      "chuong": 9,
+      "dieu": 149
+    }
+  },
+  {
+    "number": "33/2023/TT-BTC",
+    "doc_type": "thong_tu",
+    "short": "Thông tư 33/2023/TT-BTC",
+    "title": "Quy định về xác định xuất xứ hàng hóa xuất khẩu, nhập khẩu",
+    "issuing_body": "Bộ Tài chính",
+    "signed_date": "2023-05-31",
+    "gazette_date": "2023-06-21",
+    "effective_from": "2023-07-15",
+    "effective_to": null,
+    "effectiveness": "con_hieu_luc",
+    "is_consolidated": false,
+    "consolidates": null,
+    "gazette_issue": "773+774",
+    "source_url": "https://congbao.chinhphu.vn/van-ban/thong-tu-so-33-2023-tt-btc-39571.htm",
+    "summary": "Thông tư 33/2023/TT-BTC quy định xác định xuất xứ hàng hóa xuất khẩu, nhập khẩu: thủ tục xác định trước xuất xứ, khai và nộp chứng từ chứng nhận xuất xứ, kiểm tra và xác minh xuất xứ hàng hóa khi làm thủ tục hải quan.",
+    "doc_file": "doc/33-2023-xuatxu.pdf",
+    "domain": "Xuất xứ hàng hóa XNK",
+    "expect": {
+      "chuong": 5,
+      "dieu": 23
+    }
   }
 ]
-

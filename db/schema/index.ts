@@ -104,6 +104,12 @@ export const dutyKind = pgEnum('duty_kind', ['percent', 'specific']);
 /** A declarant's verdict on a looked-up rate at point of use (Phase 3 verify loop). */
 export const confirmationVerdict = pgEnum('confirmation_verdict', ['correct', 'wrong', 'unsure']);
 
+/** What a chat conversation is currently about. Decides which follow-up cues are even legal. */
+export const conversationTopic = pgEnum('conversation_topic', ['tariff', 'legal', 'general']);
+
+/** Who spoke a turn. */
+export const conversationRole = pgEnum('conversation_role', ['user', 'bot']);
+
 // --- HS nomenclature version (a dimension, not a hardcoded constant) ---------
 
 /**
@@ -463,5 +469,73 @@ export const legalChunk = pgTable(
     index('legal_chunk_valid_idx').on(t.effectiveFrom, t.effectiveTo),
     index('legal_chunk_article_idx').on(t.articleProvisionId),
     index('legal_chunk_document_idx').on(t.documentId),
+  ],
+);
+
+// --- Chat conversation memory (Phase 6) -------------------------------------
+
+/**
+ * One conversation per (channel, thread, person). The Zalo bot used to keep a
+ * single in-RAM `lastLookup` entry per person, which made every message a fresh
+ * session: it could not tell whether the previous turn was a tariff lookup or a
+ * legal question. That is not a cosmetic gap — the follow-up cues are ambiguous
+ * across topics ("không phải" means "wrong HS code" after a tariff answer and
+ * "wrong document" after a legal one), so without a topic the bot answered a
+ * legal complaint with "noted, the HS code was wrong".
+ *
+ * `state` holds the resolvable referents of the current topic — the last tariff
+ * lookup (so "đúng"/"sai" and "còn từ Nhật thì sao" resolve) and the last legal
+ * question with its cited documents (so "khoản 3 của điều đó" resolves). It is
+ * jsonb because its shape is the bot's business, not the database's; the columns
+ * that must be queryable (topic, recency) are real columns.
+ *
+ * Lives in Postgres, not RAM, so a bot redeploy does not amputate every in-flight
+ * conversation (see the postgres-only ADR — no new stateful service).
+ */
+export const conversation = pgTable(
+  'conversation',
+  {
+    id: serial('id').primaryKey(),
+    channel: varchar('channel', { length: 16 }).notNull().default('zalo'),
+    threadId: varchar('thread_id', { length: 64 }).notNull(), // Zalo thread (1-1 or group)
+    userId: varchar('user_id', { length: 64 }).notNull(), // the person inside that thread
+    staffName: varchar('staff_name', { length: 64 }),
+    topic: conversationTopic('topic'),
+    state: jsonb('state'), // { tariff: {...}, legal: {...} } — referents the next turn may resolve
+    lastActiveAt: timestamp('last_active_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('conversation_key_uq').on(t.channel, t.threadId, t.userId),
+    index('conversation_last_active_idx').on(t.lastActiveAt),
+  ],
+);
+
+/**
+ * The turn log — what was actually said, oldest to newest. Read back as the
+ * transcript the intent router sees, so a follow-up is classified against the
+ * conversation instead of against one orphaned sentence.
+ *
+ * RETENTION IS A REQUIREMENT, NOT HOUSEKEEPING: staff paste customer names, phone
+ * numbers and shipment references into chat. The service prunes on every write —
+ * at most MAX_TURNS per conversation, and nothing older than the retention window
+ * (see .agent/business-rules.md). ON DELETE CASCADE so dropping a conversation
+ * takes its turns with it.
+ */
+export const conversationTurn = pgTable(
+  'conversation_turn',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    conversationId: integer('conversation_id')
+      .notNull()
+      .references(() => conversation.id, { onDelete: 'cascade' }),
+    role: conversationRole('role').notNull(),
+    body: text('body').notNull(),
+    intent: varchar('intent', { length: 16 }), // what the router decided, for debugging/eval
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('conversation_turn_recent_idx').on(t.conversationId, t.id),
+    index('conversation_turn_created_idx').on(t.createdAt),
   ],
 );
