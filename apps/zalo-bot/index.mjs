@@ -20,11 +20,12 @@ import { dirname } from 'node:path';
 import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 
 import { answerByHs, answerImage, answerLegal, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
-import { legalDocuments } from './api.mjs';
+import { ackIngestReports, ingestReports, legalDocuments, requestIngest, verifyDocument } from './api.mjs';
 import { loadContext, saveContext } from './conversation.mjs';
-import { fallbackIntent, fastPath, guardIntent } from './dispatch.mjs';
+import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
-import { mergeQuote, parseQuery, stripMentions } from './parse.mjs';
+import { formatIngestQueued, formatIngestReport } from './format.mjs';
+import { docNumberStatedIn, mergeQuote, parseQuery, stripMentions } from './parse.mjs';
 import { route } from './router.mjs';
 
 const API = process.env.API_URL || 'http://api:3000';
@@ -95,11 +96,45 @@ async function connect() {
  * cho regex soi cả ngữ cảnh thì một câu hỏi pháp luật reply vào tin có "8481.10.11"
  * sẽ bị bắt nhầm thành tra thuế.
  */
-async function respond({ text, image, quote, ctx, senderName }) {
+async function respond({ text, image, quote, ctx, senderName, threadId, userId }) {
   const quoteText = String(quote?.msg || '');
 
+  // 0. "xác nhận văn bản <số hiệu>" — người đọc đứng ra bảo đảm cho một văn bản bot tự
+  // nạp. Ghi kèm TÊN người xác nhận, giống hệt sổ verify-on-use của mã HS.
+  const verifyDoc = parseVerifyDocCommand(text);
+  if (verifyDoc) {
+    const res = await verifyDocument(verifyDoc, senderName);
+    return {
+      text: res?.verified
+        ? `✅ Đã ghi nhận ${verifyDoc} là ĐÃ ĐỐI CHIẾU (theo ${senderName}). Từ giờ trích dẫn từ văn bản này không còn cảnh báo nữa.`
+        : `Mình không tìm thấy ${verifyDoc} ở trạng thái "bot tự nạp" để xác nhận — có thể nó đã được xác nhận rồi, hoặc chưa có trong kho.`,
+      topic: 'legal',
+      intent: 'legal',
+    };
+  }
+
   // 1. Đường tắt không cần LLM — nhưng CHỈ khi chủ đề đang bàn cho phép.
-  const fast = fastPath({ text, hasImage: Boolean(image), quoteText, topic: ctx.topic, tariffFresh: ctx.tariffFresh });
+  const pending = ctx.legal?.pendingIngest ?? null;
+  const fast = fastPath({
+    text,
+    hasImage: Boolean(image),
+    quoteText,
+    topic: ctx.topic,
+    tariffFresh: ctx.tariffFresh,
+    pendingIngest: Boolean(pending),
+  });
+  if (fast?.action === 'ingest') {
+    const q = await requestIngest({ number: pending.number, requestedBy: senderName, threadId, userId });
+    return {
+      text: q
+        ? formatIngestQueued(pending.number, Boolean(q.alreadyQueued))
+        : `Mình chưa xếp hàng nạp được ${pending.number}, thử lại sau nhé.`,
+      topic: 'legal',
+      // The offer has been taken up; leave it open and a later "ok" would queue it twice.
+      legal: { ...ctx.legal, pendingIngest: null },
+      intent: 'legal',
+    };
+  }
   if (fast?.action === 'confirm') return { ...(await handleConfirm(ctx.tariff, fast.verdict, senderName)), intent: 'confirm' };
   if (fast?.action === 'correction') return { ...(await handleCorrection(ctx.tariff, text, senderName, quote)), intent: 'correction' };
 
@@ -132,10 +167,19 @@ async function respond({ text, image, quote, ctx, senderName }) {
     // ("không phải câu trả lời tôi muốn") tự nó là rác với retriever; chỉ khi ghép ngữ cảnh
     // nó mới thành câu tra được. Không có router → dùng câu đã ghép quote.
     const query = routed?.searchQuery || mergeQuote(text, quote);
+    // The router may RECOGNISE a document number, never MINT one. `doc=` is trusted
+    // absolutely downstream, so a number the human never wrote redirects the whole
+    // answer: asked "thông tư 36 của bộ Khoa học công nghệ" — no year at all — the
+    // router supplied "36/2016/TT-BKHCN", carried over from an earlier turn, and the
+    // bot went on to report that document missing and list unrelated circulars.
+    const statedDoc =
+      routed?.docNumber && docNumberStatedIn(`${text} ${quoteText}`, routed.docNumber)
+        ? routed.docNumber
+        : undefined;
     return {
       ...(await answerLegal(query, {
         asOf: routed?.date,
-        doc: routed?.docNumber,
+        doc: statedDoc,
         article: routed?.article,
         clause: routed?.clause,
         lead: routed?.lead,
@@ -148,7 +192,7 @@ async function respond({ text, image, quote, ctx, senderName }) {
     return {
       text:
         routed?.reply ||
-        'Mình là bot hải quan: gõ TÊN HÀNG (van, xăng…) hoặc MÃ HS để xem thuế; hỏi về thủ tục/C/O/khái niệm cũng được.',
+        'Mình tra được hai thứ: (1) biểu thuế XNK — gõ TÊN HÀNG (van, xăng…) hoặc MÃ HS; (2) văn bản pháp luật Việt Nam — luật, nghị định, thông tư của bất kỳ bộ ngành nào. Văn bản chưa có trong kho thì mình tìm trên Công báo và nạp về giúp bạn.',
       topic: 'general',
       intent,
     };
@@ -217,7 +261,7 @@ async function main() {
         await api.sendMessage({ msg: '🔍 Đang xem ảnh…', quote: msg.data }, msg.threadId, msg.type).catch(() => {});
       }
 
-      const result = await respond({ text, image, quote: msg.data?.quote, ctx, senderName });
+      const result = await respond({ text, image, quote: msg.data?.quote, ctx, senderName, threadId: msg.threadId, userId });
       if (process.env.BOT_DEBUG) {
         console.log(`[zalo] topic=${ctx.topic ?? '-'} tariffFresh=${ctx.tariffFresh} → intent=${result.intent}`);
       }
@@ -247,6 +291,37 @@ async function main() {
       }
     }
   });
+
+  // Ingest takes minutes, long past the message that asked for it, so the outcome comes
+  // home on its own. Acknowledge only AFTER the message is sent: re-reporting once is a
+  // far smaller failure than promising to follow up and going silent.
+  setInterval(async () => {
+    try {
+      const reports = await ingestReports();
+      const delivered = [];
+      for (const r of reports) {
+        if (!r.threadId) { delivered.push(r.id); continue; }
+        // The queue row does not record whether the thread was a group or a 1-1 chat,
+        // so try both rather than adding a column for it — a wrong ThreadType is the
+        // only way this send fails, and one retry costs nothing.
+        let sent = false;
+        for (const type of [ThreadType.Group, ThreadType.User]) {
+          try {
+            await api.sendMessage({ msg: formatIngestReport(r) }, r.threadId, type);
+            sent = true;
+            break;
+          } catch {
+            /* try the other thread type */
+          }
+        }
+        if (sent) delivered.push(r.id);
+        else console.warn(`[zalo] không gửi được báo cáo nạp #${r.id}`);
+      }
+      if (delivered.length) await ackIngestReports(delivered);
+    } catch (e) {
+      console.warn('[zalo] lỗi vòng báo cáo nạp:', e?.message);
+    }
+  }, 30_000).unref?.();
 
   api.listener.on('error', (e) => console.error('[zalo] listener error:', e?.message));
   api.listener.start();

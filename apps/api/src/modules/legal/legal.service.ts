@@ -7,7 +7,16 @@ import { extractAsOf } from './legal.asof';
 import { generate } from './legal.generation';
 import { keepRelevant, validateCitations } from './legal.grounding';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
-import { inIds, parseArticleNo, parseDocRef, resolveArticles, resolveDocuments } from './legal.scope';
+import {
+  inIds,
+  lookupGazette,
+  lookupGazetteLoose,
+  parseArticleNo,
+  parseDocRef,
+  parseLooseDocRef,
+  resolveArticles,
+  resolveDocuments,
+} from './legal.scope';
 import type { LegalAnswer, LegalCitation, LegalDocumentView, LegalProvisionView } from './legal.types';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -43,7 +52,7 @@ export class LegalService {
     return (await this.db.execute(sql`
       SELECT number, doc_type AS "docType", title, consolidates,
              effective_from::text AS "effectiveFrom", effective_to::text AS "effectiveTo",
-             effectiveness, source_url AS "sourceUrl"
+             effectiveness, verification, source_url AS "sourceUrl"
       FROM legal_document
       ORDER BY doc_type, number
     `)) as unknown as LegalDocumentView[];
@@ -98,11 +107,21 @@ export class LegalService {
     if (ref) {
       const docs = await resolveDocuments(this.db, ref);
       if (!docs.length) {
+        // Not in the corpus — but the gazette catalogue may still know what it IS.
+        // "We don't hold it" and "no such document" are different answers.
+        const gazette = await lookupGazette(this.db, ref);
         return {
           query,
           asOf,
           requestedDoc: ref.core,
           missingDoc: ref.raw,
+          gazetteMatchKind: gazette.exact ? 'exact' : gazette.matches.length ? 'similar' : 'none',
+          gazetteMatches: gazette.matches.map(({ number, docType, title, sourceUrl }) => ({
+            number,
+            docType,
+            title,
+            sourceUrl,
+          })),
           abstained: true,
           reason: `văn bản "${ref.raw}" chưa có trong cơ sở dữ liệu pháp luật đã kiểm chứng`,
           answer: '',
@@ -110,6 +129,41 @@ export class LegalService {
         };
       }
       documentIds = docs.map((d) => d.id);
+    }
+
+    // No precise number, but the question may still NAME a document the way people say
+    // it — "thông tư 36 của bộ Khoa học công nghệ". Answering that from whatever the
+    // retriever happens to surface is how a Bộ Công Thương circular got returned for a
+    // Bộ Khoa học question; ask the catalogue what they might mean instead.
+    if (!ref) {
+      const loose = parseLooseDocRef(query);
+      if (loose) {
+        const candidates = await lookupGazetteLoose(this.db, loose);
+        const held = new Set(
+          ((await this.documents()) as Array<{ number: string }>).map((d) => d.number.toUpperCase()),
+        );
+        if (!candidates.some((c) => held.has(c.number.toUpperCase()))) {
+          return {
+            query,
+            asOf,
+            requestedDoc: null,
+            missingDoc: loose.label,
+            gazetteMatchKind: candidates.length ? 'ambiguous' : 'none',
+            gazetteMatches: candidates.map(({ number, docType, title, sourceUrl }) => ({
+              number,
+              docType,
+              title,
+              sourceUrl,
+            })),
+            abstained: true,
+            reason: candidates.length
+              ? `chưa nạp toàn văn; trên Công báo có ${candidates.length} thông tư khớp số ${loose.serial} của cơ quan này`
+              : `không tìm thấy thông tư số ${loose.serial} của cơ quan này trên Công báo`,
+            answer: '',
+            citations: [],
+          };
+        }
+      }
     }
 
     const articleNo = articleParam?.replace(/\D/g, '') || (ref ? parseArticleNo(query) : null);
@@ -138,7 +192,12 @@ export class LegalService {
     // far more strongly than cosine distance can, so an explicit article bypasses it —
     // otherwise "cho tôi Điều 18" could abstain on the very article it asked for.
     const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, MAX_CITATIONS);
-    const scope = { requestedDoc: ref?.core ?? null, missingDoc: null };
+    const scope = {
+      requestedDoc: ref?.core ?? null,
+      missingDoc: null,
+      gazetteMatchKind: 'none' as const,
+      gazetteMatches: [],
+    };
 
     if (kept.length === 0) {
       return {
@@ -156,8 +215,33 @@ export class LegalService {
 
     const gen = await generate(query, asOf, kept);
 
-    // No LLM available, or it declined → the verbatim provisions stand on their own.
-    if (!gen || gen.abstain || !gen.answer) {
+    /**
+     * The model READ these provisions and judged them insufficient. Returning them
+     * anyway as "the most relevant provision" overrides that judgement with a shrug,
+     * and the shrug is what the reader sees.
+     *
+     * Observed 2026-08-14: asked for "thông tư 36 của Bộ Khoa học công nghệ", the model
+     * abstained and said exactly why — "các điều khoản đã cung cấp thuộc Thông tư
+     * 36/2016/TT-BCT của Bộ Công Thương, không phải văn bản của Bộ Khoa học và Công
+     * nghệ". The service printed those provisions regardless, under "đây là điều khoản
+     * liên quan nhất". A correct refusal was turned into a confident near-miss by the
+     * layer above it. An abstention is an ANSWER; carry it through.
+     */
+    if (gen?.abstain) {
+      return {
+        query,
+        asOf,
+        ...scope,
+        abstained: true,
+        reason: gen.reason ?? 'các điều khoản truy hồi được không đủ căn cứ để trả lời câu hỏi này',
+        answer: '',
+        citations: [],
+      };
+    }
+
+    // No LLM available at all → the verbatim provisions stand on their own, as they did
+    // before generation existed. Distinct from an abstention: nothing has judged them.
+    if (!gen || !gen.answer) {
       return {
         query,
         asOf,
@@ -210,5 +294,6 @@ function toCitation(a: RetrievedArticle): LegalCitation {
     effectiveFrom: a.effectiveFrom,
     effectiveTo: a.effectiveTo,
     gazetteUrl: a.gazetteUrl,
+    verification: a.verification,
   };
 }

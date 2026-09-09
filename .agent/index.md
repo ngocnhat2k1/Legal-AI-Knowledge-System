@@ -53,6 +53,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Nhật ký tiến độ](planning/02-progress.md) — **điểm tiếp tục**; những gì đã thực sự diễn ra
 - [Kế hoạch khởi tạo](planning/00-bootstrap.md) — các giai đoạn và cổng kiểm soát (gate)
 - [Danh sách công việc](planning/01-task-list.md) — chi tiết công việc và tiêu chí chấp nhận
+- [Kế hoạch mở rộng LLM (M0…M4)](planning/03-llm-expansion-tasks.md) — nền móng, kho rộng ra, truy hồi, bằng chứng HS, phân loại HS
 
 ## Tài liệu (Documentation)
 
@@ -60,6 +61,8 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Tổ chức mã nguồn](docs/code-organization.md)
 - [Bot Zalo: hiểu ảnh + tin quote](docs/zalo-bot-image-and-quote-context.md) — vision → đường thuế tất định; confine Read chống prompt-injection
 - [Bot Zalo: bộ nhớ hội thoại + định tuyến theo chủ đề](docs/zalo-bot-conversation-memory.md) — vì sao "không phải" trên luồng pháp luật từng bị ghi thành đính chính mã HS
+- [Kho pháp luật tự mở rộng](docs/legal-corpus-self-extension.md) — chỉ mục Công báo → nạp theo yêu cầu có cổng tự kiểm → thăng cấp bởi con người
+- [Mở rộng LLM](docs/llm-expansion-design.md) — dùng nhiều LLM hơn mà không nới rào chắn: kho rộng ra, truy hồi đa truy vấn, bằng chứng phân loại HS
 - [Đánh giá](docs/evaluation.md) — bộ vàng (golden set) và các cổng ra mắt (ship gates)
 
 ## Quyết định (Decisions)
@@ -73,6 +76,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Dùng VBHN đã công bố, không tự hợp nhất](architecture-decisions/2026-07-17-use-published-vbhn-not-computed-consolidation.md)
 - [Hiệu lực bitemporal ngay từ đầu](architecture-decisions/2026-07-17-bitemporal-validity-from-day-one.md)
 - [Công cụ repo: Drizzle + Yarn + Docker (khung TASK-006)](architecture-decisions/2026-07-18-repo-tooling-drizzle-yarn.md)
+- [LLM sinh giả thuyết, không bao giờ khẳng định](architecture-decisions/2026-08-14-llm-generates-hypotheses-never-assertions.md) — LLM ở chỗ tìm và điều hướng, không ở chỗ khẳng định; ngân sách 2 lần gọi mỗi lượt chat
 
 ## Đánh giá (Reviews)
 

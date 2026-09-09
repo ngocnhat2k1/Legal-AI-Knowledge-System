@@ -103,3 +103,10 @@ export async function loadConversation(threadId, userId, limit = 8) {
 }
 
 export const recordTurns = (payload) => postJson('/conversation/turn', payload);
+
+// --- On-request corpus growth ----------------------------------------------
+
+export const requestIngest = (payload) => postJson('/ingest/request', payload);
+export const ingestReports = async () => (await getJson('/ingest/reports')) ?? [];
+export const ackIngestReports = (ids) => postJson('/ingest/reports/ack', { ids });
+export const verifyDocument = (number, staffName) => postJson('/ingest/verify', { number, staffName });

@@ -10,9 +10,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { fallbackIntent, fastPath, guardIntent } from './dispatch.mjs';
+import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
 import { sanitizeLead, withLead } from './format.mjs';
-import { corpusHas, parseDocRef } from './parse.mjs';
+import { cleanGazetteTitle, corpusHas, docNumberStatedIn, parseDocRef } from './parse.mjs';
 
 // The bot's own legal answer, as it appears in a quote. Note it carries NO HS code.
 const LEGAL_ANSWER_QUOTE =
@@ -172,4 +172,55 @@ test('asking for a base decree finds the VBHN that consolidates it', () => {
 test('a leading zero does not hide a document', () => {
   const manifest = [{ number: '08/2015/NĐ-CP', consolidates: null }];
   assert.equal(corpusHas(manifest, parseDocRef('nghị định 8/2015')), true);
+});
+
+// --- The router may recognise an identifier, never mint one ------------------
+
+test('a document number the user never wrote is rejected', () => {
+  // Observed 2026-08-14: asked "đọc lại thông tư 36 của bộ Khoa học công nghệ" — no
+  // year at all — the router returned "36/2016/TT-BKHCN", carrying the year over from
+  // an earlier turn. `doc=` is trusted absolutely downstream, so that one invented
+  // number redirected the whole answer onto a document nobody had named.
+  assert.equal(docNumberStatedIn('đọc lại thông tư 36 của bộ Khoa học công nghệ', '36/2016/TT-BKHCN'), false);
+  assert.equal(docNumberStatedIn('cho mình xem thông tư 36/2016/TT-BKHCN', '36/2016/TT-BKHCN'), true);
+  // A quoted earlier message counts — the caller passes text + quote together.
+  assert.equal(docNumberStatedIn('cái đó nói gì 36/2025/TT-BKHCN', '36/2025/TT-BKHCN'), true);
+  // A leading zero is the same number.
+  assert.equal(docNumberStatedIn('nghị định 8/2015', '08/2015/NĐ-CP'), true);
+  // A digit inside a longer number must not count as a match.
+  assert.equal(docNumberStatedIn('lô hàng 3620161234', '36/2016/TT-BKHCN'), false);
+});
+
+test('gazette titles read as titles, not as the number three times', () => {
+  // Deep listing pages prefix the number to a title that already contains it.
+  assert.equal(
+    cleanGazetteTitle('36/2016/NĐ-CP', '36/2016/NĐ-CP Nghị định số 36/2016/NĐ-CP về quản lý trang thiết bị y tế.'),
+    'về quản lý trang thiết bị y tế.',
+  );
+  assert.equal(
+    cleanGazetteTitle('33/2023/TT-BTC', 'Thông tư số 33/2023/TT-BTC quy định về xác định xuất xứ hàng hóa'),
+    'quy định về xác định xuất xứ hàng hóa',
+  );
+});
+
+test('titles are cut on a word boundary, never mid-word', () => {
+  // Mid-word truncation ("trang thiết bị y t") is most of what makes a listing read as
+  // machine output, so assert the cut lands exactly where a space was.
+  const full = 'quy định về quản lý trang thiết bị y tế và các nội dung liên quan khác';
+  const out = cleanGazetteTitle('1/2020/TT-X', full, 40);
+  assert.ok(out.endsWith('…'), out);
+  const body = out.slice(0, -1);
+  assert.ok(full.startsWith(body), `không phải tiền tố của bản gốc: ${body}`);
+  assert.equal(full[body.length], ' ', `cắt giữa từ: …${body.slice(-12)}|${full[body.length]}`);
+  assert.ok(out.length <= 45, out);
+});
+
+test('a person can vouch for an auto-ingested document from chat', () => {
+  // The unverified warning tells the reader to send exactly this, so it must parse.
+  assert.equal(parseVerifyDocCommand('xác nhận văn bản 36/2025/TT-BKHCN'), '36/2025/TT-BKHCN');
+  assert.equal(parseVerifyDocCommand('xac nhan 33/2023/TT-BTC nhé'), '33/2023/TT-BTC');
+  assert.equal(parseVerifyDocCommand('duyệt văn bản 08/2015/NĐ-CP.'), '08/2015/NĐ-CP');
+  // Not a vouch: no document number, or an unrelated confirmation.
+  assert.equal(parseVerifyDocCommand('xác nhận đúng rồi'), null);
+  assert.equal(parseVerifyDocCommand('đúng'), null);
 });

@@ -60,12 +60,17 @@ export const isDisagreement = (text) => DISAGREE_CUE.test(String(text ?? '').toL
  * @param {string} input.quoteText   the replied-to message body, '' when not a reply
  * @param {?string} input.topic      what the conversation was about: 'tariff'|'legal'|'general'
  * @param {boolean} input.tariffFresh a recent tariff lookup is still referable
+ * @param {boolean} input.pendingIngest the bot has offered to fetch a document and is awaiting a yes
  */
-export function fastPath({ text, hasImage = false, quoteText = '', topic = null, tariffFresh = false }) {
+export function fastPath({ text, hasImage = false, quoteText = '', topic = null, tariffFresh = false, pendingIngest = false }) {
   const onTariff = topic === 'tariff';
 
   // Checked BEFORE the image branch on purpose: replying to a photo and typing exactly
   // "đúng" must record the verdict, not re-run vision on the photo.
+  // An open offer to fetch a document consumes a bare "nạp"/"ok" first: the same word
+  // would otherwise read as a tariff confirmation, which is a different topic entirely.
+  if (pendingIngest && isAcceptIngest(text) && !hasImage) return { action: 'ingest' };
+
   const verdict = confirmVerdict(text);
   if (verdict) {
     // A bare "đúng" only means "confirm that rate" when there IS a rate on the table.
@@ -83,6 +88,31 @@ export function fastPath({ text, hasImage = false, quoteText = '', topic = null,
     return { action: 'correction' };
   }
   return null;
+}
+
+/**
+ * Accepting the bot's offer to fetch a document. Matched only when an offer is actually
+ * open (state.legal.pendingIngest), so a bare "ok" in any other context stays harmless —
+ * the same topic discipline the confirm/correction cues follow.
+ */
+const ACCEPT_WORDS = ['nạp', 'nap', 'có', 'co', 'ok', 'oke', 'okay', 'đồng ý', 'dong y', 'nạp đi', 'nap di', 'lấy về', 'lay ve', 'ừ', 'u', 'yes'];
+
+export function isAcceptIngest(text) {
+  const t = String(text ?? '').toLowerCase().normalize('NFC').replace(/[.!,?…\s]+$/g, '').trim();
+  return ACCEPT_WORDS.includes(t);
+}
+
+/**
+ * "xác nhận văn bản 36/2025/TT-BKHCN" — a person vouching for a document the bot
+ * fetched itself. The unverified warning printed under every such citation tells the
+ * reader to send exactly this, so the bot has to understand it; a promise the system
+ * cannot keep is worse than no promise.
+ */
+export function parseVerifyDocCommand(text) {
+  const m = String(text ?? '')
+    .normalize('NFC')
+    .match(/(?:xác nhận|xac nhan|duyệt|duyet)\s*(?:văn bản|van ban|vb)?\s*(\d{1,4}[A-Za-zĐđ]?\/[^\s,;]+)/i);
+  return m ? m[1].replace(/[.,;:]+$/, '').toUpperCase() : null;
 }
 
 const INTENTS = new Set(['tariff', 'legal', 'general', 'confirm', 'correction', 'refine']);

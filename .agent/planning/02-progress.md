@@ -22,11 +22,11 @@ thực sự đã xảy ra**, thường khác đi.
 
 | | |
 |---|---|
-| **Giai đoạn hiện tại** | **Giai đoạn 6 — bot Zalo có bộ nhớ hội thoại + corpus pháp luật 7 văn bản: CODE XONG, CHƯA DEPLOY** (GĐ 1/3/5 đã live trên VPS) |
-| **Công việc tiếp theo** | **Deploy lên VPS**: `docker compose build migrate` → `run --rm --no-deps migrate` (migration 0006) → `FORCE_RESEED=1 … seed-legal` (**embed 1807 chunks ≈ 35-40′**) → `up -d --no-deps --force-recreate api zalo-bot`. **Copy CẢ thư mục `apps/zalo-bot/`** (bot không còn là một file). Rồi diễn lại hội thoại trong ảnh chụp 2026-08-13 để nghiệm thu. |
-| **Đang bị chặn bởi** | Không (kỹ thuật). Một câu hỏi chờ chủ dự án: có nạp NĐ 134/2016 khi Công báo **không có VBHN** hợp nhất nó không (xem nhật ký 2026-08-13). |
-| **Code đã viết** | Khung repo (006) + schema (007) + loader ND 26/2023 (008) + chuỗi sửa đổi/hồi quy (009) + **API `/tariff` + staleness** (010/011) + **loader 4 FTA** + **validator nghiệm thu** (012) + **Legal RAG** (`modules/legal/`) + **bộ nhớ hội thoại** (`modules/conversation/`, migration 0006) + **bot Zalo dạng module** (`apps/zalo-bot/*.mjs`, `yarn test:bot`). |
-| **Phiên gần nhất** | 2026-08-13 (xem nhật ký bên dưới) |
+| **Giai đoạn hiện tại** | **Giai đoạn 8 — mở rộng LLM. M0 (nền móng) đã viết xong, test xanh trên máy dev (2026-08-14). CHƯA deploy, CHƯA nạp lại kho, CHƯA có baseline.** |
+| **Công việc tiếp theo** | Ba việc, đúng thứ tự: (1) `docker compose build api` — chứng minh dòng cài CLI `claude` trong image chạy được (máy dev không có Docker nên chưa kiểm được); (2) `FORCE_RESEED=1 yarn db:seed:legal` để bản sửa tiêu đề vào kho, rồi **kiểm tra ngẫu nhiên nội dung**, không tin số đếm; (3) `yarn eval` lấy **baseline** và chép nguyên văn con số vào file này. Sau đó viết kế hoạch M1. |
+| **Đang bị chặn bởi** | Không. Một câu hỏi chờ chủ dự án: có nạp NĐ 134/2016 khi Công báo **không có VBHN** hợp nhất nó không (xem nhật ký 2026-08-13). |
+| **Code đã viết** | Khung repo (006) + schema (007) + loader ND 26/2023 (008) + chuỗi sửa đổi/hồi quy (009) + **API `/tariff` + staleness** (010/011) + **loader 4 FTA** + **validator nghiệm thu** (012) + **Legal RAG** (`modules/legal/`) + **bộ nhớ hội thoại** (`modules/conversation/`, migration 0006) + **bot Zalo dạng module** (`apps/zalo-bot/*.mjs`, `yarn test:bot`) + **M0 mở rộng LLM**: `health.llm.ts`, CLI trong image, sửa parser tiêu đề, `apps/eval/` (`yarn eval`). |
+| **Phiên gần nhất** | 2026-08-14 (xem nhật ký bên dưới) |
 
 ### ⚠️ TASK-001 — phần còn lại cần con người, không phải agent
 
@@ -68,8 +68,9 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | TASK-009 — Xác lập chuỗi sửa đổi MFN 2026 | ✅ xong 2026-07-18 | Chuỗi xác lập từ nguồn chính thức (R10+R12 bù nhau; 201/2026 là XK; 72/2026 gia hạn NQ 25/2026). Hồi quy 72/2026 nạp bằng cắt-khoảng append-only, live 6/6. Xem [research/task-009-amendment-chain](../../research/task-009-amendment-chain/README.md) |
 | TASK-010 — Phát hiện độ cũ | ✅ xong 2026-07-18 | Trong API: snapshotDate + reliableThrough (−48 ngày lag) + stale/warning. Acceptance PASS (snapshot 2026-03-15/query 2026-03-10 → stale). |
 | TASK-011 — API tra cứu | ✅ xong 2026-07-18 | `GET /tariff` SQL keyed, vị từ khoảng, không LLM; rate có kiểu + statement, FTA/Ch.98 có điều kiện, CBPG riêng, staleness. FTA `preferential[]` chờ nạp biểu FTA. Xem [research/task-010-011-lookup-api](../../research/task-010-011-lookup-api/README.md) |
-| TASK-013 — Bot Zalo: bộ nhớ hội thoại + định tuyến theo chủ đề | ✅ code xong 2026-08-13, ⛔ chưa deploy | Postgres `conversation`/`conversation_turn` (0006) + `/conversation` API; bot tách 8 module; `guardIntent` chặn cả regex lẫn LLM; router thấy transcript + viết lại `search_query`; lead có guard. 20/20 test thuần. Thiết kế: [zalo-bot-conversation-memory](../docs/zalo-bot-conversation-memory.md); quy tắc [R13/R14](../business-rules.md) |
-| TASK-014 — Mở rộng corpus pháp luật 4 → 7 văn bản | ✅ trích xuất xong 2026-08-13, ⛔ chưa embed/deploy | +54/VBHN-VPQH (8/104), +25/VBHN-BTC = TT 38/2015+39/2018 (9/149), +33/2023/TT-BTC (5/23). 4472 provisions · 1807 chunks, 7/7 qua cổng `expect`. Parser thêm 2 luật (dấu chấm+thứ tự; "Phụ lục" viết thường). **NĐ 134/2016 KHÔNG nạp** — không có VBHN công bố, vướng ADR |
+| TASK-013 — Bot Zalo: bộ nhớ hội thoại + định tuyến theo chủ đề | ✅ xong + LIVE 2026-08-13 | Postgres `conversation`/`conversation_turn` (0006) + `/conversation` API; bot tách 8 module; `guardIntent` chặn cả regex lẫn LLM; router thấy transcript + viết lại `search_query`; lead có guard. 20/20 test thuần. Thiết kế: [zalo-bot-conversation-memory](../docs/zalo-bot-conversation-memory.md); quy tắc [R13/R14](../business-rules.md) |
+| TASK-015 — Kho tự mở rộng (chỉ mục → nạp theo yêu cầu → thăng cấp) | ✅ xong + LIVE 2026-08-14 | `gazette_document` ~15.5k văn bản (0007/0008); worker `apps/ingest` + cổng tự kiểm; `verification`/`verified_by` (0009). Nghiệm thu: 36/2016/TT-BCT nạp tự động 14 điều/57 chunk rồi thăng cấp. 11 test đơn vị cho parser chỉ mục. Thiết kế: [legal-corpus-self-extension](../docs/legal-corpus-self-extension.md) |
+| TASK-014 — Mở rộng corpus pháp luật 4 → 7 văn bản | ✅ xong + LIVE 2026-08-13 | +54/VBHN-VPQH (8/104), +25/VBHN-BTC = TT 38/2015+39/2018 (9/149), +33/2023/TT-BTC (5/23). **4475 provisions · 1806 chunks đã embed**, 7/7 qua cổng `expect`. Parser thêm 3 luật (dấu chấm+thứ tự; "Phụ lục" viết thường; tham chiếu chéo rơi đúng `điều+1`). **NĐ 134/2016 KHÔNG nạp** — không có VBHN công bố, vướng ADR |
 | TASK-012 — Nghiệm thu Giai đoạn 1 | ✅ xong 2026-07-18 | **Corpus 249/249 khớp 100%** (MFN + 4 FTA); random 20/20 khớp source; star-case đủ 4 FTA 0%. Xem [research/task-012-acceptance](../../research/task-012-acceptance/README.md) + [fta-loader](../../research/fta-loader/README.md) |
 
 Chú thích: ✅ xong · 🟡 đang tiến hành · 🔲 chưa làm · ⛔ bị chặn · ❌ bỏ dở (nói lý do)
@@ -115,6 +116,103 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-08-14 (chiều) — Giai đoạn 8 chốt hướng, M0 xong: LLM sinh giả thuyết, hệ thống kiểm chứng
+
+**Vì sao** — chủ dự án báo ba triệu chứng: hệ thống **quá hẹp**, **thường xuyên tra không ra** văn bản
+lẫn mã HS, và **chưa hiểu đúng mã HS**; muốn dùng nhiều LLM hơn mà vẫn đảm bảo kết quả. Đọc code cho
+thấy đó là **ba** vấn đề khác nhau: kho chỉ có 7 văn bản (không phải retriever kém — không có gì để
+truy hồi); chỉ một cách diễn đạt truy vấn cho mỗi câu hỏi; và phần *quyết định* của phân loại HS
+(chú giải Phần/Chương, GRI, bằng chứng) **chưa từng được xây**.
+
+**Ràng buộc chủ dự án chốt**: giữ `claude -p` subscription (không dùng API trả phí) → ngân sách cứng
+**2 lần gọi LLM mỗi lượt chat**, job nền không giới hạn; mở rộng kho **cả** bulk **lẫn** tự nạp tức
+thì; bằng chứng HS lấy từ TT 31/2022 + SEN 2022 + công văn phân loại + WCO EN (EN chờ license).
+
+**Thiết kế**: [llm-expansion-design.md](../docs/llm-expansion-design.md), ADR
+[LLM sinh giả thuyết, không bao giờ khẳng định](../architecture-decisions/2026-08-14-llm-generates-hypotheses-never-assertions.md),
+kế hoạch [03-llm-expansion-tasks.md](03-llm-expansion-tasks.md). Hai điểm tự quyết, ghi rõ trong spec:
+**không** thêm mức `auto_gated` (giữ hai mức, đúng ADR kho tự mở rộng); mốc M4 = **top-3 nhóm 4 số ≥ 85%**.
+
+**M0 đã làm — ba việc nền, tất cả có test**
+- **Tầng LLM ngừng tắt âm thầm.** Repo trước đây **không** cài CLI `claude` trong image và **không**
+  truyền `CLAUDE_CODE_OAUTH_TOKEN` qua compose — một bản deploy sạch chạy hoàn toàn không có LLM mà
+  không có gì báo. Nay: `npm i -g @anthropic-ai/claude-code` trong stage `runtime` (dùng chung cho
+  `api` và `zalo-bot`), token qua compose + `.env.example`, và `/health` có trường
+  `llm: up|no_token|no_cli` (dò có cache 60s). **Cố ý KHÔNG cho nó làm 503** — tra thuế không cần LLM,
+  503 vì thiếu CLI sẽ kéo sập nửa tất định của sản phẩm.
+- **Tiêu đề điều bị PDF ngắt dòng.** `_is_heading_continuation` + `HEADING_WRAP_MAX`: dòng mở đầu
+  bằng **chữ thường** ngay dưới tiêu đề là phần đuôi bị cắt, không phải thân điều.
+- **Cổng đo** `yarn eval` (`apps/eval/`): gọi qua HTTP đúng đường người dùng đi — recall@k, từ chối
+  đúng, tỉ lệ trả lời có trích dẫn, HS top-1/top-3 chấm ở **nhóm 4 số**. Ghi `fixtures/eval-baseline.json`.
+
+**Đã học — địa hình thật**
+- **🔴 Chỉ số "thân điều bắt đầu chữ thường" KHÔNG phân biệt được "vá đúng chỗ cụt" với "nuốt nhầm
+  footnote".** Cả hai đều làm con số giảm. Chạy so sánh trước/sau trên 387 điều thật (4 văn bản) mới
+  lộ ra: bản sửa đầu tiên **làm hỏng Điều 40 của 25/VBHN-BTC** — tiêu đề vốn sạch `Điều 40. (được bãi
+  bỏ)` bị kéo cả footnote văn bản sửa đổi vào. Kho có **41 điều** mang dấu `(được bãi bỏ)`; thêm
+  `HEADING_TERMINATED` để tiêu đề dừng ở dấu đó. Bài học lặp lại lần thứ ba trong dự án này: **một chỉ
+  số đi đúng hướng không phải bằng chứng thay đổi là đúng** — phải so từng dòng trên văn bản thật.
+- **Hằng số chọn bằng đo, không bằng cảm giác.** `HEADING_WRAP_MAX`: 0 → 126/387 tiêu đề cụt, 2 → 2,
+  3 → 1. Nới 2→3 đổi **đúng một** điều trên toàn bộ 387 (Điều 87 của 25/VBHN-BTC, tiêu đề thật dài 3
+  dòng) và **không đụng** ba văn bản kia — chính sự bất động đó là bằng chứng ngưỡng 3 không thò vào
+  thân điều. Chốt 3. Kết quả cuối: **126 → 1** tiêu đề cụt, số điều không đổi (23/149/104/111), 0
+  điều bãi bỏ bị nuốt footnote.
+- **Cổng tự kiểm phải đi theo parser.** Luật `frag` trong `ingest_document.py` để ngưỡng 0.5 vì tiêu
+  đề cụt là chuyện thường; nay không thường nữa → hạ 0.2. Cổng nới rộng hơn thực tế thì im lặng đúng
+  lúc cần kêu.
+- Test parser là `unittest` stdlib (`yarn test:parser`) — không thêm dependency cho 9 test thuần.
+
+**Còn tồn (không chặn, nhưng M0 chưa đóng)**
+- **Chưa build image**: máy dev không có Docker. Dòng `npm i -g @anthropic-ai/claude-code` chỉ mới
+  xác nhận package tồn tại (v2.1.232), chưa chứng minh build chạy.
+- **Chưa nạp lại kho**: bản sửa parser mới nằm trong code, kho trên VPS vẫn mang tiêu đề cụt.
+- **Chưa có baseline**: `yarn eval` cần API sống + DB đã seed. Con số đầu tiên phải chép vào file này.
+- Điều 40 của 25/VBHN-BTC vẫn là ca duy nhất còn thân bắt đầu chữ thường — đúng vì đó là footnote,
+  không phải tiêu đề.
+
+---
+
+### 2026-08-14 — Kho pháp luật TỰ MỞ RỘNG: chỉ mục Công báo → nạp theo yêu cầu → thăng cấp
+
+**Vì sao** — sau bản vá 13/08, bot trả lời trung thực nhưng cụt: hỏi `36/2016/TT-BKHCN` thì nó liệt kê
+thứ mình có rồi dừng. Chủ dự án muốn hệ thống tự đi lấy dữ liệu thay vì đứng yên.
+
+**Không làm "crawl xong trả lời luôn".** Tải văn bản là phần dễ; hai phần khó đều là chỗ sai âm thầm:
+(1) không có nguồn máy-đọc-được nào đáng tin để biết văn bản còn hiệu lực — "sơ đồ văn bản" của Công báo
+báo NĐ 134/2016 có **0 văn bản sửa đổi** trong khi NĐ 18/2021 sửa rất nhiều; (2) cổng `expect` là tri
+thức con người, không ai có cho văn bản lạ. Nên: nạp thì được, **nhưng dữ liệu tự nạp không được lặng lẽ
+lên ngang hàng với dữ liệu đã đối chiếu tay**. Thiết kế: [legal-corpus-self-extension](../docs/legal-corpus-self-extension.md).
+
+**Đã làm — ba lớp, tất cả đã LIVE và nghiệm thu**
+- **Lớp 1 — chỉ mục `gazette_document`** (migration 0007/0008): crawler Node đi 8 loại VBQPPL trên Công
+  báo. **~15.500+ văn bản** (thông tư 9.800 · nghị định 2.668 · luật 823 · …). Tách bạch "văn bản TỒN TẠI"
+  với "văn bản ĐÃ NẠP toàn văn" — nhờ đó bot phân biệt được *"tôi chưa nạp"* với *"không có số hiệu này"*.
+- **Lớp 2 — nạp theo yêu cầu**: service `apps/ingest` (Python + pdfplumber) làm worker rút hàng đợi
+  `ingest_request` bot ghi vào. Tải → parse → **cổng tự kiểm cấu trúc** → chunk → embed → ghi lẻ trong
+  MỘT transaction. Bot hỏi trước, người trả lời "nạp", worker chạy vài phút rồi **tự nhắn lại** thread đã hỏi.
+- **Lớp 3 — thăng cấp**: cột `verification` + `verified_by` (migration 0009). Văn bản tự nạp vào ở
+  `auto_unverified`, **mọi trích dẫn từ nó hiện cảnh báo**; chuyên viên đối chiếu xong thì thăng lên
+  `verified` kèm tên — chính là [R9 verify-on-use](../business-rules.md) mở rộng từ mã HS sang văn bản.
+
+**Nghiệm thu toàn tuyến (2026-08-14)**: hỏi `36/2016/TT-BKHCN` → không có thật → bot nêu *"số hiệu gần
+giống, KHÁC văn bản bạn hỏi"*, không mời nạp. Hỏi `36/2016/TT-BCT` → có thật → mời nạp → xếp hàng →
+worker tải, parse **14 điều/57 khoản**, qua cổng, embed 57 chunk, ghi vào kho `auto_unverified` → hỏi lại
+trả lời có căn cứ, trích dẫn mang nhãn cảnh báo → `POST /ingest/verify` → thành `verified · Ngọc Nhật`.
+
+**Đã học — xem [ghi chú thiết kế](../docs/legal-corpus-self-extension.md#địa-hình-thật--những-thứ-chỉ-lộ-ra-khi-chạy-2026-08-14)**
+cho cả 5 cái bẫy. Ba cái đắt nhất: trang vượt phạm vi **bị clamp** chứ không rỗng (crawler dừng sai =
+chạy vô tận); **slug danh mục không cho biết loại văn bản** (705 nghị định bị gắn nhãn thông tư → suy loại
+từ chính số hiệu); và **CDN tải file không gửi chứng thư trung gian** nên Python không verify được —
+sửa bằng cách nhúng chứng thư GlobalSign có **ghim SHA-256**, không tắt verify.
+
+Một luật cổng tự kiểm đã phải gỡ vì **báo động giả trên bản parse đúng** (5/23 điều), hoá ra chỉ là đuôi
+tiêu đề bị PDF ngắt dòng. Cổng kêu oan trên văn bản lành thì sẽ bị bỏ qua đúng lúc cần nhất.
+
+**Còn tồn** — tiêu đề dài hơn một dòng PDF bị cắt đuôi vào thân điều; ảnh hưởng nhãn trích dẫn của **cả
+kho**, không riêng văn bản tự nạp. Sửa phải đụng parser + nạp lại toàn bộ, chờ chủ dự án quyết.
 
 ---
 
@@ -173,7 +271,30 @@ trạng thái pháp luật. Mỗi tin là một phiên độc lập.
 - **25/VBHN-BTC nằm ở 8 kỳ Công báo** (913+914 → 927+928); chỉ **4 kỳ đầu** chứa điều, phần còn lại là
   phụ lục/biểu mẫu.
 
+**Bắt được khi nghiệm thu trên VPS — luật parser thứ BA**
+
+Seed xong lần 1, kiểm tra ngẫu nhiên phát hiện **6 điều bị mất tiêu đề**: Điều 18/33/51/71 của
+25/VBHN-BTC và 9/20 của 33/2023. Nguyên nhân là dạng mà **cả hai luật trước đều không bắt được**: một
+tham chiếu chéo mà số của nó **tình cờ đúng bằng `điều trước + 1`** → lọt qua nhánh chấp nhận-không-dấu-chấm.
+Nó không chỉ thêm điều ma, nó **cướp tiêu đề của điều thật** — `Điều 18. Khai hải quan` biến thành
+"Điều 18 Luật Hải quan và lấy mẫu hàng hóa…", thân điều bắt đầu giữa câu, nhãn trích dẫn trỏ sai chủ đề.
+Đúng dạng sai âm thầm mà [R2](../business-rules.md) tồn tại để chặn.
+
+Không thể chữa bằng cách **bắt buộc dấu chấm**: "Điều 71 Thủ tục xử lý phế liệu…" là tiêu đề THẬT bị
+PDF ăn mất dấu chấm — siết là mất Điều 71. Phân biệt bằng **thứ đứng ngay sau số**: tiêu đề đi kèm
+TÊN ĐIỀU, tham chiếu đi kèm TÊN VĂN BẢN ("Luật", "Nghị định", "Thông tư này") hoặc chữ cái phụ ("51a").
+`DIEU_REFERENCE` chặn đúng 6 ca, giữ nguyên Điều 71, cả 7 văn bản vẫn qua cổng `expect` (+3 điểm thu
+lại). Phải nạp lại lần 2 (~55′) — cái giá của việc **kiểm tra ngẫu nhiên nội dung sau khi seed**, không
+chỉ tin vào số đếm chương/điều.
+
+**Đã deploy + nghiệm thu (2026-08-13)** — 7 docs · 4475 provisions · 1806/1806 chunks đã embed; 12 route
+map đúng; bot khôi phục session (không cần quét QR lại); `Điều 18 TT 38/2015` trả đúng "Nguyên tắc khai
+hải quan"; hỏi văn bản ngoài kho → `missingDoc` + abstain; hồi quy `8481.80.99 CN` → MFN 10% + 4 FTA;
+bộ nhớ hội thoại sống sót qua 2 lần recreate api.
+
 **Còn tồn / quyết định**
+- Đã commit (`a117816`) và **đã đối chiếu checksum: VPS khớp HEAD** trên toàn bộ file seed/bot/api —
+  lần deploy sau bằng `git archive HEAD` sẽ không lùi bản.
 - **NĐ 134/2016 (miễn/giảm/hoàn thuế) KHÔNG nạp.** Chủ dự án có chọn, nhưng Công báo **không có VBHN**
   hợp nhất nó (NĐ 18/2021 đã sửa rất nhiều), mà [ADR dùng VBHN đã công bố](../architecture-decisions/2026-07-17-use-published-vbhn-not-computed-consolidation.md)
   cấm tự hợp nhất. Nạp bản gốc = phục vụ điều khoản đã bị sửa — đúng dạng sai âm thầm dự án này sợ

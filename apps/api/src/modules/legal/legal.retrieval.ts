@@ -48,6 +48,8 @@ export interface RetrievedArticle {
   effectiveFrom: string | null;
   effectiveTo: string | null;
   gazetteUrl: string | null;
+  /** 'verified' | 'auto_unverified' — an answer must say which it is standing on. */
+  verification: string;
   score: number;
   bestDist: number | null; // min cosine distance (null = keyword-only hit)
   kwHit: boolean;
@@ -68,6 +70,7 @@ interface RawRow {
   document_number: string;
   document_title: string;
   gazette_url: string | null;
+  verification: string;
   effectiveness: string;
   effective_from: string | null;
   effective_to: string | null;
@@ -167,7 +170,7 @@ export async function hybridRetrieve(db: Database, opts: RetrieveOpts): Promise<
            art.citation_label AS article_citation, art.path AS path, art.body AS article_body,
            cl.citation_label AS clause_citation, cl.body AS clause_body,
            d.id AS document_id, d.number AS document_number, d.title AS document_title,
-           d.source_url AS gazette_url,
+           d.source_url AS gazette_url, d.verification AS verification,
            coalesce(art.effectiveness, d.effectiveness) AS effectiveness,
            coalesce(art.effective_from, d.effective_from)::text AS effective_from,
            coalesce(art.effective_to, d.effective_to)::text AS effective_to
@@ -195,6 +198,7 @@ export async function hybridRetrieve(db: Database, opts: RetrieveOpts): Promise<
     effectiveFrom: r.effective_from,
     effectiveTo: r.effective_to,
     gazetteUrl: r.gazette_url,
+    verification: r.verification,
     score: r.score,
     bestDist: r.best_dist,
     kwHit: r.kw_hit,

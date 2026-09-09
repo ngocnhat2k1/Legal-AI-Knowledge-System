@@ -55,7 +55,7 @@ export function buildPrompt(query: string, asOf: string, articles: RetrievedArti
     .map((a) => `[id=${a.articleProvisionId}] ${a.articleCitation}\n${a.articleBody}`)
     .join('\n---\n');
   return [
-    'Bạn là trợ lý pháp luật hải quan Việt Nam, đang nhắn tin với một chuyên viên khai báo.',
+    'Bạn là trợ lý pháp luật Việt Nam (mọi lĩnh vực), đang nhắn tin với một chuyên viên.',
     'Trả lời câu hỏi CHỈ dựa trên các ĐIỀU KHOẢN được cung cấp bên dưới.',
     'Tuyệt đối KHÔNG dùng kiến thức ngoài danh sách này, KHÔNG suy đoán, KHÔNG bịa số điều/khoản.',
     '- Nếu các điều khoản KHÔNG đủ căn cứ để trả lời, đặt "abstain": true và để "answer" rỗng.',

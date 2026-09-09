@@ -21,6 +21,12 @@ export interface LegalCitation {
   effectiveFrom: string | null;
   effectiveTo: string | null;
   gazetteUrl: string | null;
+  /**
+   * 'auto_unverified' means the bot fetched and parsed this document on request and
+   * nobody has read it since. Answers resting on it are labelled, because machine-
+   * fetched text must never quietly acquire the standing of text a human checked.
+   */
+  verification: string;
 }
 
 /** One document in the corpus — the manifest the bot shows when asked for something we lack. */
@@ -61,6 +67,23 @@ export interface LegalAnswer {
    * near-miss from whichever document we happen to carry.
    */
   missingDoc: string | null;
+  /**
+   * When `missingDoc` is set, what the Công báo catalogue knows about that number.
+   * Turns a dead end into a next step: the real title, the gazette link, and a
+   * document we could offer to fetch. Empty when the catalogue has never seen it —
+   * which is itself informative (the number may simply be wrong).
+   */
+  /**
+   * WHAT the catalogue hits are, because the three cases need three different replies:
+   *   'exact'     — this IS the document asked for; offer to fetch it.
+   *   'ambiguous' — right issuer and serial, several years ("thông tư 36 của Bộ KH&CN");
+   *                 ask which year. These are candidates, not wrong answers.
+   *   'similar'   — merely near by number ("36/2016" also matches 36/2016/TT-BCT).
+   *                 A different ministry's document; present as "did you mean", never
+   *                 as the answer, and never offer to fetch one in its place.
+   */
+  gazetteMatchKind: 'exact' | 'ambiguous' | 'similar' | 'none';
+  gazetteMatches: Array<{ number: string; docType: string; title: string; sourceUrl: string }>;
   /** True when no provision could ground the question — the honest "I don't know". */
   abstained: boolean;
   /** Present when abstained, or when a prose answer could not be grounded. */

@@ -8,6 +8,8 @@
  * See the no-llm-on-tariff-numbers ADR.
  */
 
+import { cleanGazetteTitle } from './parse.mjs';
+
 const PERCENT_RE = /\d+([.,]\d+)?\s*%/;
 const CITATION_RE = /(?:điều|khoản|điểm)\s*\d+[a-zà-ỹ]?/gi;
 const HS_DOTTED_RE = /\d{4}\.\d{2}\.\d{2}/g;
@@ -108,6 +110,7 @@ export function formatCandidates(kw, list, origin) {
 export function formatLegal(r, { showSourceNote = true } = {}) {
   const out = [];
   out.push(r.answer ? r.answer : '📚 Mình chưa tổng hợp được câu trả lời chắc chắn, nhưng đây là điều khoản liên quan nhất:');
+  const unverified = (r.citations || []).some((c) => c.verification === 'auto_unverified');
   for (const c of (r.citations || []).slice(0, 3)) {
     const stale = c.effectiveness && c.effectiveness !== 'con_hieu_luc' ? ` ⚠️ ${c.effectiveness}` : '';
     const eff = c.effectiveFrom ? ` · hiệu lực từ ${c.effectiveFrom}${c.effectiveTo ? '→' + c.effectiveTo : ''}` : '';
@@ -115,6 +118,15 @@ export function formatLegal(r, { showSourceNote = true } = {}) {
     const quoted = text.length > 480 ? text.slice(0, 480) + '…' : text;
     out.push(`\n📖 ${c.provisionLabel}${stale}${eff}\n“${quoted}”`);
     if (c.gazetteUrl) out.push(`↗ ${c.gazetteUrl}`);
+  }
+  // A document the bot fetched itself is NOT the same evidence as one a human checked,
+  // and the difference has to be visible at the point of use — not buried in a schema
+  // column. Always shown, regardless of showSourceNote: this is a caveat, not chrome.
+  if (unverified) {
+    out.push(
+      '\n⚠️ Văn bản này do bot TỰ NẠP từ Công báo, CHƯA có người đối chiếu. Hiệu lực và bản sửa đổi chưa được kiểm tra — đọc kỹ link gốc trước khi dùng.' +
+        '\n   Nếu bạn đã đối chiếu và thấy đúng, nhắn "xác nhận văn bản <số hiệu>" để mình đánh dấu đã kiểm chứng.',
+    );
   }
   if (showSourceNote) out.push('\n📌 Trích nguyên văn từ văn bản trên Công báo — đối chiếu link để chắc chắn.');
   return out.join('\n');
@@ -144,14 +156,54 @@ const DOC_KIND = {
  * hold retrieved the nearest passage from a document we DO hold and presented it as
  * the answer — which reads as the bot being wrong rather than the bot being out of
  * scope. Naming what IS held turns a dead end into a usable next step.
+ *
+ * `gazetteMatches` sharpens it further, because "we don't hold it" and "no such
+ * document" deserve different answers. When the Công báo catalogue knows the number,
+ * the bot can state the real title and link and offer to fetch it; when the catalogue
+ * has never seen it, the likeliest explanation is a mistyped number, and saying so is
+ * more useful than listing our shelf again.
  */
-export function formatMissingDoc(label, docs) {
-  const lines = [`📚 Kho văn bản của mình chưa có ${label}. Mình chỉ trả lời được trong phạm vi đã kiểm chứng:`];
-  for (const d of docs || []) {
-    const kind = DOC_KIND[d.docType] || '';
-    const base = d.consolidates ? ` (hợp nhất ${d.consolidates})` : '';
-    lines.push(`• ${kind} ${d.number}${base} — ${String(d.title || '').replace(/\s+/g, ' ').slice(0, 80)}`);
+export function formatMissingDoc(label, gazetteMatches = [], kind = 'none') {
+  const lines = [];
+  const matches = gazetteMatches || [];
+  const item = (g) => `• ${g.number} — ${cleanGazetteTitle(g.number, g.title)}`;
+
+  if (kind === 'exact' && matches[0]) {
+    const hit = matches[0];
+    lines.push(`Trên Công báo có ${hit.number}: ${cleanGazetteTitle(hit.number, hit.title, 130)}`);
+    if (hit.sourceUrl) lines.push(`↗ ${hit.sourceUrl}`);
+    lines.push('Kho mình chưa có toàn văn. Trả lời "nạp" là mình lấy về rồi tra nội dung cho bạn (vài phút).');
+  } else if (kind === 'ambiguous' && matches.length) {
+    // Right issuer, right serial, several years. These ARE candidates for what was
+    // asked — the only missing piece is which year, so ask for that rather than
+    // implying the user got the reference wrong.
+    lines.push(`${label} có ${matches.length} văn bản, mình chưa rõ bạn cần bản năm nào:`);
+    lines.push(...matches.slice(0, 6).map(item));
+    lines.push('Nhắn số hiệu đầy đủ (vd "36/2025/TT-BKHCN") là mình nạp về ngay.');
+  } else if (matches.length) {
+    // NOT what was asked for. Offering a different ministry's circular as though it
+    // were the requested one is the confident-wrong failure this system guards against.
+    lines.push(`Mình không tìm thấy ${label} trên Công báo — có thể số hiệu chưa đúng.`);
+    lines.push('Cùng số nhưng của cơ quan khác:');
+    lines.push(...matches.slice(0, 4).map(item));
+    lines.push('Nếu đúng là một trong số này, nhắn số hiệu đầy đủ để mình nạp.');
+  } else {
+    lines.push(`Mình không tìm thấy ${label} — cả trong kho lẫn trên Công báo. Bạn kiểm tra lại số hiệu giúp mình.`);
   }
-  lines.push('Bạn hỏi trong các văn bản trên nhé, hoặc tra tại congbao.chinhphu.vn cho văn bản ngoài kho.');
   return lines.join('\n');
+}
+
+/** Reply to an accepted ingest offer. */
+export function formatIngestQueued(number, alreadyQueued) {
+  return alreadyQueued
+    ? `⏳ ${number} đang được nạp rồi — mình nhắn lại ngay khi xong.`
+    : `⏳ Đã xếp hàng nạp ${number}. Tải + tách điều khoản + embed mất vài phút; xong mình nhắn lại đây.`;
+}
+
+/** Report an ingest outcome back to the thread that asked for it. */
+export function formatIngestReport(report) {
+  if (report.status === 'done') {
+    return `✅ Đã nạp xong ${report.number} — ${report.detail || ''}\nBạn hỏi nội dung văn bản này được rồi. Lưu ý: bản này bot tự nạp, chưa có người đối chiếu.`;
+  }
+  return `❌ Không nạp được ${report.number}: ${report.detail || 'không rõ lý do'}\nBạn tra trực tiếp trên congbao.chinhphu.vn giúp mình nhé.`;
 }

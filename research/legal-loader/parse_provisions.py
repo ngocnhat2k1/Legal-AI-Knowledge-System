@@ -40,8 +40,37 @@ DIEU = re.compile(r'^Điều\s+(\d+)\.?\d*\s*(.+)$')  # also tolerates a missing
 # The same line WITH the period present — the mark of a real heading rather than a
 # cross-reference that happened to wrap onto its own line. See split_articles.
 DIEU_HEADING = re.compile(r'^Điều\s+\d+\.')
+# A period-less "Điều N …" that is a REFERENCE, not a heading. What follows the number
+# decides: a heading is followed by its TITLE ("Điều 71 Thủ tục xử lý phế liệu" — a real
+# heading whose period the PDF render ate), a reference is followed by the name of the
+# document it points into ("Điều 18 Luật Hải quan và …", "Điều 9 Thông tư này.") or by a
+# sub-article letter ("Điều 51a hoặc điểm a …"). Without this, a reference that happens to
+# land on the NEXT article's number slips through the successor branch and steals that
+# article's heading — it cost Điều 18/33/51/71 of 25/VBHN-BTC and 9/20 of 33/2023/TT-BTC.
+DIEU_REFERENCE = re.compile(
+    r'^Điều\s+\d+(?:[a-zđ]\b'
+    r'|\s+(?:của|này|nêu|hoặc|và|tại|theo|trên|Luật|Bộ luật|Nghị định|Nghị quyết'
+    r'|Thông tư|Quyết định|Pháp lệnh|Hiệp định)\b)',
+)
 KHOAN = re.compile(r'^(\d+)\.\d*\s+(.+)$')
 DIEM = re.compile(r'^([a-zđ])\)\s+(.*)$')
+# A heading longer than one rendered line WRAPS, and its tail lands as the first line of
+# the body: "Điều 12. Thủ tục hải quan đối với hàng hóa xuất khẩu, nhập" / "khẩu tại chỗ".
+# The citation then reads truncated and the body starts mid-sentence — the same visible
+# damage a stolen heading does, from a different cause, and it affects the whole corpus.
+# Bounded, because an unbounded join would swallow a genuinely lower-case body line: two
+# is what a real title needs even at the width of a Công báo column. Measured over the
+# four multi-part documents in the corpus (387 articles): 0 -> 126 truncated headings,
+# 2 -> 2, 3 -> 1, and raising 2 to 3 changes exactly ONE article — Điều 87 of
+# 25/VBHN-BTC, whose title genuinely runs three lines. Nothing else moves, which is the
+# evidence that 3 does not reach into bodies.
+HEADING_WRAP_MAX = 3
+# A repealed article's heading is COMPLETE at the marker: "Điều 26. (được bãi bỏ)". What
+# follows on the next line is the amending document's footnote ("ngày 20 tháng 4 năm 2018
+# của Bộ trưởng…"), which opens in lower case and would otherwise read as a wrap. 41 such
+# articles sit in the corpus; without this the join dragged a whole footnote into the
+# label of Điều 40 of 25/VBHN-BTC, replacing a clean heading with a paragraph.
+HEADING_TERMINATED = re.compile(r'\((?:được|bị|đã)\s+bãi bỏ\)\s*$')
 # End of the enacting text — signature block / appendix. Everything after is not
 # Điều-structured (forms, tables), so we stop before it.
 TERMINATOR = re.compile(r'^(TM\.|KT\.|Nơi nhận|THỦ TƯỚNG\b|BỘ TRƯỞNG\b|CHỦ TỊCH\b|PHỤ LỤC\b)')
@@ -166,6 +195,24 @@ def read_doc(doc: dict) -> list[str]:
     return lines
 
 
+def _is_heading_continuation(line: str) -> bool:
+    """Is this line the wrapped tail of the heading above it, rather than the body?
+
+    Legal prose opens a real body line with a capital or a numbered khoản, so LOWER
+    CASE at the head of an article body means the line above it was cut by the render.
+    Anything that opens a new structural unit ends the heading whatever its case, so
+    those are checked first — a khoản absorbed into a heading would lose a clause.
+    """
+    s = line.strip()
+    if not s:
+        return False
+    if (KHOAN.match(s) or DIEM.match(s) or DIEU.match(s) or CHUONG.match(s)
+            or MUC.match(s) or TERMINATOR.match(s) or APPENDIX_HEADING.match(s)
+            or FOOTER.search(s)):
+        return False
+    return s[0].islower()
+
+
 def split_articles(lines: list[str]) -> list[dict]:
     """Walk lines into articles, each tagged with its chapter/section context.
 
@@ -186,9 +233,14 @@ def split_articles(lines: list[str]) -> list[dict]:
     Order alone is NOT enough, and assuming it was cost 28 articles of 46/VBHN-BTC
     on the first attempt: a single spurious HIGH reference ("Điều 50 của Luật Hải
     quan") would raise the watermark and swallow every real article beneath it. So
-    a jump forward is only believed when the line also carries the period, while the
-    strict successor (N = last + 1) is accepted either way — that is the case the
-    period-optional tolerance exists for (a dropped footnote superscript can eat it).
+    a jump forward is only believed when the line also carries the period.
+
+    The strict successor (N = last + 1) is accepted without the period — that is the
+    case the period-optional tolerance exists for — but only after DIEU_REFERENCE
+    clears it. A reference whose number happens to be exactly the next article's is
+    the one shape both signals miss, and it does not merely add a phantom article: it
+    STEALS the real article's heading, which then reads as a sentence fragment while
+    the citation label points at the wrong subject.
     """
     articles: list[dict] = []
     chuong_num = chuong_title = muc_num = muc_title = None
@@ -219,7 +271,11 @@ def split_articles(lines: list[str]) -> list[dict]:
             continue
         m = DIEU.match(line)
         num = int(m.group(1)) if m else 0
-        if m and (num == last_dieu + 1 or (num > last_dieu and DIEU_HEADING.match(line))):
+        is_heading = (
+            (num > last_dieu and DIEU_HEADING.match(line))
+            or (num == last_dieu + 1 and not DIEU_REFERENCE.match(line))
+        )
+        if m and is_heading:
             started = True
             last_dieu = num
             cur = {
@@ -228,6 +284,18 @@ def split_articles(lines: list[str]) -> list[dict]:
                 'dieu_num': m.group(1), 'heading': line, 'title': m.group(2).strip(),
                 'body_lines': [],
             }
+            # Take back the wrapped tail of the heading before the body starts.
+            wrapped = 0
+            while wrapped < HEADING_WRAP_MAX and i + 1 < n:
+                if HEADING_TERMINATED.search(cur['heading']):
+                    break
+                tail = lines[i + 1]
+                if not _is_heading_continuation(tail):
+                    break
+                cur['heading'] = f"{cur['heading']} {tail.strip()}"
+                cur['title'] = f"{cur['title']} {tail.strip()}"
+                i += 1
+                wrapped += 1
             articles.append(cur)
             i += 1
             continue

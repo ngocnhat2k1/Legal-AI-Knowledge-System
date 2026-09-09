@@ -26,6 +26,8 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/db ./db
 COPY --from=build /app/public ./public
 COPY --from=build /app/apps/zalo-bot ./apps/zalo-bot
+# Operational jobs run from source with tsx (like db/migrate.ts), so they ship as TS.
+COPY --from=build /app/apps/ingest ./apps/ingest
 COPY --from=build /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=build /app/package.json ./package.json
 EXPOSE 3000

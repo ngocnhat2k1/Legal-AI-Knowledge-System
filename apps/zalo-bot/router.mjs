@@ -105,7 +105,7 @@ const INTENTS = ['tariff', 'legal', 'general', 'confirm', 'correction', 'refine'
 export async function route(text, ctx = {}) {
   if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) return null;
   const prompt = [
-    'Bạn là bộ định tuyến cho trợ lý hải quan Việt Nam đang nhắn tin với chuyên viên khai báo.',
+    'Bạn là bộ định tuyến cho trợ lý tra cứu biểu thuế + pháp luật Việt Nam, đang nhắn tin với chuyên viên.',
     'Đọc CẢ hội thoại rồi phân loại TIN NHẮN MỚI. Trả JSON MỘT dòng, KHÔNG markdown, KHÔNG chữ ngoài JSON.',
     '',
     'HỘI THOẠI GẦN ĐÂY:',
@@ -121,11 +121,11 @@ export async function route(text, ctx = {}) {
     '',
     'PHÂN LOẠI (intent):',
     '- tariff: hỏi thuế suất hoặc mã HS của MỘT mặt hàng cụ thể.',
-    '- legal: hỏi luật/nghị định/thông tư/thủ tục/C/O/hồ sơ/khái niệm thuế XNK.',
+    '- legal: hỏi bất kỳ VĂN BẢN PHÁP LUẬT Việt Nam nào — luật/nghị định/thông tư/quyết định của BẤT KỲ bộ ngành nào, không giới hạn hải quan.',
     '- confirm: xác nhận kết quả TRA THUẾ vừa rồi đúng hay sai ("đúng rồi", "sai").',
     '- correction: đưa MÃ HS ĐÚNG để sửa kết quả tra thuế vừa rồi ("HS đúng là 7326.90.99").',
     '- refine: nói kết quả VỪA RỒI chưa đúng ý và muốn tìm lại, nhưng CHƯA nêu đáp án ("không phải cái đó", "ý tôi là thông tư khác").',
-    '- general: chào hỏi, hỏi bot làm được gì, hoặc ngoài phạm vi hải quan.',
+    '- general: chào hỏi hoặc hỏi bot làm được gì. KHÔNG dùng general chỉ vì câu hỏi ngoài lĩnh vực hải quan — hỏi pháp luật lĩnh vực nào cũng là legal.',
     'QUY TẮC QUAN TRỌNG: nếu lượt trước là PHÁP LUẬT thì "không phải/sai rồi" là refine của câu hỏi pháp luật — TUYỆT ĐỐI không phải correction mã HS.',
     '',
     'CÁC TRƯỜNG:',

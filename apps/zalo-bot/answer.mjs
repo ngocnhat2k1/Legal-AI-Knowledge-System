@@ -24,7 +24,7 @@ import {
 import { stampTariff } from './conversation.mjs';
 import { formatAnswer, formatLegal, formatMissingDoc, formatProvisions, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
-import { citationFrom, corpusHas, detectOrigin, keywordFrom, parseDocRef, parseQuery } from './parse.mjs';
+import { citationFrom, cleanGazetteTitle, corpusHas, detectOrigin, keywordFrom, parseDocRef, parseQuery } from './parse.mjs';
 import { claudeVision } from './router.mjs';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -180,21 +180,14 @@ export async function answerLegal(query, { asOf, doc, article, clause, lead, sho
   const ref = parseDocRef(doc || '') ?? (() => { const r = parseDocRef(query); return r?.confident ? r : null; })();
 
   if (ref && !corpusHas(docs, ref)) {
-    return {
-      text: formatMissingDoc(ref.label, docs),
-      topic: 'legal',
-      legal: { query, asOf: asOf ?? null, missingDoc: ref.label },
-    };
+    // Ask the API anyway: it is the side that can consult the Công báo catalogue, and
+    // "we don't hold it" reads very differently with the document's real title attached.
+    const probe = await legalAnswer(query, { asOf, doc: ref.core });
+    return missingDocAnswer(query, ref.label, probe, asOf);
   }
 
   const r = await legalAnswer(query, { asOf, doc: ref?.core, article });
-  if (r?.missingDoc) {
-    return {
-      text: formatMissingDoc(r.missingDoc, docs),
-      topic: 'legal',
-      legal: { query, asOf: r.asOf ?? null, missingDoc: r.missingDoc },
-    };
-  }
+  if (r?.missingDoc) return missingDocAnswer(query, r.missingDoc, r, r.asOf ?? asOf);
 
   if (!r || r.abstained || !(r.citations || []).length) {
     // A named Điều that retrieval could not ground is still fetchable verbatim —
@@ -214,12 +207,12 @@ export async function answerLegal(query, { asOf, doc, article, clause, lead, sho
         };
       }
     }
-    const where = ref ? ` trong ${ref.label}` : ' trong CSDL pháp luật hải quan đã kiểm chứng';
+    const where = ref ? ` trong ${ref.label}` : ' trong các văn bản đã nạp';
     return {
       text:
         `Mình không tìm thấy điều khoản đủ căn cứ${where}` +
         (r?.reason ? ` (${r.reason})` : '') +
-        '. Bạn nói rõ hơn phần muốn tra, hoặc kiểm tra tại congbao.chinhphu.vn; cần con số thuế cụ thể thì cho mình TÊN HÀNG + XUẤT XỨ.',
+        '. Bạn nêu SỐ HIỆU văn bản để mình nạp về tra giúp, hoặc nói rõ hơn phần muốn tìm.',
       topic: 'legal',
       legal: { query, asOf: r?.asOf ?? null, missingDoc: null },
     };
@@ -234,6 +227,30 @@ export async function answerLegal(query, { asOf, doc, article, clause, lead, sho
       docNumbers: [...new Set((r.citations || []).map((c) => c.documentNumber))],
       citations: (r.citations || []).slice(0, 3).map((c) => ({ documentNumber: c.documentNumber, provisionLabel: c.provisionLabel })),
       missingDoc: null,
+    },
+  };
+}
+
+/**
+ * Answer for a document we do not hold, carrying whatever the gazette catalogue knows.
+ * `pendingIngest` is what lets the next turn act on "nạp" — the offer and the thing
+ * being offered have to survive between messages, which is what conversation memory is for.
+ */
+function missingDocAnswer(query, label, apiAnswer, asOf) {
+  const matches = apiAnswer?.gazetteMatches ?? [];
+  const kind = apiAnswer?.gazetteMatchKind ?? 'none';
+  // Only an EXACT catalogue hit may be offered for ingest. A near-miss by number is a
+  // different document, and an ambiguous year is a question for the user — fetching
+  // either would answer something nobody asked.
+  const hit = kind === 'exact' ? (matches[0] ?? null) : null;
+  return {
+    text: formatMissingDoc(label, matches, kind),
+    topic: 'legal',
+    legal: {
+      query,
+      asOf: asOf ?? null,
+      missingDoc: label,
+      pendingIngest: hit ? { number: hit.number, title: hit.title, sourceUrl: hit.sourceUrl } : null,
     },
   };
 }

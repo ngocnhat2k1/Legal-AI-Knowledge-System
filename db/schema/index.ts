@@ -389,6 +389,12 @@ export const legalEffectiveness = pgEnum('legal_effectiveness', [
 /** The internal structure of a VBQPPL: Chương → Mục → Điều → Khoản → Điểm. */
 export const provisionType = pgEnum('provision_type', ['chuong', 'muc', 'dieu', 'khoan', 'diem']);
 
+/** How far a document's text has been checked. See .agent/docs/legal-corpus-self-extension.md. */
+export const legalVerification = pgEnum('legal_verification', [
+  'verified', // a human produced and checked the extract (everything seeded before Phase 7)
+  'auto_unverified', // fetched and parsed on request; passed the structural gate, nobody read it
+]);
+
 /** A source legal document (prefer the published VBHN where one exists). */
 export const legalDocument = pgTable('legal_document', {
   id: serial('id').primaryKey(),
@@ -407,6 +413,16 @@ export const legalDocument = pgTable('legal_document', {
   sourceUrl: text('source_url'), // Công báo link
   docSummary: varchar('doc_summary', { length: 200 }), // ~150-char SAC prefix (fights DRM)
   embedModel: varchar('embed_model', { length: 48 }), // e.g. 'bge-m3@1' — re-embed on change
+  /**
+   * How far this document's text has been checked. Defaults to `verified` so every
+   * hand-built extract keeps its standing; only Phase 7's on-request ingest writes
+   * `auto_unverified`, and answers citing such a document say so. A corpus that can
+   * extend itself must never quietly launder machine-fetched text into the same
+   * authority as text a human read.
+   */
+  verification: legalVerification('verification').notNull().default('verified'),
+  /** Who promoted an auto-ingested document to verified. The trail says WHO, not just that. */
+  verifiedBy: varchar('verified_by', { length: 64 }),
   recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
   supersededAt: timestamp('superseded_at', { withTimezone: true }),
 });
@@ -538,4 +554,64 @@ export const conversationTurn = pgTable(
     index('conversation_turn_recent_idx').on(t.conversationId, t.id),
     index('conversation_turn_created_idx').on(t.createdAt),
   ],
+);
+
+// --- Gazette catalogue (Phase 7: a corpus that can extend itself) ------------
+
+
+/**
+ * What EXISTS on Công báo — deliberately separate from `legal_document`, which is what
+ * we have actually INGESTED. The boundary is the point of the table: it lets the bot
+ * distinguish "I have never heard of that document" from "that document is real, here
+ * is its title, date and gazette link — I just don't hold its full text yet". Before
+ * this, both came out as the same unhelpful shrug.
+ *
+ * Rows are pure Công báo metadata, copied not interpreted, so this carries none of the
+ * effectiveness risk that ingesting a document's TEXT does.
+ *
+ * Keyed by `congbao_id` rather than by number: the same document appears in several
+ * gazette issues, and a number alone is not unique across issuing bodies.
+ */
+export const gazetteDocument = pgTable(
+  'gazette_document',
+  {
+    id: serial('id').primaryKey(),
+    congbaoId: integer('congbao_id').notNull().unique(), // 39571 → /van-ban/…-39571.htm
+    // 96, not 64: an inter-ministerial circular names every signing agency —
+    // '05/2012/TTLT-VKSNDTC-TANDTC-BCA-BTP-BQP-BTC-BNNPTNT' is 51 characters.
+    number: varchar('number', { length: 96 }).notNull(), // '36/2016/TT-BKHCN'
+    docType: varchar('doc_type', { length: 32 }).notNull(), // listing slug: 'thong_tu', 'nghi_dinh', …
+    title: text('title').notNull(),
+    sourceUrl: text('source_url').notNull(),
+    seenAt: timestamp('seen_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Lookup is by number, upper-cased, and usually by PREFIX ("38/2015" → "38/2015/TT-BTC"),
+    // which a plain btree on the expression serves.
+    index('gazette_document_number_idx').on(sql`upper(${t.number}) varchar_pattern_ops`),
+    index('gazette_document_type_idx').on(t.docType),
+  ],
+);
+
+/**
+ * A request to pull a document into the corpus. An explicit queue rather than a
+ * fire-and-forget job because ingest is slow (fetch + parse + embed ≈ minutes), can
+ * fail for reasons a human needs to read, and is triggered from a chat message that
+ * has long since been answered — the outcome has to find its way back to a thread.
+ */
+export const ingestRequest = pgTable(
+  'ingest_request',
+  {
+    id: serial('id').primaryKey(),
+    number: varchar('number', { length: 64 }).notNull(),
+    congbaoId: integer('congbao_id'),
+    status: varchar('status', { length: 16 }).notNull().default('queued'), // queued|running|done|failed
+    detail: text('detail'), // why it failed, or what it produced — written for a human
+    requestedBy: varchar('requested_by', { length: 64 }),
+    threadId: varchar('thread_id', { length: 64 }), // where to report back
+    userId: varchar('user_id', { length: 64 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+  },
+  (t) => [index('ingest_request_status_idx').on(t.status, t.createdAt)],
 );

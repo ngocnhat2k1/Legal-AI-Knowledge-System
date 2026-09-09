@@ -17,10 +17,13 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:bot": "node --test \"apps/zalo-bot/*.test.mjs\"",
+    "test:parser": "python3 -m unittest discover -s research/legal-loader -p 'test_*.py'",
+    "eval": "tsx apps/eval/run.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx db/migrate.ts",
     "db:seed": "tsx db/seed/index.ts",
-    "db:seed:legal": "tsx db/seed/legal.ts"
+    "db:seed:legal": "tsx db/seed/legal.ts",
+    "gazette:index": "tsx apps/ingest/crawl-gazette.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.28",

@@ -166,3 +166,56 @@ export function corpusHas(docs, ref) {
     return heads.some((h) => num.startsWith(h) || (base && base.startsWith(h)));
   });
 }
+
+/**
+ * Did the USER actually write this document number, or did the router invent it?
+ *
+ * The intent router returns `doc_number`, and the API trusts an explicit `doc=`
+ * absolutely — so a fabricated one silently redirects the whole answer. Observed
+ * 2026-08-14: asked "đọc lại thông tư 36 của bộ Khoa học công nghệ" (no year at all),
+ * the router produced "36/2016/TT-BKHCN", copying the year from an earlier turn. The
+ * bot then reported that 36/2016/TT-BKHCN does not exist and listed unrelated
+ * circulars — answering a question nobody asked, about a document nobody named.
+ *
+ * A document number is an IDENTIFIER. The model may recognise one, never mint one:
+ * the same rule that keeps tariff rates out of the model's mouth. Every digit group in
+ * the number must appear as a standalone token in what the human wrote.
+ */
+export function docNumberStatedIn(text, number) {
+  const n = String(number || '').trim();
+  if (!n) return false;
+  const hay = String(text || '');
+  const groups = n.match(/\d+/g) ?? [];
+  if (!groups.length) return false;
+  // Compare without leading zeros: people write "nghị định 8/2015" for 08/2015/NĐ-CP.
+  // The boundaries are digit-only, so a serial must not match inside a longer number.
+  return groups.every((g) => {
+    const bare = g.replace(/^0+/, '') || '0';
+    return new RegExp(`(?<!\\d)0*${bare}(?!\\d)`).test(hay);
+  });
+}
+
+/**
+ * A Công báo title that reads as a title. Deep listing pages prefix the number to the
+ * title, which already contains it, so a naive render says the number three times:
+ * "36/2016/NĐ-CP — 36/2016/NĐ-CP Nghị định số 36/2016/NĐ-CP về quản lý…". Trim to the
+ * subject, and cut on a word boundary — mid-word truncation ("trang thiết bị y t") is
+ * most of what makes a listing feel machine-generated.
+ */
+export function cleanGazetteTitle(number, title, max = 90) {
+  const n = String(number || '').trim();
+  let t = String(title || '').replace(/\s+/g, ' ').trim();
+  if (n) {
+    const esc = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    t = t.replace(new RegExp(`^(?:${esc}\\s*[-—:]?\\s*)+`, 'i'), '');
+    t = t.replace(
+      new RegExp(`^(?:thông tư|nghị định|quyết định|nghị quyết|luật|pháp lệnh|văn bản hợp nhất)\\s*(?:liên tịch\\s*)?(?:số\\s*)?${esc}\\s*`, 'i'),
+      '',
+    );
+  }
+  t = t.replace(/^[-—:,.\s]+/, '').trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const sp = cut.lastIndexOf(' ');
+  return (sp > max * 0.6 ? cut.slice(0, sp) : cut).replace(/[,.;:\s]+$/, '') + '…';
+}

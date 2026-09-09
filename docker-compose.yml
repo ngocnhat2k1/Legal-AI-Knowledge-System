@@ -97,6 +97,10 @@ services:
       EMBEDDER_URL: "${EMBEDDER_URL:-http://embedder:8000}"
       # How stale is the loaded data? Defaults to max(recorded_at); override when known.
       DATA_SNAPSHOT_DATE: "${DATA_SNAPSHOT_DATE:-}"
+      # Subscription credential for the Claude Code CLI, used by grounded legal
+      # synthesis. Empty = the model layer is off and /health reports llm=no_token;
+      # tariff lookup is unaffected, and /legal falls back to verbatim provisions.
+      CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN:-}"
     ports:
       # Localhost only — a reverse proxy (Caddy) fronts it with TLS on the server.
       - "127.0.0.1:3000:3000"
@@ -108,6 +112,25 @@ services:
       seed-legal:
         condition: service_completed_successfully
 
+  # On-request legal ingest (Phase 7): drains the ingest_request queue the bot writes to.
+  # A poller rather than something the API starts, because spawning a container would
+  # mean handing the API the docker socket, and an ingest outlives the chat message that
+  # asked for it by minutes. A one-off run is still possible:
+  #   docker compose run --rm ingest "36/2016/TT-BKHCN"
+  ingest:
+    build:
+      context: .
+      dockerfile: apps/ingest/Dockerfile
+    image: customs-assistant-ingest:local
+    command: ["--worker"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/customs_assistant
+      EMBEDDER_URL: "${EMBEDDER_URL:-http://embedder:8000}"
+    depends_on:
+      db:
+        condition: service_healthy
+
   zalo-bot:
     image: customs-assistant:local
     command: ["node", "apps/zalo-bot/index.mjs"]
@@ -116,6 +139,10 @@ services:
       ZALO_SESSION_PATH: /session/zalo-session.json
       # Comma-separated Zalo threadIds allowed to query (empty = answer everyone).
       ALLOWED_THREADS: "${ALLOWED_THREADS:-}"
+      # Subscription credential for the Claude Code CLI: the intent router and image
+      # vision both need it. Empty = the bot stays on its regex fast paths and
+      # fallbackIntent, which answers, but only within the current topic.
+      CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN:-}"
     volumes:
       - zalo_session:/session
     depends_on:
