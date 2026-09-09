@@ -77,6 +77,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Hiệu lực bitemporal ngay từ đầu](architecture-decisions/2026-07-17-bitemporal-validity-from-day-one.md)
 - [Công cụ repo: Drizzle + Yarn + Docker (khung TASK-006)](architecture-decisions/2026-07-18-repo-tooling-drizzle-yarn.md)
 - [LLM sinh giả thuyết, không bao giờ khẳng định](architecture-decisions/2026-08-14-llm-generates-hypotheses-never-assertions.md) — LLM ở chỗ tìm và điều hướng, không ở chỗ khẳng định; ngân sách 2 lần gọi mỗi lượt chat
+- [Nạp Chú giải Phần/Chương và 6 quy tắc GRI](architecture-decisions/2026-09-09-load-hs-notes-and-gri.md) — bằng chứng pháp lý cho phân loại HS; trước đó kho dữ liệu có đúng 1 lần xuất hiện chữ "Chú giải"
 
 ## Đánh giá (Reviews)
 
