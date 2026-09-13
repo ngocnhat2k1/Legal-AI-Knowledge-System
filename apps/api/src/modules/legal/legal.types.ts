@@ -53,6 +53,8 @@ export interface LegalProvisionView {
   effectiveFrom: string | null;
   effectiveTo: string | null;
   gazetteUrl: string | null;
+  /** 'auto_unverified' text must carry the bot's warning (R18). */
+  verification: string;
 }
 
 export interface LegalAnswer {

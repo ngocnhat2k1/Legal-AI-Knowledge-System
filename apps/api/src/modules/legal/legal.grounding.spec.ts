@@ -48,4 +48,9 @@ describe('numberMarkers — [n] points at citations[n-1], and the numbers beside
     expect(numberMarkers(s, [3], five, '').answer).toBe('Kho chưa có Nghị định 43/2017/NĐ-CP.');
     expect(numberMarkers('Mức 5% [3].', [3], five, 'mức 5% đúng không').answer).toBe('');
   });
+
+  it('reads a bold, quoted or directly marked document number without the characters around it', () => {
+    expect(numberMarkers('Theo **Nghị định 08/2015/NĐ-CP** [1].', [1], five, '').answer).toBe('Theo **Nghị định 08/2015/NĐ-CP** [1].');
+    expect(numberMarkers('Theo “08/2015/NĐ-CP”[1].', [1], five, '').answer).toBe('Theo “08/2015/NĐ-CP”[1].');
+  });
 });

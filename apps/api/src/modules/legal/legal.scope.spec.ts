@@ -44,4 +44,11 @@ describe('resolveDocuments — a full number names one document', () => {
     const db = { execute: async () => [row] };
     expect(await resolveDocuments(db as never, parseDocRef('Nghị định 8/2015/ND-CP')!)).toEqual([row]);
   });
+
+  it('keeps digits in the issuer: Luật 107/2016/QH13 reaches the VBHN that consolidates it', async () => {
+    const ref = parseDocRef('Luật 107/2016/QH13')!;
+    expect(ref.full).toBe('107/2016/QH13');
+    const row = { id: 3, number: '96/VBHN-VPQH', title: 't', docType: 'vbhn', consolidates: '107/2016/QH13' };
+    expect(await resolveDocuments({ execute: async () => [row] } as never, ref)).toEqual([row]);
+  });
 });

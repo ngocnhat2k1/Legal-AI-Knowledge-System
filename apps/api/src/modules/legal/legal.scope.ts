@@ -100,7 +100,8 @@ export function parseDocRef(input: string): ParsedDocRef | null {
   const isVbhn = /vbhn/i.test(m[2]!);
   // The echo keeps the issuer segment when there is one, so "38/2015/TT-BTC" is
   // reported back the way the user wrote it, not truncated to "38/2015".
-  const rawEnd = start + m[0].length + (hasIssuerSegment ? (after.match(/^\s*\/\s*[a-zà-ỹ-]+/i)?.[0].length ?? 0) : 0);
+  // The issuer may end in digits (QH13, NQ-UBTVQH14); `full` must carry them to match exactly.
+  const rawEnd = start + m[0].length + (hasIssuerSegment ? (after.match(/^\s*\/\s*[a-zà-ỹ][a-zà-ỹ\d-]*/i)?.[0].length ?? 0) : 0);
   const raw = text.slice(start, rawEnd).trim();
   return {
     core: `${m[1]}/${m[2]}`.toUpperCase(),

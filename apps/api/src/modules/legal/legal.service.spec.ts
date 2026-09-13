@@ -1,3 +1,6 @@
+import type { SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
+
 import { generate } from './legal.generation';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
 import { LegalService } from './legal.service';
@@ -32,5 +35,20 @@ describe('LegalService.ask — [n] maps to the n-th provision given to the model
     const res = await svc.ask('Hàng nào được miễn thuế nhập khẩu', '2026-09-13');
     expect(res.answer).toBe('Ý một [1]. Ý hai [2].');
     expect(res.citations.map((c) => c.articleLabel)).toEqual(['Điều 22', 'Điều 11']);
+  });
+});
+
+describe('LegalService.provision — the verbatim path carries verification (R18)', () => {
+  it('selects the document verification so the bot can warn on auto-ingested text', async () => {
+    const dialect = new PgDialect();
+    const queries: string[] = [];
+    const db = {
+      execute: async (q: SQL) => {
+        queries.push(dialect.sqlToQuery(q).sql);
+        return queries.length === 1 ? [{ id: 1, number: '08/2015/NĐ-CP', title: 't', docType: 'nghi_dinh', consolidates: null }] : [];
+      },
+    };
+    await new LegalService(db as never, {} as never).provision('08/2015/NĐ-CP', '18');
+    expect(queries[queries.length - 1]).toContain('d.verification AS verification');
   });
 });

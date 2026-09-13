@@ -44,7 +44,8 @@ const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean }> = [
   { re: /\d[\d.,]*\s*(?:USD|VND|đồng|đ)(?![\p{L}\d])/giu, exempt: false, fatal: true },
   { re: /\d{1,2}\/\d{1,2}\/\d{4}/g, exempt: true, fatal: false },
   { re: /\d+\s*(?:ngày|tháng)(?![\p{L}])/giu, exempt: false, fatal: false },
-  { re: /\d{1,4}\/(?:\d{4}|VBHN)[^\s,;)]*/gi, exempt: true, fatal: false },
+  // The tail stops at emphasis, quotes and brackets: `**08/2015/NĐ-CP**` and `“…”[1]` must still anchor.
+  { re: /\d{1,4}\/(?:\d{4}|VBHN)[^\s,;)*"'“”‘’[\]]*/gi, exempt: true, fatal: false },
   { re: /\d{4}(?:\.\d{2}){1,2}/g, exempt: true, fatal: false },
 ];
 

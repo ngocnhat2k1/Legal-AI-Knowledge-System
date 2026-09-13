@@ -1018,7 +1018,8 @@ cứ, `abstain`, một lần gọi, trần 45s:
   2. **Số liệu neo theo câu** — phần chuỗi của kiểm 3 §3.6, làm ngay ở đây vì bố cục mới đặt `[n]` sát
      dữ kiện và cho đậm con số do LLM viết ([R10](../business-rules.md)). Tách câu tại `. `, `? `, `! `,
      `; ` và xuống dòng. Trong mỗi câu, mọi `\d+([.,]\d+)?\s*%`, tiền `\d[\d.,]*\s*(USD|VND|đồng|đ)\b`,
-     ngày `\d{1,2}/\d{1,2}/\d{4}`, thời hạn `\d+\s*(ngày|tháng)`, số hiệu `\d{1,4}/(\d{4}|VBHN)[^\s,;)]*`,
+     ngày `\d{1,2}/\d{1,2}/\d{4}`, thời hạn `\d+\s*(ngày|tháng)`, số hiệu `\d{1,4}/(\d{4}|VBHN)[^\s,;)*"'“”‘’[\]]*` (đuôi dừng ở `*`, dấu nháy, ngoặc vuông: số hiệu
+     in **đậm**, trong ngoặc kép hay dính `[n]` vẫn neo được),
      mã HS `\d{4}(\.\d{2}){1,2}` phải nằm (sau NFC, gộp khoảng trắng, không phân biệt hoa/thường) trong
      `sources[n-1]` của một `[n]` **có trong chính câu đó**; câu không có dấu thì trong một nguồn thuộc
      `cited`. Miễn trừ: số hiệu, mã HS, ngày mà người dùng đã viết trong `userText` (so như
@@ -1052,7 +1053,7 @@ cứ, `abstain`, một lần gọi, trần 45s:
 - In **mọi** trích dẫn API trả (≤ 5, `MAX_CITATIONS`) — cắt còn 3 như nay sẽ làm `[4]`, `[5]` mồ côi.
 - **Dòng đỏ hiệu lực theo từng trích dẫn**, từ `effectiveness` của chính trích dẫn đó (đã là hiệu lực cấp
   điều khoản); các `[n]` chỉ gộp chung một dòng khi cùng văn bản **và** cùng giá trị. Nhãn viết từ enum,
-  không từ chữ mô hình: `het_hieu_luc` "hết hiệu lực", `het_hieu_luc_mot_phan` "hết hiệu lực một phần",
+  không từ chữ mô hình: `het_hieu_luc` "hết hiệu lực", `het_hieu_luc_mot_phan` "hết hiệu lực một phần — kiểm tra điều khoản còn áp dụng" (chỉ loại này có vế đuôi; hết hiệu lực toàn bộ thì không còn điều khoản nào áp dụng),
   `chua_co_hieu_luc` "chưa có hiệu lực (từ {effectiveFrom})".
 - **Vế hiệu lực trên dòng nguồn:** " · hiệu lực {from}–{to}" khi `effectiveTo` khác null hoặc
   `effectiveFrom > asOf` ([R8](../business-rules.md)), như bố cục cũ.
@@ -1064,7 +1065,7 @@ cứ, `abstain`, một lần gọi, trần 45s:
   "Mình chưa tổng hợp được câu trả lời chắc chắn; đây là các điều khoản liên quan nhất để bạn đối chiếu:"
   + danh sách nguồn với trích ≤ 480 ký tự như nay. Không in `lead`.
 - `formatProvisions`: lời dẫn đã gác, hoặc câu tất định "Nguyên văn **{citationLabel}**:"; thân nguyên
-  văn ≤ 1.200 ký tự là đoạn **thuần**; dòng đỏ hiệu lực nếu có; `note` "Toàn văn: {url}".
+  văn ≤ 1.200 ký tự là đoạn **thuần**; dòng đỏ hiệu lực nếu có; `note` "Toàn văn: {url}"; văn bản `auto_unverified` có cùng dòng cam "do bot tự nạp…" như `formatLegal` ([R18](../business-rules.md); `/legal/provision` trả thêm `verification`).
 - Từ chối (`answer.mjs`, nhánh không có trích dẫn): "Mình chưa tìm thấy điều khoản đủ căn cứ trong
   **{ref.label}** nên chưa trả lời, để tránh sai." (không có `ref`: "trong các văn bản mình đang có") +
   `note` "Lý do: {reason}" chỉ khi `reason` qua cổng văn xuôi §5b.7 + "Nếu bạn biết số hiệu văn bản, nhắn
@@ -1132,7 +1133,9 @@ quan khác".
    của nhóm số đầu. `8/2015/ND-CP` ≡ `08/2015/NĐ-CP`: kho đã coi số 0 đầu là cách gõ thường
    (`docNumberStatedIn`, `corpusHas`, `resolveDocuments`). Đoạn cơ quan ban hành so chặt:
    `69/2018/TT-BTC` ≠ `69/2018/NĐ-CP`; `69/2018` ≠ `69/2018/NĐ-CP`.
-2. **Bot gửi số đầy đủ.** `parseDocRef` trả thêm `full` như API: `issuer ? label : null`. Ba chỗ gọi gửi
+2. **Bot gửi số đầy đủ.** `parseDocRef` trả thêm `full` như API: `issuer ? label : null`. Đoạn cơ quan
+   ban hành có thể kết bằng chữ số (`107/2016/QH13`, `NQ-UBTVQH14`): cả hai phía đọc nó bằng
+   `\/\s*[a-zà-ỹ][a-zà-ỹ\d-]*`, vì cắt ở chữ số đầu sẽ làm luật kho đang giữ (qua VBHN) thành "không có". Ba chỗ gọi gửi
    `ref.full ?? ref.core`. Khi có `ref.full`, `corpusHas` so bằng `sameDocNumber` với `number` /
    `consolidates` thay vì so tiền tố `core`: kho có 69/2018/NĐ-CP mà người dùng hỏi 69/2018/TT-BTC thì
    **không** coi là có.

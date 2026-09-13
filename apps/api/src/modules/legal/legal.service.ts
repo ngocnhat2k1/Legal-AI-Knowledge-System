@@ -80,7 +80,7 @@ export class LegalService {
              coalesce(p.effectiveness, d.effectiveness) AS effectiveness,
              coalesce(p.effective_from, d.effective_from)::text AS "effectiveFrom",
              coalesce(p.effective_to, d.effective_to)::text AS "effectiveTo",
-             d.source_url AS "gazetteUrl"
+             d.source_url AS "gazetteUrl", d.verification AS verification
       FROM legal_provision p
       JOIN legal_document d ON d.id = p.document_id
       WHERE p.document_id IN ${inIds(docIds)}
