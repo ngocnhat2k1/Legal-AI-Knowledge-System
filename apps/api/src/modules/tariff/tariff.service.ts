@@ -549,11 +549,13 @@ export class TariffService {
       this.decrees = undefined; // a failed read is retried on the next lookup, not cached
       throw e;
     });
+    // Await before the next query: a decree rejection left pending across it is unhandled and exits Node 22.
+    const decrees = await this.decrees;
     const extended = (await this.db.execute(sql`
       SELECT r.conditions->>'extended_by' AS extended_by FROM tariff_rate r
       WHERE r.hs_code = ${hs} AND r.superseded_at IS NULL AND r.effective_to < ${date}
         AND r.conditions->>'extended_by' IS NOT NULL
     `)) as unknown as Array<{ extended_by: string }>;
-    return stalenessView(await this.decrees, date, extended.map((x) => x.extended_by));
+    return stalenessView(decrees, date, extended.map((x) => x.extended_by));
   }
 }

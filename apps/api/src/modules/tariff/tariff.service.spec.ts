@@ -376,4 +376,34 @@ describe('stalenessView — names the loaded decree in force on the query date',
     expect(res.staleness.latestInstrument?.number).toBe('26/2023/NĐ-CP');
     expect(res.staleness.pendingExtension).toContain('NQ 25/2026');
   });
+
+  it('a failed decree read is a handled error that the next lookup retries, never an unhandled rejection', async () => {
+    const db = fakeDb([MFN, acfta(null)], { decrees: DECREES });
+    const real = db.execute;
+    let fail = true;
+    db.execute = async (q: SQL) => {
+      const text = dialect.sqlToQuery(q).sql;
+      if (fail && text.includes('FROM decree d')) {
+        fail = false;
+        db.calls.push(text);
+        throw new Error('decree read failed');
+      }
+      if (text.includes('extended_by')) await new Promise((r) => setTimeout(r, 5)); // a slower second query
+      return real(q);
+    };
+    const unhandled: unknown[] = [];
+    const onUnhandled = (e: unknown) => unhandled.push(e);
+    process.on('unhandledRejection', onUnhandled); // Node 22 exits the API process on one
+    const svc = new TariffService(db as never);
+    try {
+      await expect(svc.lookup('0901.11.20', undefined, '2026-05-15')).rejects.toThrow('decree read failed');
+      await new Promise((r) => setTimeout(r, 20));
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+    expect(unhandled).toHaveLength(0);
+    const res = await svc.lookup('0901.11.20', undefined, '2026-05-15');
+    expect(res.staleness.latestInstrument?.number).toBe('26/2023/NĐ-CP');
+    expect(db.calls.filter((t) => t.includes('FROM decree d'))).toHaveLength(2);
+  });
 });
