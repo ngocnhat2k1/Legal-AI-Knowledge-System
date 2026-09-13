@@ -25,6 +25,7 @@ import { stampTariff } from './conversation.mjs';
 import { formatAnswer, formatLegal, formatMissingDoc, formatProvisions, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
 import { citationFrom, cleanGazetteTitle, corpusHas, detectOrigin, keywordFrom, parseDocRef, parseQuery } from './parse.mjs';
+import { L, toText } from './render.mjs';
 import { claudeVision } from './router.mjs';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -32,7 +33,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 // --- Tariff by explicit HS code ---------------------------------------------
 
 /** Direct lookup when the message itself carries an HS code — no model in the path. */
-export async function answerByHs(q, { lead = null, showFooter = true } = {}) {
+export async function answerByHs(q, { showFooter = true } = {}) {
   let res;
   try {
     res = await tariffResponse(q.hs, q.origin, q.date);
@@ -52,9 +53,9 @@ export async function answerByHs(q, { lead = null, showFooter = true } = {}) {
   }
   const data = await res.json();
   const confirm = await confirmations(q.hs, q.origin);
-  const block = formatAnswer(q, data, confirm, { showFooter });
   return {
-    text: withLead(lead, block),
+    // The tariff block writes its own lead from data (spec §5b.2): no LLM lead here.
+    text: formatAnswer(q, data, confirm, { showFooter }),
     topic: 'tariff',
     tariff: stampTariff({ hs: q.hs, dotted: q.dotted, origin: q.origin, date: q.date, snapshot: data }),
   };
@@ -138,7 +139,7 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   }
   out.push(
     full
-      ? formatAnswer({ dotted: top.hsDotted, origin, date }, full, confirm, { showFooter })
+      ? toText(formatAnswer({ dotted: top.hsDotted, origin, date }, full, confirm, { showFooter })) // bridge: Task 4 builds Line[]
       : citedRuling
         ? `📋 ${top.hsDotted} — theo ÁP MÃ đã ghi (${citedRuling.staffName}); chưa có dòng thuế hiệu lực tại ${date}, đối chiếu nguồn trước khi dùng.`
         : `📋 ${top.hsDotted} — ${top.path}`,
@@ -310,7 +311,7 @@ export async function handleCorrection(tariff, text, senderName, quote) {
   if (fix && old?.hs && fix.hs === old.hs) {
     await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || now, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null });
     return {
-      text: `✓ Đã xác nhận ĐÚNG mã ${old.dotted}${old.origin ? ` · ${old.origin}` : ''}. Cảm ơn ${senderName}.`,
+      text: [L(['Đã xác nhận mã ', [old.dotted, 'b'], `${old.origin ? ` (xuất xứ ${old.origin})` : ''} là đúng. Cảm ơn ${senderName}.`])],
       topic: 'tariff',
       tariff: tariff?.hs ? stampTariff({ ...old, desc: prodDesc || undefined, keywords: prevKw }) : null,
     };
@@ -322,7 +323,7 @@ export async function handleCorrection(tariff, text, senderName, quote) {
 
   if (!fix) {
     return {
-      text: `📝 Đã ghi nhận: mã${old?.dotted ? ` ${old.dotted}` : ' trước'} chưa đúng (theo ${senderName}). Bạn gửi MÃ HS đúng, hoặc mô tả/ảnh mặt hàng để mình tra lại nhé.`,
+      text: [L(['Đã ghi nhận: mã ', old?.dotted ? [old.dotted, 'b'] : 'trước', ` chưa đúng (theo ${senderName}). Bạn gửi mã HS đúng, hoặc mô tả hay ảnh mặt hàng để mình tra lại nhé.`])],
       topic: 'tariff',
       tariff: null,
     };
@@ -330,19 +331,18 @@ export async function handleCorrection(tariff, text, senderName, quote) {
 
   // Tra mã đúng. Xuất xứ chỉ lấy khi lời sửa nêu rõ (không kéo theo xuất xứ cũ có thể sai).
   const origin = detectOrigin(text);
-  const head = `📝 Đã ghi nhận đính chính từ ${senderName}: mã${old?.dotted ? ` ${old.dotted}` : ''} chưa đúng → sửa thành ${fix.dotted}.`;
+  const head = L([`Đã ghi nhận đính chính từ ${senderName}: mã `, ...(old?.dotted ? [[old.dotted, 'b'], ' '] : []), 'chưa đúng, sửa thành ', [fix.dotted, 'b'], '.']);
   const res = await tariffResponse(fix.hs, origin, fix.date);
   if (!res.ok) {
     const why = res.status === 404 ? 'không có trong dữ liệu đã nạp' : `lỗi ${res.status}`;
-    return { text: `${head}\nNhưng mình chưa tra được thuế cho ${fix.dotted} (${why}). Kiểm tra lại mã giúp mình nhé.`, topic: 'tariff', tariff: null };
+    return { text: [head, L(['Nhưng mình chưa tra được thuế cho ', [fix.dotted, 'b'], ` (${why}). Bạn kiểm tra lại mã giúp mình nhé.`])], topic: 'tariff', tariff: null };
   }
   const data = await res.json();
   // Ghi mã ĐÚNG = 'correct' KÈM mô tả sản phẩm + số căn cứ (rulingNote, đã lọc PII) → tra lại được sau này.
   await postConfirm({ hs: fix.hs, origin: origin || null, date: fix.date, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: data });
   const confirm = await confirmations(fix.hs, origin);
-  const body = formatAnswer({ dotted: fix.dotted, origin, date: fix.date }, data, confirm);
   return {
-    text: `${head}\n\n${body}`,
+    text: [head, L([]), ...formatAnswer({ dotted: fix.dotted, origin, date: fix.date }, data, confirm)],
     topic: 'tariff',
     tariff: stampTariff({ hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data, desc: prodDesc || undefined, keywords: prevKw }),
   };

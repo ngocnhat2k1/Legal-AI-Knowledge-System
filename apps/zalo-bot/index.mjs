@@ -26,6 +26,7 @@ import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './
 import { extractImage } from './images.mjs';
 import { formatIngestQueued, formatIngestReport } from './format.mjs';
 import { docNumberStatedIn, mergeQuote, parseQuery, stripMentions } from './parse.mjs';
+import { toText } from './render.mjs';
 import { route } from './router.mjs';
 
 const API = process.env.API_URL || 'http://api:3000';
@@ -206,7 +207,7 @@ async function respond({ text, image, quote, ctx, senderName, threadId, userId }
       origin: routed.origin ?? ctx.tariff.origin ?? null,
       date: routed.date || new Date().toISOString().slice(0, 10),
     };
-    return { ...(await answerByHs(q, { lead: routed.lead, showFooter: false })), intent };
+    return { ...(await answerByHs(q, { showFooter: false })), intent };
   }
   return { ...(await tariffByClues(routed, text, { showFooter: ctx.topic !== 'tariff' })), intent };
 }
@@ -265,7 +266,8 @@ async function main() {
       if (process.env.BOT_DEBUG) {
         console.log(`[zalo] topic=${ctx.topic ?? '-'} tariffFresh=${ctx.tariffFresh} → intent=${result.intent}`);
       }
-      await api.sendMessage({ msg: result.text, quote: msg.data }, msg.threadId, msg.type);
+      const reply = toText(result.text); // bridge: plain text until Task 6 sends styles
+      await api.sendMessage({ msg: reply, quote: msg.data }, msg.threadId, msg.type);
 
       // Ghi nhớ SAU khi đã trả lời — lỗi lưu trí nhớ không được làm mất câu trả lời.
       // `tariff`/`legal` vắng mặt = giữ nguyên phần trí nhớ đó; null = xoá (không còn gì để trỏ tới).
@@ -277,7 +279,7 @@ async function main() {
         userId,
         staffName: senderName,
         userText: text || '(ảnh)',
-        botText: result.text,
+        botText: reply,
         intent: result.intent,
         topic: result.topic ?? ctx.topic ?? null,
         state,

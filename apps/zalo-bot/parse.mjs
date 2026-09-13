@@ -24,6 +24,12 @@ const ORIGIN = {
 // Explicit UPPERCASE ISO/shorthand a user types on purpose ("8481.80.99 TQ", "… KR").
 const ORIGIN_CODE = { TQ: 'CN', CN: 'CN', JP: 'JP', KR: 'KR', AU: 'AU', NZ: 'NZ', TH: 'TH', MY: 'MY', SG: 'SG', ID: 'ID', PH: 'PH', DE: 'DE', EU: 'EU', GB: 'GB', UK: 'GB', US: 'US', VN: 'VN' };
 
+/** Display names for origin codes. For printing only — never used to READ an origin. */
+export const ORIGIN_LABEL = {
+  CN: 'Trung Quốc', JP: 'Nhật Bản', KR: 'Hàn Quốc', AU: 'Úc', NZ: 'New Zealand', TH: 'Thái Lan', MY: 'Malaysia',
+  SG: 'Singapore', ID: 'Indonesia', PH: 'Philippines', DE: 'Đức', EU: 'EU', GB: 'Anh', US: 'Hoa Kỳ', VN: 'Việt Nam', IN: 'Ấn Độ',
+};
+
 // Unambiguous country NAMES, matched on WORD BOUNDARIES. Short/ambiguous bare words are left
 // out on purpose — "hàn"=hàn (weld), "anh"=anh (you), "in"=in (print), "phi"=Ø, "úc"⊂"phúc",
 // "đức"=name Đức, "hàng"⊂"hàn" — a WRONG origin silently changes the FTA answer, so prefer null.

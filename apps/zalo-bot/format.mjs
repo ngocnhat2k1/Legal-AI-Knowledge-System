@@ -8,7 +8,8 @@
  * See the no-llm-on-tariff-numbers ADR.
  */
 
-import { cleanGazetteTitle } from './parse.mjs';
+import { cleanGazetteTitle, ORIGIN_LABEL } from './parse.mjs';
+import { L, toText } from './render.mjs';
 
 const PERCENT_RE = /\d+([.,]\d+)?\s*%/;
 const CITATION_RE = /(?:điều|khoản|điểm)\s*\d+[a-zà-ỹ]?/gi;
@@ -39,57 +40,214 @@ export function sanitizeLead(lead, block = '') {
   return text.slice(0, 400);
 }
 
-/** Join a sanitized lead onto a deterministic block. */
-export function withLead(lead, block) {
-  const clean = sanitizeLead(lead, block);
-  return clean ? `${clean}\n\n${block}` : block;
+/** A gated lead as its own line above the reply; it never replaces a line of the reply. */
+export function withLead(lead, lines) {
+  // The legal builders still return strings; this branch goes when they return Line[].
+  if (typeof lines === 'string') {
+    const clean = sanitizeLead(lead, lines);
+    return clean ? `${clean}\n\n${lines}` : lines;
+  }
+  const clean = sanitizeLead(lead, toText(lines));
+  return clean ? [L([clean]), L([]), ...lines] : lines;
 }
+
+/** 2026-09-13 → 13/09/2026 */
+export const dmy = (iso) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : '');
 
 // --- Tariff -----------------------------------------------------------------
 
-/** Footer: show what's already been recorded, and DON'T re-ask if it's confirmed correct. */
+const RATE_TYPES = new Set(['ad_valorem', 'specific', 'compound']);
+
+/** Which row of the §5b.3 table a preferential line falls in. The first match wins. */
+function prefState(p) {
+  if (p.type === 'excluded') return 'excludedLine';
+  if (p.originExcluded === true) return 'excludedOrigin';
+  if (p.type === 'by_subline') return 'bySubline';
+  if (p.originEligible === null && (p.sublines ?? []).some((s) => s.originExcluded === true)) return 'subExcluded';
+  if (p.originEligible === true && RATE_TYPES.has(p.type)) return 'true';
+  if (p.originEligible === true && p.type === 'trq') return 'trq';
+  if (p.originEligible === false) return 'false';
+  return 'null';
+}
+
+/** Verdict history as one small line, or null when nobody has confirmed anything yet (R18). */
 export function confirmFooter(c) {
-  if (!c || !(c.correct || c.wrong || c.unsure)) {
-    return '— trả lời "đúng" hoặc "sai" nếu muốn xác nhận kết quả này.';
-  }
+  if (!c || !(c.correct || c.wrong || c.unsure)) return null;
   const recent = Array.isArray(c.recent) ? c.recent : [];
   const lastOf = (v) => recent.find((r) => r.verdict === v);
   const parts = [];
-  if (c.correct) { const l = lastOf('correct'); parts.push(`✓ đã xác nhận ĐÚNG ${c.correct} lần${l ? ` (gần nhất: ${l.staffName})` : ''}`); }
-  if (c.wrong) { const l = lastOf('wrong'); parts.push(`✗ từng báo SAI ${c.wrong} lần${l ? ` (${l.staffName}${l.note ? ': ' + String(l.note).replace(/\s+/g, ' ').slice(0, 60) : ''})` : ''}`); }
-  if (c.unsure) parts.push(`? chưa chắc ${c.unsure} lần`);
-  const invite = c.wrong
-    ? '— mã này từng bị đính chính, kiểm tra kỹ. Trả lời "đúng"/"sai" để cập nhật.'
-    : '— nếu chưa đúng, trả lời "sai" hoặc gửi mã đúng để mình sửa.';
-  return `📌 ${parts.join(' · ')}\n${invite}`;
+  if (c.correct) {
+    const l = lastOf('correct');
+    parts.push([`đã xác nhận đúng ${c.correct} lần${l ? ` (gần nhất: ${l.staffName})` : ''}`]);
+  }
+  if (c.wrong) {
+    const l = lastOf('wrong');
+    const who = l ? ` (${l.staffName}${l.note ? `: ${String(l.note).replace(/\s+/g, ' ').slice(0, 60)}` : ''})` : '';
+    parts.push([`từng bị báo sai ${c.wrong} lần${who} — kiểm tra kỹ`, 'orange']);
+  }
+  if (c.unsure) parts.push([`chưa chắc ${c.unsure} lần`]);
+  parts[0][0] = parts[0][0][0].toUpperCase() + parts[0][0].slice(1);
+  return L([...parts.flatMap((p, k) => (k ? [' · ', p] : [p])), ' — trả lời "đúng"/"sai" để cập nhật.'], 'note');
 }
 
 /**
- * The tariff answer. `showFooter` is false on a follow-up within the same topic —
- * repeating "trả lời đúng/sai để xác nhận" under every single message is most of
- * what made the bot read like a machine. It is still shown whenever there is a real
- * verdict history to surface.
+ * The tariff reply (spec §5b.3). Prints API fields verbatim: `rate` / `statement` are never
+ * recomposed here. Colours: green only on an eligible single rate outside candidate mode;
+ * red for "không được hưởng", anti-dumping and a pending extension; orange for rates that
+ * depend on which 10-digit line the goods fall in; one `warn` line for the data scope.
+ *
+ * @param {{dotted: string, origin: string|null, date: string}} q
+ * @param {object} r         TariffResponse
+ * @param {object|null} confirm  verdict history from /tariff/confirmations
+ * @param {{showFooter?: boolean, candidate?: boolean}} opts  candidate: the code is not settled (R2)
  */
-export function formatAnswer(q, r, confirm, { showFooter = true } = {}) {
-  const lines = [`📋 ${q.dotted}${q.origin ? ` · ${q.origin}` : ''} · ${q.date}`];
-  if (r.goods?.heading) lines.push(`📦 ${r.goods.heading}`);
-  const mfn = r.import?.mfn;
-  if (mfn) lines.push(`MFN: ${mfn.statement}  (${mfn.decree})`);
-  const pref = r.import?.preferential ?? [];
-  if (pref.length) {
-    lines.push('Ưu đãi FTA (cần C/O đúng form):');
-    // ⛔ marks a schedule the decree denies this origin, so it does not read as a preference.
-    for (const p of pref) lines.push(`${p.originExcluded ? '⛔' : '•'} ${p.schedule}: ${p.statement}`);
+export function formatAnswer(q, r, confirm, { showFooter = true, candidate = false } = {}) {
+  const origin = r.origin ?? q.origin ?? null;
+  const name = origin ? (ORIGIN_LABEL[origin] ?? origin) : null;
+  const verified = Boolean(r.ftaMembership);
+  const date = dmy(r.date ?? q.date);
+
+  // [n] in print order; the same source keeps its number.
+  const refs = [];
+  const cite = (key, label) => {
+    let i = refs.findIndex((x) => x.key === key);
+    if (i < 0) i = refs.push({ key, label }) - 1;
+    return ` [${i + 1}]`;
+  };
+  const dec = (v) => cite(v.decree, `NĐ ${v.decree} — ${v.scheduleName}`);
+
+  const mfn = r.import?.mfn ?? null;
+  const heading = r.goods?.heading ? cleanGazetteTitle('', r.goods.heading, 45) : '';
+  const hs = [[q.dotted, 'b'], ...(heading ? [' (', [heading, 'i'], ')'] : [])];
+  const mfnRate = (verb = '') =>
+    mfn
+      ? ['thuế nhập khẩu ưu đãi thông thường (', ['MFN', 'b'], `) ${verb}`, [mfn.statement, 'b'], dec(mfn)]
+      : [`chưa có dòng MFN tại ngày ${date}`];
+  const has = (verb) => (mfn ? [` ${verb} `, ...mfnRate()] : [' ', ...mfnRate()]);
+
+  const sched = (p) => `${p.schedule}${p.form ? ` (form ${p.form})` : ''}`;
+  const refused = (p, why) => L([[sched(p), 'b'], ': ', ['không được hưởng', 'red'], ` — ${why}`, dec(p)]);
+  const compact = (p) =>
+    L(
+      [
+        `${sched(p)}: `,
+        [p.rate, 'b'],
+        dec(p),
+        p.originExcluded === null && p.excludedOrigins?.length
+          ? ` — trừ hàng xuất xứ ${p.excludedOrigins.join(', ')} (NĐ ${p.decree} loại trừ ở dòng này)`
+          : '',
+      ],
+      'ul',
+    );
+  const row = (p, state) => {
+    switch (state) {
+      case 'excludedLine':
+        return [refused(p, 'dòng này bị loại khỏi biểu')];
+      case 'excludedOrigin':
+        return [refused(p, `NĐ ${p.decree} loại trừ hàng xuất xứ ${name} ở dòng này`)];
+      case 'bySubline':
+        return [
+          L([`${sched(p)}: `, ['mức theo dòng 10 số — đối chiếu dòng của hàng', 'orange'], dec(p)], 'ul'),
+          ...(p.sublines ?? []).map((s) =>
+            L([
+              `${s.codeDotted} ${s.desc}: `,
+              s.type === 'excluded' || s.originExcluded === true
+                ? ['không được hưởng', 'red']
+                : s.percent == null
+                  ? ['không rõ mức — đối chiếu nghị định', 'orange'] // malformed jsonb: never "null%" or 0%
+                  : [`${s.percent}%`, 'b'],
+            ]),
+          ),
+        ];
+      case 'subExcluded': {
+        const codes = p.sublines.filter((s) => s.originExcluded === true).map((s) => s.codeDotted).join(', ');
+        return [
+          L(
+            [`${sched(p)}: `, [p.rate, 'b', 'orange'], dec(p), ` — riêng dòng 10 số ${codes} không áp dụng cho xuất xứ ${name}; đối chiếu dòng của hàng`],
+            'ul',
+          ),
+        ];
+      }
+      case 'true':
+        // The only green in the bot: a verified member origin, not excluded, one rate for the whole 8-digit line.
+        return candidate
+          ? [compact(p)]
+          : [L([[`Có C/O${p.form ? ` form ${p.form}` : ''} hợp lệ (${p.schedule})`, 'b'], ': thuế nhập khẩu ưu đãi đặc biệt ', [p.rate, 'b', 'green'], dec(p)], 'ul')];
+      default:
+        return [compact(p)]; // trq, null, and false in candidate / unfiltered modes
+    }
+  };
+
+  const rows = (r.import?.preferential ?? []).map((p) => ({ p, s: prefState(p) }));
+  const pick = (...states) => rows.filter((x) => states.includes(x.s)).flatMap((x) => row(x.p, x.s));
+  const all = () => rows.flatMap((x) => row(x.p, x.s));
+  const unknown = () => (rows.some((x) => x.s === 'null') ? [L(['Biểu chưa xác định được theo xuất xứ:']), ...pick('null')] : []);
+  const hidden = rows.filter((x) => x.s === 'false').map((x) => x.p.schedule);
+  const COND = 'chỉ áp dụng khi hàng có xuất xứ từ nước thành viên và có C/O hợp lệ đúng form:';
+
+  const lines = [];
+  if (candidate) {
+    lines.push(L(['Nếu hàng thuộc mã ', ...hs, ', ', ...mfnRate('là '), rows.length ? `; mức FTA dưới đây ${COND}` : '.']), ...all());
+  } else if (!origin || !verified) {
+    const second = !rows.length
+      ? []
+      : !origin
+        ? [` Mức ưu đãi đặc biệt theo FTA ${COND}`]
+        : [' Mình chưa lọc được các biểu FTA theo xuất xứ ', [name, 'b'], `; mỗi mức dưới đây ${COND}`];
+    lines.push(L(['Hàng hóa có mã HS ', ...hs, ...has('có'), '.', ...second]), ...all());
+  } else if (rows.some((x) => x.s === 'true')) {
+    lines.push(
+      L(['Đối với hàng hóa có mã HS ', ...hs, ' có xuất xứ ', [name, 'b'], ', mức thuế nhập khẩu phụ thuộc vào việc có C/O ưu đãi hợp lệ hay không:']),
+      ...pick('true'),
+      ...pick('excludedLine', 'excludedOrigin'),
+      L([['Không có C/O ưu đãi hợp lệ', 'b'], ': ', ...mfnRate()], 'ul'),
+      ...pick('trq', 'bySubline', 'subExcluded'),
+      ...unknown(),
+    );
+    if (hidden.length) {
+      lines.push(L([`Đã ẩn ${hidden.join(', ')} vì ${name} không có trong danh sách nước thành viên đã xác nhận; nếu nước xuất xứ khác nước gửi hàng, nhắn tên nước xuất xứ.`], 'note'));
+    }
+  } else {
+    lines.push(
+      L(['Hàng hóa có mã HS ', ...hs, ' có xuất xứ ', [name, 'b'], ...has('áp'), '.']),
+      ...pick('excludedLine', 'excludedOrigin'),
+      ...pick('trq', 'bySubline', 'subExcluded'),
+      ...unknown(),
+    );
+    if (hidden.length) {
+      lines.push(L([`Các biểu FTA đã nạp khác (${hidden.join(', ')}) không áp dụng cho xuất xứ này; các hiệp định khác chưa được nạp. Nếu nước xuất xứ khác nước gửi hàng, nhắn tên nước xuất xứ.`]));
+    }
   }
+
   const oq = r.import?.outOfQuota;
-  if (oq) lines.push(`Ngoài hạn ngạch: ${oq.statement}`);
-  if (r.export) lines.push(`Xuất khẩu: ${r.export.statement}`);
-  for (const c of r.antiDumping ?? []) lines.push(`⚠️ ${c.statement}`);
-  if (r.staleness?.stale) lines.push(`⚠️ ${r.staleness.warning}`);
-  if (r.notes?.length) lines.push(...r.notes.map((n) => `ℹ️ ${n}`));
-  const hasHistory = confirm && (confirm.correct || confirm.wrong || confirm.unsure);
-  if (showFooter || hasHistory) lines.push(confirmFooter(confirm));
-  return lines.join('\n');
+  if (oq) lines.push(L(['Ngoài hạn ngạch: ', [oq.statement, 'b'], dec(oq)]));
+  if (r.export) lines.push(L(['Thuế xuất khẩu: ', [r.export.statement, 'b'], dec(r.export)]));
+  for (const c of r.antiDumping ?? []) {
+    lines.push(L([[c.statement, 'b'], ` — theo ${c.decisionNumber}`, cite(c.decisionNumber, `${c.decisionNumber} — thuế chống bán phá giá`)], 'red'));
+  }
+  if (r.staleness?.pendingExtension) lines.push(L([r.staleness.pendingExtension], 'red'));
+  for (const n of r.notes ?? []) lines.push(L([`Lưu ý: ${n}`], 'note'));
+
+  lines.push(L([]));
+  if (r.staleness?.warning) lines.push(L([r.staleness.warning], 'warn'));
+  const unloaded = r.staleness?.unloadedInstruments ?? [];
+  const sources = [
+    `Tra theo ngày ${date}`,
+    ...refs.map((x, i) => `[${i + 1}] ${x.label}`),
+    ...(unloaded.length ? [`Chưa nạp: ${unloaded.map((u) => `NĐ ${u}`).join(', ')}`] : []),
+  ];
+  lines.push(L([sources.join(' · ')], 'note'));
+
+  const history = confirmFooter(confirm);
+  if (history) {
+    lines.push(history);
+  } else if (showFooter) {
+    // Suggest only what the bot can do now; an origin changes nothing until the membership table is signed.
+    const hint = !verified ? '' : origin ? 'Muốn xem xuất xứ khác, nhắn tên nước; ' : 'Cho mình biết xuất xứ để lọc đúng biểu ưu đãi; ';
+    const sentence = `${hint}mã đúng với lô hàng thì trả lời "đúng", chưa đúng thì trả lời "sai" hoặc gửi mã đúng.`;
+    lines.push(L([[sentence[0].toUpperCase() + sentence.slice(1), 'i']]));
+  }
+  return lines;
 }
 
 export function formatCandidates(kw, list, origin) {
