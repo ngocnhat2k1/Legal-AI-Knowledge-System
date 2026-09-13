@@ -13,7 +13,7 @@ import { test } from 'node:test';
 import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
 import { formatAnswer, sanitizeLead, withLead } from './format.mjs';
 import { L, render, toText } from './render.mjs';
-import { cleanGazetteTitle, corpusHas, docNumberStatedIn, parseDocRef } from './parse.mjs';
+import { cleanGazetteTitle, corpusHas, docNumberStatedIn, parseDocRef, parseQuotedTariff } from './parse.mjs';
 
 // The bot's own legal answer, as it appears in a quote. Note it carries NO HS code.
 const LEGAL_ANSWER_QUOTE =
@@ -294,9 +294,20 @@ test('thuế CN, bảng thành viên đã xác nhận: đúng một chỗ xanh, 
   const sources = lineWith(p, 'Tra theo ngày 13/09/2026');
   assert.ok(sources.includes('[1] NĐ 118/2022/NĐ-CP') && sources.includes('[2] NĐ 26/2023/NĐ-CP'));
   assert.ok(lineWith(p, 'Đã ẩn AANZFTA, ATIGA, EVFTA'), 'phải nói rõ đã ẩn biểu nào');
+  assert.ok(styled(p, 'f_13').some((t) => t.startsWith('Đã ẩn')), 'dòng "Đã ẩn" là dòng note');
   for (const s of ['AANZFTA', 'ATIGA', 'EVFTA']) {
     assert.equal(p.msg.split('\n').filter((l) => l.includes(s)).length, 1, `${s} chỉ được nêu ở dòng "Đã ẩn"`);
   }
+  // A non-member schedule stays hidden when its line is by_subline: no sub-line rate for an origin with no right to it.
+  const r = tariff8481({ origin: 'CN', verified: true, eligible: { ACFTA: true, ...NOT_MEMBER } });
+  const sub = (codeDotted, percent) => ({ code: codeDotted.replace(/\./g, ''), codeDotted, desc: '- - x', type: 'ad_valorem', percent, excludedOrigins: [], originExcluded: null });
+  r.import.preferential[3] = { ...r.import.preferential[3], type: 'by_subline', percent: null, rate: 'Theo dòng 10 số (không có một mức chung cho mã 8 số)', sublines: [sub('8481.80.99.10', 0), sub('8481.80.99.90', 5)] };
+  const bySub = one(formatAnswer(CN, r, null));
+  assert.equal(bySub.msg.split('\n').filter((l) => l.includes('EVFTA')).length, 1, 'EVFTA by_subline của nước không phải thành viên chỉ nằm ở dòng "Đã ẩn"');
+  assert.ok(lineWith(bySub, 'Đã ẩn').includes('EVFTA'));
+  assert.ok(!bySub.msg.includes('8481.80.99.10') && !bySub.msg.includes('8481.80.99.90'), 'không in dòng 10 số của biểu đã ẩn');
+  // Quoted back after memory expired: the lead names the origin that was looked up.
+  assert.equal(parseQuotedTariff(toText(formatAnswer(CN, tariff8481({ origin: 'CN', verified: true, eligible: { ACFTA: true, ...NOT_MEMBER } }), null))).origin, 'CN');
 });
 
 test('thuế CN, bảng chưa xác nhận: đủ bốn biểu, không xanh, không gợi ý đổi xuất xứ', () => {
@@ -311,6 +322,9 @@ test('thuế không có xuất xứ: dòng gọn, không xanh, ACFTA nêu các n
   const p = one(formatAnswer(NO_ORIGIN, tariff8481(), null));
   assert.equal(styled(p, GREEN).length, 0);
   assert.ok(lineWith(p, 'ACFTA (form E)').includes('trừ hàng xuất xứ KH, PH'));
+  // Quoted back: "ASEAN–Trung Quốc (ACFTA)" in the rows and sources is not an origin; the date is the looked-up one.
+  const quoted = parseQuotedTariff(toText(formatAnswer(NO_ORIGIN, { ...tariff8481(), date: '2026-01-05' }, null)));
+  assert.deepEqual([quoted.hs, quoted.origin, quoted.date], ['84818099', null, '2026-01-05']);
 });
 
 test('xuất xứ bị NĐ 118 loại trừ ở dòng: "không được hưởng" màu đỏ, không con số ưu đãi, vẫn có MFN', () => {
@@ -329,11 +343,19 @@ test('dòng loại khỏi biểu và dòng hạn ngạch không bao giờ xanh; 
   assert.deepEqual(styled(excluded, RED), ['không được hưởng']);
   assert.ok(!lineWith(excluded, 'ACFTA (form E)').includes('%'));
   assert.ok(!excluded.msg.includes('phụ thuộc vào việc có C/O'));
+  assert.ok(excluded.msg.split('\n')[0].includes(' áp thuế'), 'mọi biểu đã bị từ chối thì MFN là mức áp');
   const trq = one(
     formatAnswer(CN, tariff8481({ origin: 'CN', verified: true, eligible: NOT_MEMBER, acfta: { type: 'trq', rate: 'Trong hạn ngạch 0%; ngoài hạn ngạch xem biểu ngoài hạn ngạch', originEligible: true } }), null),
   );
   assert.equal(styled(trq, GREEN).length, 0);
   assert.ok(!trq.msg.includes('phụ thuộc vào việc có C/O'));
+  // A row below can still grant a preference: the lead must not read as "MFN applies".
+  const open = (p) => {
+    const lead = p.msg.split('\n')[0];
+    assert.ok(!lead.includes(' áp thuế') && lead.includes('Mỗi mức dưới đây chỉ áp dụng khi'), lead);
+  };
+  open(trq);
+  open(one(formatAnswer({ ...CN, origin: 'EU' }, tariff8481({ origin: 'EU', verified: true }), null)));
 });
 
 test('dòng 10 số: loại trừ ở một dòng con thì mức tô cam; by_subline in từng dòng; không xanh', () => {
@@ -360,10 +382,19 @@ test('chống bán phá giá và gia hạn chưa nạp: dòng đỏ, chữ nguy�
   const statement = 'Chống bán phá giá 4.28% (cộng thêm thuế NK), xuất xứ CN';
   const ext = 'Mức thuế nhập khẩu ưu đãi của mã này có thể đã được NQ 25/2026 gia hạn tới 30/06/2026 nhưng văn bản đó chưa nạp — đối chiếu trước khi khai.';
   const base = tariff8481({ origin: 'CN' });
-  const r = { ...base, antiDumping: [{ statement, decisionNumber: 'QĐ-TEST-01' }], staleness: { ...base.staleness, pendingExtension: ext } };
-  const red = styled(one(formatAnswer(CN, r, null)), RED);
+  const r = {
+    ...base,
+    export: { schedule: 'XK', scheduleName: 'Biểu thuế xuất khẩu', type: 'ad_valorem', percent: '0', decree: '26/2023/NĐ-CP', statement: '0%' },
+    antiDumping: [{ statement, decisionNumber: 'QĐ-TEST-01' }],
+    staleness: { ...base.staleness, pendingExtension: ext },
+  };
+  const p = one(formatAnswer(CN, r, null));
+  const red = styled(p, RED);
   assert.ok(red.some((t) => t.includes(statement) && t.includes('QĐ-TEST-01')));
   assert.ok(red.includes(ext));
+  // Export and MFN share a decree, so one [n]; its label must name both schedules (R10).
+  assert.ok(lineWith(p, 'Thuế xuất khẩu').endsWith('[1]'));
+  assert.ok(lineWith(p, 'Tra theo ngày').includes('[1] NĐ 26/2023/NĐ-CP — Biểu thuế nhập khẩu ưu đãi (MFN, Mục I); Biểu thuế xuất khẩu'));
 });
 
 test('dòng phạm vi kho là dòng cam nguyên văn; gộp với cảnh báo nhiều nhóm thành đúng một dòng', () => {
@@ -385,6 +416,7 @@ test('dòng kết: lịch sử xác nhận thay lời mời; không lịch sử 
   assert.equal(afterSources(hist).length, 1);
   assert.ok(afterSources(hist)[0].startsWith('Từng bị báo sai 1 lần'), 'lịch sử xác nhận phải còn hiện (R18)');
   assert.ok(styled(hist, ORANGE).some((t) => t.startsWith('Từng bị báo sai')));
+  assert.ok(styled(hist, 'f_13').some((t) => t.startsWith('Từng bị báo sai')), 'lịch sử xác nhận là dòng note');
   assert.ok(!afterSources(hist)[0].includes('nhắn tên nước'), 'có lịch sử thì không gợi ý');
   assert.equal(afterSources(one(formatAnswer(CN, r, null))).length, 1);
   assert.equal(afterSources(one(formatAnswer(CN, r, null, { showFooter: false }))).length, 0);
@@ -396,4 +428,5 @@ test('chế độ ứng viên: câu dẫn có điều kiện, không xanh, khôn
   assert.equal(styled(p, 'b')[0], '8481.80.99');
   assert.equal(styled(p, GREEN).length, 0, 'mức ưu đãi phụ thuộc một phân loại chưa ai chốt');
   assert.ok(!p.msg.includes('Đã ẩn'));
+  for (const s of ['AANZFTA (form AANZ)', 'ATIGA (form D)', 'EVFTA (form EUR.1/REX)']) assert.ok(lineWith(p, s), `thiếu dòng ${s}`);
 });

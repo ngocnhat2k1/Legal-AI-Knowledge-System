@@ -643,11 +643,11 @@ giờ dùng để đọc xuất xứ.
 |---|---|
 | `type === 'excluded'` | "**{schedule} (form {form})**: {đỏ: không được hưởng} — dòng này bị loại khỏi biểu [n]". Không có con số |
 | `originExcluded === true` | "**{schedule} (form {form})**: {đỏ: không được hưởng} — NĐ {decree} loại trừ hàng xuất xứ {nhãn} ở dòng này [n]". Không có con số |
+| `originEligible === false` | ẩn; tên biểu vào dòng "Đã ẩn" (dạng A) hoặc câu thuần (dạng B). Đứng trước `by_subline`: API trả `false` cho mọi xuất xứ ngoài bảng thành viên bất kể `type`, nên mã `by_subline` của biểu mà xuất xứ không phải thành viên cũng ẩn, không in mức dòng 10 số |
 | `type === 'by_subline'` | `ul` "{schedule} (form {form}): {cam: mức theo dòng 10 số — đối chiếu dòng của hàng} [n]", rồi mỗi `sublines[]` một dòng thuần "{codeDotted} {desc}: **{percent}%**" (`type === 'excluded'` hoặc `originExcluded === true` → {đỏ: không được hưởng}, không con số). Không xanh, không phải dòng `true` |
 | mã có mức chung, một `sublines[].originExcluded === true` (API trả `originEligible: null`) | `ul` "{schedule} (form {form}): {cam: **{rate}**} [n] — riêng dòng 10 số {codeDotted} không áp dụng cho xuất xứ {nhãn}; đối chiếu dòng của hàng" |
 | `originEligible === true` và `type` ∈ {`ad_valorem`, `specific`, `compound`}, gọi là **dòng `true`** | `ul` "**Có C/O form {form} hợp lệ ({schedule})**: thuế nhập khẩu ưu đãi đặc biệt {xanh: **{rate}**} [n]". **Chỗ duy nhất có xanh** |
 | `originEligible === true`, `type === 'trq'` | `ul` "{schedule} (form {form}): **{rate}** [n]". Không xanh, không phải dòng `true` |
-| `originEligible === false` | ẩn; tên biểu vào dòng "Đã ẩn" (dạng A) hoặc câu thuần (dạng B) |
 | `originEligible === null` | dạng gọn `ul` "{schedule} (form {form}): **{rate}** [n]"; khi `originExcluded === null` và `excludedOrigins` khác rỗng thêm " — trừ hàng xuất xứ {excludedOrigins} (NĐ {decree} loại trừ ở dòng này)"; không xanh |
 
 Hai hàng đỏ đầu gọi chung là **dòng không được hưởng**.
@@ -667,6 +667,10 @@ Hai hàng đỏ đầu gọi chung là **dòng không được hưởng**.
      **{mfn.statement}** [n]." → các dòng không được hưởng, các dòng `trq` → câu thuần "Các biểu FTA đã
      nạp khác ({chỉ các biểu `false`}) không áp dụng cho xuất xứ này; các hiệp định khác chưa được nạp.
      Nếu nước xuất xứ khác nước gửi hàng, nhắn tên nước xuất xứ." (bỏ câu khi không có biểu `false`).
+     Câu dẫn chỉ nói "áp" khi mọi dòng là dòng không được hưởng hoặc `false`. Còn dòng có thể cho hưởng ưu
+     đãi khi có C/O (`trq`, `by_subline`, mức chung có dòng 10 số bị loại trừ, `null`) thì "áp" đổi thành
+     "có" và thêm câu "Mỗi mức dưới đây chỉ áp dụng khi hàng có xuất xứ từ nước thành viên và có C/O hợp lệ
+     đúng form:": người khai đọc câu đầu như câu trả lời.
    - **(C)** không có xuất xứ: "Hàng hóa có mã HS **{dotted}** (*{heading}*) có thuế nhập khẩu ưu đãi
      thông thường (**MFN**) **{mfn.statement}** [n]. Mức ưu đãi đặc biệt theo FTA chỉ áp dụng khi hàng có
      xuất xứ từ nước thành viên và có C/O hợp lệ đúng form:" → các dòng theo bảng.
@@ -693,7 +697,9 @@ Hai hàng đỏ đầu gọi chung là **dòng không được hưởng**.
 5. **Dòng phạm vi kho:** `staleness.warning` nguyên văn, nhãn `warn`.
 6. **Nguồn** (`note`): "Tra theo ngày {dd/mm/yyyy} · [1] NĐ {decree} — {scheduleName} · [2] … · Chưa nạp:
    NĐ {u1}, NĐ {u2}…" (vế cuối từ `staleness.unloadedInstruments`, bỏ khi rỗng). [n] cấp **theo thứ tự
-   in**: dòng mang dấu xuất hiện trước trong tin nhận số nhỏ hơn; cùng số hiệu nghị định → cùng [n].
+   in**: dòng mang dấu xuất hiện trước trong tin nhận số nhỏ hơn; cùng số hiệu nghị định → cùng [n], và nhãn
+   của [n] đó nối thêm tên biểu trích sau ("; {scheduleName}"), ví dụ MFN và thuế xuất khẩu cùng NĐ
+   26/2023/NĐ-CP: "[1] NĐ 26/2023/NĐ-CP — Biểu thuế nhập khẩu ưu đãi (MFN, Mục I); Biểu thuế xuất khẩu" (R10).
 7. **Dòng kết: tối đa một dòng sau nguồn.**
    - Có lịch sử xác nhận → `confirmFooter` trả **một** dòng `note`, giữ lịch sử
      ([R18](../business-rules.md)): `Đã xác nhận đúng {n} lần (gần nhất: {tên}) · {cam: từng bị báo sai
@@ -1181,29 +1187,37 @@ test hàm thuần: không import `index.mjs` (chạy `main()` và đăng nhập 
 10. CN, bảng đã xác nhận (ACFTA `originEligible: true`, ba biểu còn lại `false`) → câu dẫn chứa "có xuất
     xứ", không chứa "nhập khẩu từ"; đúng một style `c_15a85f`, phủ `0%` của dòng ACFTA; dòng ACFTA mang
     `[1]`, dòng MFN `10%` mang `[2]`; nguồn chứa `[1] NĐ 118/2022/NĐ-CP` và `[2] NĐ 26/2023/NĐ-CP`; có dòng
-    `note` "Đã ẩn AANZFTA, ATIGA, EVFTA"; ngoài dòng đó không có chữ `AANZFTA`, `ATIGA`, `EVFTA`.
+    `note` "Đã ẩn AANZFTA, ATIGA, EVFTA" (mang `f_13`); ngoài dòng đó không có chữ `AANZFTA`, `ATIGA`, `EVFTA`.
+    EVFTA đổi thành `by_subline` với hai dòng 10 số, `originEligible: false` → EVFTA vẫn chỉ ở dòng "Đã ẩn",
+    không in `codeDotted` nào. `parseQuotedTariff(toText(…))` → `origin === 'CN'`.
 11. CN, `ftaMembership: null` → bốn dòng FTA, **không** style xanh, câu dẫn chứa "Mình chưa lọc được các
     biểu FTA theo xuất xứ"; dòng kết không chứa "nhắn tên nước".
 12. Không xuất xứ → bốn dòng gọn, không xanh, dòng ACFTA chứa "trừ hàng xuất xứ KH, PH".
+    `parseQuotedTariff` trên chữ trả lời ngày `2026-01-05` → `origin === null` dù hàng và nguồn có
+    "ASEAN–Trung Quốc", `date === '2026-01-05'` (lấy lại từ "Tra theo ngày").
 13. `originExcluded: true` → "không được hưởng" mang `c_db342e`; dòng đó không chứa `%`; vẫn có câu MFN;
     không xanh.
 14. `type: 'excluded'` với `originEligible: true` → "không được hưởng" mang `c_db342e`, dòng không chứa
     `%`, câu dẫn dạng (B) (không chứa "phụ thuộc vào việc có C/O"); `type: 'trq'` với `originEligible:
-    true` → không xanh, câu dẫn dạng (B).
+    true` → không xanh, câu dẫn dạng (B). Câu dẫn của dòng `excluded` chứa " áp thuế"; câu dẫn của dòng `trq`
+    và của xuất xứ `EU` (mọi dòng `null`) không chứa " áp thuế" mà chứa "Mỗi mức dưới đây chỉ áp dụng khi".
 15. CN, bảng đã xác nhận, ACFTA mức chung `0%` có một `sublines[]` với `originExcluded: true`,
     `originEligible: null` → không `c_15a85f`; mức của dòng mang `c_f27806`; dòng chứa "riêng dòng 10 số".
     `type: 'by_subline'` với hai dòng 10 số `0` và `5` → không `c_15a85f`; có cả hai `codeDotted`; dòng tên
     biểu không chứa `%`; câu dẫn không phải dạng (A).
 16. Một mục `antiDumping` → một dòng `c_db342e` chứa `statement` và `decisionNumber`;
-    `staleness.pendingExtension` khác null → một dòng `c_db342e` nguyên văn.
+    `staleness.pendingExtension` khác null → một dòng `c_db342e` nguyên văn. `export` cùng NĐ 26/2023/NĐ-CP
+    với MFN → dòng "Thuế xuất khẩu" mang `[1]`; nhãn `[1]` chứa "Biểu thuế nhập khẩu ưu đãi (MFN, Mục I);
+    Biểu thuế xuất khẩu".
 17. Dòng phạm vi kho = `staleness.warning` nguyên văn, mang `c_f27806`. Fixture `Line[]` = một dòng `warn`
     (cảnh báo nhiều nhóm) nối trước đầu ra `formatAnswer(…)` → sau `render` đúng một dòng cam, chứa cả hai
     chữ.
 18. Dòng kết: có lịch sử `wrong` → dòng cuối là `confirmFooter` (một dòng `note`, đoạn "từng bị báo sai"
-    mang `c_f27806`), không có gợi ý; không lịch sử, `showFooter` → đúng một dòng sau dòng nguồn;
+    mang `f_13` và `c_f27806`), không có gợi ý; không lịch sử, `showFooter` → đúng một dòng sau dòng nguồn;
     `showFooter: false`, không lịch sử → không dòng nào sau dòng nguồn.
 19. Chế độ ứng viên: `formatAnswer(…, { candidate: true })` với ACFTA `originEligible: true` → câu dẫn bắt
-    đầu "Nếu hàng thuộc mã **8481.80.99**", không `c_15a85f`, không dòng "Đã ẩn";
+    đầu "Nếu hàng thuộc mã **8481.80.99**", không `c_15a85f`, không dòng "Đã ẩn", vẫn có dòng AANZFTA, ATIGA,
+    EVFTA;
     `withLead('Sản phẩm này thuộc mã 8481.80.99', [dòng ứng viên cố định, …])` vẫn chứa dòng ứng viên cố
     định.
 20. Pháp luật: `answer` có `[1]`, `[2]`, API trả 5 trích dẫn → in đủ `[1]`…`[5]`; hai văn bản

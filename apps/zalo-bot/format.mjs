@@ -62,11 +62,12 @@ const RATE_TYPES = new Set(['ad_valorem', 'specific', 'compound']);
 function prefState(p) {
   if (p.type === 'excluded') return 'excludedLine';
   if (p.originExcluded === true) return 'excludedOrigin';
+  // Before by_subline: a non-member origin is hidden whatever the line type, never shown its sub-line rates.
+  if (p.originEligible === false) return 'false';
   if (p.type === 'by_subline') return 'bySubline';
   if (p.originEligible === null && (p.sublines ?? []).some((s) => s.originExcluded === true)) return 'subExcluded';
   if (p.originEligible === true && RATE_TYPES.has(p.type)) return 'true';
   if (p.originEligible === true && p.type === 'trq') return 'trq';
-  if (p.originEligible === false) return 'false';
   return 'null';
 }
 
@@ -107,14 +108,15 @@ export function formatAnswer(q, r, confirm, { showFooter = true, candidate = fal
   const verified = Boolean(r.ftaMembership);
   const date = dmy(r.date ?? q.date);
 
-  // [n] in print order; the same source keeps its number.
+  // [n] in print order; the same decree keeps its number, and its label names every schedule cited from it (R10).
   const refs = [];
-  const cite = (key, label) => {
+  const cite = (key, label, name = '') => {
     let i = refs.findIndex((x) => x.key === key);
     if (i < 0) i = refs.push({ key, label }) - 1;
+    else if (name && !refs[i].label.includes(name)) refs[i].label += `; ${name}`;
     return ` [${i + 1}]`;
   };
-  const dec = (v) => cite(v.decree, `NĐ ${v.decree} — ${v.scheduleName}`);
+  const dec = (v) => cite(v.decree, `NĐ ${v.decree} — ${v.scheduleName}`, v.scheduleName);
 
   const mfn = r.import?.mfn ?? null;
   const heading = r.goods?.heading ? cleanGazetteTitle('', r.goods.heading, 45) : '';
@@ -208,8 +210,10 @@ export function formatAnswer(q, r, confirm, { showFooter = true, candidate = fal
       lines.push(L([`Đã ẩn ${hidden.join(', ')} vì ${name} không có trong danh sách nước thành viên đã xác nhận; nếu nước xuất xứ khác nước gửi hàng, nhắn tên nước xuất xứ.`], 'note'));
     }
   } else {
+    // "áp" only when every row is refused or hidden; a trq, 10-digit or undetermined row can still grant a preference.
+    const settled = rows.every((x) => ['false', 'excludedLine', 'excludedOrigin'].includes(x.s));
     lines.push(
-      L(['Hàng hóa có mã HS ', ...hs, ' có xuất xứ ', [name, 'b'], ...has('áp'), '.']),
+      L(['Hàng hóa có mã HS ', ...hs, ' có xuất xứ ', [name, 'b'], ...has(settled ? 'áp' : 'có'), '.', ...(settled ? [] : [` Mỗi mức dưới đây ${COND}`])]),
       ...pick('excludedLine', 'excludedOrigin'),
       ...pick('trq', 'bySubline', 'subExcluded'),
       ...unknown(),

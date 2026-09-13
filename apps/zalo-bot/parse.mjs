@@ -76,6 +76,19 @@ export function parseQuery(text) {
 /** Does this text contain an HS code at all? Used to decide whether a quoted message is a tariff answer. */
 export const hasHs = (text) => HS_RE.test(String(text || ''));
 
+/**
+ * The code, origin and date a quoted tariff reply was looked up with. Reads only the first line naming a
+ * code (the lead): the rows and sources name schedules such as "ASEAN–Trung Quốc (ACFTA)", which are not
+ * origins. The date comes back from "Tra theo ngày dd/mm/yyyy".
+ */
+export function parseQuotedTariff(text) {
+  const s = String(text || '');
+  const q = parseQuery(s.split('\n').find(hasHs));
+  const d = s.match(/Tra theo ngày (\d{2})\/(\d{2})\/(\d{4})/);
+  if (q && d) q.date = `${d[3]}-${d[2]}-${d[1]}`;
+  return q;
+}
+
 /** Strip origin/date/filler from a sentence to get the product keyword ("van từ TQ" → "van"). */
 export function keywordFrom(text, origin) {
   let t = String(text || '').toLowerCase().replace(/\d{4}-\d{2}-\d{2}/g, ' ');

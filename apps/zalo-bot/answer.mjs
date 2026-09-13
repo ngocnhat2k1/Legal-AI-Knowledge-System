@@ -24,7 +24,7 @@ import {
 import { stampTariff } from './conversation.mjs';
 import { formatAnswer, formatLegal, formatMissingDoc, formatProvisions, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
-import { citationFrom, cleanGazetteTitle, corpusHas, detectOrigin, keywordFrom, parseDocRef, parseQuery } from './parse.mjs';
+import { citationFrom, cleanGazetteTitle, corpusHas, detectOrigin, keywordFrom, parseDocRef, parseQuery, parseQuotedTariff } from './parse.mjs';
 import { L, toText } from './render.mjs';
 import { claudeVision } from './router.mjs';
 
@@ -296,7 +296,7 @@ export async function handleCorrection(tariff, text, senderName, quote) {
   // Mã CŨ (bị coi là sai): ưu tiên kết quả đã nhớ; nếu hết hạn thì lấy lại từ tin được quote.
   const old = tariff?.hs
     ? { hs: tariff.hs, dotted: tariff.dotted, origin: tariff.origin, date: tariff.date, snapshot: tariff.snapshot }
-    : parseQuery(String(quote?.msg || ''));
+    : parseQuotedTariff(quote?.msg);
   const fix = parseQuery(text); // mã đúng người dùng đưa ra (nếu có)
   const now = today();
   // Mô tả hàng đã lưu từ lần phân loại trước — để đính vào bản ghi 'correct' cho mã đúng,
