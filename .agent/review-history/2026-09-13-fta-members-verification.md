@@ -1,13 +1,15 @@
 ---
 type: review
-status: pending-owner-verification
+status: approved
 updated: 2026-09-13
 related:
   - ../business-rules.md
   - ../concepts/tariff-system.md
 ---
 
-# Phiếu xác minh danh sách nước được hưởng thuế suất FTA (BẢN NHÁP)
+# Phiếu xác minh danh sách nước được hưởng thuế suất FTA
+
+**Đã duyệt: Trần Ngọc Nhật, 2026-09-13** (chủ dự án duyệt qua trao đổi với agent). Duyệt toàn bộ bảng như trích dẫn dưới đây, kể cả các điểm ở mục "Cần anh/chị xem kỹ". Chưa làm: rà các nghị định sửa đổi, bổ sung 4 văn bản sau 30/12/2022 (mục 8). `db/seed/data/fta-members.json` đã ghi `verifiedBy`/`verifiedAt` tương ứng.
 
 File cần xác minh: `db/seed/data/fta-members.json` (`verifiedBy: null`, `verifiedAt: null`). Theo R18, chỉ người có tên mới được ghi "đã xác minh".
 Nguồn: văn bản `.doc` trên Công báo (congbao.chinhphu.vn), tải ngày 2026-09-13, chuyển sang text bằng `textutil`. Trích dẫn cắt thẳng từ text nguồn (chỉ bỏ dòng trống); từng tên nước đã được so khớp tự động với đúng dòng của nó trong trích dẫn.
@@ -55,7 +57,7 @@ Tổng: **10** thành viên.
 
 - Hàng hóa từ khu phi thuế quan của Việt Nam nhập khẩu vào thị trường trong nước được áp dụng thuế suất thuế nhập khẩu ưu đãi đặc biệt theo Hiệp định ACFTA phải đáp ứng đủ các điều kiện quy định tại khoản 1 và khoản 3 Điều 4 Nghị định này.
 
-- [ ] Tôi đã đối chiếu trích dẫn và 10 mã ISO của ACFTA với văn bản gốc. Người xác minh: ____________ Ngày: ____________
+- [x] Tôi đã đối chiếu trích dẫn và 10 mã ISO của ACFTA với văn bản gốc. Người xác minh: Trần Ngọc Nhật Ngày: 2026-09-13
 
 ## AANZFTA — Nghị định 121/2022/NĐ-CP
 
@@ -101,7 +103,7 @@ Tổng: **11** thành viên.
 
 - Hàng hóa từ khu phi thuế quan của Việt Nam nhập khẩu vào thị trường trong nước được áp dụng thuế suất thuế nhập khẩu ưu đãi đặc biệt theo Hiệp định thành lập Khu vực Thương mại tự do ASEAN - Ôt-xtrây-lia - Niu Di-lân phải đáp ứng đủ các điều kiện quy định tại khoản 1 và khoản 3 Điều 4 Nghị định này.
 
-- [ ] Tôi đã đối chiếu trích dẫn và 11 mã ISO của AANZFTA với văn bản gốc. Người xác minh: ____________ Ngày: ____________
+- [x] Tôi đã đối chiếu trích dẫn và 11 mã ISO của AANZFTA với văn bản gốc. Người xác minh: Trần Ngọc Nhật Ngày: 2026-09-13
 
 ## ATIGA — Nghị định 126/2022/NĐ-CP
 
@@ -143,7 +145,7 @@ Tổng: **9** thành viên.
 
 - Hàng hóa từ khu phi thuế quan của Việt Nam nhập khẩu vào thị trường trong nước được áp dụng thuế suất thuế nhập khẩu ưu đãi đặc biệt theo Hiệp định Thương mại hàng hóa ASEAN phải đáp ứng đủ các điều kiện quy định tại khoản 1 và khoản 3 Điều 4 Nghị định này.
 
-- [ ] Tôi đã đối chiếu trích dẫn và 9 mã ISO của ATIGA với văn bản gốc. Người xác minh: ____________ Ngày: ____________
+- [x] Tôi đã đối chiếu trích dẫn và 9 mã ISO của ATIGA với văn bản gốc. Người xác minh: Trần Ngọc Nhật Ngày: 2026-09-13
 
 ## EVFTA — Nghị định 116/2022/NĐ-CP
 
@@ -232,11 +234,11 @@ Tổng: **29** thành viên.
 - Vùng lãnh thổ Xớt-ta và Mê-li-la.
 - Hàng hóa từ khu phi thuế quan của Việt Nam nhập khẩu vào thị trường trong nước được áp dụng thuế suất thuế nhập khẩu ưu đãi đặc biệt theo Hiệp định EVFTA phải đáp ứng đủ các điều kiện quy định tại điểm a, điểm c khoản 3 Điều 5 Nghị định này.
 
-- [ ] Tôi đã đối chiếu trích dẫn và 29 mã ISO của EVFTA với văn bản gốc. Người xác minh: ____________ Ngày: ____________
+- [x] Tôi đã đối chiếu trích dẫn và 29 mã ISO của EVFTA với văn bản gốc. Người xác minh: Trần Ngọc Nhật Ngày: 2026-09-13
 
 ## Cần anh/chị xem kỹ
 
-1. **ACFTA — cột “Nước không được hưởng ưu đãi” (Điều 3 khoản 5) bị thiếu trong dữ liệu đã nạp.** Biểu ACFTA có cột này; hàng nhập từ nước có ký hiệu trong cột KHÔNG được hưởng thuế suất ACFTA. `fta-acfta.ndjson` chỉ có `hs/hs_dotted/desc/rates`. Rà soát tự động 10 phần Công báo (529+530 → 547+548): khoảng **3185** dòng HS có ký hiệu nước; **510** dòng loại trừ CN, trong đó **446** dòng đang có thuế suất 0 trong seed (ví dụ `0901.11.20` loại trừ CN, MM, TH). Số dòng theo nước: BN 371, KH 1177, ID 951, LA 121, MY 692, MM 707, PH 896, SG 4, TH 856, CN 510. Nếu code chỉ kiểm tra "nước có là thành viên", bot sẽ báo 0% cho hàng Trung Quốc ở các dòng này — đúng kiểu lỗi âm thầm. Đề nghị: không dùng file thành viên cho ACFTA cho tới khi nạp cột loại trừ. Số đếm ban đầu là heuristic; **đang sửa riêng (2026-09-13 tối)**: nạp cột loại trừ vào `db/seed/data/fta-acfta.ndjson` (trường `excluded`, `excluded_sublines`) và API không trả mức ưu đãi cho nước bị loại trừ ở dòng đó — có agent đối chiếu độc lập toàn bộ dòng với nghị định.
+1. **ACFTA — cột “Nước không được hưởng ưu đãi” (Điều 3 khoản 5) bị thiếu trong dữ liệu đã nạp.** Biểu ACFTA có cột này; hàng nhập từ nước có ký hiệu trong cột KHÔNG được hưởng thuế suất ACFTA. `fta-acfta.ndjson` chỉ có `hs/hs_dotted/desc/rates`. Rà soát tự động 10 phần Công báo (529+530 → 547+548): khoảng **3185** dòng HS có ký hiệu nước; **510** dòng loại trừ CN, trong đó **446** dòng đang có thuế suất 0 trong seed (ví dụ `0901.11.20` loại trừ CN, MM, TH). Số dòng theo nước: BN 371, KH 1177, ID 951, LA 121, MY 692, MM 707, PH 896, SG 4, TH 856, CN 510. Nếu code chỉ kiểm tra "nước có là thành viên", bot sẽ báo 0% cho hàng Trung Quốc ở các dòng này — đúng kiểu lỗi âm thầm. Đề nghị: không dùng file thành viên cho ACFTA cho tới khi nạp cột loại trừ. Số đếm ban đầu là heuristic; **đã sửa và deploy (2026-09-13, commit `19eda99`)**: nạp cột loại trừ vào `db/seed/data/fta-acfta.ndjson` (trường `excluded`, `excluded_sublines`) và API không trả mức ưu đãi cho nước bị loại trừ ở dòng đó — có agent đối chiếu độc lập toàn bộ dòng với nghị định.
 2. **ACFTA — Hồng Kông, Ma Cao, Đài Loan:** Điều 4 khoản 2 viết “các quốc gia và vùng lãnh thổ sau” nhưng chỉ liệt kê 10 nước; không có HK/MO/TW. File không thêm các mã này.
 3. **Mi-an-ma, Cam-pu-chia, Lào:** cả 3 nghị định ASEAN (118, 121, 126) liệt kê bình thường, không có điều kiện riêng ở khoản thành viên. Nhưng trong Biểu ACFTA các nước này thường nằm ở cột loại trừ (KH 1177, MM 707, LA 121 dòng).
 4. **EVFTA — thành phần EU:** Phụ lục III có 27 nước, không có Anh. Tây Ban Nha “không bao gồm vùng lãnh thổ Xớt-ta và Mê-li-la”, nhưng Xớt-ta và Mê-li-la lại được hưởng riêng (điểm b) — không có mã ISO chính thức (chỉ mã bảo lưu `EA`) nên để ở specialOrigins; tờ khai có thể ghi ES. An-đô-ra (`AD`) và San Ma-ri-nô (`SM`) có trong members. Mô-na-cô và các lãnh thổ hải ngoại (Greenland, Faroe, Aruba…) không được nêu. Hy Lạp là `GR` (EU có nơi dùng `EL`). Nghị định gọi “Cộng hòa Hà Lan” — giữ nguyên.
