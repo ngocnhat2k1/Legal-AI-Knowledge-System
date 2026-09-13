@@ -49,6 +49,17 @@ describe('numberMarkers — [n] points at citations[n-1], and the numbers beside
     expect(numberMarkers('Mức 5% [3].', [3], five, 'mức 5% đúng không').answer).toBe('');
   });
 
+  it('matches a figure on digit boundaries: 0% is not inside 10%, 30 ngày not inside 130 ngày', () => {
+    const src = ['Điều 1\nThuế suất 10%, nộp trong 130 ngày, phạt 11.000.000 đồng'];
+    expect(numberMarkers('Thuế suất **0%** [1].', [1], src, '').answer).toBe('');
+    expect(numberMarkers('Phạt **1.000.000 đồng** [1].', [1], src, '').answer).toBe('');
+    expect(numberMarkers('Nộp trong **30 ngày** [1].', [1], src, '').answer).toBe('Nộp trong 30 ngày.');
+  });
+
+  it('reads a leading zero as the same document number', () => {
+    expect(numberMarkers('Theo **08/2015/NĐ-CP** [1].', [1], ['Điều 1 Nghị định 8/2015/NĐ-CP\nx'], '').answer).toBe('Theo **08/2015/NĐ-CP** [1].');
+  });
+
   it('reads a bold, quoted or directly marked document number without the characters around it', () => {
     expect(numberMarkers('Theo **Nghị định 08/2015/NĐ-CP** [1].', [1], five, '').answer).toBe('Theo **Nghị định 08/2015/NĐ-CP** [1].');
     expect(numberMarkers('Theo “08/2015/NĐ-CP”[1].', [1], five, '').answer).toBe('Theo “08/2015/NĐ-CP”[1].');

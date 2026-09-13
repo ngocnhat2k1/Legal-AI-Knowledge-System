@@ -31,6 +31,11 @@ export function keepRelevant(articles: RetrievedArticle[]): RetrievedArticle[] {
 }
 
 const norm = (s: string): string => s.normalize('NFC').replace(/\s+/g, ' ').replace(/\s*%/g, '%').toLowerCase().trim();
+const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** `fact` stands in `hay` on digit boundaries, leading zeros ignored: 0% is not inside 10%, nor 30 ngày inside 130 ngày. */
+const figureIn = (hay: string, fact: string): boolean =>
+  new RegExp(`(?<!\\d[.,]?)0*${esc(fact.replace(/^0+(?=\d)/, ''))}(?!\\d)`).test(hay);
 
 /** Every digit group of `fact` stands as its own token in `text`, leading zeros ignored (as the bot's docNumberStatedIn). */
 const statedIn = (text: string, fact: string): boolean => {
@@ -79,7 +84,7 @@ export function numberMarkers(answer: string, cited: number[], sources: string[]
     for (const { re, exempt, fatal } of FACTS) {
       for (const [fact] of s.matchAll(re)) {
         const f = norm(fact.replace(/[.:]+$/, ''));
-        if (hay.some((h) => h.includes(f)) || (exempt && statedIn(userText, fact))) continue;
+        if (hay.some((h) => figureIn(h, f)) || (exempt && statedIn(userText, fact))) continue;
         if (fatal) return { answer: '', order: [] };
         anchored = false;
       }
