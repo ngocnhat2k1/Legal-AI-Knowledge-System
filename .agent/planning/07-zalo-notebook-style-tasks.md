@@ -15,7 +15,7 @@ related:
 
 # Kế hoạch triển khai — trình bày kiểu notebook trên Zalo (§5b)
 
-> **Trạng thái 2026-09-14:** Task 1–7 và Task 9 **đã code, kiểm và commit** (không push), trên BASE `853d09d`: Task 1
+> **Trạng thái 2026-09-14:** **đã deploy lên server và push (`69d1ab4`, gồm sửa đọc mã xuất xứ viết hoa); Task 8 xong, chủ dự án thử trên Zalo.** Task 1–7 và Task 9 **đã code, kiểm và commit**, trên BASE `853d09d`: Task 1
 > `276c866`, `8616092`; Task 2 `148b983`, `ff576b3`; Task 3 `8a42c61`, `39f59d4`; Task 4 `9aa4d02`, `0d2364b`; Task 5
 > `97bfb5c`, `28a22f9`, `7c689b2`, `44f0297`; Task 6 `1c950cb`, `da5b3ed`; Task 7 `3b793ee`; sửa sau rà soát cuối
 > `f5e0348`, `952f15d`; Task 9 là commit tài liệu ngay sau. Tại `952f15d`: bot 62/62; Jest tariff + legal + `apps/eval`
