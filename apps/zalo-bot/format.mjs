@@ -8,8 +8,8 @@
  * See the no-llm-on-tariff-numbers ADR.
  */
 
-import { cleanGazetteTitle, ORIGIN_LABEL } from './parse.mjs';
-import { L, toText } from './render.mjs';
+import { cleanGazetteTitle, missingKind, ORIGIN_LABEL } from './parse.mjs';
+import { L, md, toText } from './render.mjs';
 
 const PERCENT_RE = /\d+([.,]\d+)?\s*%|phần\s*trăm/i;
 const CITATION_RE = /(?:điều|khoản|điểm)\s*\d+[a-zà-ỹ]?/gi;
@@ -50,11 +50,6 @@ export function sanitizeLead(lead, block = '', max = 400) {
 
 /** A gated lead as its own line above the reply; it never replaces a line of the reply. */
 export function withLead(lead, lines) {
-  // The legal builders still return strings; this branch goes when they return Line[].
-  if (typeof lines === 'string') {
-    const clean = sanitizeLead(lead, lines);
-    return clean ? `${clean}\n\n${lines}` : lines;
-  }
   const clean = sanitizeLead(lead, toText(lines));
   return clean ? [L([clean]), L([]), ...lines] : lines;
 }
@@ -264,91 +259,151 @@ export function formatAnswer(q, r, confirm, { showFooter = true, candidate = fal
 
 // --- Legal ------------------------------------------------------------------
 
-/** Grounded legal answer: prose + VERBATIM provisions + effectiveness + Công báo link. */
-export function formatLegal(r, { showSourceNote = true } = {}) {
-  const out = [];
-  out.push(r.answer ? r.answer : '📚 Mình chưa tổng hợp được câu trả lời chắc chắn, nhưng đây là điều khoản liên quan nhất:');
-  const unverified = (r.citations || []).some((c) => c.verification === 'auto_unverified');
-  for (const c of (r.citations || []).slice(0, 3)) {
-    const stale = c.effectiveness && c.effectiveness !== 'con_hieu_luc' ? ` ⚠️ ${c.effectiveness}` : '';
-    const eff = c.effectiveFrom ? ` · hiệu lực từ ${c.effectiveFrom}${c.effectiveTo ? '→' + c.effectiveTo : ''}` : '';
-    const text = (c.verbatimText || '').replace(/\s+/g, ' ').trim();
-    const quoted = text.length > 480 ? text.slice(0, 480) + '…' : text;
-    out.push(`\n📖 ${c.provisionLabel}${stale}${eff}\n“${quoted}”`);
-    if (c.gazetteUrl) out.push(`↗ ${c.gazetteUrl}`);
-  }
-  // A document the bot fetched itself is NOT the same evidence as one a human checked,
-  // and the difference has to be visible at the point of use — not buried in a schema
-  // column. Always shown, regardless of showSourceNote: this is a caveat, not chrome.
-  if (unverified) {
-    out.push(
-      '\n⚠️ Văn bản này do bot TỰ NẠP từ Công báo, CHƯA có người đối chiếu. Hiệu lực và bản sửa đổi chưa được kiểm tra — đọc kỹ link gốc trước khi dùng.' +
-        '\n   Nếu bạn đã đối chiếu và thấy đúng, nhắn "xác nhận văn bản <số hiệu>" để mình đánh dấu đã kiểm chứng.',
-    );
-  }
-  if (showSourceNote) out.push('\n📌 Trích nguyên văn từ văn bản trên Công báo — đối chiếu link để chắc chắn.');
-  return out.join('\n');
-}
-
-/** A provision fetched by citation (no retrieval in the path). */
-export function formatProvisions(rows) {
-  const out = [];
-  for (const p of rows.slice(0, 2)) {
-    const stale = p.effectiveness && p.effectiveness !== 'con_hieu_luc' ? ` ⚠️ ${p.effectiveness}` : '';
-    const eff = p.effectiveFrom ? ` · hiệu lực từ ${p.effectiveFrom}${p.effectiveTo ? '→' + p.effectiveTo : ''}` : '';
-    const body = (p.body || '').replace(/\s+/g, ' ').trim();
-    out.push(`📖 ${p.citationLabel}${stale}${eff}\n“${body.length > 1200 ? body.slice(0, 1200) + '…' : body}”`);
-    if (p.gazetteUrl) out.push(`↗ ${p.gazetteUrl}`);
-  }
-  return out.join('\n\n');
-}
-
-/** Human name for a document kind, for the manifest listing. */
-const DOC_KIND = {
-  luat: 'Luật', phap_lenh: 'Pháp lệnh', nghi_dinh: 'Nghị định', nghi_quyet: 'Nghị quyết',
-  thong_tu: 'Thông tư', quyet_dinh: 'Quyết định', vbhn: 'VBHN',
+const EFFECT = {
+  het_hieu_luc: 'hết hiệu lực',
+  het_hieu_luc_mot_phan: 'hết hiệu lực một phần',
+  chua_co_hieu_luc: 'chưa có hiệu lực',
 };
 
+/** A red effectiveness line, worded from the enum, never from model text (R8). */
+function effectLine(c, ns = []) {
+  const marks = ns.length ? `${ns.map((n) => `[${n}]`).join(' ')} ` : '';
+  const tail =
+    c.effectiveness === 'chua_co_hieu_luc'
+      ? c.effectiveFrom ? ` (từ ${dmy(c.effectiveFrom)})` : ''
+      : ' — kiểm tra điều khoản còn áp dụng';
+  return L([`${marks}${c.documentNumber} ${EFFECT[c.effectiveness]}${tail}.`], 'red');
+}
+
 /**
- * The honest out-of-corpus answer. Before this, a question about a document we do not
- * hold retrieved the nearest passage from a document we DO hold and presented it as
- * the answer — which reads as the bot being wrong rather than the bot being out of
- * scope. Naming what IS held turns a dead end into a usable next step.
- *
- * `gazetteMatches` sharpens it further, because "we don't hold it" and "no such
- * document" deserve different answers. When the Công báo catalogue knows the number,
- * the bot can state the real title and link and offer to fetch it; when the catalogue
- * has never seen it, the likeliest explanation is a mistyped number, and saying so is
- * more useful than listing our shelf again.
+ * The opening of a provision, cut at the first sentence or clause boundary between 140 and 480
+ * characters: Vietnamese provisions put the exception after the first clause ("được miễn thuế …
+ * trừ trường hợp …"), and a hard cut there can read as the opposite rule.
  */
-export function formatMissingDoc(label, gazetteMatches = [], kind = 'none') {
-  const lines = [];
-  const matches = gazetteMatches || [];
-  const item = (g) => `• ${g.number} — ${cleanGazetteTitle(g.number, g.title)}`;
+export function excerpt(raw, min = 140, max = 480) {
+  const text = String(raw ?? '').normalize('NFC').trim();
+  const flat = (s) => s.replace(/\s+/g, ' ').trim();
+  const whole = flat(text);
+  if (whole.length <= max) return { text: whole, cut: false };
+  for (const m of text.matchAll(/[.;:](?=\s)|\n(?=\s*(?:[a-zđ]\)|\d+\.)\s)/g)) {
+    const head = flat(text.slice(0, m.index + (m[0] === '\n' ? 0 : 1)));
+    if (head.length > max) break;
+    if (head.length >= min) return { text: `${head.replace(/[.;:]$/, '')}…`, cut: true };
+  }
+  return { text: `${whole.slice(0, max)}…`, cut: true };
+}
+
+/**
+ * "Nguồn:" block, small italic. items: { n, label, quote?, cut?, url? }. Links are de-duplicated
+ * per document and capped at three. Reused by Mảng 3's formatAnswerMd.
+ */
+export function sourceLines(items) {
+  if (!items.length) return [];
+  const urls = [...new Set(items.map((x) => x.url).filter(Boolean))].slice(0, 3);
+  return [
+    L(['Nguồn:'], 'note'),
+    ...items.map((x) => L([`[${x.n}] ${x.label}${x.quote ? ` — “${x.quote}”${x.cut ? ' (trích đoạn đầu)' : ''}` : ''}`], 'note')),
+    ...(urls.length ? [L([`Toàn văn: ${urls.join(' · ')}`], 'note')] : []),
+  ];
+}
+
+/** Grounded legal answer: md(prose with [n]) + effectiveness + unverified warning + every source. */
+export function formatLegal(r) {
+  const cites = r.citations ?? [];
+  const lines = r.answer
+    ? md(r.answer)
+    : [L(['Mình chưa tổng hợp được câu trả lời chắc chắn; đây là các điều khoản liên quan nhất để bạn đối chiếu:'])];
+  lines.push(L([]));
+
+  // One red line per (document, effectiveness) — markers share a line only when both match.
+  const groups = new Map();
+  cites.forEach((c, i) => {
+    if (!EFFECT[c.effectiveness]) return;
+    const key = `${c.documentNumber}|${c.effectiveness}`;
+    if (!groups.has(key)) groups.set(key, { c, ns: [] });
+    groups.get(key).ns.push(i + 1);
+  });
+  for (const { c, ns } of groups.values()) lines.push(effectLine(c, ns));
+
+  // Machine-fetched text never quietly acquires the standing of text a person checked (R18).
+  const unverified = [...new Set(cites.filter((c) => c.verification === 'auto_unverified').map((c) => c.documentNumber))];
+  if (unverified.length) {
+    lines.push(
+      L(
+        [`${unverified.join(', ')} do bot tự nạp, chưa có người đối chiếu — đọc bản gốc trước khi dùng; đã đối chiếu thì nhắn "xác nhận văn bản ${unverified.length === 1 ? unverified[0] : '<số hiệu>'}".`],
+        'warn',
+      ),
+    );
+  }
+
+  const items = cites.map((c, i) => {
+    const ex = excerpt(c.verbatimText);
+    const late = c.effectiveTo || (c.effectiveFrom && r.asOf && c.effectiveFrom > r.asOf);
+    const window =
+      late && c.effectiveFrom
+        ? ` · hiệu lực ${c.effectiveTo ? `${dmy(c.effectiveFrom)}–${dmy(c.effectiveTo)}` : `từ ${dmy(c.effectiveFrom)}`}`
+        : '';
+    return { n: i + 1, label: `${c.provisionLabel}${window}`, quote: ex.text, cut: ex.cut, url: c.gazetteUrl };
+  });
+  lines.push(...sourceLines(items));
+  return lines;
+}
+
+/** A provision fetched by citation (no retrieval, no model in the path). */
+export function formatProvisions(rows) {
+  return rows.slice(0, 2).flatMap((p, k) => {
+    const body = (p.body || '').replace(/\s+/g, ' ').trim();
+    return [
+      ...(k ? [L([])] : []),
+      L(['Nguyên văn ', [p.citationLabel, 'b'], ':']),
+      L([body.length > 1200 ? `${body.slice(0, 1200)}…` : body]),
+      ...(EFFECT[p.effectiveness] ? [effectLine(p)] : []),
+      ...(p.gazetteUrl ? [L([`Toàn văn: ${p.gazetteUrl}`], 'note')] : []),
+    ];
+  });
+}
+
+/**
+ * The honest out-of-corpus answer. "We don't hold it" and "no such document" differ, and a
+ * catalogue hit equal to the number asked for is that document — never "another agency's".
+ */
+export function formatMissingDoc(label, gazetteMatches = [], kindIn = 'none') {
+  const { kind, matches } = missingKind(label, gazetteMatches, kindIn);
+  const opener = (num) => L(['Mình chưa có toàn văn và tình trạng hiệu lực của ', [num, 'b'], ' nên chưa trả lời được câu này.']);
+  const item = (g) => L([[g.number, 'b'], ` — ${cleanGazetteTitle(g.number, g.title)}`], 'ul');
 
   if (kind === 'exact' && matches[0]) {
     const hit = matches[0];
-    lines.push(`Trên Công báo có ${hit.number}: ${cleanGazetteTitle(hit.number, hit.title, 130)}`);
-    if (hit.sourceUrl) lines.push(`↗ ${hit.sourceUrl}`);
-    lines.push('Kho mình chưa có toàn văn. Trả lời "nạp" là mình lấy về rồi tra nội dung cho bạn (vài phút).');
-  } else if (kind === 'ambiguous' && matches.length) {
-    // Right issuer, right serial, several years. These ARE candidates for what was
-    // asked — the only missing piece is which year, so ask for that rather than
-    // implying the user got the reference wrong.
-    lines.push(`${label} có ${matches.length} văn bản, mình chưa rõ bạn cần bản năm nào:`);
-    lines.push(...matches.slice(0, 6).map(item));
-    lines.push('Nhắn số hiệu đầy đủ (vd "36/2025/TT-BKHCN") là mình nạp về ngay.');
-  } else if (matches.length) {
-    // NOT what was asked for. Offering a different ministry's circular as though it
-    // were the requested one is the confident-wrong failure this system guards against.
-    lines.push(`Mình không tìm thấy ${label} trên Công báo — có thể số hiệu chưa đúng.`);
-    lines.push('Cùng số nhưng của cơ quan khác:');
-    lines.push(...matches.slice(0, 4).map(item));
-    lines.push('Nếu đúng là một trong số này, nhắn số hiệu đầy đủ để mình nạp.');
-  } else {
-    lines.push(`Mình không tìm thấy ${label} — cả trong kho lẫn trên Công báo. Bạn kiểm tra lại số hiệu giúp mình.`);
+    return [
+      opener(hit.number),
+      L(['Công báo có văn bản này: ', [cleanGazetteTitle(hit.number, hit.title, 130), 'i'], '.']),
+      ...(hit.sourceUrl ? [L([`Toàn văn: ${hit.sourceUrl}`], 'note')] : []),
+      L(['Trả lời "nạp" là mình lấy toàn văn về rồi tra tiếp cho bạn (mất vài phút).']),
+    ];
   }
-  return lines.join('\n');
+  if (kind === 'ambiguous' && matches.length) {
+    return [
+      opener(label),
+      L([`Công báo có ${matches.length} văn bản mang số này, bạn cần bản năm nào?`]),
+      ...matches.slice(0, 6).map(item),
+      L(['Nhắn số hiệu đầy đủ (ví dụ 36/2025/TT-BKHCN) là mình nạp về.']),
+    ];
+  }
+  if (matches.length) {
+    // Same serial, and the requested number is not among them (missingKind moved that case to exact).
+    const hasIssuer = /\/.*\/|vbhn-/i.test(label);
+    return [
+      opener(label),
+      L([
+        hasIssuer
+          ? `Công báo không có văn bản đúng số này; có ${matches.length} văn bản cùng số của cơ quan khác:`
+          : `Công báo có ${matches.length} văn bản mang số này, bạn cần văn bản nào?`,
+      ]),
+      ...matches.slice(0, 4).map(item),
+      L(['Nếu đúng là một trong số này, nhắn số hiệu đầy đủ để mình nạp.']),
+    ];
+  }
+  return [L(['Mình không tìm thấy ', [label, 'b'], ' cả trong kho lẫn trên Công báo — bạn kiểm tra lại số hiệu giúp mình.'])];
 }
 
 /** Reply to an accepted ingest offer. */

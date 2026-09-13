@@ -167,17 +167,45 @@ export function parseDocRef(raw) {
   const after = text.slice(start + m[0].length);
   const issuer = after.match(/^\s*\/\s*[a-zà-ỹ-]+/i)?.[0] ?? '';
   const isVbhn = /vbhn/i.test(m[2]);
+  const label = (text.slice(start, start + m[0].length) + issuer).replace(/\s+/g, '').toUpperCase();
   return {
     core: `${m[1]}/${m[2]}`.toUpperCase(),
     docType,
-    label: (text.slice(start, start + m[0].length) + issuer).replace(/\s+/g, '').toUpperCase(),
+    label,
+    // The number as written, issuer included, when the user wrote one — what the API needs to match exactly.
+    full: issuer ? label : null,
     confident: Boolean(docType) || Boolean(issuer) || isVbhn,
   };
+}
+
+/** The API's foldDocNumber (legal.scope.ts): NFC, no whitespace, upper case, Đ → D, no leading zeros. */
+const foldDocNumber = (s) =>
+  String(s ?? '').normalize('NFC').replace(/\s+/g, '').toUpperCase().replace(/Đ/g, 'D').replace(/^0+(?=\d)/, '');
+
+/** Same document number? `08/2015/NĐ-CP` ≡ `8/2015/ND-CP`; `69/2018/TT-BTC` ≠ `69/2018/NĐ-CP`. */
+export function sameDocNumber(a, b) {
+  const x = foldDocNumber(a);
+  return x !== '' && x === foldDocNumber(b);
+}
+
+/**
+ * Never present the number asked for as a different document: a `similar`/`ambiguous` catalogue
+ * hit equal to `label` IS the document, so it becomes `exact` (and can be offered for ingest).
+ */
+export function missingKind(label, matches = [], kind = 'none') {
+  const list = matches || [];
+  if (kind === 'similar' || kind === 'ambiguous') {
+    const same = list.find((g) => sameDocNumber(label, g.number));
+    if (same) return { kind: 'exact', matches: [same] };
+  }
+  return { kind, matches: list };
 }
 
 /** Does the corpus manifest hold this reference? `docs` is the /legal/documents payload. */
 export function corpusHas(docs, ref) {
   if (!ref) return true;
+  // A full number names one document: holding 69/2018/NĐ-CP is not holding 69/2018/TT-BTC.
+  if (ref.full) return (docs || []).some((d) => sameDocNumber(d.number, ref.full) || sameDocNumber(d.consolidates, ref.full));
   const heads = [ref.core, ref.core.replace(/^0+/, ''), /^\d\//.test(ref.core) ? `0${ref.core}` : ref.core];
   return (docs || []).some((d) => {
     const num = String(d.number || '').toUpperCase();

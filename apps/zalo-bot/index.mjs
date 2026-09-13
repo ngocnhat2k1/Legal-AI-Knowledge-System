@@ -184,7 +184,6 @@ async function respond({ text, image, quote, ctx, senderName, threadId, userId }
         article: routed?.article,
         clause: routed?.clause,
         lead: routed?.lead,
-        showSourceNote: ctx.topic !== 'legal',
       })),
       intent,
     };

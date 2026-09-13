@@ -12,9 +12,9 @@ import { test } from 'node:test';
 
 import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
 import { tariffByClues } from './answer.mjs';
-import { formatAnswer, sanitizeLead, withLead } from './format.mjs';
+import { formatAnswer, formatLegal, formatMissingDoc, sanitizeLead, withLead } from './format.mjs';
 import { L, render, toText } from './render.mjs';
-import { cleanGazetteTitle, corpusHas, docNumberStatedIn, parseDocRef, parseQuotedTariff } from './parse.mjs';
+import { cleanGazetteTitle, corpusHas, docNumberStatedIn, missingKind, parseDocRef, parseQuotedTariff, sameDocNumber } from './parse.mjs';
 
 // The bot's own legal answer, as it appears in a quote. Note it carries NO HS code.
 const LEGAL_ANSWER_QUOTE =
@@ -139,12 +139,10 @@ test('a lead citing an HS code is kept only if the block returned it', () => {
 });
 
 test('withLead falls back to the deterministic block alone', () => {
-  assert.equal(withLead('Thuế là 15%.', 'BLOCK'), 'BLOCK');
-  assert.equal(withLead('Đây bạn nhé.', 'BLOCK'), 'Đây bạn nhé.\n\nBLOCK');
-  assert.equal(withLead(null, 'BLOCK'), 'BLOCK');
   const block = [L(['BLOCK'])];
   assert.equal(withLead('Thuế là 15%.', block), block);
   assert.equal(toText(withLead('Đây bạn nhé.', block)), 'Đây bạn nhé.\n\nBLOCK');
+  assert.equal(withLead(null, block), block);
 });
 
 // --- Document references ----------------------------------------------------
@@ -509,4 +507,65 @@ test('ứng viên HS nằm ranh giới vẫn in lịch sử xác nhận của m�
 test('ứng viên HS không còn mô tả nào sau cổng thì không in "Với mô tả" rỗng', async () => {
   const text = await byClues({ keywords: [], hsHints: ['8481'], note: 'thuế suất 20%', date: '2026-09-13' }, null, '');
   assert.ok(text.startsWith('Mình tra được các mã ứng viên dưới đây'), text.slice(0, 80));
+});
+
+// --- Legal reply (spec §5b.6) ----------------------------------------------------
+
+test('pháp luật: in đủ năm nguồn, một dòng cam cho văn bản tự nạp, dòng đỏ gộp theo văn bản và hiệu lực, trích đoạn giữ vế ngoại lệ', () => {
+  const clause =
+    'Hàng hóa nhập khẩu để gia công cho thương nhân nước ngoài theo hợp đồng gia công đã ký kết và đã đăng ký với cơ quan hải quan nơi làm thủ tục được miễn thuế nhập khẩu, trừ trường hợp hàng hóa đó được bán hoặc tiêu thụ nội địa. ' +
+    'Phần còn lại của khoản quy định hồ sơ, thủ tục và thời hạn thông báo cho cơ quan hải quan. '.repeat(5);
+  assert.ok(clause.indexOf('trừ trường hợp') > 140, 'fixture: vế ngoại lệ phải nằm sau ký tự 140');
+  const cite = (n, doc, over = {}) => ({
+    documentNumber: doc, documentTitle: 't', articleLabel: `Điều ${n} ${doc}`, provisionLabel: `Khoản 1 Điều ${n} ${doc}`,
+    verbatimText: `Nội dung khoản ${n}.`, path: '', effectiveness: 'con_hieu_luc', effectiveFrom: '2020-01-01', effectiveTo: null,
+    gazetteUrl: `https://congbao.chinhphu.vn/van-ban/${n}`, verification: 'verified', ...over,
+  });
+  const r = {
+    asOf: '2026-09-13',
+    answer: 'Hàng gia công được **miễn thuế** [1], trừ khi bán nội địa [2] [4].',
+    citations: [
+      cite(1, 'VB-A', { verbatimText: clause }),
+      cite(2, 'VB-B', { effectiveness: 'het_hieu_luc_mot_phan' }),
+      cite(3, 'VB-C', { verification: 'auto_unverified' }),
+      cite(4, 'VB-B', { effectiveness: 'het_hieu_luc_mot_phan' }),
+      cite(5, 'VB-D', { verification: 'auto_unverified' }),
+    ],
+  };
+  const lines = formatLegal(r);
+  const text = toText(lines);
+  for (const n of [1, 2, 3, 4, 5]) assert.ok(text.includes(`[${n}] Khoản 1 Điều ${n}`), `thiếu nguồn [${n}] — dấu trong câu trả lời sẽ mồ côi`);
+  const parts = render(lines);
+  const all = (st) => parts.flatMap((p) => styled(p, st));
+  assert.equal(all(ORANGE).length, 1, 'một dòng cảnh báo');
+  assert.ok(all(ORANGE)[0].includes('VB-C') && all(ORANGE)[0].includes('VB-D'));
+  assert.deepEqual(all(RED), ['[2] [4] VB-B hết hiệu lực một phần — kiểm tra điều khoản còn áp dụng.']);
+  const src1 = text.split('\n').find((l) => l.startsWith('[1] '));
+  assert.ok(src1.includes('trừ trường hợp') && src1.endsWith('(trích đoạn đầu)'), src1);
+  assert.deepEqual(all('b'), ['miễn thuế']);
+});
+
+// --- 69/2018 (spec §5b.8) ------------------------------------------------------------
+
+test('HỒI QUY 69/2018: số hiệu đầy đủ đi nguyên vẹn; văn bản đúng số không bị liệt kê như của cơ quan khác', () => {
+  assert.equal(parseDocRef('Nghị định 69/2018/NĐ-CP còn áp dụng không').full, '69/2018/NĐ-CP');
+  assert.equal(parseDocRef('69/2018').full, null);
+  assert.equal(sameDocNumber('69/2018/ND-CP', '69/2018/NĐ-CP'), true);
+  assert.equal(sameDocNumber('8/2015/ND-CP', '08/2015/NĐ-CP'), true);
+  assert.equal(sameDocNumber('69/2018/TT-BTC', '69/2018/NĐ-CP'), false);
+  const nd = { number: '69/2018/NĐ-CP', title: 'Nghị định 69/2018/NĐ-CP tiêu đề', sourceUrl: 'https://congbao.chinhphu.vn/van-ban/nd' };
+  const tt = { number: '69/2018/TT-BTC', title: 'Thông tư 69/2018/TT-BTC tiêu đề', sourceUrl: 'https://congbao.chinhphu.vn/van-ban/tt' };
+  assert.deepEqual(missingKind('69/2018/NĐ-CP', [nd, tt], 'similar'), { kind: 'exact', matches: [nd] });
+  const text = toText(formatMissingDoc('69/2018/NĐ-CP', [nd, tt], 'similar'));
+  assert.ok(!text.includes('cơ quan khác'), 'chính văn bản được hỏi bị trình bày như văn bản của cơ quan khác');
+  assert.ok(text.includes('Trả lời "nạp"'), 'văn bản đúng số thì được đề nghị nạp');
+  assert.equal(corpusHas([{ number: '69/2018/NĐ-CP', consolidates: null }], parseDocRef('69/2018/TT-BTC')), false);
+});
+
+test('cùng số, khác cơ quan ban hành: vẫn là văn bản khác và không được đề nghị nạp', () => {
+  const tt = { number: '69/2018/TT-BTC', title: 'Thông tư 69/2018/TT-BTC tiêu đề', sourceUrl: 'https://congbao.chinhphu.vn/van-ban/tt' };
+  assert.equal(missingKind('69/2018/NĐ-CP', [tt], 'similar').kind, 'similar');
+  const text = toText(formatMissingDoc('69/2018/NĐ-CP', [tt], 'similar'));
+  assert.ok(text.includes('cùng số của cơ quan khác'));
+  assert.ok(!text.includes('Trả lời "nạp"'), 'không bao giờ nạp một văn bản khác thay cho văn bản được hỏi');
 });

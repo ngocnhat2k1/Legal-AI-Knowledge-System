@@ -24,7 +24,7 @@ import {
 import { stampTariff } from './conversation.mjs';
 import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
-import { citationFrom, cleanGazetteTitle, corpusHas, detectOrigin, keywordFrom, parseDocRef, parseQuery, parseQuotedTariff } from './parse.mjs';
+import { citationFrom, cleanGazetteTitle, corpusHas, detectOrigin, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff } from './parse.mjs';
 import { L } from './render.mjs';
 import { claudeVision } from './router.mjs';
 
@@ -201,25 +201,26 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
  * The first case used to be silently collapsed into "chưa tổng hợp được câu trả lời",
  * which reads as the bot failing rather than the question being out of scope.
  */
-export async function answerLegal(query, { asOf, doc, article, clause, lead, showSourceNote = true } = {}) {
+export async function answerLegal(query, { asOf, doc, article, clause, lead } = {}) {
   const docs = await legalDocuments();
   const ref = parseDocRef(doc || '') ?? (() => { const r = parseDocRef(query); return r?.confident ? r : null; })();
 
   if (ref && !corpusHas(docs, ref)) {
     // Ask the API anyway: it is the side that can consult the Công báo catalogue, and
     // "we don't hold it" reads very differently with the document's real title attached.
-    const probe = await legalAnswer(query, { asOf, doc: ref.core });
+    // The full number when the user wrote one: the API can then match that ONE document (69/2018 bug).
+    const probe = await legalAnswer(query, { asOf, doc: ref.full ?? ref.core });
     return missingDocAnswer(query, ref.label, probe, asOf);
   }
 
-  const r = await legalAnswer(query, { asOf, doc: ref?.core, article });
+  const r = await legalAnswer(query, { asOf, doc: ref ? (ref.full ?? ref.core) : undefined, article });
   if (r?.missingDoc) return missingDocAnswer(query, r.missingDoc, r, r.asOf ?? asOf);
 
   if (!r || r.abstained || !(r.citations || []).length) {
     // A named Điều that retrieval could not ground is still fetchable verbatim —
     // "cho tôi Điều 18" is a lookup, and the text either exists or it does not.
     if (ref && article) {
-      const rows = await legalProvision(ref.core, article, clause);
+      const rows = await legalProvision(ref.full ?? ref.core, article, clause);
       if (rows?.length) {
         return {
           text: withLead(lead, formatProvisions(rows)),
@@ -233,19 +234,21 @@ export async function answerLegal(query, { asOf, doc, article, clause, lead, sho
         };
       }
     }
-    const where = ref ? ` trong ${ref.label}` : ' trong các văn bản đã nạp';
+    // The API reason is shown only when it passes the same gate as LLM prose (it can be model text).
+    const reason = sanitizeLead(r?.reason, '');
     return {
-      text:
-        `Mình không tìm thấy điều khoản đủ căn cứ${where}` +
-        (r?.reason ? ` (${r.reason})` : '') +
-        '. Bạn nêu SỐ HIỆU văn bản để mình nạp về tra giúp, hoặc nói rõ hơn phần muốn tìm.',
+      text: [
+        L(['Mình chưa tìm thấy điều khoản đủ căn cứ trong ', ref ? [ref.label, 'b'] : 'các văn bản mình đang có', ' nên chưa trả lời, để tránh sai.']),
+        ...(reason ? [L([`Lý do: ${reason}`], 'note')] : []),
+        L(['Nếu bạn biết số hiệu văn bản, nhắn số hiệu để mình tìm trên Công báo và nạp về.']),
+      ],
       topic: 'legal',
       legal: { query, asOf: r?.asOf ?? null, missingDoc: null },
     };
   }
 
   return {
-    text: withLead(lead, formatLegal(r, { showSourceNote })),
+    text: formatLegal(r),
     topic: 'legal',
     legal: {
       query,
@@ -263,8 +266,8 @@ export async function answerLegal(query, { asOf, doc, article, clause, lead, sho
  * being offered have to survive between messages, which is what conversation memory is for.
  */
 function missingDocAnswer(query, label, apiAnswer, asOf) {
-  const matches = apiAnswer?.gazetteMatches ?? [];
-  const kind = apiAnswer?.gazetteMatchKind ?? 'none';
+  // A catalogue hit equal to the number asked for IS that document: offer it, never list it as another one.
+  const { kind, matches } = missingKind(label, apiAnswer?.gazetteMatches ?? [], apiAnswer?.gazetteMatchKind ?? 'none');
   // Only an EXACT catalogue hit may be offered for ingest. A near-miss by number is a
   // different document, and an ambiguous year is a question for the user — fetching
   // either would answer something nobody asked.
