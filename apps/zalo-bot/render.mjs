@@ -37,13 +37,16 @@ export function toText(input) {
 
 /** Merge every `warn` line into one orange line at the first one's place, joined by "; ". */
 function mergeWarnings(lines) {
-  const warns = lines.filter((ln) => ln.marks?.includes('warn'));
+  const isWarn = (ln) => ln.marks?.includes('warn');
+  const warns = lines.filter(isWarn);
   if (warns.length < 2) return lines;
   const merged = L(
     warns.flatMap((ln, k) => (k ? ['; ', ...ln.segs] : ln.segs)),
     'warn',
   );
-  return lines.flatMap((ln) => (ln === warns[0] ? [merged] : warns.includes(ln) ? [] : [ln]));
+  // By position, not identity: the same warn Line object may be passed twice.
+  const first = lines.findIndex(isWarn);
+  return lines.flatMap((ln, k) => (k === first ? [merged] : isWarn(ln) ? [] : [ln]));
 }
 
 function build(lines) {
@@ -226,15 +229,23 @@ function inline(text) {
 export function md(text) {
   const src = String(text ?? '').normalize('NFC').replace(/\r\n?/g, '\n');
   const out = [];
+  // Zalo numbers `ol` lines itself, so `N. ` becomes `ol` only when N continues a run from 1.
+  // Any other number stays in the text: "2. …\n4. …" keeps the clause numbers the reader cites (R10).
+  let olNext = 1;
   for (const raw of src.split('\n')) {
+    let m = raw.match(/^\s*(\d+)[.)]\s+(.*)$/);
+    if (m && Number(m[1]) === olNext) {
+      olNext++;
+      out.push({ segs: inline(m[2]), marks: ['ol'] });
+      continue;
+    }
+    olNext = 1;
     if (!raw.trim()) {
       if (out.length && lineText(out[out.length - 1]) !== '') out.push(L([]));
       continue;
     }
-    let m;
     if ((m = raw.match(/^\s*#{1,3}\s+(.*)$/))) out.push({ segs: inline(m[1]), marks: ['b'] });
     else if ((m = raw.match(/^\s*[-*•]\s+(.*)$/))) out.push({ segs: inline(m[1]), marks: ['ul'] });
-    else if ((m = raw.match(/^\s*\d+[.)]\s+(.*)$/))) out.push({ segs: inline(m[1]), marks: ['ol'] });
     else out.push({ segs: inline(raw), marks: [] });
   }
   return out;

@@ -26,6 +26,7 @@ test('bảng nhãn khớp TextStyle của zca-js', () => {
     ul: TextStyle.UnorderedList,
     ol: TextStyle.OrderedList,
   }, 'nâng zca-js mà đổi mã style thì màu/đậm gửi đi sai âm thầm');
+  assert.throws(() => render([L([['x', 'gren']])]), /unknown mark/, 'nhãn gõ sai phải throw');
 });
 
 test('offset đúng trên chữ có dấu, kể cả khi đầu vào là NFD', () => {
@@ -111,6 +112,10 @@ test('md(): danh sách, tiêu đề, đậm, nghiêng lồng nhau, [n] giữ ngu
   const [p] = render(lines);
   assert.deepEqual(texts(p, 'b'), ['Tiêu đề', '0% có điều kiện']);
   assert.deepEqual(texts(p, 'i'), ['có']);
+  const clauses = md('2. khoản hai\n4. khoản bốn');
+  assert.deepEqual(clauses.map((l) => l.marks), [[], []], 'số không liền mạch từ 1 thì không thành ol');
+  assert.equal(toText(clauses), '2. khoản hai\n4. khoản bốn', 'giữ số khoản gốc (R10)');
+  assert.deepEqual(md('1. a\n2. b').map((l) => l.marks), [['ol'], ['ol']]);
 });
 
 test('md() không có đường nào sinh màu', () => {
@@ -132,4 +137,8 @@ test('mọi dòng warn gộp thành một dòng cam, không bị thu nhỏ', () 
   assert.equal(orange[0], 'Mặt hàng có thể thuộc nhiều nhóm; Biểu thuế trong kho cập nhật tới NĐ 26/2023/NĐ-CP');
   assert.equal(p.styles.filter((s) => s.st === ST.small).length, 0, 'warn không bao giờ thành chữ nhỏ');
   assert.equal(p.msg.split('\n').length, 2);
+  const W = L(['Cảnh báo chung'], 'warn');
+  const [r] = render([W, L(['thân']), W]);
+  assert.equal(texts(r, ST.orange).length, 1, 'cùng một đối tượng warn dùng hai lần vẫn chỉ một dòng cam');
+  assert.equal(r.msg.split('\n').length, 2);
 });
