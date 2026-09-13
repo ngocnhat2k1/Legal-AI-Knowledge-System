@@ -17,6 +17,9 @@
  */
 import { spawn } from 'node:child_process';
 
+import { CAPABILITIES } from './format.mjs';
+import { toText } from './render.mjs';
+
 const TIMEOUT_MS = 45_000;
 
 /** Run `claude -p` with the prompt on STDIN (argv has a 128KB limit; transcripts grow). */
@@ -140,7 +143,10 @@ export async function route(text, ctx = {}) {
     '"verdict":"<correct|wrong|unsure nếu intent=confirm, else null>",',
     '"note":"<nếu tariff: MỘT câu ≤22 từ mô tả mặt hàng + chức năng chính>",',
     '"lead":"<1-2 câu TIẾNG VIỆT tự nhiên dẫn vào câu trả lời, như đồng nghiệp nói chuyện. TUYỆT ĐỐI KHÔNG chứa con số thuế (%), số Điều/Khoản, hay mã HS — phần đó hệ thống tự điền>",',
-    '"reply":"<CHỈ khi intent=general: câu trả lời TIẾNG VIỆT ≤120 từ>"}',
+    '"reply":"<CHỈ khi intent=general: câu trả lời TIẾNG VIỆT ≤120 từ, chỉ nhắc các việc trong NĂNG LỰC CỦA BOT; KHÔNG nêu con số thuế, phần trăm, số hiệu văn bản hay mã HS>"}',
+    '',
+    'NĂNG LỰC CỦA BOT (reply chỉ được nhắc những việc này):',
+    toText(CAPABILITIES),
     '',
     'Phân loại hàng hoá theo CHỨC NĂNG (thiết bị làm gì), cân nhắc nhóm cạnh tranh',
     '(vd điện tử: truyền dữ liệu 8517 · định vị vô tuyến 8526 · báo hiệu 8531 · lưu trữ 8523).',

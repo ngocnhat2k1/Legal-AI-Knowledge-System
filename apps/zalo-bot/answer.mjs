@@ -290,7 +290,7 @@ function missingDocAnswer(query, label, apiAnswer, asOf) {
 export async function handleConfirm(tariff, verdict, senderName) {
   if (!tariff?.hs) {
     return {
-      text: 'Mình chưa có kết quả tra cứu gần đây của bạn để xác nhận. Bạn tra MÃ HS hoặc TÊN HÀNG trước, rồi trả lời "đúng"/"sai"/"không chắc" nhé.',
+      text: 'Mình chưa có kết quả tra cứu gần đây của bạn để xác nhận. Bạn tra mã HS hoặc tên hàng trước, rồi trả lời "đúng", "sai" hoặc "không chắc" nhé.',
       topic: 'tariff',
     };
   }
@@ -305,9 +305,9 @@ export async function handleConfirm(tariff, verdict, senderName) {
     snapshot: tariff.snapshot,
   });
   if (!ok) return { text: 'Ghi nhận xác nhận bị lỗi, thử lại sau nhé.', topic: 'tariff' };
-  const label = verdict === 'correct' ? '✓ ĐÚNG' : verdict === 'wrong' ? '✗ SAI' : '? Không chắc';
+  const label = verdict === 'correct' ? 'đúng' : verdict === 'wrong' ? 'sai' : 'chưa chắc';
   return {
-    text: `Đã ghi nhận: ${label} cho HS ${tariff.dotted}${tariff.origin ? ` · ${tariff.origin}` : ''} (ngày ${tariff.date}). Cảm ơn ${senderName}.`,
+    text: [L(['Đã ghi nhận ', [label, 'b'], ' cho mã ', [tariff.dotted, 'b'], ` (${tariff.origin ? `xuất xứ ${tariff.origin}, ` : ''}ngày ${dmy(tariff.date)}). Cảm ơn ${senderName}.`])],
     topic: 'tariff',
   };
 }

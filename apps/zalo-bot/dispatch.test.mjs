@@ -12,7 +12,16 @@ import { test } from 'node:test';
 
 import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
 import { tariffByClues } from './answer.mjs';
-import { formatAnswer, formatLegal, formatMissingDoc, formatProvisions, sanitizeLead, withLead } from './format.mjs';
+import {
+  CAPABILITIES,
+  formatAnswer,
+  formatGeneral,
+  formatLegal,
+  formatMissingDoc,
+  formatProvisions,
+  sanitizeLead,
+  withLead,
+} from './format.mjs';
 import { L, render, toText } from './render.mjs';
 import { cleanGazetteTitle, corpusHas, docNumberStatedIn, missingKind, parseDocRef, parseQuotedTariff, sameDocNumber } from './parse.mjs';
 
@@ -589,4 +598,13 @@ test('nguyên văn theo trích dẫn: văn bản tự nạp có đúng một dò
   assert.ok(all(ORANGE)[0].startsWith('VB-X do bot tự nạp'), all(ORANGE)[0]);
   assert.deepEqual(all(RED), ['VB-X hết hiệu lực.']);
   assert.equal(render(formatProvisions([row({})])).flatMap((p) => styled(p, ORANGE)).length, 0, 'văn bản đã đối chiếu không có dòng cam');
+});
+
+// --- General reply (spec §5b.7) -------------------------------------------------------
+
+test('formatGeneral: trả lời chung có dữ kiện bị thay bằng danh sách năng lực; danh sách giữ dạng', () => {
+  for (const reply of ['Thuế khoảng 15% bạn nhé.', 'Khoảng mười phần trăm.', 'Theo Nghị định 26/2023/NĐ-CP thì được.', 'Hàng này thuộc mã 8481.80 đó.', 'Là mã HS 84818099 nhé.']) {
+    assert.equal(formatGeneral(reply), CAPABILITIES, `phải bác: ${reply}`);
+  }
+  assert.deepEqual(formatGeneral('- a\n- b').map((l) => l.marks), [['ul'], ['ul']]);
 });

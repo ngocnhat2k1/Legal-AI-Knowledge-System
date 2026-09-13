@@ -417,14 +417,36 @@ export function formatMissingDoc(label, gazetteMatches = [], kindIn = 'none') {
 /** Reply to an accepted ingest offer. */
 export function formatIngestQueued(number, alreadyQueued) {
   return alreadyQueued
-    ? `⏳ ${number} đang được nạp rồi — mình nhắn lại ngay khi xong.`
-    : `⏳ Đã xếp hàng nạp ${number}. Tải + tách điều khoản + embed mất vài phút; xong mình nhắn lại đây.`;
+    ? [L([[number, 'b'], ' đang được nạp rồi — mình nhắn lại ngay khi xong.'])]
+    : [L(['Đã xếp hàng nạp ', [number, 'b'], '. Tải, tách điều khoản và embed mất vài phút; xong mình nhắn lại đây.'])];
 }
 
 /** Report an ingest outcome back to the thread that asked for it. */
 export function formatIngestReport(report) {
   if (report.status === 'done') {
-    return `✅ Đã nạp xong ${report.number} — ${report.detail || ''}\nBạn hỏi nội dung văn bản này được rồi. Lưu ý: bản này bot tự nạp, chưa có người đối chiếu.`;
+    return [
+      L([
+        'Đã nạp xong ',
+        [report.number, 'b'],
+        `${report.detail ? ` — ${report.detail}` : ''}. Bạn hỏi nội dung văn bản này được rồi; lưu ý bản này bot tự nạp, chưa có người đối chiếu.`,
+      ]),
+    ];
   }
-  return `❌ Không nạp được ${report.number}: ${report.detail || 'không rõ lý do'}\nBạn tra trực tiếp trên congbao.chinhphu.vn giúp mình nhé.`;
+  return [L(['Không nạp được ', [report.number, 'b'], `: ${report.detail || 'không rõ lý do'}. Bạn tra trực tiếp trên congbao.chinhphu.vn giúp mình nhé.`])];
+}
+
+// --- General ------------------------------------------------------------------
+
+/** The only capabilities the router's reply may mention, and the reply when the gate drops it. */
+export const CAPABILITIES = [
+  L(['Mình tra được hai việc:']),
+  L([['Biểu thuế xuất nhập khẩu', 'b'], ' — gõ tên hàng hoặc mã HS, kèm xuất xứ.'], 'ol'),
+  L([['Văn bản pháp luật hải quan', 'b'], ' — hỏi nội dung văn bản mình đang có; chưa có thì mình tìm trên Công báo và nạp về.'], 'ol'),
+  L([['Ví dụ: "thuế nhập khẩu 8481.80.99 xuất xứ Trung Quốc"', 'i']]),
+];
+
+/** The router's free reply (intent general): gated like any LLM prose, then md() on the original text. */
+export function formatGeneral(reply) {
+  // sanitizeLead collapses whitespace, so it is only the gate; md() reads the original line breaks.
+  return sanitizeLead(reply, '', 900) ? md(String(reply).slice(0, 900)) : CAPABILITIES;
 }

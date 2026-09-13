@@ -11,7 +11,8 @@
  *   conversation.mjs bộ nhớ hội thoại (lưu ở Postgres qua API)
  *   router.mjs       một bước Claude đọc CẢ hội thoại để phân loại + viết lại câu hỏi
  *   answer.mjs       tạo câu trả lời (số liệu luôn từ DB)
- *   format.mjs       ghép lời dẫn của LLM lên trên khối số liệu tất định
+ *   format.mjs       dựng câu trả lời (Line[]) từ dữ liệu API; lời văn LLM chỉ qua cổng sanitizeLead
+ *   render.mjs       Line[] → tin Zalo có styles, tách tin ~1.800 ký tự
  *
  * Env: API_URL, ZALO_SESSION_PATH, ALLOWED_THREADS, ZALO_USER_AGENT, CLAUDE_CODE_OAUTH_TOKEN.
  */
@@ -24,9 +25,9 @@ import { ackIngestReports, ingestReports, legalDocuments, requestIngest, verifyD
 import { loadContext, saveContext } from './conversation.mjs';
 import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
-import { formatIngestQueued, formatIngestReport } from './format.mjs';
+import { formatGeneral, formatIngestQueued, formatIngestReport } from './format.mjs';
 import { docNumberStatedIn, mergeQuote, parseQuery, stripMentions } from './parse.mjs';
-import { toText } from './render.mjs';
+import { L, render } from './render.mjs';
 import { route } from './router.mjs';
 
 const API = process.env.API_URL || 'http://api:3000';
@@ -107,8 +108,8 @@ async function respond({ text, image, quote, ctx, senderName, threadId, userId }
     const res = await verifyDocument(verifyDoc, senderName);
     return {
       text: res?.verified
-        ? `✅ Đã ghi nhận ${verifyDoc} là ĐÃ ĐỐI CHIẾU (theo ${senderName}). Từ giờ trích dẫn từ văn bản này không còn cảnh báo nữa.`
-        : `Mình không tìm thấy ${verifyDoc} ở trạng thái "bot tự nạp" để xác nhận — có thể nó đã được xác nhận rồi, hoặc chưa có trong kho.`,
+        ? [L(['Đã ghi nhận ', [verifyDoc, 'b'], ` là đã đối chiếu (theo ${senderName}). Từ giờ trích dẫn từ văn bản này không còn cảnh báo nữa.`])]
+        : [L(['Mình không tìm thấy ', [verifyDoc, 'b'], ' ở trạng thái "bot tự nạp" để xác nhận — có thể nó đã được xác nhận rồi, hoặc chưa có trong kho.'])],
       topic: 'legal',
       intent: 'legal',
     };
@@ -190,9 +191,7 @@ async function respond({ text, image, quote, ctx, senderName, threadId, userId }
   }
   if (intent === 'general') {
     return {
-      text:
-        routed?.reply ||
-        'Mình tra được hai thứ: (1) biểu thuế XNK — gõ TÊN HÀNG (van, xăng…) hoặc MÃ HS; (2) văn bản pháp luật Việt Nam — luật, nghị định, thông tư của bất kỳ bộ ngành nào. Văn bản chưa có trong kho thì mình tìm trên Công báo và nạp về giúp bạn.',
+      text: formatGeneral(routed?.reply),
       topic: 'general',
       intent,
     };
@@ -258,15 +257,17 @@ async function main() {
 
       // Vision mất ~15-30s: báo ngay để người dùng không tưởng bot treo.
       if (image) {
-        await api.sendMessage({ msg: '🔍 Đang xem ảnh…', quote: msg.data }, msg.threadId, msg.type).catch(() => {});
+        await api.sendMessage({ ...render('Mình đang xem ảnh, bạn chờ khoảng 20 giây nhé.')[0], quote: msg.data }, msg.threadId, msg.type).catch(() => {});
       }
 
       const result = await respond({ text, image, quote: msg.data?.quote, ctx, senderName, threadId: msg.threadId, userId });
       if (process.env.BOT_DEBUG) {
         console.log(`[zalo] topic=${ctx.topic ?? '-'} tariffFresh=${ctx.tariffFresh} → intent=${result.intent}`);
       }
-      const reply = toText(result.text); // bridge: plain text until Task 6 sends styles
-      await api.sendMessage({ msg: reply, quote: msg.data }, msg.threadId, msg.type);
+      // Only the first part quotes the question. Memory is saved right after it, so a later part
+      // failing never costs the "đúng"/"sai" that follows (tariffFresh).
+      const parts = render(result.text);
+      await api.sendMessage({ ...parts[0], quote: msg.data }, msg.threadId, msg.type);
 
       // Ghi nhớ SAU khi đã trả lời — lỗi lưu trí nhớ không được làm mất câu trả lời.
       // `tariff`/`legal` vắng mặt = giữ nguyên phần trí nhớ đó; null = xoá (không còn gì để trỏ tới).
@@ -278,15 +279,19 @@ async function main() {
         userId,
         staffName: senderName,
         userText: text || '(ảnh)',
-        botText: reply,
+        botText: parts.map((p) => p.msg).join('\n\n'),
         intent: result.intent,
         topic: result.topic ?? ctx.topic ?? null,
         state,
       });
+      for (const p of parts.slice(1)) {
+        // Part 1 is delivered and remembered: a later failure only logs, never sends the generic error.
+        await api.sendMessage(p, msg.threadId, msg.type).catch((e) => console.warn('[zalo] send part failed:', e?.message));
+      }
     } catch (e) {
       console.error('[zalo] lỗi xử lý tin:', e?.message);
       try {
-        await api.sendMessage({ msg: 'Xin lỗi, có lỗi khi tra cứu. Thử lại sau.' }, msg.threadId, msg.type);
+        await api.sendMessage(render('Xin lỗi, có lỗi khi tra cứu. Thử lại sau.')[0], msg.threadId, msg.type);
       } catch {
         /* ignore */
       }
@@ -308,7 +313,7 @@ async function main() {
         let sent = false;
         for (const type of [ThreadType.Group, ThreadType.User]) {
           try {
-            await api.sendMessage({ msg: formatIngestReport(r) }, r.threadId, type);
+            for (const p of render(formatIngestReport(r))) await api.sendMessage(p, r.threadId, type);
             sent = true;
             break;
           } catch {
