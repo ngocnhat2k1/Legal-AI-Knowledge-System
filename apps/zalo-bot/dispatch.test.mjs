@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
+import { tariffByClues } from './answer.mjs';
 import { formatAnswer, sanitizeLead, withLead } from './format.mjs';
 import { L, render, toText } from './render.mjs';
 import { cleanGazetteTitle, corpusHas, docNumberStatedIn, parseDocRef, parseQuotedTariff } from './parse.mjs';
@@ -449,4 +450,63 @@ test('cổng văn xuôi LLM: phần trăm, số hiệu, mã HS mọi dạng ch�
   assert.equal(sanitizeLead('theo Nghị định 26/2023/NĐ-CP', '[1] NĐ 26/2023/NĐ-CP — MFN'), 'theo Nghị định 26/2023/NĐ-CP');
   assert.equal(sanitizeLead('thuế suất tuỳ loại hàng', ''), '');
   assert.equal(sanitizeLead('Hộp kim loại chắn sóng vô tuyến', ''), 'Hộp kim loại chắn sóng vô tuyến');
+});
+
+test('cổng văn xuôi LLM: số lệch một chữ số không được coi là có trong khối', () => {
+  const legal = 'Khoản 1 Điều 25 Nghị định 08/2015/NĐ-CP';
+  assert.equal(sanitizeLead('theo Nghị định 6/2023/NĐ-CP', '[1] NĐ 26/2023/NĐ-CP — MFN'), '');
+  assert.equal(sanitizeLead('thuộc nhóm 8180', 'Mã 8481.80.99'), '');
+  assert.equal(sanitizeLead('thuộc nhóm 9910', 'Mã 8481.80.99 10 ngày'), '');
+  assert.equal(sanitizeLead('thuộc nhóm 2023', 'NĐ 26/2023/NĐ-CP · Tra theo ngày 13/09/2026'), '');
+  assert.equal(sanitizeLead('nằm ở Điều 2', legal), '');
+  assert.equal(sanitizeLead('theo Nghị định 8/2015/NĐ-CP, Điều 25.', legal), 'theo Nghị định 8/2015/NĐ-CP, Điều 25.');
+  assert.equal(sanitizeLead('thuộc mã 848180 nhé', 'Mã 8481.80.99'), 'thuộc mã 848180 nhé');
+});
+
+// --- tariffByClues against a fake API ------------------------------------------
+
+const cand = (hs, heading, mfn) => ({ hs, hsDotted: `${hs.slice(0, 4)}.${hs.slice(4, 6)}.${hs.slice(6)}`, heading, path: `Chương ${hs.slice(0, 2)} › ${heading}`, mfn });
+// /tariff/search prices MFN at CURRENT_DATE, as the real endpoint does.
+const CANDS = { 8481: [cand('84818099', 'Van loại khác', '10'), cand('84818091', 'Van bằng đồng', '5')], 7307: [cand('73079990', 'Phụ kiện ghép nối', '15')] };
+async function byClues(clues, confirm = null, text = 'van') {
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const u = new URL(url);
+    const body =
+      u.pathname === '/tariff/search' ? CANDS[u.searchParams.get('prefix')] ?? []
+      : u.pathname === '/tariff/confirmations/match' ? []
+      : u.pathname === '/tariff/confirmations' ? confirm
+      : u.pathname === '/tariff' ? tariff8481({ origin: 'CN' })
+      : null;
+    return { ok: body !== null, status: body !== null ? 200 : 404, json: async () => body };
+  };
+  try {
+    return toText((await tariffByClues({ keywords: ['van'], origin: 'CN', ...clues }, text)).text);
+  } finally {
+    globalThis.fetch = real;
+  }
+}
+
+test('ứng viên HS: MFN từ /tariff/search (giá hôm nay) không in dưới một ngày tra khác (R8)', async () => {
+  const past = await byClues({ hsHints: ['8481'], date: '2024-01-01' });
+  assert.match(past, /8481\.80\.91 · MFN — ·/, 'menu ngày khác không mang MFN hôm nay');
+  const border = await byClues({ hsHints: ['8481', '7307'], date: '2024-01-01' });
+  assert.match(border, /7307\.99\.90 · .* · MFN —/);
+  assert.doesNotMatch(past + border, /· MFN \d/);
+  const now = await byClues({ hsHints: ['8481'], date: new Date().toISOString().slice(0, 10) });
+  assert.match(now, /8481\.80\.91 · MFN 5% ·/, 'ngày tra là hôm nay thì in MFN ứng viên');
+});
+
+test('ứng viên HS nằm ranh giới vẫn in lịch sử xác nhận của mã đầu (R18)', async () => {
+  const text = await byClues(
+    { hsHints: ['8481', '7307'], date: '2026-09-13' },
+    { correct: 0, wrong: 1, unsure: 0, recent: [{ verdict: 'wrong', staffName: 'Chuyên viên A', note: 'là 7307' }] },
+  );
+  assert.ok(text.includes('Từng bị báo sai 1 lần (Chuyên viên A: là 7307) — kiểm tra kỹ'), 'thiếu lịch sử báo sai');
+  assert.ok(text.indexOf('Từng bị báo sai') < text.indexOf('Nhắn mã bạn chốt'), 'lịch sử đứng trước ghi chú chốt mã');
+});
+
+test('ứng viên HS không còn mô tả nào sau cổng thì không in "Với mô tả" rỗng', async () => {
+  const text = await byClues({ keywords: [], hsHints: ['8481'], note: 'thuế suất 20%', date: '2026-09-13' }, null, '');
+  assert.ok(text.startsWith('Mình tra được các mã ứng viên dưới đây'), text.slice(0, 80));
 });

@@ -16,6 +16,7 @@ const CITATION_RE = /(?:điều|khoản|điểm)\s*\d+[a-zà-ỹ]?/gi;
 const HS_DOTTED_RE = /\d{4}\.\d{2}\.\d{2}/g;
 const DOC_NO_RE = /\d{1,4}\s*\/\s*(?:\d{4}|vbhn)[^\s,;)]*/gi;
 const HS_ANY_RE = /(?:mã|nhóm|hs)\s*(?:hs\s*)?(\d{4}(?:\.?\d{2}){0,2})(?!\d)/gi;
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * The gate for LLM prose. Dropped outright: a rate ("%", "phần trăm") — a percentage in
@@ -34,12 +35,16 @@ export function sanitizeLead(lead, block = '', max = 400) {
   if (!block && /thuế suất/i.test(text)) return '';
   const low = text.toLowerCase();
   const hay = String(block ?? '').toLowerCase().replace(/\s+/g, ' ');
-  const bare = hay.replace(/[.\s]/g, '');
-  for (const c of [...(low.match(CITATION_RE) ?? []), ...(low.match(HS_DOTTED_RE) ?? [])]) {
-    if (!hay.includes(c.replace(/\s+/g, ' '))) return '';
-  }
-  for (const c of low.match(DOC_NO_RE) ?? []) if (!bare.includes(c.replace(/[.:\s]/g, ''))) return '';
-  for (const [, code] of low.matchAll(HS_ANY_RE)) if (!bare.includes(code.replace(/\./g, ''))) return '';
+  // Containment is anchored on digits, so an off-by-one-digit slip is not "in the block":
+  // Điều 2 ≠ Điều 25, 6/2023 ≠ 26/2023, nhóm 8180 ≠ 8481.80.99.
+  const found = (re, s = hay) => new RegExp(re).test(s);
+  for (const c of low.match(CITATION_RE) ?? []) if (!found(`${esc(c.replace(/\s+/g, ' '))}(?![\\da-zà-ỹ])`)) return '';
+  for (const c of low.match(HS_DOTTED_RE) ?? []) if (!found(`(?<!\\d)${esc(c)}(?!\\d)`)) return '';
+  const docs = hay.replace(/[.:]/g, '').replace(/\s*\/\s*/g, '/');
+  for (const c of low.match(DOC_NO_RE) ?? []) if (!found(`(?<!\\d)0*${esc(c.replace(/[.:\s]/g, '').replace(/^0+/, ''))}`, docs)) return '';
+  // Block HS codes as whole digit runs; a date or document number (next to "/") is not a code.
+  const codes = (hay.match(/(?<![\d/])\d{4}(?:\.?\d{2}){0,3}(?![\d/])/g) ?? []).map((b) => b.replace(/\./g, ''));
+  for (const [, code] of low.matchAll(HS_ANY_RE)) if (!codes.some((b) => b.startsWith(code.replace(/\./g, '')))) return '';
   return text.slice(0, max);
 }
 

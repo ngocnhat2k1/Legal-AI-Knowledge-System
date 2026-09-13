@@ -22,7 +22,7 @@ import {
   tariffResponse,
 } from './api.mjs';
 import { stampTariff } from './conversation.mjs';
-import { dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, sanitizeLead, withLead } from './format.mjs';
+import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
 import { citationFrom, cleanGazetteTitle, corpusHas, detectOrigin, keywordFrom, parseDocRef, parseQuery, parseQuotedTariff } from './parse.mjs';
 import { L } from './render.mjs';
@@ -136,11 +136,13 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   const full = await lookupFull(top.hsDotted, origin, date);
   const confirm = full ? await confirmations(top.hsDotted, origin) : null;
   const tail = (c) => (c.path || '').split(' › ').slice(-2).join(' › ');
-  const mfnOf = (c) => (c.mfn != null ? `${Number(c.mfn)}%` : '—');
+  // /tariff/search prices MFN at the server's CURRENT_DATE: print it only when that is the lookup date (R8).
+  const mfnOf = (c) => (date === today() && c.mfn != null ? `${Number(c.mfn)}%` : '—');
   const menu = (c) => L([[c.hsDotted, 'b'], ' · MFN ', [mfnOf(c), 'b'], ' · ', [tail(c), 'i']], 'ul');
 
   // R2: always said, and the LLM lead can only stand above it — a lead naming the top code passes the gate.
-  const lines = [L(['Với mô tả ', [desc, 'i'], ', mình tra được các mã ứng viên dưới đây — đây là ứng viên để bạn chốt, chưa phải mã đã xác định.'])];
+  const said = 'mình tra được các mã ứng viên dưới đây — đây là ứng viên để bạn chốt, chưa phải mã đã xác định.';
+  const lines = [L(desc ? ['Với mô tả ', [desc, 'i'], `, ${said}`] : [said[0].toUpperCase() + said.slice(1)])];
   if (citedRuling) {
     const cite = String(citedRuling.note || '').replace(/\s+/g, ' ').trim().slice(0, 90);
     lines.push(L(['Mã ', [citedRuling.dotted, 'b'], ' đã được ', [citedRuling.staffName, 'b'], ` xác nhận cho hàng tương tự${cite ? ` (${cite})` : ''} — mình ưu tiên mã này, bạn vẫn đối chiếu căn cứ.`]));
@@ -156,6 +158,8 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
       L([]),
       ...(full?.staleness?.warning ? [L([full.staleness.warning], 'warn')] : []),
       L([`Tra theo ngày ${dmy(date)} · MFN theo Biểu thuế nhập khẩu ưu đãi đã nạp${full?.import?.mfn ? ` (mã đầu: NĐ ${full.import.mfn.decree})` : ''}`], 'note'),
+      // A human verdict on the top code (R18) matters most where the code is least settled.
+      ...[confirmFooter(confirm)].filter(Boolean),
       L(['Nhắn mã bạn chốt (kèm xuất xứ) để mình tra đủ thuế ưu đãi, hoặc nhắn "HS đúng là <mã>" (kèm số công văn nếu có) để mình ghi nhận cho lần sau.'], 'note'),
     );
   } else {
@@ -390,7 +394,8 @@ export async function answerImage(imageUrls, caption) {
         tariff: null,
       };
     }
-    return await tariffByClues(clues, [caption, clues.note].filter(Boolean).join(' '));
+    // The note is LLM text: gate it here, so no fallback (keywords, desc, no-candidates line) can echo it (R1).
+    return await tariffByClues(clues, [caption, sanitizeLead(clues.note, '')].filter(Boolean).join(' '));
   } finally {
     try { unlinkSync(file); } catch { /* ignore */ }
   }
