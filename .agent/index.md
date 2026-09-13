@@ -1,7 +1,7 @@
 ---
 type: index
 status: active
-updated: 2026-09-13
+updated: 2026-09-14
 related:
   - AGENTS.md
   - project-context.md
@@ -55,6 +55,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Danh sách công việc](planning/01-task-list.md) — chi tiết công việc và tiêu chí chấp nhận
 - [Triển khai lại lên server dev dùng chung của MONA](planning/06-deploy-mona-dev-server.md) — **đang thực thi (2026-09-13)**: API + kho pháp lý chạy, LLM up; bot Zalo đã đăng nhập, còn kiểm thử đầu-cuối (Task 9); chờ domain + mật khẩu basic auth (Task 8), `rclone.conf` (Task 10). Dữ liệu Contabo đã mất (VPS bị xoá) nên seed mới
 - [Nâng cấp bot ngang notebook — Mảng 1…4](planning/05-bot-parity-tasks.md) — **kế hoạch đang chạy (2026-09-13)**: mảng 1 chi tiết (nền, baseline), mảng 2–4 phác thảo
+- [Trình bày kiểu notebook trên Zalo — kế hoạch 07](planning/07-zalo-notebook-style-tasks.md) — chữ định dạng + màu do dữ liệu quyết, lọc FTA theo bảng thành viên đã ký, dòng phạm vi kho từ bảng `decree`, sửa 69/2018; làm trước Mảng 2
 - [Đường ống hộp thư đến — Giai đoạn 9](planning/04-inbox-ingest-tasks.md) — **kế hoạch đang chạy**; nạp tài liệu mới + gộp nguồn notebook, không cần máy chủ
 - [Kế hoạch mở rộng LLM (M0…M4)](planning/03-llm-expansion-tasks.md) — nền móng, kho rộng ra, truy hồi, bằng chứng HS, phân loại HS
 
@@ -92,6 +93,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Bảng bằng chứng chung và câu trả lời dài có kiểm nguyên văn](architecture-decisions/2026-09-13-evidence-sections-and-long-form-answers.md) — thay một phần ADR 2026-08-14: ngân sách 4 lần gọi/lượt; `quote ⊂ nguồn` là sàn kiểm căn cứ
 - [Host trên server dev dùng chung của MONA](architecture-decisions/2026-09-13-host-on-mona-dev-server.md) — thay VPS Contabo đã bị xoá: một compose project cô lập, nginx có sẵn thay Caddy, cổng 3060/5435, sao lưu lên Drive
 - [Dòng 10 số quốc gia của biểu FTA đi kèm mã 8 số; EVFTA chỉ nạp Phụ lục II](architecture-decisions/2026-09-13-fta-national-sublines.md) — dòng con khác mức → `by_subline`, không in một con số; 553 mã EVFTA từng nạp nhầm thuế XK
+- [Chữ định dạng Zalo theo giọng notebook, màu do dữ liệu quyết](architecture-decisions/2026-09-13-zalo-rich-text-notebook-style.md)
 
 ## Đánh giá (Reviews)
 

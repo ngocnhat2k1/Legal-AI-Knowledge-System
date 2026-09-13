@@ -1,7 +1,7 @@
 ---
 type: runbook
 status: active
-updated: 2026-09-13
+updated: 2026-09-14
 related:
   - ../planning/06-deploy-mona-dev-server.md
   - ../architecture-decisions/2026-09-13-host-on-mona-dev-server.md
@@ -163,6 +163,13 @@ Tra cứu thử:
 ```bash
 curl -s "http://127.0.0.1:3060/tariff/search?q=th%C3%A9p" | head -c 300
 curl -s http://127.0.0.1:3060/legal/documents | head -c 300
+```
+
+Xem trước câu trả lời của bot (chữ + style, không gửi Zalo, không ghi bộ nhớ hội thoại):
+
+```bash
+docker-compose exec -T zalo-bot node apps/zalo-bot/dry-run.mjs                      # sáu câu mẫu
+docker-compose exec -T zalo-bot node apps/zalo-bot/dry-run.mjs "câu hỏi của bạn"
 ```
 
 Đếm dòng dữ liệu:

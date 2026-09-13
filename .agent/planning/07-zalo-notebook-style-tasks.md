@@ -1,7 +1,7 @@
 ---
 type: planning
 status: active
-updated: 2026-09-13
+updated: 2026-09-14
 related:
   - ../docs/bot-answer-parity-design.md
   - ../architecture-decisions/2026-09-13-zalo-rich-text-notebook-style.md
@@ -15,13 +15,15 @@ related:
 
 # Kế hoạch triển khai — trình bày kiểu notebook trên Zalo (§5b)
 
-> **Trạng thái 2026-09-13 (khuya):** chưa bắt đầu code. Kế hoạch đã rà lại với mã thật và commit cùng spec §5b, ADR
-> và `verifiedHash` của `fta-members.json` — commit đó là BASE của Task 1. Làm **trước** Mảng 2 của
+> **Trạng thái 2026-09-14:** Task 1–7 và Task 9 **đã code, kiểm và commit** (không push), trên BASE `853d09d`: Task 1
+> `276c866`, `8616092`; Task 2 `148b983`, `ff576b3`; Task 3 `8a42c61`, `39f59d4`; Task 4 `9aa4d02`, `0d2364b`; Task 5
+> `97bfb5c`, `28a22f9`, `7c689b2`, `44f0297`; Task 6 `1c950cb`, `da5b3ed`; Task 7 `3b793ee`; sửa sau rà soát cuối
+> `f5e0348`, `952f15d`; Task 9 là commit tài liệu ngay sau. Tại `952f15d`: bot 62/62; Jest tariff + legal + `apps/eval`
+> 68/68; `tsc` sạch; `yarn build` sạch. Số test vượt số ghi trong task (50 và 62) vì mỗi vòng sửa sau rà soát thêm test;
+> mã trong các task dưới đây là bản trước các vòng sửa — spec §5b và mã là nguồn đúng. **Task 8 (deploy) do controller
+> thực hiện ngay sau**; ngày deploy, đầu ra chạy khô trên server và kết quả kiểm của chủ dự án (điện thoại + Zalo PC)
+> ghi vào [nhật ký tiến độ](02-progress.md) khi có — hiện **chờ chủ dự án kiểm**. Làm **trước** Mảng 2 của
 > [kế hoạch 05](05-bot-parity-tasks.md), Mảng 2 làm ngay sau. Không thêm bảng, seed, migration hay lần gọi LLM nào.
-> Mã trong kế hoạch đã được áp nguyên văn lên một bản sao ngoài repo dựng từ `HEAD` `e823678` và chạy lại (sau khi sửa
-> lỗi import trùng ở Task 2 bước 4a): bot 35 → 44 → 46 → 49 → 50/50; Jest tariff 32/32; tariff + legal + `apps/eval`
-> 62/62, không dòng `WARN` nào khi file có `verifiedHash`; `tsc` sạch; `yarn build` sạch; bản chạy khô Task 7 bước 3 in
-> đúng đầu ra mong đợi.
 >
 > **Quyết định của chủ dự án (2026-09-13), ghi đè chữ cũ của kế hoạch nếu mâu thuẫn:** làm xong là deploy luôn —
 > controller deploy ở Task 8, không có điểm dừng chủ dự án trước deploy, chủ dự án duyệt bằng cách nhắn thử trên Zalo

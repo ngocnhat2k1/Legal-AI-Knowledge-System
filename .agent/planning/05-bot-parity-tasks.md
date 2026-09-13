@@ -1,7 +1,7 @@
 ---
 type: planning
 status: active
-updated: 2026-09-13
+updated: 2026-09-14
 related:
   - ../docs/bot-answer-parity-design.md
   - ../architecture-decisions/2026-09-13-evidence-sections-and-long-form-answers.md
@@ -11,7 +11,7 @@ related:
 
 # Kế hoạch triển khai — bot trả lời ngang notebook (Mảng 1 … 4)
 
-> **Trạng thái 2026-09-13 (tối):** Mảng 1 đã commit; server đã chạy ([kế hoạch 06](06-deploy-mona-dev-server.md)) — Task 7 đạt (`/health` báo `llm: up`); Task 8 bước 4 chờ `rclone.conf`; Task 6 bước 6 (đo mục dài trên server) chưa làm; Task 5 bước 6–9 chờ chủ dự án. Task 9 bước 2 xong trên **kho cũ** (bước 1 chưa làm vì Task 5 còn chờ): pháp luật recall@5 90% (20 câu), từ chối đúng 2/2, trích dẫn hợp lệ 100%; HS top-1 20% / top-3 27,3% (55 tờ khai, đường tra tất định); notebook đạt 1/14, nhóm an toàn 0/8 — `fixtures/eval-baseline.json`. **Chủ dự án chốt thứ tự mới:** trình bày kiểu notebook + định dạng Zalo (đậm, màu theo ngữ nghĩa) trước, rồi Mảng 2 ngay sau. Sổ thực thi: `.superpowers/sdd/05-bot-parity-tasks/progress.md` (ngoài git).
+> **Trạng thái 2026-09-13 (tối):** Mảng 1 đã commit; server đã chạy ([kế hoạch 06](06-deploy-mona-dev-server.md)) — Task 7 đạt (`/health` báo `llm: up`); Task 8 bước 4 chờ `rclone.conf`; Task 6 bước 6 (đo mục dài trên server) chưa làm; Task 5 bước 6–9 chờ chủ dự án. Task 9 bước 2 xong trên **kho cũ** (bước 1 chưa làm vì Task 5 còn chờ): pháp luật recall@5 90% (20 câu), từ chối đúng 2/2, trích dẫn hợp lệ 100%; HS top-1 20% / top-3 27,3% (55 tờ khai, đường tra tất định); notebook đạt 1/14, nhóm an toàn 0/8 — `fixtures/eval-baseline.json`. **Chủ dự án chốt thứ tự mới:** trình bày kiểu notebook + định dạng Zalo (đậm, màu theo ngữ nghĩa) trước, rồi Mảng 2 ngay sau. Sổ thực thi: `.superpowers/sdd/05-bot-parity-tasks/progress.md` (ngoài git). **Kế hoạch 07 xong** ([07](07-zalo-notebook-style-tasks.md)): `render.mjs`, `md()`, tách tin, `sourceLines`, `numberMarkers` đã có — Mảng 3 dùng lại.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -1270,13 +1270,13 @@ export function statusSections(documents: DocRow[], relations: RelationRow[]): E
 | `repair.ts` | gọi #3 với danh sách vi phạm; cắt câu khi còn vi phạm |
 | `types.ts` | `AnswerRequest`, `AnswerResponse`, `Plan`, `Citation`, `Candidate` đúng JSON spec §3.1 |
 | `apps/api/src/modules/conversation/conversation.service.ts` | `sweepIdle` xoá `decision_log` > 30 ngày |
-| `apps/zalo-bot/render.mjs` (+ `render.test.mjs`) | markdown → chữ Zalo, danh sách nguồn, một dòng cảnh báo, khối ứng viên, tách tin ~1.800 |
+| `apps/zalo-bot/format.mjs` (+ `dispatch.test.mjs`) | **chỉ thêm** `formatAnswerMd(answer: AnswerResponse): Line[]`: `md(answerMd)`, `sourceLines` với nhãn `authority`/`window`/`meta.status`, khối `candidates` và khối thuế đặt dưới; bỏ qua `followups`. `render.mjs` (bộ trình bày, tách tin, `warn`) đã có từ [kế hoạch 07](07-zalo-notebook-style-tasks.md) — không viết bộ trình bày thứ hai |
 | `apps/zalo-bot/dispatch.mjs` (+ test) | `INTENTS` thêm `status`/`hs`/`mixed` pass-through |
 | `apps/zalo-bot/index.mjs`, `api.mjs`, `answer.mjs`, `conversation.mjs`, `parse.mjs` | gọi `/answer`, ack "🔍 Đang tra…", `forceIntent`, `state.legal.evidenceIds`, `parseQuery` bắt `\d{4}\.\d{2}` và "nhóm dddd" |
 
-**Hợp đồng giao diện:** đúng JSON ở spec §3.1; `guards.check(answer: ComposeResult, evidence: ExpandedSection[], userTokens: string[]): Violation[]`; `render(answer: AnswerResponse): string[]` (mảng tin đã tách).
+**Hợp đồng giao diện:** đúng JSON ở spec §3.1; `guards.check(answer: ComposeResult, evidence: ExpandedSection[], userTokens: string[]): Violation[]`; `formatAnswerMd(AnswerResponse): Line[]` + `render(Line[]) → {msg, styles}[]` (có sẵn); `guards.ts` chuyển `numberMarkers` từ `legal.grounding.ts` sang và so với `quote` từng trích dẫn.
 
-**Việc:** (1) `types.ts` + `guards.ts` TDD với mọi ca §7; (2) `plan.ts` + `normalizePlan` test; (3) `retrieve.ts` với test SQL thật trên DB seed (Phần XVI, 16/2026, mũ bảo hiểm, 84.18); (4) `expand.ts` + trần token; (5) `compose.ts` + `repair.ts`; (6) `answer.service` + controller + `decision_log` + sweep; (7) bot: `render.mjs` TDD, `dispatch` mở rộng, `index.mjs` nối, ack; (8) `yarn eval` với `EVAL_ANSWER_ENDPOINT=/answer`: 14/14 có bằng chứng truy hồi (`expectEvidence`), `numbersOutsideSentenceQuote = 0`, `citationsProven = 100%`, p95 ≤ 120s.
+**Việc:** (1) `types.ts` + `guards.ts` TDD với mọi ca §7; (2) `plan.ts` + `normalizePlan` test; (3) `retrieve.ts` với test SQL thật trên DB seed (Phần XVI, 16/2026, mũ bảo hiểm, 84.18); (4) `expand.ts` + trần token; (5) `compose.ts` + `repair.ts`; (6) `answer.service` + controller + `decision_log` + sweep; (7) bot: `formatAnswerMd` TDD, `dispatch` mở rộng, `index.mjs` nối, ack; (8) `yarn eval` với `EVAL_ANSWER_ENDPOINT=/answer`: 14/14 có bằng chứng truy hồi (`expectEvidence`), `numbersOutsideSentenceQuote = 0`, `citationsProven = 100%`, p95 ≤ 120s.
 
 ## Mảng 4 · Nghiệm thu — phác thảo (chi tiết hoá sau mảng 3)
 
