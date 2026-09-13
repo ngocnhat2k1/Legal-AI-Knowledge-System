@@ -9,6 +9,8 @@ related:
   - ../architecture-decisions/2026-09-13-evidence-sections-and-long-form-answers.md
   - ../architecture-decisions/2026-08-14-llm-generates-hypotheses-never-assertions.md
   - ../business-rules.md
+  - ../architecture-decisions/2026-09-13-zalo-rich-text-notebook-style.md
+  - ../concepts/tariff-system.md
 ---
 
 # Thiết kế: bot Zalo trả lời ngang hoặc hơn Gemini Notebook
@@ -16,6 +18,11 @@ related:
 > Bản 2 (2026-09-13, tối). Bản 1 được chủ dự án duyệt rồi đưa qua một đợt kiểm độc lập (3 góc soát,
 > mỗi phát hiện một agent phản biện): 21 phát hiện đứng vững, 8 mức chặn. Bản này vá tất cả. Những chỗ
 > đổi so với bản 1 đánh dấu **[v2]**.
+>
+> **Bản 3 (2026-09-13, khuya):** thêm §5b — trình bày kiểu notebook trên Zalo cho các đường đang chạy
+> (chữ định dạng, màu do dữ liệu quyết, lọc FTA theo bảng thành viên đã có người xác nhận, dòng phạm vi
+> kho từ bảng `decree`, sửa lỗi 69/2018), làm **trước** Mảng 2; §5 trỏ về §5b. Chỗ đổi đánh dấu
+> **[v3]**. Đã rà với mã thật khi lập kế hoạch 07 (2026-09-13); chủ dự án cho triển khai và deploy.
 
 ## Vì sao
 
@@ -125,7 +132,7 @@ chỉ ngân sách gọi thay đổi.
 | `source_ref` | text | file + trang/anchor/H2 để truy vết |
 | `meta` | jsonb | nhãn hs2022 của công văn, mặt hàng, `also_contains`, `phan`, `row_from/row_to`, **[v2]** `status` = câu tình trạng nguyên văn của bản ghi notebook-only (gắn cho **mọi** cửa sổ của bản ghi đó) |
 
-Migration **viết tay** `db/migrations/0010_evidence_section.sql` (gồm cả `decision_log` ở §6) + mục
+Migration **viết tay** `db/migrations/0011_evidence_section.sql` (0010 đã là `0010_tariff_by_subline`) (gồm cả `decision_log` ở §6) + mục
 trong `_journal.json`, cùng cách 0007–0009 đã làm. Không chạy `drizzle-kit generate` — snapshot
 0007–0009 vẫn thiếu, đó là nợ riêng (TASK-022), không chặn việc này. Bảng khai báo thêm trong
 `db/schema/index.ts` để có kiểu. Khoá idempotent: `(kind, instrument, source_ref)`; thân đổi thì
@@ -466,16 +473,864 @@ những gì đã tìm.
 - Theo intent: `confirm`/`correction` → `handleConfirm`/`handleCorrection`; `general` → `plan.reply`;
   `tariff` → `answerByHs`/`tariffByClues` với `keywords`/`hsHints` từ kế hoạch; `legal`/`status`/
   `mixed`/`hs` → `render.mjs`.
-- **`render.mjs`** — markdown → chữ Zalo: `## ` → dòng in hoa; `- ` → `•`; `**x**` → `x`; `[n]` giữ;
-  bảng → `a · b · c`; cuối tin `Nguồn:` `[1] <label> (<instrument>)` + `↗ link` **chỉ khi có**; trên
+- **`render.mjs`** — **[v3]** bộ trình bày duy nhất, định nghĩa ở [§5b](#5b-trình-bày-kiểu-notebook-trên-zalo-v3):
+  `answerMd` đi qua `md()` (tập Markdown con §5b.1 — `**x**` giữ thành chữ đậm bằng `styles` của `zca-js`,
+  không còn bỏ dấu; `## ` → dòng đậm, không in hoa; `- ` → danh sách Zalo; `[n]` giữ); bảng → `a · b · c`;
+  cuối tin danh sách nguồn chữ nhỏ nghiêng `[1] <label> (<instrument>)` + link **chỉ khi có**; trên
   dòng nguồn in `authority`/`window`/`meta.status` khi không phải `binding`/`current`; `note` in
-  "ghi chú nghiệp vụ của dự án — không phải căn cứ pháp lý". Một dòng ⚠️ từ `warnings`. Khối
-  `candidates` và khối thuế (`formatAnswer`, thêm dòng `Chương 98: <98xx> ↔ <mã thường> · <thuế> · có
-  điều kiện`) đặt **dưới** câu trả lời.
-- **Tách tin** ở ~1.800 ký tự tại ranh giới đoạn, đánh số `(1/3)`. *Giả định* — đo giới hạn thật của
-  `zca-js` khi triển khai (không kiểm được từ repo: `node_modules/zca-js/dist` rỗng).
+  "ghi chú nghiệp vụ của dự án — không phải căn cứ pháp lý". Một dòng cảnh báo (cam) từ `warnings`, do
+  `render()` cưỡng chế. Khối `candidates` và khối thuế (`formatAnswer`, thêm dòng `Chương 98: <98xx> ↔
+  <mã thường> · <thuế> · có điều kiện`) đặt **dưới** câu trả lời, theo mẫu §5b.3 và §5b.5.
+- **Tách tin** — **[v3]** làm trong `render()` (§5b.1): ~1.800 ký tự tại ranh giới đoạn, `(k/n)` ở cuối
+  mỗi tin. Giới hạn thật vẫn là *giả định* — đo khi triển khai; `zca-js` 2.1.2 đã có trong `node_modules`
+  và phía client chỉ chặn tin rỗng.
 - Bộ nhớ hội thoại: `state.legal.evidenceIds` + `citations` (cùng tên trường `router.stateOf` đọc);
   "cho tôi toàn văn điều đó" → `/legal/provision`; "toàn văn mục đó" → `GET /evidence/:id`.
+
+## 5b. Trình bày kiểu notebook trên Zalo [v3]
+
+> Chủ dự án (2026-09-13, sau khi thử bot live): câu trả lời "quá cứng nhắc", khác giọng và bố cục
+> notebook trên cùng nguồn; muốn đồng bộ giọng, bố cục và định dạng (đậm, nghiêng, màu theo nghĩa). Thứ
+> tự đã chốt: phần này trước, Mảng 2 ngay sau; phần này **không** chặn và **không** làm trùng Mảng 2/3.
+> Quyết định: [ADR chữ định dạng Zalo theo giọng notebook](../architecture-decisions/2026-09-13-zalo-rich-text-notebook-style.md).
+
+**Phạm vi.** Đổi cách trình bày trên các đường **đang chạy** (`/tariff`, `/tariff/search`, `/legal`,
+`/legal/provision`), cộng các thay đổi API nhỏ (§5b.4, §5b.6, §5b.8) và một dòng `norm` ở
+`apps/eval/notebook.ts` (§5b.9). Không đổi dữ liệu thuế, không đổi hợp đồng ứng viên HS, không thêm lần
+gọi LLM.
+
+**Ký hiệu trong ví dụ:** `**x**` đậm · `*x*` nghiêng · `{xanh: x}` `{cam: x}` `{đỏ: x}` màu ·
+`{nhỏ: x}` chữ nhỏ nghiêng · `•` dòng mang kiểu danh sách của Zalo (dấu chấm do Zalo vẽ, **không** nằm
+trong `msg`).
+
+### 5b.1 `apps/zalo-bot/render.mjs` — bộ trình bày duy nhất
+
+Module thuần (không I/O, không import `zca-js`):
+
+```js
+// Line = { segs: Array<string | [string, ...Mark]>, marks?: Mark[] }  — segs rỗng = dòng trống (ranh giới đoạn)
+export const L = (segs, ...marks) => ({ segs, marks });
+export function md(text): Line[]          // CHỈ cho văn xuôi LLM: router `reply`, `/legal` `answer`, (Mảng 3) `answerMd`
+export function toText(input): string     // chữ thuần: sanitizeLead, botText, test — không bao giờ làm thân bằng chứng (§5b.10)
+export function render(input, { budget = 1800 } = {}): Array<{ msg: string, styles: Style[] }>
+// input: string (một khối chữ thuần, không đọc ký hiệu) | Line[]
+```
+
+**Hai đường vào, một đầu ra.** Builder tất định (`format.mjs`) dựng `Line[]` từ đoạn chữ + nhãn ngữ
+nghĩa — chỉ ở đây mới có màu. Văn xuôi LLM đi qua `md()`, và tập nhãn đầu ra của `md()` là `{b, i, ul,
+ol}` theo cấu trúc hàm: không có cú pháp nào sinh màu. "Màu do code quyết từ dữ liệu" vì vậy đúng bằng
+code, không bằng prompt.
+
+**Nhãn → `TextStyle`** (zca-js 2.1.2, `node_modules/zca-js/dist/apis/sendMessage.d.ts`):
+
+| Nhãn | Dùng cho | `st` gửi đi |
+|---|---|---|
+| `b` | mã HS, mức thuế, số hiệu, ý chính | `b` (Bold) |
+| `i` | tên hàng, mô tả phụ, gợi ý kết | `i` (Italic) |
+| `green` | mức ưu đãi **khi điều kiện xác định được là đáp ứng** (§5b.3) | `c_15a85f` (Green) |
+| `orange` | cần chuyên viên chốt / chưa chắc | `c_f27806` (Orange) |
+| `red` | cảnh báo pháp lý: không được hưởng, chống bán phá giá, hết/chưa có hiệu lực | `c_db342e` (Red) |
+| `small` | cỡ nhỏ | `f_13` (Small) |
+| `ul` / `ol` | nhãn dòng: danh sách | `lst_1` / `lst_2` |
+| `note` (bí danh) | nguồn, ghi chú, chân trang | `f_13` + `i` |
+| `warn` (bí danh dòng) | dòng cảnh báo | mọi dòng `warn` của một lần `render` **gộp thành một** dòng `c_f27806` ở vị trí dòng `warn` đầu tiên, nối bằng `; `. Không dòng nào bị hạ thành chữ nhỏ: cảnh báo "bot tự nạp, chưa có người đối chiếu" (R18) hay dòng phạm vi kho không bao giờ bị thu nhỏ chỉ vì đứng sau |
+
+Không dùng `u`, `s`, `c_f7b503` (Yellow), `f_18` (Big), `ind_$`. Bảng nhãn là hằng trong `render.mjs`;
+test so nó với `TextStyle` import từ `zca-js` để bắt lệch khi nâng phiên bản.
+
+**`md()` — tập Markdown con.** Chuẩn hoá NFC, `\r\n` → `\n`, gộp dòng trống liên tiếp.
+
+- Đầu dòng: `- `, `* `, `• ` → `ul`; `1. ` hoặc `1) ` → `ol`; `#` đến `###` + khoảng trắng → cả dòng
+  `b` (không in hoa, không `Big`). Tiền tố bị bỏ khỏi chữ.
+- Trong dòng: `**x**` → `b`; `*x*` → `i`; lồng `**a *b* c**` được. Dấu mở phải đứng ngay trước chữ, số
+  hoặc `*`; dấu đóng đứng sau ký tự không trắng; cặp nằm trên cùng dòng. `*` có chữ hoặc số **ở cả hai
+  bên**, hoặc đứng sát `(` hay `)`, không bao giờ là dấu (`173.6*162.6*12.1`, `a*b`, `0405.90.10 (*)` —
+  dấu loại trừ trong văn bản); `\*` → `*`, `\\` → `\`. Dấu không khép → giữ nguyên là chữ.
+- `[n]` giữ nguyên là chữ. Mọi cú pháp khác (`__`, `~~`, backtick, link, HTML, thẻ kiểu `{red}`) là chữ.
+
+**Thoát ký tự — một quy tắc:** *chỉ chuỗi được đưa vào `md()` mới bị đọc ký hiệu.* Nguyên văn điều
+khoản, dòng thuế (`*` = loại trừ), tên người gửi, số hiệu, tiêu đề Công báo luôn vào `Line` dưới dạng
+đoạn chữ thuần, và `render()` không diễn giải ký tự nào. Builder không bao giờ gọi `md()` trên dữ liệu
+DB hay chữ người dùng.
+
+**Offset.** `start`/`len` là chỉ số chuỗi JavaScript (đơn vị UTF-16, `String.prototype.length`) trên
+`msg` đã NFC — đúng cách của tin mẫu đã hiện đúng trên điện thoại và Zalo PC (465 ký tự, 25 kiểu).
+Emoji đếm 2. Nhãn đoạn phủ đúng đoạn; nhãn dòng phủ `[đầu dòng, cuối dòng)`, không gồm `\n`. Nhãn chồng
+nhau → nhiều `Style` cùng khoảng (đậm + xanh = hai mục). Đoạn rỗng không sinh style.
+
+**Tách tin.** Tách trên `Line[]` **trước** khi tính offset, nên mỗi tin tính style từ 0 — không có phép
+dời gốc nào để sai:
+
+1. Gom dòng thành đoạn (ngăn bởi dòng trống). Xếp tham lam từng đoạn vào tin hiện tại khi tổng độ dài
+   ≤ `budget − 8` (chừa chỗ `(k/n)`).
+2. Một đoạn dài hơn ngân sách → xếp theo dòng. Một dòng dài hơn ngân sách → cắt ở ranh giới đoạn chữ;
+   đoạn không nhãn được cắt ở khoảng trắng cuối cùng trước ngưỡng; **đoạn có nhãn không bị cắt**, trừ
+   khi chính nó dài hơn ngân sách (builder không sinh đoạn như vậy) — khi đó cắt ở khoảng trắng và hai
+   nửa cùng giữ nhãn. Nhãn dòng lặp trên cả hai nửa.
+3. Bỏ dòng trống đầu/cuối mỗi tin. Có hơn một tin → thêm dòng `note` `(k/n)` ở cuối mỗi tin.
+
+`budget = 1800` là hằng mặc định, không phải biến môi trường. Giới hạn thật của Zalo vẫn chưa đo; phía
+client, `zca-js` chỉ chặn tin rỗng.
+
+**Gửi (`index.mjs`).**
+
+```js
+const parts = render(result.text);
+await api.sendMessage({ ...parts[0], quote: msg.data }, msg.threadId, msg.type);
+await saveContext({ /* as today */ botText: parts.map((p) => p.msg).join('\n\n') });
+for (const p of parts.slice(1)) {
+  // Part 1 is delivered and remembered: a later failure only logs, never sends the generic error.
+  await api.sendMessage(p, msg.threadId, msg.type).catch((e) => console.warn('[zalo] send part failed:', e?.message));
+}
+```
+
+`quote` chỉ gắn vào tin đầu; các tin gửi tuần tự, chờ từng tin. Lỗi ở tin đầu vẫn rơi vào `catch` chung
+như nay; ghi nhớ đi ngay sau tin đầu, để "đúng"/"sai" tiếp theo còn `tariffFresh` dù tin sau hỏng. `zca-js` gắn `textProperties` cả ở
+nhánh `/quote` (đã đọc `sendMessage.js`), nhưng tin mẫu chưa thử kèm quote → gửi thử là bước kiểm tay
+bắt buộc (§5b.9). Ba chỗ gửi còn lại (ack ảnh, lỗi chung, báo cáo nạp) cũng đi qua `render()`.
+
+**Seam giữ nguyên, kiểu trả về đổi.** `text` trong kết quả của mọi hàm `answer.mjs` giờ là
+`string | Line[]`.
+
+| Hàm (`format.mjs`) | Trả về |
+|---|---|
+| `sanitizeLead(lead, block, max = 400)` | `string`; `block` là chữ thuần (`toText`) |
+| `withLead(lead, lines)` | `Line[]`: `sanitizeLead(lead, toText(lines))`; lời dẫn còn lại thành một dòng thuần + dòng trống **đặt trước** `lines`, không bao giờ thay dòng nào của `lines` |
+| `confirmFooter(c)` | `Line` hoặc `null` khi chưa có lịch sử xác nhận (lời mời do `formatAnswer` viết) |
+| `formatAnswer`, `formatLegal`, `formatProvisions`, `formatMissingDoc`, `formatIngestQueued`, `formatIngestReport`, `formatGeneral`, `sourceLines` | `Line[]` |
+
+Chỗ gọi đang ghép chuỗi phải đổi: `answer.mjs:345` (`handleCorrection`) →
+`[L([head]), L([]), ...formatAnswer(…)]`, nhánh lỗi `answer.mjs:337` thành `Line[]` tương tự;
+`index.mjs:310` → `for (const p of render(formatIngestReport(r))) await api.sendMessage(p, r.threadId, type)`;
+`index.mjs:194` → `formatGeneral(routed?.reply)` (§5b.7).
+
+### 5b.2 Giọng và bố cục chung
+
+Rút từ câu trả lời notebook mẫu (ví dụ 1 ở §5b.3 là bản bot của chính câu hỏi đó):
+
+1. **Câu dẫn tự nhiên** nêu thẳng dữ kiện chính, dữ kiện **đậm**. Khối thuế có câu dẫn do code viết từ
+   dữ liệu; lời dẫn LLM (`lead`) chỉ còn ở hai chỗ chưa có câu dẫn riêng: ứng viên HS (`tariffByClues`)
+   và nguyên văn theo trích dẫn (`formatProvisions`). Router vẫn trả `lead` (Mảng 3 bỏ, §3.2).
+2. **Gạch đầu dòng chỉ cho lựa chọn thật** (có/không C/O, nhiều biểu, nhiều ứng viên, các trường hợp
+   luật liệt kê). Một kết quả duy nhất → một câu.
+3. **`[n]` ngay sau dữ kiện**; danh sách nguồn chữ nhỏ nghiêng ở cuối.
+4. **Tối đa một dòng cảnh báo** (cam) mỗi câu trả lời — `render()` cưỡng chế qua `warn`. Dòng đỏ (không
+   được hưởng, chống bán phá giá, hiệu lực) là **nội dung** làm đổi nghĩa vụ, không tính vào giới hạn.
+   Ghi chú dữ liệu từ API là `note`.
+5. **Không emoji trang trí, không viết HOA để nhấn** — nhấn bằng đậm hoặc màu. Bỏ `📋 📦 📖 💡 ⚠️ ℹ️
+   📌 ✅ ❌ ⏳ 🔍 ⛔ ↗`. Chữ viết hoa sẵn của ký hiệu (`NĐ-CP`, `MFN`, `ACFTA`) giữ.
+6. **Gợi ý kết** (tuỳ chọn, chữ nghiêng): code chọn từ danh sách cố định theo trạng thái câu trả lời,
+   chỉ đề nghị việc bot làm được **ngay với dữ liệu hiện có** — cho biết xuất xứ, hoặc tra xuất xứ khác,
+   chỉ khi bảng thành viên đã xác nhận (chưa xác nhận thì xuất xứ nào cũng ra cùng các dòng); nạp văn
+   bản có trên Công báo. LLM không viết gợi ý; không bao giờ gợi ý chủ đề kho không có dữ liệu (VAT,
+   TTĐB, BVMT, thủ tục). Sau danh sách nguồn có **tối đa một** dòng kết (§5b.3 mục 7).
+7. Ngày hiển thị `dd/mm/yyyy`.
+
+### 5b.3 Trả lời thuế (`formatAnswer`, tất định — R1)
+
+**Dữ liệu vào:** `TariffResponse` cộng các trường mới ở §5b.4. Bot **không** tự ghép mức thuế: in
+`PreferentialView.rate` hoặc `RateView.statement` nguyên văn.
+
+**Tên xuất xứ:** hằng `ORIGIN_LABEL` trong `parse.mjs`, cạnh `ORIGIN_CODE` (CN Trung Quốc, JP Nhật Bản,
+KR Hàn Quốc, AU Úc, NZ New Zealand, TH Thái Lan, MY Malaysia, SG Singapore, ID Indonesia, PH Philippines,
+DE Đức, EU EU, GB Anh, US Hoa Kỳ, VN Việt Nam, IN Ấn Độ); không có thì in mã. Chỉ để hiển thị, không bao
+giờ dùng để đọc xuất xứ.
+
+**Mỗi dòng FTA** (`r.import.preferential`) in theo `type`, `originExcluded`, `sublines`,
+`originEligible`. Hàng đầu tiên của bảng mà dòng thuế khớp là cách in:
+
+| Trạng thái | Cách in |
+|---|---|
+| `type === 'excluded'` | "**{schedule} (form {form})**: {đỏ: không được hưởng} — dòng này bị loại khỏi biểu [n]". Không có con số |
+| `originExcluded === true` | "**{schedule} (form {form})**: {đỏ: không được hưởng} — NĐ {decree} loại trừ hàng xuất xứ {nhãn} ở dòng này [n]". Không có con số |
+| `type === 'by_subline'` | `ul` "{schedule} (form {form}): {cam: mức theo dòng 10 số — đối chiếu dòng của hàng} [n]", rồi mỗi `sublines[]` một dòng thuần "{codeDotted} {desc}: **{percent}%**" (`type === 'excluded'` hoặc `originExcluded === true` → {đỏ: không được hưởng}, không con số). Không xanh, không phải dòng `true` |
+| mã có mức chung, một `sublines[].originExcluded === true` (API trả `originEligible: null`) | `ul` "{schedule} (form {form}): {cam: **{rate}**} [n] — riêng dòng 10 số {codeDotted} không áp dụng cho xuất xứ {nhãn}; đối chiếu dòng của hàng" |
+| `originEligible === true` và `type` ∈ {`ad_valorem`, `specific`, `compound`}, gọi là **dòng `true`** | `ul` "**Có C/O form {form} hợp lệ ({schedule})**: thuế nhập khẩu ưu đãi đặc biệt {xanh: **{rate}**} [n]". **Chỗ duy nhất có xanh** |
+| `originEligible === true`, `type === 'trq'` | `ul` "{schedule} (form {form}): **{rate}** [n]". Không xanh, không phải dòng `true` |
+| `originEligible === false` | ẩn; tên biểu vào dòng "Đã ẩn" (dạng A) hoặc câu thuần (dạng B) |
+| `originEligible === null` | dạng gọn `ul` "{schedule} (form {form}): **{rate}** [n]"; khi `originExcluded === null` và `excludedOrigins` khác rỗng thêm " — trừ hàng xuất xứ {excludedOrigins} (NĐ {decree} loại trừ ở dòng này)"; không xanh |
+
+Hai hàng đỏ đầu gọi chung là **dòng không được hưởng**.
+
+**Mẫu, theo thứ tự dòng:**
+
+1. **Câu dẫn**, một trong các dạng dưới. Xuất xứ luôn viết "có xuất xứ", không viết "nhập khẩu từ": bộ lọc
+   dùng nước xuất xứ, còn người hỏi ("nhập từ Trung Quốc") có thể đang nói nước gửi hàng.
+   - **(A)** có ít nhất một dòng `true`: "Đối với hàng hóa có mã HS **{dotted}** (*{heading}*) có xuất xứ
+     **{nhãn}**, mức thuế nhập khẩu phụ thuộc vào việc có C/O ưu đãi hợp lệ hay không:" → các dòng
+     `true`, các dòng không được hưởng, rồi `ul` "**Không có C/O ưu đãi hợp lệ**: thuế nhập khẩu ưu đãi
+     thông thường (**MFN**) **{mfn.statement}** [n]". Có biểu bị ẩn → `note` "Đã ẩn {các biểu `false`}
+     vì {nhãn} không có trong danh sách nước thành viên đã xác nhận; nếu nước xuất xứ khác nước gửi
+     hàng, nhắn tên nước xuất xứ."
+   - **(B)** có xuất xứ, bảng đã xác nhận, không có dòng `true`: "Hàng hóa có mã HS **{dotted}**
+     (*{heading}*) có xuất xứ **{nhãn}** áp thuế nhập khẩu ưu đãi thông thường (**MFN**)
+     **{mfn.statement}** [n]." → các dòng không được hưởng, các dòng `trq` → câu thuần "Các biểu FTA đã
+     nạp khác ({chỉ các biểu `false`}) không áp dụng cho xuất xứ này; các hiệp định khác chưa được nạp.
+     Nếu nước xuất xứ khác nước gửi hàng, nhắn tên nước xuất xứ." (bỏ câu khi không có biểu `false`).
+   - **(C)** không có xuất xứ: "Hàng hóa có mã HS **{dotted}** (*{heading}*) có thuế nhập khẩu ưu đãi
+     thông thường (**MFN**) **{mfn.statement}** [n]. Mức ưu đãi đặc biệt theo FTA chỉ áp dụng khi hàng có
+     xuất xứ từ nước thành viên và có C/O hợp lệ đúng form:" → các dòng theo bảng.
+   - **(C')** có xuất xứ, bảng chưa xác nhận (`ftaMembership === null`): như (C), câu thứ hai thay bằng
+     "Mình chưa lọc được các biểu FTA theo xuất xứ **{nhãn}**; mỗi mức dưới đây chỉ áp dụng khi hàng có
+     xuất xứ từ nước thành viên và có C/O hợp lệ đúng form:". Không có dòng ghi chú riêng.
+   - **Chế độ ứng viên** (`formatAnswer(…, { candidate: true })`, chỉ `tariffByClues` dùng, §5b.5): "Nếu
+     hàng thuộc mã **{dotted}** (*{heading}*), thuế nhập khẩu ưu đãi thông thường (**MFN**) là
+     **{mfn.statement}** [n]; mức FTA dưới đây chỉ áp dụng khi hàng có xuất xứ từ nước thành viên và có C/O
+     hợp lệ đúng form:" → dòng in như (C): dòng `true` in dạng gọn, không xanh, không ẩn biểu; dòng không
+     được hưởng vẫn đỏ. Mức ưu đãi phụ thuộc một phân loại chưa ai chốt, nên không được trông như đã áp
+     dụng được.
+
+   Trong (A)/(B), dòng `null` in dạng gọn sau tiêu đề "Biểu chưa xác định được theo xuất xứ:". `heading`
+   cắt ≤ 45 ký tự ở ranh giới từ (dùng lại phần cắt của `cleanGazetteTitle`): tiêu đề nhóm 8481 dài 160
+   ký tự, cắt 80 thì câu dẫn đã chiếm khoảng 6 dòng điện thoại trước gạch đầu dòng đầu tiên. Không có
+   `mfn` → câu dẫn nói "chưa có dòng MFN tại ngày {date}" và không cấp [n] cho nó.
+
+   Các dòng dưới đây **chỉ có khi dữ liệu có**:
+2. "Ngoài hạn ngạch: **{outOfQuota.statement}** [n]" · "Thuế xuất khẩu: **{export.statement}** [n]".
+3. Mỗi `antiDumping[]`: một dòng `red` "**{statement}** — theo {decisionNumber} [n]".
+   `staleness.pendingExtension` (§5b.4): một dòng `red`, nguyên văn.
+4. Mỗi `notes[]`: một dòng `note` "Lưu ý: {note}".
+5. **Dòng phạm vi kho:** `staleness.warning` nguyên văn, nhãn `warn`.
+6. **Nguồn** (`note`): "Tra theo ngày {dd/mm/yyyy} · [1] NĐ {decree} — {scheduleName} · [2] … · Chưa nạp:
+   NĐ {u1}, NĐ {u2}…" (vế cuối từ `staleness.unloadedInstruments`, bỏ khi rỗng). [n] cấp **theo thứ tự
+   in**: dòng mang dấu xuất hiện trước trong tin nhận số nhỏ hơn; cùng số hiệu nghị định → cùng [n].
+7. **Dòng kết: tối đa một dòng sau nguồn.**
+   - Có lịch sử xác nhận → `confirmFooter` trả **một** dòng `note`, giữ lịch sử
+     ([R18](../business-rules.md)): `Đã xác nhận đúng {n} lần (gần nhất: {tên}) · {cam: từng bị báo sai
+     {n} lần ({tên}: {ghi chú}) — kiểm tra kỹ} · chưa chắc {n} lần — trả lời "đúng"/"sai" để cập nhật.`
+     Đoạn cam là **đoạn**, không phải dòng cảnh báo. Không in gợi ý.
+   - Không có lịch sử, `showFooter` → một câu nghiêng = gợi ý (nếu có) + lời mời. Gợi ý chỉ khi bảng đã
+     xác nhận: không có xuất xứ "Cho mình biết xuất xứ để lọc đúng biểu ưu đãi; ", có xuất xứ "Muốn xem
+     xuất xứ khác, nhắn tên nước; ". Lời mời: `mã đúng với lô hàng thì trả lời "đúng", chưa đúng thì trả
+     lời "sai" hoặc gửi mã đúng.` (viết hoa chữ đầu câu khi đứng một mình).
+   - Không có lịch sử, không `showFooter` → không có dòng kết.
+
+**Dòng 10 số.** Theo [ADR dòng 10 số quốc gia](../architecture-decisions/2026-09-13-fta-national-sublines.md)
+(chủ dự án chốt "nạp đủ dòng 10 số, sửa trước"), mã 8 số có các dòng 10 số khác mức mang
+`type: 'by_subline'`, không có con số chung, và `sublines[]` mang mức từng dòng (mã cha khác mức: ACFTA
+10, AANZFTA 8, EVFTA Phụ lục II 58 — [khái niệm biểu thuế](../concepts/tariff-system.md)); mã cùng mức giữ
+mức chung và vẫn có `sublines[]`. Bot in theo bảng trên: không bao giờ một con số ưu đãi duy nhất cho mã
+`by_subline`, không xanh ở mức dòng 10 số (chưa ai chốt hàng thuộc dòng nào), không tính là dòng cảnh
+báo. Dữ liệu đang phục vụ chỉ có các trường này sau khi chạy migration 0010 và seed lại; trước đó
+`sublines` rỗng và mức 8 số vẫn là mức của dòng 10 số đầu tiên. Ký `verifiedBy` bật xanh ở **mọi** mã,
+nên điều kiện ký ở §5b.11 dựa vào mốc này.
+
+**Ví dụ — `8481.80.99`, ngày 13/09/2026, chưa có lịch sử xác nhận.** Dữ liệu seed: MFN 10%
+(26/2023/NĐ-CP); ACFTA 0%, loại trừ KH, PH; AANZFTA 0%; ATIGA năm 2026 0%; EVFTA năm 2026 0%; không có
+thuế chống bán phá giá. Tiêu đề nhóm thật: "Vòi, van và các thiết bị tương tự dùng cho đường ống, thân
+nồi hơi, bể chứa hoặc các loại tương tự, kể cả van giảm áp và van điều chỉnh bằng nhiệt".
+
+*Ví dụ 1 — xuất xứ CN, bảng thành viên **đã** xác nhận* (ACFTA `true`; AANZFTA, ATIGA, EVFTA `false` →
+ẩn):
+
+```text
+Đối với hàng hóa có mã HS **8481.80.99** (*Vòi, van và các thiết bị tương tự dùng cho…*) có xuất xứ **Trung Quốc**, mức thuế nhập khẩu phụ thuộc vào việc có C/O ưu đãi hợp lệ hay không:
+• **Có C/O form E hợp lệ (ACFTA)**: thuế nhập khẩu ưu đãi đặc biệt {xanh: **0%**} [1]
+• **Không có C/O ưu đãi hợp lệ**: thuế nhập khẩu ưu đãi thông thường (**MFN**) **10%** [2]
+{nhỏ: Đã ẩn AANZFTA, ATIGA, EVFTA vì Trung Quốc không có trong danh sách nước thành viên đã xác nhận; nếu nước xuất xứ khác nước gửi hàng, nhắn tên nước xuất xứ.}
+
+{cam: Biểu thuế trong kho cập nhật tới NĐ 26/2023/NĐ-CP (hiệu lực 15/07/2023); chưa nạp dòng thuế của 4 nghị định biểu thuế còn hiệu lực — đối chiếu trước khi khai.}
+{nhỏ: Tra theo ngày 13/09/2026 · [1] NĐ 118/2022/NĐ-CP — ASEAN–Trung Quốc (ACFTA) · [2] NĐ 26/2023/NĐ-CP — Biểu thuế nhập khẩu ưu đãi (MFN, Mục I) · Chưa nạp: NĐ 144/2024/NĐ-CP, NĐ 108/2025/NĐ-CP, NĐ 199/2025/NĐ-CP, NĐ 201/2026/NĐ-CP}
+*Muốn xem xuất xứ khác, nhắn tên nước; mã đúng với lô hàng thì trả lời "đúng", chưa đúng thì trả lời "sai" hoặc gửi mã đúng.*
+```
+
+*Ví dụ 2 — xuất xứ CN, bảng thành viên không có hiệu lực* (thiếu file, thiếu `verifiedBy`, hoặc `verifiedHash`
+không khớp — đường đóng an toàn; ACFTA `originExcluded = false` vì CN không thuộc KH, PH):
+
+```text
+Hàng hóa có mã HS **8481.80.99** (*Vòi, van và các thiết bị tương tự dùng cho…*) có thuế nhập khẩu ưu đãi thông thường (**MFN**) **10%** [1]. Mình chưa lọc được các biểu FTA theo xuất xứ **Trung Quốc**; mỗi mức dưới đây chỉ áp dụng khi hàng có xuất xứ từ nước thành viên và có C/O hợp lệ đúng form:
+• ACFTA (form E): **0%** [2]
+• AANZFTA (form AANZ): **0%** [3]
+• ATIGA (form D): **0%** [4]
+• EVFTA (form EUR.1/REX): **0%** [5]
+
+{cam: (như ví dụ 1)}
+{nhỏ: Tra theo ngày 13/09/2026 · [1] NĐ 26/2023/NĐ-CP — Biểu thuế nhập khẩu ưu đãi (MFN, Mục I) · [2] NĐ 118/2022/NĐ-CP — ASEAN–Trung Quốc (ACFTA) · [3] NĐ 121/2022/NĐ-CP — ASEAN–Úc–New Zealand (AANZFTA) · [4] NĐ 126/2022/NĐ-CP — ASEAN (ATIGA) · [5] NĐ 116/2022/NĐ-CP — Việt Nam–EU (EVFTA) · Chưa nạp: (như ví dụ 1)}
+*Mã đúng với lô hàng thì trả lời "đúng", chưa đúng thì trả lời "sai" hoặc gửi mã đúng.*
+```
+
+Ví dụ 2 vẫn liệt kê AANZFTA, ATIGA, EVFTA cho hàng Trung Quốc, đúng điều chủ dự án chê: ẩn chúng khi bảng
+không có hiệu lực là trái quyết định 5 của ADR. Bảng đã được Trần Ngọc Nhật duyệt 2026-09-13 (commit
+`853a01f`) và mang `verifiedHash`, nên câu thử của chủ dự án ra ví dụ 1 ngay khi deploy (§5b.9); ví dụ 2
+chỉ còn là đường đóng an toàn khi file bị sửa sau khi duyệt.
+
+*Ví dụ 3 — không có xuất xứ*:
+
+```text
+Hàng hóa có mã HS **8481.80.99** (*Vòi, van và các thiết bị tương tự dùng cho…*) có thuế nhập khẩu ưu đãi thông thường (**MFN**) **10%** [1]. Mức ưu đãi đặc biệt theo FTA chỉ áp dụng khi hàng có xuất xứ từ nước thành viên và có C/O hợp lệ đúng form:
+• ACFTA (form E): **0%** [2] — trừ hàng xuất xứ KH, PH (NĐ 118/2022/NĐ-CP loại trừ ở dòng này)
+• AANZFTA (form AANZ): **0%** [3]
+• ATIGA (form D): **0%** [4]
+• EVFTA (form EUR.1/REX): **0%** [5]
+
+{cam: (như ví dụ 1)}
+{nhỏ: (như ví dụ 2)}
+*Cho mình biết xuất xứ để lọc đúng biểu ưu đãi; mã đúng với lô hàng thì trả lời "đúng", chưa đúng thì trả lời "sai" hoặc gửi mã đúng.*   ← vế gợi ý chỉ khi bảng đã xác nhận
+```
+
+*Ví dụ 4 (dạng B, rút gọn)* — `0901.11.20` xuất xứ CN, bảng đã xác nhận; NĐ 118 loại trừ CN ở dòng này:
+
+```text
+Hàng hóa có mã HS **0901.11.20** (*…*) có xuất xứ **Trung Quốc** áp thuế nhập khẩu ưu đãi thông thường (**MFN**) **{mức MFN}** [1].
+**ACFTA (form E)**: {đỏ: không được hưởng} — NĐ 118/2022/NĐ-CP loại trừ hàng xuất xứ Trung Quốc ở dòng này [2]
+Các biểu FTA đã nạp khác (AANZFTA, ATIGA, EVFTA) không áp dụng cho xuất xứ này; các hiệp định khác chưa được nạp. Nếu nước xuất xứ khác nước gửi hàng, nhắn tên nước xuất xứ.
+…
+```
+
+### 5b.4 API: thành viên FTA và dòng phạm vi kho — một nguồn cho bot và web
+
+**Nạp `db/seed/data/fta-members.json`: API đọc file lúc khởi động, không seed thành bảng.** Lý do: file
+đã nằm trong image (`Dockerfile` chép `/app/db`; `app.module.ts` đã định vị file theo `process.cwd()`);
+việc xác nhận của chủ dự án là một thay đổi có dấu vết git (`verifiedBy`, `verifiedAt`, `verifiedHash`)
+và có hiệu lực khi deploy lại; seed thành bảng cần migration viết tay (nợ snapshot 0007–0009) và tạo thêm
+một trạng thái DB có thể lệch khỏi file đã duyệt.
+
+Trong `tariff.service.ts`:
+
+```ts
+/**
+ * Membership per schedule code, or null unless the file parses, a named person verified it (R18),
+ * AND verifiedHash still matches the schedules they verified.
+ */
+export function ftaMembership(json: unknown): { verifiedBy: string; verifiedAt: string; members: Map<string, Set<string>> } | null;
+
+/** EU is a bloc (ND 116 lists member states); VN goods from non-tariff zones are a special origin, not a member row. */
+const UNDETERMINED_ORIGINS = new Set(['EU', 'VN']);
+
+export function originEligible(
+  m: ReturnType<typeof ftaMembership>,
+  schedule: string,
+  origin: string | null,
+  originExcluded: boolean | null,
+  sublineExcluded: boolean,
+): boolean | null {
+  if (!m || !origin || UNDETERMINED_ORIGINS.has(origin)) return null;
+  const set = m.members.get(schedule);
+  if (!set) return null; // schedule absent from the table (Chapter 98, a later FTA load): unknown, never "not a member"
+  if (!set.has(origin)) return false;
+  if (originExcluded === true) return false; // membership is necessary, not sufficient (ND 118 per-line exclusions)
+  return sublineExcluded ? null : true; // excluded on a 10-digit sub-line: depends on the goods, never green
+}
+```
+
+- Service giữ trường `membership` (không `readonly`, để spec gán fixture) đọc một lần khi khởi tạo:
+  `ftaMembership(readJson(join(process.cwd(), 'db/seed/data/fta-members.json')))`. Trả `null` (đóng an
+  toàn: không lọc, không xanh) kèm một dòng log cảnh báo lúc khởi động khi: thiếu file, JSON hỏng,
+  `verifiedBy` rỗng hoặc không phải chuỗi, `verifiedAt` không phải `YYYY-MM-DD`, `members[].iso2` không
+  khớp `^[A-Z]{2}$`, **`verifiedHash` thiếu hoặc khác `sha256(JSON.stringify(schedules))`**. Biểu có
+  `members` rỗng không vào `Map` (biểu vắng → `null`, không bao giờ `false`). Không có biến môi trường
+  cho đường dẫn.
+- **`verifiedHash`** buộc chữ ký đi cùng đúng nội dung đã đọc: sửa một nước thành viên sau khi ký (do
+  agent hay do merge) làm bảng về `null` cho tới khi người xác nhận duyệt lại. Định nghĩa duy nhất: `sha256`
+  hex của `JSON.stringify(schedules)`, với `schedules` đọc bằng `JSON.parse` (giữ thứ tự khoá như trong file),
+  tính bằng
+  `node -e 'const j=require("./db/seed/data/fta-members.json");console.log(require("crypto").createHash("sha256").update(JSON.stringify(j.schedules)).digest("hex"))'`.
+  Đổi khoảng trắng trong file không đổi hash; đổi nội dung (kể cả `quote`, `notes`) thì đổi.
+- Code không phân biệt được người với agent: điều kiện "người đứng tên" giữ bằng quy tắc và bằng review
+  commit sửa file. Agent không bao giờ ghi hay sửa `verifiedBy`, `verifiedAt` (không bao giờ cấp xác minh).
+  `verifiedHash` chỉ do controller (phiên điều phối) ghi, khi có phê duyệt rõ của chủ dự án **đã ghi trong
+  git**, trên đúng nội dung đã duyệt (`git diff <commit duyệt> -- db/seed/data/fta-members.json` rỗng). Lần
+  đầu: phê duyệt ở commit `853a01f` (Trần Ngọc Nhật, 2026-09-13), hash `2e94452a…2e044ba0` ghi ở commit
+  chuẩn bị kế hoạch 07.
+- Trường `coForm` trong file **không** được đọc — form C/O vẫn lấy từ `tariff_schedule.fta_form`.
+- `toPreferentialView` gọi `originEligible` với `sublineExcluded = sublines.some((s) => s.originExcluded
+  === true)`, tính từ `PreferentialView.sublines` mà
+  [ADR dòng 10 số quốc gia](../architecture-decisions/2026-09-13-fta-national-sublines.md) đã thêm. Không
+  thêm trường hay cờ nào, và loại trừ ở một dòng 10 số vẫn không áp cho cả mã 8 số (quyết định 6 của ADR đó).
+
+**Trường mới trong phản hồi** (`tariff.types.ts`):
+
+```ts
+export interface PreferentialView extends RateView {
+  // … existing fields, including sublines (ADR fta-national-sublines)
+  /** The rate alone, without the C/O condition: the base statement ("0%", "Loại trừ khỏi biểu (không phải 0%)",
+   *  "Theo dòng 10 số (không có một mức chung cho mã 8 số)"). */
+  rate: string;
+  /** true: member per the verified table, excluded neither on this line nor on a 10-digit sub-line;
+   *  false: not a member, or excluded on this line; null: no origin, table unverified, EU/VN,
+   *  schedule absent from the table, or excluded on a sub-line only. */
+  originEligible: boolean | null;
+}
+export interface TariffResponse { /* … */ ftaMembership: { verifiedBy: string; verifiedAt: string } | null; }
+export interface StalenessView {
+  latestInstrument: { number: string; effectiveFrom: string; effectiveTo: string | null } | null;
+  unloadedInstruments: string[];
+  /** A recorded, unloaded extension of an expired rate on this HS that may cover the query date. */
+  pendingExtension: string | null;
+  warning: string; // always present (R7)
+}
+```
+
+- `PreferentialView.statement` **không đổi**: web UI vẫn in nó, và mục `tariff` của Mảng 2 dựng từ nó
+  (§5b.10).
+- Bỏ note chung "Mức ưu đãi FTA chỉ áp dụng khi có C/O hợp lệ đúng form…": mọi `statement` có điều kiện
+  đã nói đúng câu đó, và bố cục mới đặt điều kiện trong câu dẫn. Sửa note "(Các biểu FTA nạp ở bước
+  sau.)" — sai từ khi bốn biểu được nạp — thành "Mã này không có dòng trong các biểu FTA đã nạp; chỉ trả
+  về MFN."
+- Web UI (`public/index.html`): `if (d.staleness?.stale)` → in `d.staleness.warning`, nối "Chưa nạp: …" từ
+  `unloadedInstruments` và `pendingExtension` khi có; lớp `pref` chỉ khi `p.originEligible === true` và
+  `p.type` ∈ {`ad_valorem`, `specific`, `compound`} — cùng điều kiện dòng `true` của bot (hôm nay: khi
+  `!p.originExcluded`).
+
+**"Văn bản biểu thuế mới nhất đã nạp" — định nghĩa.** Service đọc bảng `decree` **một lần, khi cần lần
+đầu**, vào một trường riêng, rồi lọc theo ngày tra trong TypeScript:
+
+```sql
+SELECT d.number, d.effective_from::text AS effective_from, d.effective_to::text AS effective_to,
+       d.signed_date::text AS signed_date,
+       EXISTS (SELECT 1 FROM tariff_rate r WHERE r.source_decree_id = d.id AND r.superseded_at IS NULL) AS loaded
+FROM decree d
+```
+
+Đọc một lần vì `tariff_rate.source_decree_id` không có chỉ mục (`db/schema/index.ts` chỉ mục `hs_code`,
+`schedule_id`, `annex_id`): chạy `EXISTS` ở mỗi `/tariff` là quét bảng thuế một lượt cho mỗi nghị định.
+Dữ liệu này chỉ đổi khi seed, và seed đi cùng deploy (API khởi động lại).
+
+- **Còn hiệu lực tại ngày tra** = `effective_from ≤ ngày ≤ coalesce(effective_to, ∞)`, cùng vị từ khoảng
+  mà truy vấn thuế dùng.
+- `latestInstrument` = dòng `loaded` **còn hiệu lực tại ngày tra** có `effective_from` lớn nhất (hoà →
+  `signed_date` lớn hơn, rồi `number`). Tính theo ngày tra, để câu hỏi về năm 2023 không viện dẫn văn bản
+  năm 2026, và để văn bản đã hết hiệu lực không đứng tên cho biểu đang áp.
+- `unloadedInstruments` = các dòng **không** `loaded` còn hiệu lực tại ngày tra, sắp theo `effective_from`.
+- **Dữ kiện seed.** Ngày 13/09/2026: `latestInstrument` = **26/2023/NĐ-CP (hiệu lực 15/07/2023)**. NĐ
+  72/2026/NĐ-CP ("Giảm thuế NK ưu đãi một số mặt hàng xăng, dầu về 0%") hết hiệu lực 30/04/2026 nên không
+  được chọn. Nếu không lọc `effective_to`, mọi câu trả lời về van hay hộp chống nhiễu ngày 13/09/2026 sẽ
+  gọi một nghị định xăng dầu đã hết hạn là "văn bản biểu thuế mới nhất", trong khi MFN 10% dẫn từ
+  26/2023. **Câu mẫu của chủ dự án dùng 72/2026 — cần báo lại.** Ngày 01/04/2026 dòng này ghi
+  72/2026/NĐ-CP (hiệu lực 09/03/2026–30/04/2026). Bốn biểu FTA (30/12/2022–31/12/2027) có `effective_from`
+  nhỏ hơn 26/2023.
+- **Vì sao `effective_from`**, không `signed_date`, `gazette_date` hay `max(recorded_at)`:
+  `effective_from` NOT NULL và là trục thời gian hợp lệ mà chính truy vấn thuế lọc theo
+  ([R8](../business-rules.md)); `signed_date` có thể null; `gazette_date` null ở mọi dòng seed;
+  `recorded_at` là thời điểm seed, không nói gì về luật — đó chính là nguồn của câu sai "dữ liệu chốt
+  2026-09-13, tin cậy đến 2026-07-27".
+- **Vì sao "có dòng thuế đã nạp"**, không "có mặt trong bảng `decree`": bảng ghi nhận 144/2024, 108/2025,
+  199/2025, 201/2026 nhưng seed không nạp dòng nào của chúng (§2.2). Lấy max theo cả bảng ngày 13/09/2026
+  ra 201/2026/NĐ-CP (01/01/2026), một nghị định sửa thuế **xuất khẩu** chưa nạp dòng nào, và câu "cập nhật
+  tới" khi đó nói quá. Vì vậy dòng cảnh báo nêu cả hai vế.
+- Tính cả chiều xuất khẩu lẫn nhập khẩu: câu trả lời in cả thuế xuất khẩu.
+
+Câu `warning`: một dòng, không `\n`, khoảng 150 ký tự. Cam nghĩa là "cần chốt", nên dòng có mặt ở mọi câu
+trả lời thuế phải ngắn; số hiệu từng văn bản chưa nạp nằm ở dòng nguồn (§5b.3 mục 6).
+
+- Có văn bản chưa nạp: `Biểu thuế trong kho cập nhật tới NĐ {latest} (hiệu lực {từ}[–{đến}]); chưa nạp
+  dòng thuế của {n} nghị định biểu thuế còn hiệu lực — đối chiếu trước khi khai.`
+- Không có: `Biểu thuế trong kho cập nhật tới NĐ {latest} (hiệu lực {từ}[–{đến}]); văn bản ban hành sau
+  mốc này có thể chưa có.`
+- `[–{đến}]` in khi `effectiveTo` khác null; ngày `dd/mm/yyyy`.
+- `latestInstrument === null`: `Không xác định được văn bản biểu thuế đã nạp cho ngày {dd/mm/yyyy} — đối
+  chiếu nguồn trước khi dùng.`
+
+**Gia hạn đã ghi nhận nhưng chưa nạp (`pendingExtension`).** Seed ghi trên dòng 0% của NĐ 72/2026 (hết
+30/04/2026) `conditions.extended_by = 'NQ 25/2026 đến 2026-06-30 — cần nạp riêng'`. Từ 01/05/2026 truy
+vấn trả mức 26/2023 đã hồi quy, trong khi dữ liệu tự ghi rằng mức 0% có thể được gia hạn tới 30/06/2026.
+`lookup` chạy thêm một câu theo `hs` (cột có chỉ mục):
+
+```sql
+SELECT r.conditions->>'extended_by' AS extended_by FROM tariff_rate r
+WHERE r.hs_code = ${hs} AND r.superseded_at IS NULL AND r.effective_to < ${date} AND r.conditions ? 'extended_by'
+```
+
+Đọc `/^(.+?) đến (\d{4}-\d{2}-\d{2})/` từ chính chuỗi đó; ngày chỉ lấy từ chuỗi, không suy. Khớp và ngày
+tra ≤ ngày đến → `Mức thuế nhập khẩu ưu đãi của mã này có thể đã được {văn bản} gia hạn tới {dd/mm/yyyy}
+nhưng văn bản đó chưa nạp — đối chiếu trước khi khai.`; khớp mà ngày tra đã qua → `null`; không đọc được
+ngày → vẫn in, kèm chuỗi nguyên văn (đóng an toàn). Bot in thành dòng đỏ (nội dung, không tính vào giới
+hạn cảnh báo). NQ 25/2026 không có trong bảng `decree`, nên không vào `unloadedInstruments`.
+
+**`DATA_SNAPSHOT_DATE` và `GAZETTE_LAG_DAYS`: bỏ.** Không còn gì cần chúng; giữ lại là giữ đúng
+heuristic đã in sai. Xoá khỏi `tariff.service.ts` (cùng `subtractDays`), `docker-compose.yml`, bảng biến
+môi trường ở [vận hành server dev](mona-dev-server-operations.md), mock config trong
+`tariff.service.spec.ts`. Thân lỗi 404 thay `snapshotDate` bằng `latestInstrument`. Độ trễ Công báo đã
+đo (15, 19, 48 ngày — [R7](../business-rules.md)) vẫn là lý do của vế "văn bản ban hành sau mốc này có
+thể chưa có".
+
+### 5b.5 Trả lời ứng viên HS (`tariffByClues` — R2)
+
+Hợp đồng không đổi (ứng viên, người chốt, `/tariff/search` tất định); đổi giọng và thứ tự. Khối thuế ở
+đây luôn dùng **chế độ ứng viên** của `formatAnswer` (§5b.3): câu dẫn điều kiện "Nếu hàng thuộc mã…",
+không xanh, không ẩn biểu.
+
+1. **Dòng ứng viên cố định, luôn in**, là dòng đầu của khối đưa vào `withLead`: "Với mô tả *{desc}*,
+   mình tra được các mã ứng viên dưới đây — đây là ứng viên để bạn chốt, chưa phải mã đã xác định."
+   `clues.lead` (nếu còn sau cổng) đứng **trước** dòng này, không bao giờ thay nó. Lý do: `sanitizeLead`
+   giữ lời dẫn có mã HS trùng khối, nên "Sản phẩm này thuộc mã 8543.70.90" qua được cổng; dòng cố định
+   cùng câu dẫn điều kiện mới là thứ giữ R2. `clues.note` (LLM, hôm nay **không** gác) qua cổng văn xuôi
+   §5b.7 trước khi vào `desc`; bị gác thì dùng từ khoá.
+2. **Có ÁP MÃ đã xác nhận** (`citedRuling`): dòng thuần "Mã **{dotted}** đã được **{staffName}** xác
+   nhận cho hàng tương tự ({cite}) — mình ưu tiên mã này, bạn vẫn đối chiếu căn cứ." Nếu đồng thời
+   `borderline` → `note` "Mặt hàng có thể thuộc nhiều nhóm; mã trên là mã đã được người xác nhận, không
+   phải bot tự suy."
+3. **`borderline` không có ÁP MÃ**: ba ứng viên song song, không ứng viên nào trông như đã chốt.
+   - Dòng `warn` "Mặt hàng có thể thuộc nhiều nhóm — cần bạn hoặc chuyên viên chốt mã (kèm số công văn nếu
+     có) trước khi khai." `render()` gộp nó với dòng phạm vi kho thành một dòng cam (§5b.1).
+   - Ba dòng `ul` "**{hsDotted}** · *{heading ≤ 50}* · MFN **{mfn}%**": mã đầu và tối đa 2 nhóm khác, tổng
+     đúng top-3 ([R2](../business-rules.md); hôm nay in mã đầu + 3).
+   - Không khối FTA, không câu dẫn thuế riêng. `note` "Tra theo ngày {date} · MFN theo Biểu thuế nhập khẩu
+     ưu đãi đã nạp (mã đầu: NĐ {mfn.decree})".
+   - `note` "Nhắn mã bạn chốt (kèm xuất xứ) để mình tra đủ thuế ưu đãi, hoặc nhắn "HS đúng là <mã>" (kèm
+     số công văn nếu có) để mình ghi nhận cho lần sau."
+   Bố cục cũ đặt các nhóm khác sau cả khối thuế của mã đầu, và câu dẫn bị lặp hai lần ("Ứng viên đầu tiên
+   là…" rồi câu dẫn của `formatAnswer`); dạng này đặt cả ba ngay dưới dòng cam.
+4. **Còn lại** (không `borderline`, hoặc có ÁP MÃ): `formatAnswer(…, { showFooter: false, candidate: true })`
+   (lịch sử xác nhận vẫn in nếu có), rồi:
+   - có ÁP MÃ và `borderline` → "Các nhóm ứng viên khác:" + tối đa 2 `ul` "**{hsDotted}** · MFN
+     **{mfn}%** · *{hai cấp cuối của path}*";
+   - không `borderline` → "Nếu chưa đúng loại hàng, bạn chọn mã khác:" + tối đa 5 mã anh em cùng dạng
+     (menu, như nay);
+   - `note` "Chốt mã đúng: nhắn "HS đúng là <mã>" (kèm số công văn nếu có) để mình ghi nhận cho lần sau."
+     (có ÁP MÃ: "Nếu mã đã xác nhận trên chưa đúng cho lô này, nhắn "HS đúng là <mã>" (kèm số công
+     văn).") thay cho chân trang xác nhận.
+   Không tra được thuế → "Chưa có dòng thuế hiệu lực cho **{dotted}** tại ngày {date} — {path}."
+5. Không có ứng viên: "Mình chưa tìm được mã HS phù hợp cho *{từ khoá}*. Bạn mô tả rõ hơn (chất liệu,
+   công dụng) hoặc gõ thẳng mã HS nhé."
+
+`formatCandidates` trong `format.mjs` không có nơi gọi → xoá. Bằng chứng nguyên văn cho ứng viên vẫn là
+việc của §3.8 (Mảng 2/3).
+
+### 5b.6 Trả lời pháp luật — tạm thời, trước khi có `POST /answer`
+
+**API** (`legal.generation.ts`, `legal.grounding.ts`, `legal.service.ts`) — giữ nguyên quy tắc bám căn
+cứ, `abstain`, một lần gọi, trần 45s:
+
+- Khối điều khoản đánh số theo vị trí, `[1] <articleCitation>\n<articleBody>`, thay `[id=NNN]`;
+  `citations` trả **số thứ tự** `n`, code đổi `n → kept[n-1]`.
+- Hợp đồng ra: `{"answer":"<Markdown tiếng Việt ≤200 từ>","citations":[<n>],"abstain":false,"reason":null}`;
+  prompt nhắc xuống dòng viết `\n` trong chuỗi JSON.
+- Thêm vào phần "CÁCH VIẾT": câu đầu trả lời thẳng; **đậm** thuật ngữ, số hiệu, điều khoản, thời hạn
+  then chốt; `- ` chỉ khi liệt kê trường hợp hoặc điều kiện song song; `[n]` ngay sau câu dựa vào điều
+  khoản n, mỗi nguồn một dấu (`[1] [2]`); mọi con số, ngày, thời hạn chép đúng cách điều khoản viết; không
+  màu, emoji, HTML, bảng, lời chào, lời mời hỏi thêm; `## ` chỉ khi câu trả lời dài hơn 3 đoạn; không
+  chép nguyên văn dài.
+- **Trần ≤ 200 từ.** Đo trên câu trả lời notebook mẫu: 4,39 ký tự/từ → 200 từ ≈ 900–1.000 ký tự; cộng 3
+  nguồn × ~190 ký tự ≈ 600 → ≈ 1.600 < 1.800: trường hợp thường vừa **một** tin; 5 nguồn thì tách hai tin
+  tại ranh giới trước danh sách nguồn. 250 từ đã chạm ngưỡng khi mới có 3 nguồn. Mảng 3 bỏ trần cứng
+  ("độ dài theo câu hỏi", §4).
+- `numberMarkers(answer: string, cited: number[], sources: string[], userText: string): { answer: string;
+  order: number[] }` — hàm thuần trong `legal.grounding.ts`, thay `validateCitations`. `sources[i]` =
+  `"{articleCitation}\n{articleBody}"` của `kept[i]`; `k = sources.length`. Theo thứ tự:
+  1. Tách `[1, 2]`/`[1,2]` thành `[1] [2]`; xoá mọi `[n]` ngoài `1..k` (mồ côi, như kiểm 5 §3.6).
+  2. **Số liệu neo theo câu** — phần chuỗi của kiểm 3 §3.6, làm ngay ở đây vì bố cục mới đặt `[n]` sát
+     dữ kiện và cho đậm con số do LLM viết ([R10](../business-rules.md)). Tách câu tại `. `, `? `, `! `,
+     `; ` và xuống dòng. Trong mỗi câu, mọi `\d+([.,]\d+)?\s*%`, tiền `\d[\d.,]*\s*(USD|VND|đồng|đ)\b`,
+     ngày `\d{1,2}/\d{1,2}/\d{4}`, thời hạn `\d+\s*(ngày|tháng)`, số hiệu `\d{1,4}/(\d{4}|VBHN)[^\s,;)]*`,
+     mã HS `\d{4}(\.\d{2}){1,2}` phải nằm (sau NFC, gộp khoảng trắng, không phân biệt hoa/thường) trong
+     `sources[n-1]` của một `[n]` **có trong chính câu đó**; câu không có dấu thì trong một nguồn thuộc
+     `cited`. Miễn trừ: số hiệu, mã HS, ngày mà người dùng đã viết trong `userText` (so như
+     `docNumberStatedIn`, bỏ số 0 đầu). `%` và tiền **không** được miễn.
+  3. Câu có dữ kiện không neo được → câu đó mất mọi `[n]` và mọi `**`. Có một `%` hoặc khoản tiền không
+     neo được ở bất kỳ câu nào → trả `answer: ''` (nhánh chỉ trích dẫn như nay).
+  4. Đánh lại số theo thứ tự xuất hiện đầu tiên; gộp dấu trùng liền nhau; `order` = vị trí gốc theo số
+     mới. Có ít nhất một dấu hợp lệ → `citations = order.map((n) => kept[n-1])`; không dấu nào nhưng
+     `cited` hợp lệ → giữ `answer` không dấu, `citations` theo `cited`; cả hai rỗng → nhánh "chưa dẫn
+     được" như nay.
+- **Hợp đồng:** `[n]` trong `LegalAnswer.answer` trỏ `citations[n-1]`. Web UI không dùng `/legal`.
+
+**Bot** (`formatLegal`):
+
+```text
+<md(r.answer)>
+{đỏ: [2] [4] Nghị định 08/2015/NĐ-CP hết hiệu lực một phần — kiểm tra điều khoản còn áp dụng.}   ← mỗi cặp (văn bản, effectiveness ≠ con_hieu_luc) của từng trích dẫn
+{cam: Nghị định 12/2026/NĐ-CP do bot tự nạp, chưa có người đối chiếu — đọc bản gốc trước khi dùng; đã đối chiếu thì nhắn "xác nhận văn bản 12/2026/NĐ-CP".}   ← warn, gộp mọi số hiệu auto_unverified
+{nhỏ: Nguồn:}
+{nhỏ: [1] Khoản 1 Điều 15 Nghị định 31/2018/NĐ-CP — “<trích đoạn>…” (trích đoạn đầu)}
+{nhỏ: [2] Điều 5 Thông tư 33/2023/TT-BTC · hiệu lực 01/01/2024–31/12/2026 — “…”}
+{nhỏ: Toàn văn: <gazetteUrl văn bản thứ nhất> · <gazetteUrl văn bản thứ hai>}                      ← khử trùng theo văn bản, tối đa 3
+```
+
+(Số hiệu và ngày trong khối trên là chỗ giữ vị trí, không phải dữ kiện.)
+
+- `sourceLines(items: Array<{ n, label, quote?, cut?, url? }>): Line[]` trong `format.mjs` dựng các dòng
+  `Nguồn:` và `Toàn văn:`. `formatLegal` ánh xạ `LegalCitation` vào: `label` = `provisionLabel` + vế hiệu
+  lực, `quote` = trích đoạn, `cut` = trích đoạn đã bị cắt (in " (trích đoạn đầu)"), `url` = `gazetteUrl`.
+  Mảng 3 dùng lại nó (§5b.10).
+- In **mọi** trích dẫn API trả (≤ 5, `MAX_CITATIONS`) — cắt còn 3 như nay sẽ làm `[4]`, `[5]` mồ côi.
+- **Dòng đỏ hiệu lực theo từng trích dẫn**, từ `effectiveness` của chính trích dẫn đó (đã là hiệu lực cấp
+  điều khoản); các `[n]` chỉ gộp chung một dòng khi cùng văn bản **và** cùng giá trị. Nhãn viết từ enum,
+  không từ chữ mô hình: `het_hieu_luc` "hết hiệu lực", `het_hieu_luc_mot_phan` "hết hiệu lực một phần",
+  `chua_co_hieu_luc` "chưa có hiệu lực (từ {effectiveFrom})".
+- **Vế hiệu lực trên dòng nguồn:** " · hiệu lực {from}–{to}" khi `effectiveTo` khác null hoặc
+  `effectiveFrom > asOf` ([R8](../business-rules.md)), như bố cục cũ.
+- **Trích đoạn:** cắt tại ranh giới câu hoặc vế đầu tiên (`.`, `;`, `:`, hoặc xuống dòng trước `a)` / `1.`)
+  nằm trong khoảng 140–480 ký tự; không có → cắt 480 như nay. Bị cắt → kết `…` và thêm " (trích đoạn
+  đầu)". Điều khoản tiếng Việt hay đặt ngoại lệ sau vế đầu ("được miễn thuế … trừ trường hợp …"); cắt
+  cứng ở 140 ký tự cạnh một `[n]` có thể đọc thành điều ngược lại. Toàn văn vẫn qua `/legal/provision`.
+- `r.answer` rỗng (không có LLM, hoặc câu trả lời không dẫn được / không neo được số liệu): câu thuần
+  "Mình chưa tổng hợp được câu trả lời chắc chắn; đây là các điều khoản liên quan nhất để bạn đối chiếu:"
+  + danh sách nguồn với trích ≤ 480 ký tự như nay. Không in `lead`.
+- `formatProvisions`: lời dẫn đã gác, hoặc câu tất định "Nguyên văn **{citationLabel}**:"; thân nguyên
+  văn ≤ 1.200 ký tự là đoạn **thuần**; dòng đỏ hiệu lực nếu có; `note` "Toàn văn: {url}".
+- Từ chối (`answer.mjs`, nhánh không có trích dẫn): "Mình chưa tìm thấy điều khoản đủ căn cứ trong
+  **{ref.label}** nên chưa trả lời, để tránh sai." (không có `ref`: "trong các văn bản mình đang có") +
+  `note` "Lý do: {reason}" chỉ khi `reason` qua cổng văn xuôi §5b.7 + "Nếu bạn biết số hiệu văn bản, nhắn
+  số hiệu để mình tìm trên Công báo và nạp về."
+- Giới hạn còn lại, ghi rõ: `numberMarkers` kiểm trên thân điều khoản, chưa trên `quote` của từng trích
+  dẫn, và chỉ ở mức chuỗi — con số có trong điều khoản vẫn có thể bị gán cho nghĩa vụ khác. Bước sửa và
+  kiểm 3/4 đầy đủ của `guards.ts` là Mảng 3.
+
+**Thiếu văn bản** (`formatMissingDoc`, bốn loại, cùng giọng). Mọi nhánh trừ `none` mở bằng cùng một câu do
+code viết, không đoán ý định câu hỏi: "Mình chưa có toàn văn và tình trạng hiệu lực của **{số}** nên chưa
+trả lời được câu này."
+
+- `exact` ({số} = `number`): câu mở + "Công báo có văn bản này: *{title ≤130}*." + `note` "Toàn văn:
+  {sourceUrl}" + "Trả lời "nạp" là mình lấy toàn văn về rồi tra tiếp cho bạn (mất vài phút)."
+- `ambiguous` ({số} = `label`): câu mở + "Công báo có {n} văn bản mang số này, bạn cần bản năm nào?" +
+  `ul` "**{number}** — {title}" (≤ 6) + "Nhắn số hiệu đầy đủ (ví dụ 36/2025/TT-BKHCN) là mình nạp về."
+- `similar` ({số} = `label`): nhãn có đoạn cơ quan ban hành → câu mở + "Công báo không có văn bản đúng số
+  này; có {n} văn bản cùng số của cơ quan khác:"; nhãn không có → câu mở + "Công báo có {n} văn bản mang
+  số này, bạn cần văn bản nào?"; tiếp `ul` (≤ 4) + "Nếu đúng là một trong số này, nhắn số hiệu đầy đủ để
+  mình nạp."
+- `none`: "Mình không tìm thấy **{label}** cả trong kho lẫn trên Công báo — bạn kiểm tra lại số hiệu giúp
+  mình."
+- Cộng sửa lỗi 69/2018 ở §5b.8.
+
+### 5b.7 Trả lời chung, xác nhận, lỗi
+
+- Mọi chuỗi còn lại đi qua `render()` dạng `string` (không màu, không đọc ký hiệu), hoặc `Line[]` khi cần
+  đậm một mã hay số hiệu. Viết lại theo §5b.2 — bỏ emoji và chữ HOA. Ví dụ: `handleConfirm` "Đã ghi nhận
+  **đúng** cho mã **8481.80.99** (xuất xứ CN, ngày 13/09/2026). Cảm ơn {tên}."; ack ảnh "Mình đang xem
+  ảnh, bạn chờ khoảng 20 giây nhé."; `formatIngestReport` "Đã nạp xong **{number}** — {detail}. Bạn hỏi
+  nội dung văn bản này được rồi; lưu ý bản này bot tự nạp, chưa có người đối chiếu."; lỗi chung giữ câu.
+- **Cổng văn xuôi LLM.** `sanitizeLead` mở rộng, áp cho mọi nơi gọi: `phần trăm` bị bác như `%`; danh sách
+  dữ kiện phải có trong `block` thêm số hiệu `\d{1,4}\s*/\s*(\d{4}|VBHN)` và mã HS dạng bất kỳ
+  `\b\d{4}(\.?\d{2}){0,2}\b` đứng sau `mã|nhóm|phân nhóm|HS`; khi `block === ''` bác thêm chữ `thuế
+  suất`. Với `block` rỗng, mọi dữ kiện đều không có trong khối nên đều bị bác. `reply` của router,
+  `clues.note` (§5b.5) và `reason` của từ chối (§5b.6) dùng `sanitizeLead(x, '')`.
+- **Trường `reply` của router (intent `general`) — hôm nay đi thẳng ra tin, không gác.** Hàm thuần mới
+  `formatGeneral(reply): Line[]` trong `format.mjs` (test được mà không import `index.mjs`):
+  - `sanitizeLead(reply, '', 900)` chỉ là **cổng**. Qua cổng → `md(String(reply).slice(0, 900))` trên
+    **chuỗi gốc**: `sanitizeLead` gộp khoảng trắng, xuống dòng mất thì `md()` không thấy `- `.
+  - Bị bác hoặc rỗng → hằng `CAPABILITIES: Line[]` trong `format.mjs`:
+
+    ```text
+    Mình tra được hai việc:
+    1. **Biểu thuế xuất nhập khẩu** — gõ tên hàng hoặc mã HS, kèm xuất xứ.
+    2. **Văn bản pháp luật hải quan** — hỏi nội dung văn bản mình đang có; chưa có thì mình tìm trên Công báo và nạp về.
+    *Ví dụ: "thuế nhập khẩu 8481.80.99 xuất xứ Trung Quốc"*
+    ```
+
+  - Prompt router chèn `toText(CAPABILITIES)` làm danh sách năng lực **duy nhất** `reply` được nhắc tới.
+    Code không kiểm được một lời hứa năng lực (VAT, thủ tục); cổng chỉ chặn dữ kiện, và hằng số là câu trả
+    về khi cổng bác.
+- `formatIngestQueued` và `formatIngestReport` trả `Line[]` để đậm số hiệu.
+
+### 5b.8 Sửa lỗi "69/2018" — cả hai phía
+
+Chuỗi lỗi: `parse.mjs` `parseDocRef` chỉ giữ đoạn cơ quan ban hành trong `label`, `core = '69/2018'`;
+`answer.mjs` (ba chỗ gọi `legalAnswer`/`legalProvision`) gửi `ref.core`; API `parseDocRef('69/2018')` có
+`full = null`, `lookupGazette` bỏ qua nhánh khớp đúng, tiền tố `69/2018%` ra nhiều văn bản →
+`gazetteMatchKind: 'similar'`; `formatMissingDoc` liệt kê chính 69/2018/NĐ-CP dưới "cùng số nhưng của cơ
+quan khác".
+
+1. **Một phép gập số hiệu, hai phía.** `foldDocNumber(s)` (API, `legal.scope.ts`) và `sameDocNumber(a, b)`
+   (bot, `parse.mjs`, so hai giá trị gập cùng cách): NFC, bỏ khoảng trắng, viết hoa, `Đ → D`, bỏ số 0 đầu
+   của nhóm số đầu. `8/2015/ND-CP` ≡ `08/2015/NĐ-CP`: kho đã coi số 0 đầu là cách gõ thường
+   (`docNumberStatedIn`, `corpusHas`, `resolveDocuments`). Đoạn cơ quan ban hành so chặt:
+   `69/2018/TT-BTC` ≠ `69/2018/NĐ-CP`; `69/2018` ≠ `69/2018/NĐ-CP`.
+2. **Bot gửi số đầy đủ.** `parseDocRef` trả thêm `full` như API: `issuer ? label : null`. Ba chỗ gọi gửi
+   `ref.full ?? ref.core`. Khi có `ref.full`, `corpusHas` so bằng `sameDocNumber` với `number` /
+   `consolidates` thay vì so tiền tố `core`: kho có 69/2018/NĐ-CP mà người dùng hỏi 69/2018/TT-BTC thì
+   **không** coi là có.
+3. **API.**
+   - `lookupGazette`: nhánh khớp đúng so gập **trong SQL** — `regexp_replace(translate(upper(number), 'Đ',
+     'D'), '^0+', '') = ${foldDocNumber(ref.full)}` — thay `upper(number) = ${ref.full}`. So trong SQL chứ
+     không lọc kết quả câu tiền tố, vì câu tiền tố có `LIMIT 5`: hơn 5 số hiệu cùng đầu thì văn bản được
+     hỏi có thể bị cắt trước khi so.
+   - `resolveDocuments`: khi có `ref.full`, chỉ giữ dòng có `number` hoặc `consolidates` gập bằng
+     `foldDocNumber(ref.full)`; không còn dòng → `[]`, để nhánh Công báo chạy thay vì trả lời bằng văn bản
+     cùng số của cơ quan khác như thể nó là văn bản được hỏi.
+   - `ask()`: `doc` không có `docType` mà `parseDocRef(query)` cùng `core` → lấy `docType` của câu hỏi.
+     "Nghị định 69/2018 còn áp dụng không" (không `/NĐ-CP`) có `full = null` và bot gửi `doc=69/2018`;
+     không có dòng này, bộ lọc loại ở `lookupGazette` không chạy và câu trả lời liệt kê cả thông tư, quyết
+     định cùng số. Sửa ở `ask()` vì mọi nơi gọi `/legal` đều qua đó.
+4. **Không bao giờ trình bày số được hỏi như văn bản khác.** Hàm thuần `missingKind(label, matches, kind):
+   { kind, matches }` trong `parse.mjs`: một khớp `similar`/`ambiguous` có `sameDocNumber(label, number)` →
+   `{ kind: 'exact', matches: [khớp đó] }`. `missingDocAnswer` gọi nó **trước** cả `formatMissingDoc` lẫn
+   `pendingIngest` (nên có đề nghị "nạp"). `formatMissingDoc` tự lọc khớp bằng nhãn khỏi danh sách "khác"
+   (phòng thủ khi được gọi thẳng).
+
+### 5b.9 Kiểm thử
+
+Bot: `yarn test:bot` (`node --test`), `test()` phẳng, fixture nội tuyến, thông điệp assert tiếng Việt. Chỉ
+test hàm thuần: không import `index.mjs` (chạy `main()` và đăng nhập Zalo), không test hàm gọi API
+(`tariffByClues`, `missingDocAnswer`); phần cần kiểm đã tách thành hàm thuần (`formatGeneral`,
+`missingKind`, chế độ `candidate`).
+
+**`apps/zalo-bot/render.test.mjs` (mới):**
+
+1. Bảng nhãn khớp `TextStyle` import từ `zca-js`.
+2. Offset có dấu tiếng Việt: `[L(['Đối với mã ', ['8481.80.99', 'b'], ' có xuất xứ ', ['Trung Quốc',
+   'b']])]` → style thứ hai có `start === msg.indexOf('Trung Quốc')`, `len === 10`; đầu vào NFD ra `msg`
+   NFC và offset vẫn đúng.
+3. Emoji: đoạn thuần `'🔍 '` trước một đoạn đậm → `start === 3` (UTF-16).
+4. Đậm + xanh cùng đoạn → hai style cùng `start`/`len`; nhãn dòng `ul` phủ `[đầu dòng, cuối dòng)`, không
+   gồm `\n`.
+5. Tách tin (`budget: 60`): mọi tin ≤ 60; ranh giới là ranh giới đoạn; mọi `start + len ≤ msg.length`;
+   mỗi đoạn có nhãn nằm trọn trong đúng một tin; style của tin thứ hai tính từ 0; có dòng `(k/n)`.
+6. Đoạn có nhãn dài hơn `budget` → cắt ở khoảng trắng, hai nửa cùng nhãn.
+7. Thoát ký tự: đoạn thuần `'173.6*162.6*12.1'` và `'**không**'` → không style, chữ nguyên vẹn;
+   `md('173.6*162.6*12.1')` → không style; `md('0405.90.10 (*) và 0405.90.90 (*)')` → không style, chữ
+   nguyên vẹn; `md('\\*x\\*')` → chữ `*x*`; `md('**x')` → chữ `**x`.
+8. `md()`: `- a` → `ul` chữ `a`; `1. a` → `ol`; `## T` → dòng `b`; `[1]` giữ; `md('{red}0%{/red} <b>x</b>')`
+   → không style nào; tập nhãn của mọi đầu ra ⊂ `{b, i, ul, ol}`.
+9. Hai dòng `warn` → **một** dòng `c_f27806` chứa cả hai chữ, nối bằng `; `; không `f_13` nào sinh từ
+   `warn`.
+
+**`apps/zalo-bot/dispatch.test.mjs` (thêm, cạnh các test `format.mjs`/`parse.mjs` sẵn có; sửa test
+`withLead` sang `Line[]`).** Fixture `TariffResponse` nội tuyến cho `8481.80.99` như §5b.3:
+
+10. CN, bảng đã xác nhận (ACFTA `originEligible: true`, ba biểu còn lại `false`) → câu dẫn chứa "có xuất
+    xứ", không chứa "nhập khẩu từ"; đúng một style `c_15a85f`, phủ `0%` của dòng ACFTA; dòng ACFTA mang
+    `[1]`, dòng MFN `10%` mang `[2]`; nguồn chứa `[1] NĐ 118/2022/NĐ-CP` và `[2] NĐ 26/2023/NĐ-CP`; có dòng
+    `note` "Đã ẩn AANZFTA, ATIGA, EVFTA"; ngoài dòng đó không có chữ `AANZFTA`, `ATIGA`, `EVFTA`.
+11. CN, `ftaMembership: null` → bốn dòng FTA, **không** style xanh, câu dẫn chứa "Mình chưa lọc được các
+    biểu FTA theo xuất xứ"; dòng kết không chứa "nhắn tên nước".
+12. Không xuất xứ → bốn dòng gọn, không xanh, dòng ACFTA chứa "trừ hàng xuất xứ KH, PH".
+13. `originExcluded: true` → "không được hưởng" mang `c_db342e`; dòng đó không chứa `%`; vẫn có câu MFN;
+    không xanh.
+14. `type: 'excluded'` với `originEligible: true` → "không được hưởng" mang `c_db342e`, dòng không chứa
+    `%`, câu dẫn dạng (B) (không chứa "phụ thuộc vào việc có C/O"); `type: 'trq'` với `originEligible:
+    true` → không xanh, câu dẫn dạng (B).
+15. CN, bảng đã xác nhận, ACFTA mức chung `0%` có một `sublines[]` với `originExcluded: true`,
+    `originEligible: null` → không `c_15a85f`; mức của dòng mang `c_f27806`; dòng chứa "riêng dòng 10 số".
+    `type: 'by_subline'` với hai dòng 10 số `0` và `5` → không `c_15a85f`; có cả hai `codeDotted`; dòng tên
+    biểu không chứa `%`; câu dẫn không phải dạng (A).
+16. Một mục `antiDumping` → một dòng `c_db342e` chứa `statement` và `decisionNumber`;
+    `staleness.pendingExtension` khác null → một dòng `c_db342e` nguyên văn.
+17. Dòng phạm vi kho = `staleness.warning` nguyên văn, mang `c_f27806`. Fixture `Line[]` = một dòng `warn`
+    (cảnh báo nhiều nhóm) nối trước đầu ra `formatAnswer(…)` → sau `render` đúng một dòng cam, chứa cả hai
+    chữ.
+18. Dòng kết: có lịch sử `wrong` → dòng cuối là `confirmFooter` (một dòng `note`, đoạn "từng bị báo sai"
+    mang `c_f27806`), không có gợi ý; không lịch sử, `showFooter` → đúng một dòng sau dòng nguồn;
+    `showFooter: false`, không lịch sử → không dòng nào sau dòng nguồn.
+19. Chế độ ứng viên: `formatAnswer(…, { candidate: true })` với ACFTA `originEligible: true` → câu dẫn bắt
+    đầu "Nếu hàng thuộc mã **8481.80.99**", không `c_15a85f`, không dòng "Đã ẩn";
+    `withLead('Sản phẩm này thuộc mã 8481.80.99', [dòng ứng viên cố định, …])` vẫn chứa dòng ứng viên cố
+    định.
+20. Pháp luật: `answer` có `[1]`, `[2]`, API trả 5 trích dẫn → in đủ `[1]`…`[5]`; hai văn bản
+    `auto_unverified` → một dòng cam nêu cả hai; `[2]` và `[4]` cùng văn bản, cùng `het_hieu_luc_mot_phan`
+    → một dòng đỏ nêu `[2] [4]`; thân có "trừ trường hợp" sau ký tự 140 và trước dấu chấm đầu tiên →
+    trích đoạn chứa "trừ trường hợp" và kết bằng "(trích đoạn đầu)".
+21. **Hồi quy 69/2018:** `parseDocRef('Nghị định 69/2018/NĐ-CP còn áp dụng không').full ===
+    '69/2018/NĐ-CP'`; `parseDocRef('69/2018').full === null`; `sameDocNumber('69/2018/ND-CP',
+    '69/2018/NĐ-CP') === true`; `sameDocNumber('8/2015/ND-CP', '08/2015/NĐ-CP') === true`;
+    `sameDocNumber('69/2018/TT-BTC', '69/2018/NĐ-CP') === false`; `missingKind('69/2018/NĐ-CP',
+    [69/2018/NĐ-CP, 69/2018/TT-BTC], 'similar')` → `exact` với đúng khớp NĐ; `formatMissingDoc` không
+    liệt kê `69/2018/NĐ-CP` như văn bản của cơ quan khác; `corpusHas([{ number: '69/2018/NĐ-CP' }],
+    parseDocRef('69/2018/TT-BTC')) === false`.
+22. `formatGeneral`: `reply` chứa `15%`, `mười phần trăm`, `theo Nghị định 26/2023/NĐ-CP`, `mã 8481.80`,
+    `mã HS 84818099` → mỗi ca ra `CAPABILITIES`; `'- a\n- b'` → hai dòng `ul`.
+
+**Jest (API):**
+
+- `tariff.service.spec.ts` — chỉ fixture JSON nội tuyến; **không** assert trạng thái `verifiedBy` của file
+  thật trong repo (nó đổi vào ngày chủ dự án ký). `ftaMembership`: `verifiedBy: null` → `null`;
+  `verifiedBy: ''` → `null`; iso2 sai → `null`; thiếu `verifiedHash` → `null`; sửa một nước sau khi tính
+  hash → `null`; hợp lệ → có `members`; biểu `members: []` → không có trong `Map`. `originEligible`:
+  CN/ACFTA đã xác nhận → `true`; CN/AANZFTA → `false`; `originExcluded: true` → `false`;
+  `sublineExcluded: true` → `null`; `EU`, `VN`, không xuất xứ, bảng `null`, biểu `NK_uu_dai_98`, biểu
+  `members: []` → `null`. `lookup` với `svc.membership = ftaMembership(fixture)` (db giả): dòng ACFTA mức
+  chung có `conditions.sublines` với một dòng `excluded_origins` chứa CN → `originEligible: null`;
+  `rate === '0%'` khi `statement` có điều kiện; `statement` của mọi dòng FTA không bị loại trừ theo xuất
+  xứ (kể cả `by_subline`) vẫn chứa `nếu có C/O form` (bất biến Mảng 2 cần, §5b.10).
+- Dòng phạm vi kho (db giả trả các dòng `decree` như seed): 2026-09-13 → `latestInstrument`
+  `26/2023/NĐ-CP`, `unloadedInstruments` = 144/2024, 108/2025, 199/2025, 201/2026 theo `effective_from`,
+  `warning` đúng nguyên văn; 2026-04-01 → `72/2026/NĐ-CP`, `warning` chứa `hiệu lực 09/03/2026–30/04/2026`;
+  2023-08-01 → `26/2023/NĐ-CP`, `unloadedInstruments` rỗng; không có dòng → câu dạng `null`; hai lần
+  `lookup` → câu `decree` chạy một lần. `pendingExtension`: dòng `extended_by = 'NQ 25/2026 đến 2026-06-30
+  — cần nạp riêng'`, ngày 2026-05-15 → chứa `NQ 25/2026` và `30/06/2026`; ngày 2026-07-01 → `null`.
+- `legal.grounding.spec.ts` (mới): `numberMarkers('A [3]. B [1].', [1, 3], năm nguồn, '')` → `'A [1]. B
+  [2].'`, `order [3, 1]`; `[9]` với 5 nguồn bị xoá; `[1, 2]` → `[1] [2]`; `[1] [1]` → `[1]`; không dấu,
+  `cited [2]` → `answer` giữ nguyên, `order [2]`; `'Thuế suất **0%** [1].'` mà nguồn 1 không chứa `0%` →
+  `answer === ''`; `'Nộp trong **30 ngày** [2]. Câu khác [1].'` mà nguồn 2 không chứa `30 ngày` → câu đầu
+  mất `[2]` và `**`, câu sau giữ dấu; số hiệu người dùng đã viết trong `userText` → được miễn.
+- `legal.scope.spec.ts` (mới): `foldDocNumber('08/2015/NĐ-CP') === foldDocNumber('8/2015/ND-CP')` và khác
+  `foldDocNumber('08/2015/TT-BTC')`; `lookupGazette` với `full '69/2018/ND-CP'` → câu khớp đúng nhận tham
+  số đã gập, db giả trả một dòng → `exact: true`; `resolveDocuments` với `full '69/2018/TT-BTC'`, db giả
+  trả `69/2018/NĐ-CP` → `[]`. `legal.service.spec.ts`: `ask('Nghị định 69/2018 còn áp dụng không', …, doc
+  '69/2018')` → `lookupGazette` nhận `docType === 'nghi_dinh'`.
+- `apps/eval/notebook.spec.ts`: `norm('**không** bao gồm') === norm('không bao gồm')`. `/legal` giờ trả
+  Markdown; `norm` không bỏ `*` thì cụm `mustSay` bị dấu đậm chẻ đôi và điểm notebook tụt so với
+  `fixtures/eval-baseline.json` vì lý do không liên quan nội dung. Sửa một dòng: `norm` thêm
+  `.replace(/\*+/g, '')` trong `apps/eval/notebook.ts`.
+
+**Kiểm tay và bảng thành viên** (chủ dự án 2026-09-13: làm xong là deploy, không có điểm dừng trước
+deploy):
+
+1. **Kiểm tay sau deploy:** chủ dự án gửi trong nhóm được phép một câu trả lời sẽ tách hai tin, tin đầu
+   kèm `quote`; xác nhận style hiện đúng trên điện thoại và Zalo PC, kể cả ở tin có quote. Không đạt →
+   rollback (kế hoạch 07 Task 8).
+2. **Bảng thành viên — đã quyết (a).** Trần Ngọc Nhật duyệt `fta-members.json` 2026-09-13 (commit
+   `853a01f`); điều kiện (a) ở §5b.11 đã thỏa; file mang `verifiedHash` khớp nội dung đã duyệt. Câu thử
+   "thuế nhập khẩu 8481.80.99 xuất xứ Trung Quốc" ra ví dụ 1 ngay khi deploy. Không có lựa chọn ẩn biểu
+   khi bảng không có hiệu lực (quyết định 5 của ADR).
+
+### 5b.10 Ranh giới với Mảng 2 và Mảng 3
+
+- **Mảng 2 không bị chạm:** không bảng, không seed, không migration mới. **Bố cục chat không bao giờ là
+  bằng chứng.** Mục `tariff` (§2.2.1) do API dựng (`expand.ts`, TypeScript, không import được
+  `format.mjs`) từ trường API, mỗi mức thuế một dòng phẳng `${schedule}: ${statement} (${decree})`, không
+  `[n]`, không chữ bố cục. `statement` mang sẵn điều kiện C/O và loại trừ theo dòng; phần này **không
+  đổi** `statement` hay `decree` (test bất biến ở §5b.9). Nhờ vậy kiểm 3 §3.6 (`quote` bằng nguyên một dòng
+  mức thuế: biểu + mức + điều kiện + nghị định) vẫn làm được. Bố cục §5b.3 tách điều kiện vào câu dẫn và
+  nghị định vào dòng nguồn, nên không dòng nào của nó đủ bốn vế; dùng nó làm thân thì câu "ACFTA (form E):
+  0%" qua được kiểm như một dòng trọn vẹn. `render.mjs` không dựng thân bằng chứng.
+- **Mảng 3 dùng lại, không viết lại:** `render.mjs` (`render`, `md`, tách tin, `warn`) là bộ trình bày
+  của `/answer`. Mảng 3 chỉ thêm `formatAnswerMd(answer: AnswerResponse): Line[]` trong `format.mjs`, dựng
+  danh sách nguồn bằng `sourceLines` (§5b.6; `citations[]` của `/answer` có sẵn `n`, `label`, `quote`,
+  `url`) và bổ sung nhãn `authority` / `window` / `meta.status`. `formatAnswerMd` **bỏ qua** `followups`
+  (§5b.2 mục 6: LLM không viết gợi ý); Mảng 3 bỏ `followups` khỏi đầu ra compose (§3.1, §3.5).
+- `numberMarkers` là hạt giống của kiểm 3 (phần chuỗi) và kiểm 5 §3.6: `guards.ts` **chuyển** nó sang và
+  đổi nguồn so từ thân điều khoản sang `quote` của từng trích dẫn, không viết lại. Prompt tạm ở
+  `legal.generation.ts` bị `compose.ts` thay; tập Markdown con của `md()` là cú pháp duy nhất prompt
+  `compose.ts` được phép cho `answerMd` (§3.1).
+- Thay đổi với phần còn lại của spec: §5 gạch `render.mjs` và "Tách tin" trỏ về đây (bỏ "`**x**` → `x`",
+  "`## ` → dòng in hoa", số `(1/3)` ở đầu tin); §4 nguyên tắc 7 có cưỡng chế bằng code (`warn`); §3.6 kiểm
+  3 và 5 có mã sẵn; §3.2 "kế hoạch không viết lời dẫn" khớp §5b.2 mục 1; §2.2.1 "đúng dạng `formatAnswer`
+  in" đọc thành "dựng từ trường API như trên"; §3.1, §3.5 bỏ `followups`.
+- Kế hoạch 05, Mảng 3 cần sửa theo đoạn trên khi lập kế hoạch cho phần này: bảng file, và dòng hợp đồng
+  giao diện `render(answer: AnswerResponse): string[]` thành `formatAnswerMd(AnswerResponse): Line[]` +
+  `render(Line[]) → {msg, styles}[]`. Không để người làm Mảng 3 đọc dòng cũ rồi dựng bộ trình bày thứ hai
+  mà ADR đã bác.
+
+### 5b.11 Phân loại tri thức [v3]
+
+**Đã xác nhận:** quyết định của chủ dự án 2026-09-13 — thứ tự làm; bảng màu; tin mẫu hiện đúng trên điện
+thoại và Zalo PC; bảng thành viên đã được Trần Ngọc Nhật duyệt 2026-09-13 (commit `853a01f`; chưa rà các nghị định sửa đổi sau 30/12/2022); dòng phạm vi kho từ bảng `decree`; sửa 69/2018;
+lỗi loại trừ ACFTA đã sửa ở commit 19eda99; nạp đủ dòng 10 số trước (ADR dòng 10 số quốc gia, `by_subline`,
+`PreferentialView.sublines`). Từ seed (`db/seed/index.ts`): ngày 13/09/2026 văn bản biểu
+thuế đã nạp còn hiệu lực mới nhất là 26/2023/NĐ-CP, không phải 72/2026/NĐ-CP như câu mẫu (72/2026 hết
+hiệu lực 30/04/2026); dòng xăng dầu của 72/2026 mang `extended_by` "NQ 25/2026 đến 2026-06-30 — cần nạp
+riêng".
+
+**Giả định (đảo được):** ngân sách 1.800 ký tự/tin; style ở nhánh `quote` hiện như tin thường (đã đọc
+code, chưa gửi thử); `EU` và `VN` là xuất xứ không xác định được theo bảng thành viên; "không được hưởng"
+tô đỏ; top-3 ứng viên = mã đầu + 2; chuỗi `extended_by` giữ dạng "{văn bản} đến YYYY-MM-DD".
+
+**Điều kiện ký `verifiedBy`.** Ký bảng bật lọc và xanh **ở mọi mã cùng lúc**. Trên dữ liệu seed cũ, mức 8
+số của các mã có dòng 10 số khác mức (ACFTA 10, AANZFTA 8, EVFTA 58) là mức của dòng 10 số đầu tiên, và
+553 mã EVFTA mang thuế xuất khẩu Phụ lục I
+([ADR dòng 10 số quốc gia](../architecture-decisions/2026-09-13-fta-national-sublines.md)): xanh khi đó
+khẳng định "được hưởng 0%" ở dòng có thể là 5%. Vì vậy chỉ ký khi (a) thay đổi của ADR đó (migration 0010
+và seed lại) đã chạy trên dữ liệu đang phục vụ; **hoặc** (b) chủ dự án ghi rõ việc chấp nhận rủi ro này
+trong cùng commit ký. `verifiedHash` ghi theo §5b.4. **Đã thỏa (a):** migration 0010 và nạp lại biểu thuế
+đã deploy 2026-09-13 ([nhật ký](../planning/02-progress.md)); duyệt ở `853a01f`.
+
+**Câu hỏi để ngỏ:** (1) ~~ai ký `verifiedBy`, khi nào, theo (a) hay (b)~~ — đã trả lời: Trần Ngọc Nhật,
+2026-09-13, theo (a); (2) có in "bảng thành viên do
+{verifiedBy} xác nhận ngày {verifiedAt}" trong dòng nguồn không — mặc định không.
+
+**Vùng rủi ro:** mô hình viết xuống dòng thô trong JSON → `JSON.parse` hỏng → rơi về trích dẫn thuần (an
+toàn nhưng tụt chất lượng; theo dõi tỉ lệ trong log); kiểm số liệu của `numberMarkers` gạt cả câu đúng mà
+mô hình viết số khác cách điều khoản viết ("ba mươi ngày" / "30 ngày") → thêm lần rơi về trích dẫn thuần,
+theo dõi cùng tỉ lệ đó; người dùng trả lời vào tin thứ hai của một câu trả lời đã tách thì `quote.msg` chỉ
+có phần đó (luồng đính chính vẫn dựa được vào bộ nhớ `tariffFresh`); bảng `decree` đọc một lần mỗi tiến
+trình — seed lại mà không khởi động lại API thì dòng phạm vi kho cũ; bảng thành viên chưa có thời gian
+hiệu lực (gia nhập, rút khỏi hiệp định).
+
+**Ngoài phạm vi:** nạp dòng 10 số (thay đổi riêng theo ADR dòng 10 số quốc gia, phần này chỉ trình bày
+kết quả); nạp 144/2024, 108/2025, 199/2025, 201/2026 và NQ 25/2026;
+bằng chứng nguyên văn cho ứng viên HS; bỏ `lead` khỏi prompt router; gợi ý kết dẫn sang quy định nộp C/O
+(chờ Mảng 2 nạp nguồn và đo được câu trả lời cho câu hỏi đó).
 
 ## 6. Lỗi và suy giảm
 
@@ -566,4 +1421,6 @@ API trả phí; sửa gốc rác HYPERLINK trong NĐ 31/2018; phần hướng d�
 - [Mở rộng LLM](llm-expansion-design.md) · [Đường ống hộp thư đến](inbox-ingest-workflow.md) ·
   [Đánh giá](evaluation.md) · [Quy tắc nghiệp vụ](../business-rules.md) ·
   [ADR 2026-09-13](../architecture-decisions/2026-09-13-evidence-sections-and-long-form-answers.md) ·
-  [ADR HS là ứng viên](../architecture-decisions/2026-07-17-hs-candidates-not-answers.md)
+  [ADR HS là ứng viên](../architecture-decisions/2026-07-17-hs-candidates-not-answers.md) ·
+  [ADR chữ định dạng Zalo theo giọng notebook](../architecture-decisions/2026-09-13-zalo-rich-text-notebook-style.md) ·
+  [Khái niệm biểu thuế](../concepts/tariff-system.md)
