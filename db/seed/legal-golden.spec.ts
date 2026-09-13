@@ -152,9 +152,16 @@ const article = (dieu: number) => new RegExp(`^Điều ${dieu} `);
     }, 30_000);
 
     it('a document outside the corpus resolves to nothing (so the caller can say so)', async () => {
-      const ref = parseDocRef('Thông tư 38/2015/TT-BTC')!;
+      const ref = parseDocRef('Nghị định 69/2018/NĐ-CP')!;
       expect(ref.confident).toBe(true);
       expect(await resolveDocuments(db, ref)).toEqual([]);
+    });
+
+    it('a consolidated circular resolves to the VBHN that carries it', async () => {
+      // TT 38/2015 is in the corpus only through 25/VBHN-BTC (TT 38/2015 + TT 39/2018).
+      const ref = parseDocRef('Thông tư 38/2015/TT-BTC')!;
+      const docs = (await resolveDocuments(db, ref)) as Array<{ number: string }>;
+      expect(docs.map((d) => d.number)).toEqual(['25/VBHN-BTC']);
     });
   });
 });
