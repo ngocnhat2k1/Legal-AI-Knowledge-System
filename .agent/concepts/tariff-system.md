@@ -223,6 +223,57 @@ Ngoài đợt 2022:
   2026-07-17, nguồn: nghiên cứu 12 §3. Số hiệu nghị định cho các biểu thuế AJCEP/VJEPA/Campuchia 2026
   không được ghi lại — xem [Chưa xác minh](#chưa-xác-minh--không-được-dựa-vào).)
 
+### ⚠️ ACFTA: cột “Nước không được hưởng ưu đãi” — loại trừ xuất xứ theo từng dòng (2026-09-13)
+
+Biểu ACFTA (**NĐ 118/2022/NĐ-CP**) có thêm một cột sau thuế suất. Điều 3 khoản 5 (nguyên văn):
+*“Cột “Nước không được hưởng ưu đãi”: Những mặt hàng nhập khẩu từ nước có thể hiện ký hiệu tên nước
+(được quy định tại khoản 2 Điều 4 Nghị định này) không được áp dụng thuế suất ACFTA quy định tại Nghị
+định này.”* Ký hiệu lấy từ Điều 4 khoản 2: `BN` Bru-nây Đa-rút-xa-lam, `KH` Vương quốc Cam-pu-chia, `ID`
+Cộng hòa In-đô-nê-xi-a, `LA` Cộng hòa Dân chủ Nhân dân Lào, `MY` Ma-lay-xi-a, `MM` Cộng hòa Liên bang
+Mi-an-ma, `PH` Cộng hòa Phi-líp-pin, `SG` Cộng hòa Xinh-ga-po, `TH` Vương quốc Thái Lan, `CN` Cộng hòa
+Nhân dân Trung Hoa.
+
+Ví dụ trong nghị định: `0901.11.20 | - - - Arabica | 0 | MM, TH, CN` — hàng xuất xứ Trung Quốc, Mi-an-ma,
+Thái Lan **không** được 0% ACFTA ở dòng này, dù có C/O mẫu E; áp mức MFN.
+
+**Lỗi đã xảy ra (xác nhận live 2026-09-13):** loader cũ chỉ lấy mã, mô tả, thuế suất → API trả
+“0% nếu có C/O form E hợp lệ” cho hàng CN ở những dòng bị loại trừ. Đúng kiểu [R3](../business-rules.md):
+sai nhưng trông hợp lệ. Thành viên của hiệp định (Điều 4 khoản 2) là điều kiện **cần**, không đủ.
+
+Quy mô (trích lại từ 10 phần Công báo, 2026-09-13): nghị định ghi loại trừ trực tiếp ở **3.151 dòng 8 số**
+và **34 dòng 10 số** (trên 28 mã 8 số) — khớp 100% với một lần trích độc lập (3.185 mục). Sau khi gộp 3 mã
+mà mọi dòng 10 số đều loại trừ cùng một nước (xem giới hạn dòng 10 số bên dưới), dữ liệu có **3.154 dòng 8
+số** có loại trừ — KH 1.166, ID 948, PH 895, TH 842, MM 692, MY 689, **CN 509** (446 dòng trong đó đang có
+thuế suất 0), BN 371, LA 121, SG 4. Dòng CN thứ 510 là dòng 10 số `4810.14.10.10`.
+
+Biểu diễn: extract `fta-acfta.ndjson` có `excluded` / `excluded_sublines`; seed ghi vào
+`tariff_rate.conditions` = `{"excluded_origins": [...]}` / `{"excluded_sublines": [...]}`; API trả
+`excludedOrigins`, `originExcluded` và câu `statement` nói rõ “Không áp dụng cho hàng xuất xứ … — áp mức
+MFN …” (không in con số ưu đãi). Không truyền xuất xứ thì statement liệt kê các nước bị loại trừ.
+`origin` phải là mã nước 2 chữ; API đổi `TQ` → `CN` (và `UK` → `GB`), giá trị khác (vd “Trung Quốc”) trả 400
+để không lặng lẽ bỏ qua loại trừ và thuế chống bán phá giá. Mã 2 chữ không thuộc Điều 4 khoản 2 (vd `JP`)
+được trả lời như không truyền xuất xứ (liệt kê nước bị loại trừ, `originExcluded = null`), không bao giờ là
+“không bị loại trừ”.
+
+**Giới hạn dòng 10 số:** Điều 3 khoản 2 cho phép biểu chi tiết đến cấp 10 số, nhưng mô hình dữ liệu là 8
+số (NĐ 26/2023 cũng không có các dòng này). 34 dòng 10 số có loại trừ (vd `1211.60.00.10` loại trừ MM, TH)
+**không** được nạp thành dòng riêng; chúng chỉ đi kèm mã 8 số cha để API ghi chú “đối chiếu nghị định”, và
+**không** được áp thành loại trừ cho cả mã 8 số — trừ khi **mọi** dòng 10 số của mã cha cùng loại trừ một nước
+(các dòng 10 số chia trọn mã 8 số, dòng cuối là “Loại khác”): khi đó nước đó bị loại trừ cả mã 8 số. Hiện chỉ
+có ID ở `4011.80.31`, `4011.80.39`, `4011.80.40` (`.10` loại trừ ID, MY; `.90` “Loại khác” loại trừ ID) — MY
+vẫn chỉ là ghi chú dòng 10 số. Rủi ro còn mở, chưa sửa (hotfix cố ý giữ nguyên
+mọi thuế suất): với 34 mã cha này, thuế suất nạp cho mã 8 số là ô thuế đầu tiên sau mã cha, tức là của
+dòng 10 số đầu tiên; ở 10 mã cha các dòng 10 số có thuế suất khác nhau (vd `1601.00.10`: `.10` = 0 loại
+trừ KH, `.90` = 5), nên mức 8 số đã nạp có thể sai với dòng 10 số còn lại. Lỗi này **không riêng ACFTA**
+(đo 2026-09-13 bằng cùng cách đọc ô): AANZFTA 8/8 mã cha có dòng 10 số mang thuế suất khác nhau (vd
+`0307.22.00`, `8703.31.41`); EVFTA 139/155 mã cha chỉ trong 2/16 phần Công báo có tại máy. Cần một thay đổi
+riêng cho mọi biểu FTA, có đủ nguồn và cổng kiểm riêng.
+
+**AANZFTA (121/2022), ATIGA (126/2022), EVFTA (116/2022) không có cột này** — chỉ có ký hiệu `*` (loại
+trừ toàn dòng, không phải 0%). Đã kiểm parser mới cho ra kết quả giống hệt từng byte với parser cũ trên nguồn
+có tại máy: AANZFTA đầy đủ (.docx, 11.414 dòng; và phần 293–294), ATIGA **chỉ** phần 461–462, EVFTA **chỉ**
+phần 391–392 và 421–422. Các phần ATIGA/EVFTA còn lại chưa kiểm; ba file seed của các biểu này không đổi.
+
 ### ⚠️ VÁCH ĐÁ 2027
 
 **Về cơ bản toàn bộ kho FTA hết hiệu lực vào 31/12/2027.** Một đợt kế tiếp gồm khoảng 17 nghị định sẽ

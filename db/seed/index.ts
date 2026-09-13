@@ -36,7 +36,10 @@ const PETROL = ['27101221', '27101222', '27101224', '27101225', '27101280'];
 const FTA_YEARS = [2022, 2023, 2024, 2025, 2026, 2027];
 
 interface Nd26Row { annex: string; chapter98: boolean; hs: string; hs_dotted: string; desc: string; rate: string | null; corresponding?: string | null }
-interface FtaRow { hs: string; hs_dotted: string; desc: string; rates: string[] }
+// Type aliases, not interfaces: sql.json() needs index-signature-compatible objects.
+type FtaSubline = { hs10: string; hs_dotted: string; desc: string; rates: string[]; excluded: string[] };
+/** `excluded` / `excluded_sublines`: ACFTA only — ND 118/2022 column "Nước không được hưởng ưu đãi". */
+type FtaRow = { hs: string; hs_dotted: string; desc: string; rates: string[]; excluded?: string[]; excluded_sublines?: FtaSubline[] };
 
 /** FTA schedules: single-rate (whole 2022–2027) unless `years` maps six columns. */
 const FTA = [
@@ -202,6 +205,12 @@ async function main(): Promise<void> {
     for (const r of rows) {
       if (seen.has(r.hs) || r.rates.length === 0) continue;
       seen.add(r.hs);
+      const cond = {
+        ...(r.excluded?.length ? { excluded_origins: r.excluded } : {}),
+        ...(r.excluded_sublines?.length ? { excluded_sublines: r.excluded_sublines } : {}),
+      };
+      // Always set the key: a multi-row insert takes its column list from the first row.
+      const conditions = Object.keys(cond).length ? sql.json(cond) : null;
       const intervals = f.years && r.rates.length === f.years.length
         ? r.rates.map((rate, idx) => ({ rate, from: `${f.years![idx]}-01-01`, to: `${f.years![idx]}-12-31` }))
         : [{ rate: r.rates[0]!, from: '2022-12-30', to: '2027-12-31' }];
@@ -211,7 +220,7 @@ async function main(): Promise<void> {
           hs_code: r.hs, hs_version_id: hsV, annex_id: ann.id as number, schedule_id: schedId[f.schedule]!,
           rate_type: excl ? 'excluded' : 'ad_valorem', rate_percent: excl ? null : ivl.rate!.replace(',', '.'),
           effective_from: ivl.from, effective_to: ivl.to, source_decree_id: fdec as number,
-          source_cell_text: `${f.schedule} | ${r.hs_dotted} | ${r.desc} | ${ivl.rate}`,
+          source_cell_text: `${f.schedule} | ${r.hs_dotted} | ${r.desc} | ${ivl.rate}`, conditions,
         });
       }
     }

@@ -20,7 +20,36 @@ lại MFN", không bao giờ 0% trần.
   EVFTA `8481.80.99` = `[5, 3,3, 1,6, 0, 0, 0]` → 2026 = 0%.
 - **AANZFTA** lấy từ `datafiles.chinhphu.vn` (`.docx`, không token) vì trang Công báo định tuyến theo id
   nội bộ khó dò; `parse_fta.py` đọc cả `.doc` lẫn `.docx` qua textutil.
-- Mỗi biểu **11.414 mã** (khớp danh mục AHTN 2022). `*` → `excluded` (không phải 0%).
+- Mỗi biểu **11.414 mã** (khớp danh mục AHTN 2022). `*` → `rate_type = excluded` (không phải 0%). Cột loại trừ theo nước chỉ có ở ACFTA — xem bên dưới.
+
+## ACFTA — cột “Nước không được hưởng ưu đãi” (2026-09-13)
+
+Biểu NĐ 118/2022 có cột loại trừ xuất xứ theo dòng (Điều 3 khoản 5), ô ngay sau thuế suất, dạng
+`MM, TH, CN` (ký hiệu theo Điều 4 khoản 2). Trước 2026-09-13 parser bỏ cột này → hàng CN ở dòng bị loại
+trừ vẫn nhận 0% ACFTA. Nay `parse_cells` (hàm thuần, test không cần `.doc`) ghi thêm hai trường, **chỉ khi
+có** (dòng không có loại trừ giữ nguyên từng byte):
+
+- `excluded`: `["CN","MM","TH"]` — ký hiệu đã sắp xếp, không trùng.
+- `excluded_sublines`: dòng 10 số có loại trừ riêng, gắn vào mã 8 số cha —
+  `[{"hs10":"1211600010","hs_dotted":"1211.60.00.10","desc":"…","rates":["0"],"excluded":["MM","TH"]}]`.
+  Loại trừ của dòng 10 số **không** được chép thành `excluded` của mã cha — trừ khi **mọi** dòng 10 số của
+  mã cha cùng loại trừ một nước (hiện chỉ ID ở `4011.80.31/39/40`).
+
+Kết quả tái trích (2026-09-13): 3.154 dòng 8 số có `excluded` (3.151 ghi trực tiếp + 3 mã gộp từ dòng 10 số),
+34 dòng 10 số trên 28 mã cha; **0 khác biệt** mã/mô tả/thuế suất so với extract trước (9e3431d).
+AANZFTA/ATIGA/EVFTA: đầu ra parser giống hệt từng byte trên nguồn có tại máy — AANZFTA đầy đủ, ATIGA chỉ phần
+461–462, EVFTA chỉ phần 391–392 + 421–422.
+Nguồn `.doc` là 10 phần Công báo 529+530 → 547+548 (không commit, xem `.gitignore`).
+
+```bash
+python3 research/fta-loader/parse_fta.py research/fta-loader/acfta/doc/ --emit db/seed/data/fta-acfta.ndjson
+corepack yarn test:parser                                             # gồm cell walk research/fta-loader
+node_modules/.bin/jest db/seed/fta-acfta.spec.ts                      # 0 thuế suất lệch so với 9e3431d
+```
+
+Còn mở: 34 mã cha có dòng 10 số lấy thuế suất từ dòng 10 số đầu tiên; 10 mã trong đó có dòng 10 số với
+thuế suất khác nhau (vd `1601.00.10`). Cùng lỗi có ở AANZFTA (8/8 mã cha) và EVFTA (139/155 trong 2/16 phần).
+Xem [tariff-system](../../.agent/concepts/tariff-system.md).
 
 ## RCEP — cố ý CHƯA nạp
 

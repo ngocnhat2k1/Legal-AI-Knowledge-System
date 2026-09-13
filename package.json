@@ -17,7 +17,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:bot": "node --test \"apps/zalo-bot/*.test.mjs\"",
-    "test:parser": "python3 -m unittest discover -s research/legal-loader -p 'test_*.py'",
+    "test:parser": "python3 -m unittest discover -s research/legal-loader -p 'test_*.py' && python3 -m unittest discover -s research/fta-loader -p 'test_*.py' && python3 -m unittest discover -s research/inbox-loader -p 'test_*.py'",
     "eval": "tsx apps/eval/run.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx db/migrate.ts",

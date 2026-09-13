@@ -111,7 +111,7 @@ background:#fff; padding:16px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0
         }
         if (d.staleness?.stale) h += `<div class="warn">⚠️ ${esc(d.staleness.warning)}</div>`;
         if (d.import?.mfn) h += rateRow(d.import.mfn);
-        (d.import?.preferential || []).forEach((p) => (h += rateRow(p, 'pref')));
+        (d.import?.preferential || []).forEach((p) => (h += rateRow(p, p.originExcluded ? '' : 'pref'))); // excluded origin: not a preference
         (d.import?.chapter98 || []).forEach((p) => (h += rateRow(p, 'pref')));
         if (d.import?.outOfQuota) h += rateRow(d.import.outOfQuota);
         if (d.export) h += rateRow(d.export);

@@ -78,7 +78,8 @@ export function formatAnswer(q, r, confirm, { showFooter = true } = {}) {
   const pref = r.import?.preferential ?? [];
   if (pref.length) {
     lines.push('Ưu đãi FTA (cần C/O đúng form):');
-    for (const p of pref) lines.push(`• ${p.schedule}: ${p.statement}`);
+    // ⛔ marks a schedule the decree denies this origin, so it does not read as a preference.
+    for (const p of pref) lines.push(`${p.originExcluded ? '⛔' : '•'} ${p.schedule}: ${p.statement}`);
   }
   const oq = r.import?.outOfQuota;
   if (oq) lines.push(`Ngoài hạn ngạch: ${oq.statement}`);

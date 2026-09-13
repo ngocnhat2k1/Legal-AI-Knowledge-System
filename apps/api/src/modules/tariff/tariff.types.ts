@@ -34,6 +34,10 @@ export interface PreferentialView extends RateView {
   requiresCo: boolean;
   /** Extra per-line conditions carried in the tariff_rate.conditions column. */
   conditions: Record<string, unknown> | null;
+  /** Origins the decree excludes on this line (ACFTA column "Nước không được hưởng ưu đãi"); [] when none. */
+  excludedOrigins: string[];
+  /** Whether the queried origin is excluded on this line; null when no origin was given or the line has no exclusion data. */
+  originExcluded: boolean | null;
 }
 
 /** Anti-dumping duty (CBPG) — a separate charge that STACKS on the import duty. */

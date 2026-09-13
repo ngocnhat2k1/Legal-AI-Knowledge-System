@@ -15,6 +15,37 @@ import type {
 
 const HS8 = /^\d{8}$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const ALPHA2 = /^[A-Z]{2}$/;
+/** Non-ISO shorthands users and the bot's LLM router send (TQ = Trung Quốc), as the bot's parser maps them. */
+const ORIGIN_ALIASES: Record<string, string> = { TQ: 'CN', UK: 'GB' };
+
+/**
+ * Origin names and codes verbatim from ND 118/2022/NĐ-CP (ACFTA) Điều 4 khoản 2 —
+ * the codes its per-line column "Nước không được hưởng ưu đãi" uses (Điều 3 khoản 5).
+ */
+const ND118_ORIGINS: Record<string, string> = {
+  BN: 'Bru-nây Đa-rút-xa-lam',
+  KH: 'Vương quốc Cam-pu-chia',
+  ID: 'Cộng hòa In-đô-nê-xi-a',
+  LA: 'Cộng hòa Dân chủ Nhân dân Lào',
+  MY: 'Ma-lay-xi-a',
+  MM: 'Cộng hòa Liên bang Mi-an-ma',
+  PH: 'Cộng hòa Phi-líp-pin',
+  SG: 'Cộng hòa Xinh-ga-po',
+  TH: 'Vương quốc Thái Lan',
+  CN: 'Cộng hòa Nhân dân Trung Hoa',
+};
+/** jsonb fields read defensively: an unexpected shape yields [] instead of a throw. */
+const arr = <T>(v: unknown): T[] => (Array.isArray(v) ? v : []);
+const originNames = (codes: string[]): string =>
+  codes.map((c) => (ND118_ORIGINS[c] ? `${ND118_ORIGINS[c]} (${c})` : c)).join(', ');
+
+/** A 10-digit national sub-line exclusion, carried on its HS8 parent (conditions.excluded_sublines). */
+interface ExcludedSubline {
+  hs_dotted: string;
+  desc: string;
+  excluded: string[];
+}
 
 /** Row shape of the point-in-time rate query. */
 interface RateRow {
@@ -92,7 +123,15 @@ export class TariffService {
     if (!ISO_DATE.test(dateRaw ?? '')) {
       throw new BadRequestException('date must be YYYY-MM-DD');
     }
-    const origin = originRaw?.trim().toUpperCase() || null;
+    const originCode = originRaw?.trim().toUpperCase() || null;
+    const origin = originCode ? (ORIGIN_ALIASES[originCode] ?? originCode) : null;
+    if (origin && !ALPHA2.test(origin)) {
+      // Fail closed: an unreadable origin would silently skip exclusions and anti-dumping duties.
+      throw new BadRequestException('origin must be a 2-letter country code (e.g. CN; TQ is accepted)');
+    }
+    // Per-line exclusions list ND 118 codes only. Any other origin is answered as if none was
+    // given (the excluded origins are named), never as "not excluded".
+    const nd118Origin = origin && ND118_ORIGINS[origin] ? origin : null;
 
     const rows = (await this.db.execute(sql`
       SELECT s.code AS schedule, s.name AS schedule_name, s.fta_form, s.requires_co,
@@ -151,7 +190,22 @@ export class TariffService {
         'Có mức thuế NK ưu đãi riêng tại Chương 98 (Mục II) áp dụng có điều kiện cho hàng đủ tiêu chí; đây là lựa chọn thay thế cho mức MFN Mục I, không phải mức mặc định.',
       );
     }
-    const preferential = prefRows.map((r) => this.toPreferentialView(r, mfn));
+    const preferential = prefRows.map((r) => this.toPreferentialView(r, mfn, nd118Origin));
+    for (const r of prefRows) {
+      // The data is 8-digit: a sub-line exclusion is surfaced, never applied to the whole line.
+      // Codes the whole line already excludes (excluded_origins) are not repeated here.
+      const lineCodes = arr<string>(r.conditions?.excluded_origins);
+      const subs = arr<ExcludedSubline>(r.conditions?.excluded_sublines)
+        .map((s) => ({ ...s, excluded: arr<string>(s?.excluded).filter((c) => !lineCodes.includes(c)) }))
+        .filter((s) => s.excluded.length && (!nd118Origin || s.excluded.includes(nd118Origin)));
+      if (subs.length) {
+        notes.push(
+          `${r.schedule}: NĐ ${r.decree} chi tiết mã này ở cấp 10 số và loại trừ xuất xứ theo từng dòng 10 số — ${subs
+            .map((s) => `${s.hs_dotted} "${s.desc}": không áp dụng cho ${originNames(s.excluded)}`)
+            .join('; ')}. Dữ liệu chỉ nạp cấp 8 số nên loại trừ này KHÔNG áp cho cả mã 8 số; nếu hàng thuộc dòng 10 số trên, đối chiếu nghị định trước khi áp thuế suất ${r.schedule}.`,
+        );
+      }
+    }
     if (preferential.some((p) => p.requiresCo)) {
       notes.push(
         'Mức ưu đãi FTA chỉ áp dụng khi có C/O hợp lệ đúng form; nếu không, áp mức MFN. Không có con số 0% vô điều kiện.',
@@ -172,7 +226,7 @@ export class TariffService {
         mfn,
         preferential,
         outOfQuota: outOfQuotaRow ? this.toRateView(outOfQuotaRow) : null,
-        chapter98: ch98Rows.map((r) => this.toPreferentialView(r, mfn)),
+        chapter98: ch98Rows.map((r) => this.toPreferentialView(r, mfn, nd118Origin)),
       },
       export: exportRow ? this.toRateView(exportRow) : null,
       antiDumping: await this.antiDumping(hs, origin, dateRaw),
@@ -198,18 +252,30 @@ export class TariffService {
     };
   }
 
-  private toPreferentialView(r: RateRow, mfn: RateView | null): PreferentialView {
+  /** `origin`: the queried origin only when it is an ND 118 code, else null (see lookup). */
+  private toPreferentialView(r: RateRow, mfn: RateView | null, origin: string | null): PreferentialView {
     const base = this.toRateView(r);
     const requiresCo = r.requires_co;
     const fallback = mfn ? `${mfn.statement} (MFN)` : 'mức MFN';
+    const excludedOrigins = arr<string>(r.conditions?.excluded_origins);
+    const originExcluded = origin && excludedOrigins.length ? excludedOrigins.includes(origin) : null;
+    let statement = requiresCo
+      ? `${base.statement} nếu có C/O${r.fta_form ? ` form ${r.fta_form}` : ''} hợp lệ, ngược lại ${fallback}`
+      : base.statement;
+    if (originExcluded) {
+      // Never print the preferential number here: for this origin it does not exist.
+      statement = `Không áp dụng cho hàng xuất xứ ${originNames([origin!])}: NĐ ${r.decree} loại trừ nước này ở dòng thuế này — áp mức MFN${mfn ? ` ${mfn.statement}` : ''}`;
+    } else if (!origin && excludedOrigins.length) {
+      statement += `; không áp dụng cho hàng xuất xứ ${originNames(excludedOrigins)} (NĐ ${r.decree} loại trừ theo dòng)`;
+    }
     return {
       ...base,
       form: r.fta_form,
       requiresCo,
       conditions: r.conditions,
-      statement: requiresCo
-        ? `${base.statement} nếu có C/O${r.fta_form ? ` form ${r.fta_form}` : ''} hợp lệ, ngược lại ${fallback}`
-        : base.statement,
+      excludedOrigins,
+      originExcluded,
+      statement,
     };
   }
 
