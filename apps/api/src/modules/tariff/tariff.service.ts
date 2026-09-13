@@ -1,5 +1,8 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/database';
@@ -101,10 +104,125 @@ function toCandidate(r: SearchRow): SearchCandidate {
   };
 }
 
-function subtractDays(iso: string, days: number): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  const t = Date.UTC(y!, m! - 1, d!) - days * 86_400_000;
-  return new Date(t).toISOString().slice(0, 10);
+const dmy = (iso: string): string => iso.split('-').reverse().join('/');
+
+export interface FtaMembership {
+  verifiedBy: string;
+  verifiedAt: string;
+  members: Map<string, Set<string>>;
+}
+
+/**
+ * Membership per schedule code, or null unless the file parses, a named person verified it (R18),
+ * AND verifiedHash still matches the schedules they verified. Null means: no origin filtering, no green.
+ */
+export function ftaMembership(json: unknown): FtaMembership | null {
+  const j = (json ?? {}) as { verifiedBy?: unknown; verifiedAt?: unknown; verifiedHash?: unknown; schedules?: unknown };
+  if (typeof j.verifiedBy !== 'string' || !j.verifiedBy.trim()) return null;
+  if (typeof j.verifiedAt !== 'string' || !ISO_DATE.test(j.verifiedAt)) return null;
+  if (!Array.isArray(j.schedules)) return null;
+  // The signature covers exactly the content that was read: an edit after signing voids it.
+  if (j.verifiedHash !== createHash('sha256').update(JSON.stringify(j.schedules)).digest('hex')) return null;
+  const members = new Map<string, Set<string>>();
+  for (const s of j.schedules as Array<{ schedule?: unknown; members?: unknown }>) {
+    const codes = arr<{ iso2?: unknown }>(s?.members).map((m) => m?.iso2);
+    if (typeof s?.schedule !== 'string' || codes.some((c) => typeof c !== 'string' || !ALPHA2.test(c))) return null;
+    if (codes.length) members.set(s.schedule, new Set(codes as string[])); // empty list: absent, never "not a member"
+  }
+  return { verifiedBy: j.verifiedBy, verifiedAt: j.verifiedAt, members };
+}
+
+/** EU is a bloc (ND 116 lists member states); VN goods from non-tariff zones are a special origin, not a member row. */
+const UNDETERMINED_ORIGINS = new Set(['EU', 'VN']);
+
+export function originEligible(
+  m: FtaMembership | null,
+  schedule: string,
+  origin: string | null,
+  originExcluded: boolean | null,
+  sublineExcluded: boolean,
+): boolean | null {
+  if (!m || !origin || UNDETERMINED_ORIGINS.has(origin)) return null;
+  const set = m.members.get(schedule);
+  if (!set) return null; // schedule absent from the table (Chapter 98, a later FTA load): unknown, never "not a member"
+  if (!set.has(origin)) return false;
+  if (originExcluded === true) return false; // membership is necessary, not sufficient (ND 118 per-line exclusions)
+  return sublineExcluded ? null : true; // excluded on a 10-digit sub-line: depends on the goods, never green
+}
+
+function readMembership(): FtaMembership | null {
+  let json: unknown = null;
+  try {
+    json = JSON.parse(readFileSync(join(process.cwd(), 'db/seed/data/fta-members.json'), 'utf8'));
+  } catch {
+    /* missing or unreadable: stays null (fail closed) */
+  }
+  const m = ftaMembership(json);
+  if (!m) {
+    new Logger('TariffService').warn(
+      'db/seed/data/fta-members.json is not in effect (unverified, missing, invalid, or edited after verification): FTA rows are not filtered by origin and never marked eligible',
+    );
+  }
+  return m;
+}
+
+/** One row of the decree table, with whether any current tariff line cites it. */
+export interface DecreeRow {
+  number: string;
+  effective_from: string;
+  effective_to: string | null;
+  signed_date: string | null;
+  loaded: boolean;
+}
+
+/**
+ * What the answer stands on, from the decree table — not from when the seed ran.
+ * "Latest" = the loaded decree IN FORCE on the query date with the greatest effective_from
+ * (ties: signed_date, then number), so a 2023 question never cites a 2026 decree and an
+ * expired decree (72/2026 after 30/04/2026) never names the schedule in force.
+ */
+export function stalenessView(decrees: DecreeRow[], date: string, extendedBy: string[]): StalenessView {
+  const inForce = decrees.filter((d) => d.effective_from <= date && (d.effective_to == null || date <= d.effective_to));
+  const latest = inForce
+    .filter((d) => d.loaded)
+    .sort(
+      (a, b) =>
+        b.effective_from.localeCompare(a.effective_from) ||
+        (b.signed_date ?? '').localeCompare(a.signed_date ?? '') ||
+        b.number.localeCompare(a.number),
+    )[0];
+  const unloadedInstruments = inForce
+    .filter((d) => !d.loaded)
+    .sort((a, b) => a.effective_from.localeCompare(b.effective_from))
+    .map((d) => d.number);
+  let warning: string;
+  if (!latest) {
+    warning = `Không xác định được văn bản biểu thuế đã nạp cho ngày ${dmy(date)} — đối chiếu nguồn trước khi dùng.`;
+  } else {
+    const window = `${dmy(latest.effective_from)}${latest.effective_to ? `–${dmy(latest.effective_to)}` : ''}`;
+    warning = `Biểu thuế trong kho cập nhật tới NĐ ${latest.number} (hiệu lực ${window}); ${
+      unloadedInstruments.length
+        ? `chưa nạp dòng thuế của ${unloadedInstruments.length} nghị định biểu thuế còn hiệu lực — đối chiếu trước khi khai.`
+        : 'văn bản ban hành sau mốc này có thể chưa có.'
+    }`;
+  }
+  // The date comes only from the recorded string; an unreadable one is still printed (fail closed).
+  const pendingExtension =
+    extendedBy
+      .map((s) => {
+        const m = s.match(/^(.+?) đến (\d{4}-\d{2}-\d{2})/);
+        if (!m) return `Mức thuế nhập khẩu ưu đãi của mã này có thể đã được gia hạn (${s}) nhưng văn bản đó chưa nạp — đối chiếu trước khi khai.`;
+        return date <= m[2]!
+          ? `Mức thuế nhập khẩu ưu đãi của mã này có thể đã được ${m[1]} gia hạn tới ${dmy(m[2]!)} nhưng văn bản đó chưa nạp — đối chiếu trước khi khai.`
+          : null;
+      })
+      .find((x) => x) ?? null;
+  return {
+    latestInstrument: latest ? { number: latest.number, effectiveFrom: latest.effective_from, effectiveTo: latest.effective_to } : null,
+    unloadedInstruments,
+    pendingExtension,
+    warning,
+  };
 }
 
 /**
@@ -114,10 +232,12 @@ function subtractDays(iso: string, days: number): string {
  */
 @Injectable()
 export class TariffService {
-  constructor(
-    @Inject(DATABASE_CONNECTION) private readonly db: Database,
-    private readonly config: ConfigService,
-  ) {}
+  /** Read once at start-up; not readonly so a spec can assign a fixture. */
+  membership: FtaMembership | null = readMembership();
+  /** The decree table changes only with a seed, and a seed ships with a restart. */
+  private decrees?: Promise<DecreeRow[]>;
+
+  constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
 
   async lookup(hsRaw: string, originRaw: string | undefined, dateRaw: string): Promise<TariffResponse> {
     const hs = (hsRaw ?? '').replace(/\./g, '').trim();
@@ -154,7 +274,7 @@ export class TariffService {
       ORDER BY a.trade_direction, s.code
     `)) as unknown as RateRow[];
 
-    const staleness = await this.staleness(dateRaw);
+    const staleness = await this.staleness(hs, dateRaw);
     const notes: string[] = [];
 
     if (rows.length === 0) {
@@ -165,7 +285,7 @@ export class TariffService {
         message: `No tariff rate found for HS ${hs} effective ${dateRaw}. The code may be a heading/structural line, a special-provision line without its own rate, or outside the loaded data.`,
         hs,
         date: dateRaw,
-        snapshotDate: staleness.snapshotDate,
+        latestInstrument: staleness.latestInstrument,
       });
     }
 
@@ -194,16 +314,10 @@ export class TariffService {
         'Có mức thuế NK ưu đãi riêng tại Chương 98 (Mục II) áp dụng có điều kiện cho hàng đủ tiêu chí; đây là lựa chọn thay thế cho mức MFN Mục I, không phải mức mặc định.',
       );
     }
-    const preferential = prefRows.map((r) => this.toPreferentialView(r, mfn, nd118Origin));
-    if (preferential.some((p) => p.requiresCo)) {
-      notes.push(
-        'Mức ưu đãi FTA chỉ áp dụng khi có C/O hợp lệ đúng form; nếu không, áp mức MFN. Không có con số 0% vô điều kiện.',
-      );
-    }
+    // Every conditional statement already carries "nếu có C/O … hợp lệ, ngược lại … (MFN)".
+    const preferential = prefRows.map((r) => this.toPreferentialView(r, mfn, nd118Origin, origin));
     if (origin && preferential.length === 0) {
-      notes.push(
-        `Chưa có biểu FTA nào được nạp khớp với xuất xứ ${origin} cho mã này; chỉ trả về MFN. (Các biểu FTA nạp ở bước sau.)`,
-      );
+      notes.push('Mã này không có dòng trong các biểu FTA đã nạp; chỉ trả về MFN.');
     }
 
     return {
@@ -215,11 +329,12 @@ export class TariffService {
         mfn,
         preferential,
         outOfQuota: outOfQuotaRow ? this.toRateView(outOfQuotaRow) : null,
-        chapter98: ch98Rows.map((r) => this.toPreferentialView(r, mfn, nd118Origin)),
+        chapter98: ch98Rows.map((r) => this.toPreferentialView(r, mfn, nd118Origin, origin)),
       },
       export: exportRow ? this.toRateView(exportRow) : null,
       antiDumping: await this.antiDumping(hs, origin, dateRaw),
       staleness,
+      ftaMembership: this.membership ? { verifiedBy: this.membership.verifiedBy, verifiedAt: this.membership.verifiedAt } : null,
       notes,
     };
   }
@@ -241,8 +356,11 @@ export class TariffService {
     };
   }
 
-  /** `origin`: the queried origin only when it is an ND 118 code, else null (see lookup). */
-  private toPreferentialView(r: RateRow, mfn: RateView | null, origin: string | null): PreferentialView {
+  /**
+   * `origin`: the queried origin only when it is an ND 118 code, else null (see lookup) — it drives the per-line
+   * exclusions. `queried`: the origin as given, for membership.
+   */
+  private toPreferentialView(r: RateRow, mfn: RateView | null, origin: string | null, queried: string | null): PreferentialView {
     const base = this.toRateView(r);
     const requiresCo = r.requires_co;
     const fallback = mfn ? `${mfn.statement} (MFN)` : 'mức MFN';
@@ -302,6 +420,8 @@ export class TariffService {
       originExcluded,
       sublines,
       statement,
+      rate: base.statement,
+      originEligible: originEligible(this.membership, r.schedule, queried, originExcluded, sublines.some((s) => s.originExcluded === true)),
     };
   }
 
@@ -416,32 +536,24 @@ export class TariffService {
     return rows.map(toCandidate);
   }
 
-  /**
-   * TASK-010. The data is loaded as of a snapshot date. Because a binding decree
-   * can be signed and in force weeks before it reaches Công báo (ND 72/2026: 15
-   * days; EVFTA: 48), any query date within one gazette-lag of the snapshot — or
-   * after it — may be missing a decree we could not yet have seen. Those answers
-   * are flagged, not served as confident.
-   */
-  private async staleness(date: string): Promise<StalenessView> {
-    const configured = this.config.get<string>('DATA_SNAPSHOT_DATE');
-    let snapshotDate = configured && ISO_DATE.test(configured) ? configured : null;
-    if (!snapshotDate) {
-      const rows = (await this.db.execute(
-        sql`SELECT max(recorded_at)::date::text AS d FROM tariff_rate`,
-      )) as unknown as Array<{ d: string | null }>;
-      snapshotDate = rows[0]?.d ?? date;
-    }
-    const lagDays = Number(this.config.get<string>('GAZETTE_LAG_DAYS') ?? '48');
-    const reliableThrough = subtractDays(snapshotDate, lagDays);
-    const stale = date > reliableThrough;
-    return {
-      snapshotDate,
-      reliableThrough,
-      stale,
-      warning: stale
-        ? `Ngày tra cứu ${date} nằm trong cửa sổ rủi ro độ trễ công báo (dữ liệu chốt ${snapshotDate}, tin cậy đến ${reliableThrough}). Một nghị định đã ký/hiệu lực nhưng chưa lên Công báo tại thời điểm chốt có thể chưa có trong dữ liệu — hãy đối chiếu nguồn gốc trước khi dùng.`
-        : null,
-    };
+  /** R7: name the instrument the answer stands on (see stalenessView). */
+  private async staleness(hs: string, date: string): Promise<StalenessView> {
+    this.decrees ??= (
+      this.db.execute(sql`
+        SELECT d.number, d.effective_from::text AS effective_from, d.effective_to::text AS effective_to,
+               d.signed_date::text AS signed_date,
+               EXISTS (SELECT 1 FROM tariff_rate r WHERE r.source_decree_id = d.id AND r.superseded_at IS NULL) AS loaded
+        FROM decree d
+      `) as unknown as Promise<DecreeRow[]>
+    ).catch((e: unknown) => {
+      this.decrees = undefined; // a failed read is retried on the next lookup, not cached
+      throw e;
+    });
+    const extended = (await this.db.execute(sql`
+      SELECT r.conditions->>'extended_by' AS extended_by FROM tariff_rate r
+      WHERE r.hs_code = ${hs} AND r.superseded_at IS NULL AND r.effective_to < ${date}
+        AND r.conditions->>'extended_by' IS NOT NULL
+    `)) as unknown as Array<{ extended_by: string }>;
+    return stalenessView(await this.decrees, date, extended.map((x) => x.extended_by));
   }
 }

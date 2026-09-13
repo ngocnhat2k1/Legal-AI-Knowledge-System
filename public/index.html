@@ -109,9 +109,16 @@ background:#fff; padding:16px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0
           const rest = (d.goods.path || '').split(' › ').slice(1).join(' › ');
           h += `<div class="goods"><b>${esc(d.goods.heading || d.goods.path)}</b>${rest ? ' <span class="muted">› ' + esc(rest) + '</span>' : ''}</div>`;
         }
-        if (d.staleness?.stale) h += `<div class="warn">⚠️ ${esc(d.staleness.warning)}</div>`;
+        if (d.staleness?.warning) {
+          const extra = [
+            d.staleness.unloadedInstruments?.length ? `Chưa nạp: ${d.staleness.unloadedInstruments.join(', ')}.` : '',
+            d.staleness.pendingExtension || '',
+          ].filter(Boolean).join(' ');
+          h += `<div class="warn">⚠️ ${esc(d.staleness.warning)}${extra ? ' ' + esc(extra) : ''}</div>`;
+        }
         if (d.import?.mfn) h += rateRow(d.import.mfn);
-        (d.import?.preferential || []).forEach((p) => (h += rateRow(p, p.originExcluded ? '' : 'pref'))); // excluded origin: not a preference
+        // Same condition as the bot's only green line: verified member, not excluded, one rate for the 8-digit line.
+        (d.import?.preferential || []).forEach((p) => (h += rateRow(p, p.originEligible === true && ['ad_valorem', 'specific', 'compound'].includes(p.type) ? 'pref' : '')));
         (d.import?.chapter98 || []).forEach((p) => (h += rateRow(p, 'pref')));
         if (d.import?.outOfQuota) h += rateRow(d.import.outOfQuota);
         if (d.export) h += rateRow(d.export);

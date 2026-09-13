@@ -101,8 +101,6 @@ services:
       PORT: 3000
       # The legal RAG module embeds queries via this sidecar (localhost cost-free).
       EMBEDDER_URL: "${EMBEDDER_URL:-http://embedder:8000}"
-      # How stale is the loaded data? Defaults to max(recorded_at); override when known.
-      DATA_SNAPSHOT_DATE: "${DATA_SNAPSHOT_DATE:-}"
       # Subscription credential for the Claude Code CLI, used by grounded legal
       # synthesis. Empty = the model layer is off and /health reports llm=no_token;
       # tariff lookup is unaffected, and /legal falls back to verbatim provisions.

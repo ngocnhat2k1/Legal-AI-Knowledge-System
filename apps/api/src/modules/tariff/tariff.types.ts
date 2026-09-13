@@ -57,6 +57,17 @@ export interface PreferentialView extends RateView {
   originExcluded: boolean | null;
   /** The decree's 10-digit sub-lines of this code, in decree order; [] when the decree details it at 8 digits only. */
   sublines: SublineView[];
+  /**
+   * The rate alone, without the C/O condition: the base statement ("0%", "Loại trừ khỏi biểu (không phải 0%)",
+   * "Theo dòng 10 số (không có một mức chung cho mã 8 số)").
+   */
+  rate: string;
+  /**
+   * true: member per the verified table, excluded neither on this line nor on a 10-digit sub-line;
+   * false: not a member, or excluded on this line; null: no origin, table unverified, EU/VN,
+   * schedule absent from the table, or excluded on a sub-line only.
+   */
+  originEligible: boolean | null;
 }
 
 /** Anti-dumping duty (CBPG) — a separate charge that STACKS on the import duty. */
@@ -74,13 +85,16 @@ export interface AntiDumpingView {
   statement: string;
 }
 
-/** Data-freshness verdict (TASK-010). */
+/** Which loaded tariff instrument the answer stands on, and what is recorded but not loaded (R7). */
 export interface StalenessView {
-  snapshotDate: string; // the data is loaded as of this date
-  reliableThrough: string; // dates at/after this are within the gazette-lag risk window
-  stale: boolean;
-  /** Present when stale: why the answer may be incomplete for this query date. */
-  warning: string | null;
+  /** The loaded tariff decree in force on the query date with the latest effective_from; null when none. */
+  latestInstrument: { number: string; effectiveFrom: string; effectiveTo: string | null } | null;
+  /** Decrees recorded in the decree table, in force on the query date, with no tariff line loaded. */
+  unloadedInstruments: string[];
+  /** A recorded, unloaded extension of an expired rate on this HS that may cover the query date. */
+  pendingExtension: string | null;
+  /** Always present: one line naming the latest loaded instrument. */
+  warning: string;
 }
 
 /** What a code actually is, from the nomenclature (Phase 3 descriptions). */
@@ -112,6 +126,8 @@ export interface TariffResponse {
   export: RateView | null;
   antiDumping: AntiDumpingView[];
   staleness: StalenessView;
+  /** Who verified the FTA membership table (R18); null = unverified, so no origin filtering and no "eligible". */
+  ftaMembership: { verifiedBy: string; verifiedAt: string } | null;
   /** Non-fatal advisories the caller must read (conditionality, TRQ, exclusions). */
   notes: string[];
 }

@@ -96,7 +96,6 @@ Hai file này nằm trong thư mục stack. `git archive` không đè lên chún
 | `EMBEDDER_HOST_PORT` | Cổng host của embedder: `8060` | `embedder` |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Token cho CLI `claude` (lấy bằng `claude setup-token`). Để trống thì `/health` báo `llm: no_token`, `/legal` trả nguyên văn điều khoản, bot chỉ chạy nhánh regex. Đã điền khoảng 11:23 UTC ngày 2026-09-13 | `api`, `zalo-bot` |
 | `ALLOWED_THREADS` | Các threadId Zalo được bot trả lời, cách nhau dấu phẩy. Để trống là trả lời mọi người (mục 6) | `zalo-bot` |
-| `DATA_SNAPSHOT_DATE` | Ngày dữ liệu hiển thị. Để trống thì lấy `max(recorded_at)` | `api` |
 
 Lúc deploy, `.env` không đặt `EMBED_MAX_TOKENS`, `EMBED_MODEL`, `EMBED_ID`, `EMBEDDER_URL`, nên các biến này lấy mặc
 định trong `docker-compose.yml`. `FORCE_RESEED` chỉ truyền trên dòng lệnh (mục 5), không ghi vào `.env`.
