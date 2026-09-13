@@ -18,6 +18,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 
 import { answerByHs, answerImage, answerLegal, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
@@ -102,7 +103,7 @@ async function connect() {
  * cho regex soi cả ngữ cảnh thì một câu hỏi pháp luật reply vào tin có "8481.10.11"
  * sẽ bị bắt nhầm thành tra thuế.
  */
-async function respond({ text, image, quote, ctx, senderName, threadId, userId }) {
+export async function respond({ text, image, quote, ctx, senderName, threadId, userId }) {
   const quoteText = String(quote?.msg || '');
 
   // 0. "xác nhận văn bản <số hiệu>" — người đọc đứng ra bảo đảm cho một văn bản bot tự
@@ -338,7 +339,10 @@ async function main() {
   console.log('[zalo] đang lắng nghe tin nhắn…');
 }
 
-main().catch((e) => {
-  console.error('[zalo] khởi động thất bại:', e);
-  process.exit(1);
-});
+// Start only as the entry point: dry-run.mjs imports respond() without logging in to Zalo.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  main().catch((e) => {
+    console.error('[zalo] khởi động thất bại:', e);
+    process.exit(1);
+  });
+}
