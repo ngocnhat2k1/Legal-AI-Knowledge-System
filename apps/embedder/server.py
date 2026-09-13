@@ -24,6 +24,11 @@ EMBED_ID = os.environ.get('EMBED_ID', 'bge-m3@1')  # pinned into legal_document.
 app = FastAPI(title='legal-embedder')
 # Load at import so the container is only "healthy" once the model is ready.
 model = SentenceTransformer(MODEL_NAME)
+# Hard cap on input length, independent of what any caller sends. BGE-M3 accepts 8,192
+# tokens, but full-length attention on CPU for a 48k-char explanatory note is exactly the
+# unmeasured memory spike an 8 GB VPS cannot absorb. Tune from research/inbox-loader/
+# measure_embed.py; the seed additionally caps embed_text by characters (EMBED_CHARS).
+model.max_seq_length = int(os.environ.get('EMBED_MAX_TOKENS', '2048'))
 DIM = model.get_sentence_embedding_dimension()
 
 

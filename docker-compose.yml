@@ -17,7 +17,7 @@ services:
       POSTGRES_DB: customs_assistant
     ports:
       # Bound to localhost only: reached inside the compose network as db:5432.
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:${DB_HOST_PORT:-5433}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -80,6 +80,12 @@ services:
     environment:
       EMBED_MODEL: "${EMBED_MODEL:-BAAI/bge-m3}"
       EMBED_ID: "${EMBED_ID:-bge-m3@1}"
+      # Token cap per input (see apps/embedder/server.py). Measured, not guessed —
+      # research/inbox-loader/measure_embed.py; the number is recorded in the spec §2.6.
+      EMBED_MAX_TOKENS: "${EMBED_MAX_TOKENS:-2048}"
+    ports:
+      # Localhost only — for measure_embed.py and one-off checks; inside compose it is embedder:8000.
+      - "127.0.0.1:${EMBEDDER_HOST_PORT:-8000}:8000"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)\""]
       interval: 10s
@@ -102,8 +108,8 @@ services:
       # tariff lookup is unaffected, and /legal falls back to verbatim provisions.
       CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN:-}"
     ports:
-      # Localhost only — a reverse proxy (Caddy) fronts it with TLS on the server.
-      - "127.0.0.1:3000:3000"
+      # Localhost only — a reverse proxy fronts it with TLS on the server.
+      - "127.0.0.1:${API_HOST_PORT:-3000}:3000"
     # NOTE: api does NOT wait on the embedder. Tariff lookup + the web UI must never
     # be blocked by the embedding model loading (or failing) — only /legal needs it,
     # and it degrades gracefully (a legal query returns 400 while the embedder is

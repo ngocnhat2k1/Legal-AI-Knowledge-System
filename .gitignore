@@ -64,3 +64,7 @@ research/legal-loader/out/
 # Python bytecode — research loaders run on the host (research/inbox-loader, research/legal-loader, apps/ingest)
 __pycache__/
 *.pyc
+research/inbox-loader/work/
+
+# Host-specific facts that must not reach the public repo (server IP, other teams on a shared host).
+.agent/local/

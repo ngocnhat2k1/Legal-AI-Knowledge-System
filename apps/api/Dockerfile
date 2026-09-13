@@ -21,6 +21,12 @@ RUN corepack yarn build
 # TypeScript migrator with tsx (a dev dependency), while `api` runs compiled JS.
 FROM base AS runtime
 ENV NODE_ENV=production
+# The model layer (planner, vision, grounded answers) shells out to the Claude Code CLI,
+# which runs on the project's subscription rather than a metered key. Installed HERE, in
+# the shared runtime stage, so both `api` and `zalo-bot` have it. Before this the old VPS
+# mounted the binary through an override file that never reached git — a clean deploy had
+# no CLI, and every model-backed feature degraded silently.
+RUN npm install -g @anthropic-ai/claude-code && claude --version
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/db ./db

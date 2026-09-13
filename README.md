@@ -37,6 +37,47 @@ Postgres publish ra host cổng **5433** (tránh đụng Postgres sẵn có trê
 Toolchain: Node 22 LTS, Yarn 4 (Corepack), Drizzle (migration SQL), Jest. Chi tiết lựa chọn:
 [ADR công cụ repo](.agent/architecture-decisions/2026-07-18-repo-tooling-drizzle-yarn.md).
 
+## Triển khai máy chủ
+
+Máy: Ubuntu 24.04, 4 core / 8 GB, Docker Engine. Thư mục deploy ví dụ `/opt/customs-assistant` trên `<host>`.
+Máy chủ đang chạy là server dev dùng chung của MONA — vận hành hằng ngày: [runbook](.agent/docs/mona-dev-server-operations.md);
+dựng lần đầu: [kế hoạch 06](.agent/planning/06-deploy-mona-dev-server.md). Địa chỉ và thông tin riêng của máy không nằm trong git (repo công khai).
+
+**Cảnh báo: API không có xác thực ở tầng ứng dụng** — web UI có thể POST `/tariff/confirm` (ghi vào sổ xác
+minh mã HS). Bất kỳ máy chủ nào lộ ra ngoài internet phải đặt sau một reverse proxy có basic auth (máy chủ
+cũ dùng Caddy `basic_auth`).
+
+Một số máy chỉ có `docker-compose` độc lập (ví dụ v2.15.1), không có plugin `docker compose` — nếu vậy, gõ
+`docker-compose` thay cho `docker compose` trong mọi lệnh dưới đây. Bản độc lập này không có `!reset`, nên
+không thể gỡ cổng host qua file override; cổng host là biến môi trường ngay trong `docker-compose.yml`
+(gồm `API_HOST_PORT`, `DB_HOST_PORT`, `EMBEDDER_HOST_PORT` — kiểm lại bằng `grep -n '\${' docker-compose.yml`). BuildKit build được
+mà không cần plugin buildx.
+
+1. **Đưa mã lên** (giữ nguyên `.env` trên máy chủ). `git archive HEAD` chỉ gói các file **đã commit** — commit trước, file chưa commit sẽ không lên máy chủ: `git archive HEAD | ssh <host> 'mkdir -p /opt/customs-assistant && cd /opt/customs-assistant && tar xf -'`
+2. **`.env`** theo `.env.example`: `CLAUDE_CODE_OAUTH_TOKEN` (lấy bằng `claude setup-token` trên máy đã đăng nhập, không bao giờ in ra), `ALLOWED_THREADS`, `EMBED_MAX_TOKENS`.
+3. **rclone** cho sao lưu: `scp ~/.config/rclone/rclone.conf <host>:~/.config/rclone/` — file này chứa token Drive, không commit.
+4. **Dựng**: `docker compose build migrate embedder && docker compose up -d` — thứ tự tự đảm bảo: db → migrate → seed → seed-legal (embed qua sidecar, ~1 giờ lần đầu) → api → zalo-bot.
+   Lần đầu, `up -d` đứng chờ `seed-legal` khoảng một giờ — chạy trong `tmux`, hoặc tách bước:
+   `docker compose up -d db embedder`, rồi `docker compose run --rm --no-deps migrate`,
+   `docker compose run --rm --no-deps seed`, `docker compose run --rm --no-deps seed-legal`, rồi
+   `docker compose up -d --no-deps api zalo-bot`.
+5. **Kiểm**: `curl -s localhost:3000/health` phải có `"db":"up"`, `"pgvector"`, `"llm":"up"`.
+6. **Bot**: lần đầu quét QR tại `docker compose exec -T zalo-bot cat /session/qr.png > qr.png` (`-T` bắt
+   buộc — thiếu nó, TTY sẽ làm hỏng file PNG nhị phân). Mở ảnh, quét bằng TÀI KHOẢN ZALO RIÊNG của bot.
+   Session lưu trong volume `zalo_session`.
+7. **Sao lưu đêm** — cron chạy bằng root, nên rclone đọc cấu hình của root. Chép cấu hình cho root:
+   `sudo install -D -m 600 ~/.config/rclone/rclone.conf /root/.config/rclone/rclone.conf`, rồi cài file cron:
+   `echo '0 2 * * * root cd /opt/customs-assistant && ./db/backup.sh >> /var/log/customs-backup.log 2>&1' | sudo tee /etc/cron.d/customs-backup`.
+   Kiểm lần đầu bằng tay, với đúng người dùng mà cron dùng: `sudo -H ./db/backup.sh` rồi `sudo -H rclone ls gdrive:Legal-AI-Backup/`.
+   Phục hồi: dựng tới hết `migrate` nhưng **chưa** bật `api`/`zalo-bot` (bước 4 kiểu tách bước, dừng trước lệnh
+   `up -d … api zalo-bot`) để không có xác nhận mới ghi chen vào; giải nén archive rồi
+   `docker compose exec -T db psql -v ON_ERROR_STOP=1 -U app -d customs_assistant < lookup_confirmation.sql`;
+   xong mới bật `api`/`zalo-bot`. `legal_document_verification.csv` chỉ là bản tham chiếu để gán lại `verified_by` bằng tay.
+8. **Đo embedder** (một lần, trước khi nạp tầng bằng chứng): xem `research/inbox-loader/measure_embed.py`. Script mặc định
+   gọi cổng 8000; nếu đổi `EMBEDDER_HOST_PORT`, đặt `EMBEDDER_URL=http://127.0.0.1:<cổng>`.
+
+Cập nhật mã: bước 1 lại, rồi `docker compose build migrate && docker compose run --rm --no-deps migrate && docker compose up -d --no-deps --force-recreate api zalo-bot` (không đụng db/embedder). Chỉ bot: `docker compose up -d --no-deps zalo-bot`.
+
 ## Bắt đầu tại đây
 
 | Bạn là | Đọc |
