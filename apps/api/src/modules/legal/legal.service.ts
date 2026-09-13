@@ -5,7 +5,7 @@ import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/databa
 import { EmbeddingService } from '../../shared/adapters/embedding';
 import { extractAsOf } from './legal.asof';
 import { generate } from './legal.generation';
-import { keepRelevant, validateCitations } from './legal.grounding';
+import { keepRelevant, numberMarkers } from './legal.grounding';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
 import {
   inIds,
@@ -102,7 +102,14 @@ export class LegalService {
     // An explicit `doc=` wins and is trusted as-is; a number found inside the question
     // only counts when it is unmistakably a document reference (see ParsedDocRef.confident).
     const inQuery = parseDocRef(query);
-    const ref = parseDocRef(docParam ?? '') ?? (inQuery?.confident ? inQuery : null);
+    const docRef = parseDocRef(docParam ?? '');
+    // `doc=69/2018` from the bot carries no kind; "Nghị định 69/2018 …" in the question does. Without it the
+    // catalogue lookup cannot drop same-serial circulars and decisions of other agencies.
+    const ref = docRef
+      ? { ...docRef, docType: docRef.docType ?? (inQuery?.core === docRef.core ? inQuery.docType : null) }
+      : inQuery?.confident
+        ? inQuery
+        : null;
     let documentIds: number[] = [];
     if (ref) {
       const docs = await resolveDocuments(this.db, ref);
@@ -253,10 +260,11 @@ export class LegalService {
       };
     }
 
-    const valid = validateCitations(gen.citations, kept);
-    if (valid.length === 0) {
-      // The model answered but cited nothing we retrieved → ungrounded. Drop the
-      // prose, keep the verbatim provisions as references.
+    const sources = kept.map((a) => `${a.articleCitation}\n${a.articleBody}`);
+    const marked = numberMarkers(gen.answer, gen.citations, sources, query);
+    if (!marked.answer || marked.order.length === 0) {
+      // The model cited nothing we retrieved, or stated a rate or amount its source does not
+      // contain → ungrounded. Drop the prose, keep the verbatim provisions as references.
       return {
         query,
         asOf,
@@ -268,16 +276,15 @@ export class LegalService {
       };
     }
 
-    const citedSet = new Set(valid);
-    const cited = kept.filter((a) => citedSet.has(a.articleProvisionId));
+    // Contract: [n] in `answer` points at citations[n-1].
     return {
       query,
       asOf,
       ...scope,
       abstained: false,
       reason: null,
-      answer: gen.answer,
-      citations: (cited.length ? cited : kept).map(toCitation),
+      answer: marked.answer,
+      citations: marked.order.map((n) => toCitation(kept[n - 1]!)),
     };
   }
 }

@@ -60,6 +60,20 @@ export interface ParsedDocRef {
   confident: boolean;
 }
 
+/**
+ * One spelling per document number: NFC, no whitespace, upper case, Đ → D, no leading zeros on the serial.
+ * `8/2015/ND-CP` ≡ `08/2015/NĐ-CP`; the issuer segment still counts (`69/2018/TT-BTC` ≠ `69/2018/NĐ-CP`).
+ * The bot's sameDocNumber (apps/zalo-bot/parse.mjs) folds the same way.
+ */
+export function foldDocNumber(s: string | null | undefined): string {
+  return String(s ?? '')
+    .normalize('NFC')
+    .replace(/\s+/g, '')
+    .toUpperCase()
+    .replace(/Đ/g, 'D')
+    .replace(/^0+(?=\d)/, '');
+}
+
 /** Read a document reference out of free text. Returns null when there is none. */
 export function parseDocRef(input: string): ParsedDocRef | null {
   const text = String(input ?? '')
@@ -115,6 +129,7 @@ export interface ResolvedDoc {
   number: string;
   title: string;
   docType: string;
+  consolidates: string | null;
 }
 
 /**
@@ -133,11 +148,18 @@ export async function resolveDocuments(db: Database, ref: ParsedDocRef): Promise
   );
 
   const rows = (await db.execute(sql`
-    SELECT id, number, title, doc_type AS "docType"
+    SELECT id, number, title, doc_type AS "docType", consolidates
     FROM legal_document
     WHERE ${matches}
     ORDER BY id
   `)) as unknown as ResolvedDoc[];
+
+  // A full number names ONE document. Another issuer's document with the same serial is not it — and
+  // returning [] lets the caller consult the Công báo catalogue instead of answering from the wrong one.
+  if (ref.full) {
+    const want = foldDocNumber(ref.full);
+    return rows.filter((r) => foldDocNumber(r.number) === want || foldDocNumber(r.consolidates) === want);
+  }
 
   // Prefer the kind the user named — but only when that leaves something. Asking for
   // "Nghị định 08/2015" must still reach 46/VBHN-BTC, whose doc_type is 'vbhn'.
@@ -253,7 +275,9 @@ export async function lookupGazette(
   // were the one asked for. That is the confident-wrong failure this system exists to
   // avoid, and it is worse than saying we cannot find it.
   if (ref.full) {
-    const hit = await select(sql`upper(number) = ${ref.full}`);
+    // Folded in SQL, not by filtering the prefix query below: that one has a LIMIT, so with more than
+    // `limit` numbers sharing the head, the document asked for could be cut before it is compared.
+    const hit = await select(sql`regexp_replace(translate(upper(number), 'Đđ', 'DD'), '^0+', '') = ${foldDocNumber(ref.full)}`);
     if (hit.length) return { exact: true, matches: hit };
   }
 

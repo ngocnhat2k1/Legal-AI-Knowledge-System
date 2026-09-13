@@ -6,6 +6,10 @@ describe('norm', () => {
   it('collapses whitespace and case, keeps diacritics', () => {
     expect(norm('  NĐ  292/2026  ')).toBe('nđ 292/2026');
   });
+
+  it('ignores Markdown emphasis, so bold cannot split a mustSay phrase', () => {
+    expect(norm('**không** bao gồm')).toBe(norm('không bao gồm'));
+  });
 });
 
 describe('visibleText', () => {

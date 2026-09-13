@@ -5,11 +5,10 @@
  *      nearest neighbours even for an off-topic query, so we drop articles that
  *      are neither a keyword hit nor within a cosine-distance threshold. If nothing
  *      survives, the caller abstains before spending a generation.
- *   2. validateCitations — a POST-generation check that verifies the model cited
- *      provisions that were actually retrieved. "The citation resolves to a real
- *      document" is the worthless guarantee (Wilgarten); this at least refuses a
- *      citation that points outside the evidence set. It is a floor, not proof of
- *      entailment — a stronger entailment check is a later slice.
+ *   2. numberMarkers — a POST-generation check: [n] markers must point into the
+ *      evidence set, and the numbers beside them must be in the provision they cite.
+ *      "The citation resolves to a real document" is the worthless guarantee
+ *      (Wilgarten); this is a floor, not proof of entailment.
  */
 import type { RetrievedArticle } from './legal.retrieval';
 
@@ -31,8 +30,72 @@ export function keepRelevant(articles: RetrievedArticle[]): RetrievedArticle[] {
   return articles.filter((a) => a.bestDist != null && a.bestDist <= MAX_DIST);
 }
 
-/** Keep only the model's citations that point at a retrieved article. */
-export function validateCitations(cited: number[], articles: RetrievedArticle[]): number[] {
-  const ids = new Set(articles.map((a) => a.articleProvisionId));
-  return [...new Set(cited)].filter((id) => ids.has(id));
+const norm = (s: string): string => s.normalize('NFC').replace(/\s+/g, ' ').replace(/\s*%/g, '%').toLowerCase().trim();
+
+/** Every digit group of `fact` stands as its own token in `text`, leading zeros ignored (as the bot's docNumberStatedIn). */
+const statedIn = (text: string, fact: string): boolean => {
+  const groups = fact.match(/\d+/g) ?? [];
+  return groups.length > 0 && groups.every((g) => new RegExp(`(?<!\\d)0*${g.replace(/^0+/, '') || '0'}(?!\\d)`).test(text));
+};
+
+/** Facts a sentence may state only when its own [n] source contains them. `exempt`: the user may have written it. */
+const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean }> = [
+  { re: /\d+(?:[.,]\d+)?\s*%/g, exempt: false, fatal: true },
+  { re: /\d[\d.,]*\s*(?:USD|VND|đồng|đ)(?![\p{L}\d])/giu, exempt: false, fatal: true },
+  { re: /\d{1,2}\/\d{1,2}\/\d{4}/g, exempt: true, fatal: false },
+  { re: /\d+\s*(?:ngày|tháng)(?![\p{L}])/giu, exempt: false, fatal: false },
+  { re: /\d{1,4}\/(?:\d{4}|VBHN)[^\s,;)]*/gi, exempt: true, fatal: false },
+  { re: /\d{4}(?:\.\d{2}){1,2}/g, exempt: true, fatal: false },
+];
+
+/**
+ * Map the model's [n] markers onto the retrieved provisions and prove the numbers next to them (R10).
+ * `sources[i]` is "{articleCitation}\n{articleBody}" of the i-th provision given to the model.
+ *
+ * - `[1, 2]` → `[1] [2]`; markers outside 1..k are removed.
+ * - Per sentence, every %, amount, date, duration, document number and HS code must appear in a source the
+ *   sentence itself marks (unmarked sentence: any cited source). A sentence failing that loses its markers
+ *   and its bold; an unanchored % or amount anywhere empties the whole answer (citations-only reply).
+ * - Markers are renumbered by first appearance; `order[k]` is the original position of new marker k+1.
+ *
+ * A string check of support, not of entailment: a number present in the provision can still be attached to
+ * the wrong obligation. The full guards of the /answer path (Mảng 3) take this over.
+ */
+export function numberMarkers(answer: string, cited: number[], sources: string[], userText: string): { answer: string; order: number[] } {
+  const k = sources.length;
+  const inRange = (n: number) => Number.isInteger(n) && n >= 1 && n <= k;
+  const text = answer
+    .replace(/\[(\d+(?:\s*,\s*\d+)+)\]/g, (_, list: string) => list.split(',').map((n) => `[${n.trim()}]`).join(' '))
+    .replace(/\s*\[(\d+)\]/g, (m, n: string) => (inRange(Number(n)) ? m : ''));
+  const validCited = [...new Set(cited.filter(inRange))];
+
+  const sentences = text.split(/(?<=[.?!;])(?= )|(?<=\n)/);
+  const out: string[] = [];
+  for (const s of sentences) {
+    const marks = [...s.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
+    const hay = (marks.length ? marks : validCited).map((n) => norm(sources[n - 1] ?? ''));
+    let anchored = true;
+    for (const { re, exempt, fatal } of FACTS) {
+      for (const [fact] of s.matchAll(re)) {
+        const f = norm(fact.replace(/[.:]+$/, ''));
+        if (hay.some((h) => h.includes(f)) || (exempt && statedIn(userText, fact))) continue;
+        if (fatal) return { answer: '', order: [] };
+        anchored = false;
+      }
+    }
+    out.push(anchored ? s : s.replace(/\s*\[\d+\]/g, '').replace(/\*\*/g, ''));
+  }
+
+  const order: number[] = [];
+  const renumbered = out
+    .join('')
+    .replace(/\[(\d+)\]/g, (_, n: string) => {
+      const at = order.indexOf(Number(n));
+      if (at >= 0) return `[${at + 1}]`;
+      order.push(Number(n));
+      return `[${order.length}]`;
+    })
+    .replace(/(\[\d+\])(?:\s*\1)+/g, '$1');
+  if (order.length) return { answer: renumbered, order };
+  return { answer: renumbered, order: validCited };
 }

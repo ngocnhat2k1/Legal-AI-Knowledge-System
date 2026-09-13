@@ -66,7 +66,8 @@ export interface NotebookMetrics {
   misses: string[];
 }
 
-export const norm = (s: string): string => s.normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+/** `*` is dropped: /legal answers are Markdown, and `**không** bao gồm` must still contain "không bao gồm". */
+export const norm = (s: string): string => s.normalize('NFC').toLowerCase().replace(/\*+/g, '').replace(/\s+/g, ' ').trim();
 
 /** What the reader sees: the prose plus every quoted/verbatim citation text. */
 export function visibleText(r: AnswerLike): string {

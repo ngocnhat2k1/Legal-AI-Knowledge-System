@@ -41,7 +41,7 @@ function runClaude(prompt: string): Promise<string> {
 
 export interface GenerationResult {
   answer: string;
-  citations: number[]; // article provision ids the model says it used
+  citations: number[]; // 1-based positions in the provision list the model says it used
   abstain: boolean;
   reason: string | null;
 }
@@ -52,7 +52,7 @@ export function buildPrompt(query: string, asOf: string, articles: RetrievedArti
   // article, and a chunk indexed at the Khoản is only one of them. stdin has no
   // arg-size limit, so passing whole articles is fine.
   const blocks = articles
-    .map((a) => `[id=${a.articleProvisionId}] ${a.articleCitation}\n${a.articleBody}`)
+    .map((a, i) => `[${i + 1}] ${a.articleCitation}\n${a.articleBody}`)
     .join('\n---\n');
   return [
     'Bạn là trợ lý pháp luật Việt Nam (mọi lĩnh vực), đang nhắn tin với một chuyên viên.',
@@ -60,7 +60,7 @@ export function buildPrompt(query: string, asOf: string, articles: RetrievedArti
     'Tuyệt đối KHÔNG dùng kiến thức ngoài danh sách này, KHÔNG suy đoán, KHÔNG bịa số điều/khoản.',
     '- Nếu các điều khoản KHÔNG đủ căn cứ để trả lời, đặt "abstain": true và để "answer" rỗng.',
     '- Nếu có mâu thuẫn giữa một "quy tắc chung" và một quy định CỤ THỂ trong điều khoản được cung cấp, ưu tiên quy định cụ thể.',
-    '- "citations" chỉ gồm id của CHÍNH các điều khoản bạn dựa vào (chỉ dùng id xuất hiện trong danh sách).',
+    '- "citations" chỉ gồm SỐ THỨ TỰ [n] của CHÍNH các điều khoản bạn dựa vào (chỉ dùng số có trong danh sách).',
     `- as-of: ${asOf} — các điều khoản dưới đây đã được lọc theo hiệu lực tại ngày này.`,
     '',
     'CÁCH VIẾT (quan trọng — người đọc là đồng nghiệp, không phải máy):',
@@ -68,9 +68,13 @@ export function buildPrompt(query: string, asOf: string, articles: RetrievedArti
     '- Viết như đang nói chuyện: gọn, tự nhiên, không mở đầu bằng "Theo quy định của pháp luật…".',
     '- KHÔNG lặp lại nguyên văn điều khoản (nguyên văn đã được hiển thị riêng bên dưới câu trả lời).',
     '- Nếu các điều khoản chỉ trả lời được MỘT PHẦN câu hỏi, nói rõ phần nào có căn cứ và phần nào chưa.',
+    '- In **đậm** thuật ngữ, số hiệu, điều khoản, thời hạn then chốt. Dùng "- " đầu dòng CHỈ khi liệt kê các trường hợp hoặc điều kiện song song.',
+    '- Đặt [n] ngay sau câu dựa vào điều khoản số n; mỗi nguồn một dấu, ví dụ [1] [2].',
+    '- Mọi con số, ngày, thời hạn chép ĐÚNG cách điều khoản viết.',
+    '- KHÔNG màu, emoji, HTML, bảng, lời chào, lời mời hỏi thêm. Chỉ dùng "## " khi câu trả lời dài hơn 3 đoạn.',
     '',
-    'Trả về JSON MỘT dòng, không kèm giải thích:',
-    '{"answer":"<tiếng Việt, ≤130 từ, nêu rõ điều/khoản trong câu>","citations":[<id>],"abstain":false,"reason":null}',
+    'Trả về JSON MỘT dòng, không kèm giải thích. Xuống dòng trong câu trả lời viết là \\n bên trong chuỗi JSON:',
+    '{"answer":"<Markdown tiếng Việt ≤200 từ>","citations":[<n>],"abstain":false,"reason":null}',
     '',
     `CÂU HỎI: ${query}`,
     '',
