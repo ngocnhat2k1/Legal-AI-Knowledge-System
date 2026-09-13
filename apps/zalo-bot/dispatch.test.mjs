@@ -12,7 +12,7 @@ import { test } from 'node:test';
 
 import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
 import { tariffByClues } from './answer.mjs';
-import { formatAnswer, formatLegal, formatMissingDoc, sanitizeLead, withLead } from './format.mjs';
+import { formatAnswer, formatLegal, formatMissingDoc, formatProvisions, sanitizeLead, withLead } from './format.mjs';
 import { L, render, toText } from './render.mjs';
 import { cleanGazetteTitle, corpusHas, docNumberStatedIn, missingKind, parseDocRef, parseQuotedTariff, sameDocNumber } from './parse.mjs';
 
@@ -568,4 +568,25 @@ test('cùng số, khác cơ quan ban hành: vẫn là văn bản khác và khôn
   const text = toText(formatMissingDoc('69/2018/NĐ-CP', [tt], 'similar'));
   assert.ok(text.includes('cùng số của cơ quan khác'));
   assert.ok(!text.includes('Trả lời "nạp"'), 'không bao giờ nạp một văn bản khác thay cho văn bản được hỏi');
+});
+
+// --- Task 5 fix round ------------------------------------------------------------
+
+test('HỒI QUY QH13: đoạn cơ quan ban hành có chữ số vẫn thuộc số hiệu, nên kho vẫn giữ luật qua VBHN', () => {
+  assert.equal(parseDocRef('Luật 107/2016/QH13').full, '107/2016/QH13');
+  assert.equal(parseDocRef('Nghị quyết 1234/2021/NQ-UBTVQH14, còn hiệu lực không').full, '1234/2021/NQ-UBTVQH14');
+  assert.equal(corpusHas([{ number: '96/VBHN-VPQH', consolidates: '107/2016/QH13' }], parseDocRef('Luật 107/2016/QH13')), true);
+});
+
+test('nguyên văn theo trích dẫn: văn bản tự nạp có đúng một dòng cam (R18); hết hiệu lực toàn bộ không kèm "kiểm tra điều khoản"', () => {
+  const row = (over) => ({
+    documentNumber: 'VB-X', documentTitle: 't', citationLabel: 'Điều 18 VB-X', path: '', heading: null, body: 'Thân điều.',
+    effectiveness: 'con_hieu_luc', effectiveFrom: null, effectiveTo: null, gazetteUrl: null, verification: 'verified', ...over,
+  });
+  const parts = render(formatProvisions([row({ effectiveness: 'het_hieu_luc', verification: 'auto_unverified' })]));
+  const all = (st) => parts.flatMap((p) => styled(p, st));
+  assert.equal(all(ORANGE).length, 1, 'một dòng cảnh báo');
+  assert.ok(all(ORANGE)[0].startsWith('VB-X do bot tự nạp'), all(ORANGE)[0]);
+  assert.deepEqual(all(RED), ['VB-X hết hiệu lực.']);
+  assert.equal(render(formatProvisions([row({})])).flatMap((p) => styled(p, ORANGE)).length, 0, 'văn bản đã đối chiếu không có dòng cam');
 });

@@ -165,7 +165,8 @@ export function parseDocRef(raw) {
     if (re.test(before)) { docType = kind; break; }
   }
   const after = text.slice(start + m[0].length);
-  const issuer = after.match(/^\s*\/\s*[a-zà-ỹ-]+/i)?.[0] ?? '';
+  // Issuers can end in digits (QH13, NQ-UBTVQH14): cutting at the digit would miss the law we hold.
+  const issuer = after.match(/^\s*\/\s*[a-zà-ỹ][a-zà-ỹ\d-]*/i)?.[0] ?? '';
   const isVbhn = /vbhn/i.test(m[2]);
   const label = (text.slice(start, start + m[0].length) + issuer).replace(/\s+/g, '').toUpperCase();
   return {

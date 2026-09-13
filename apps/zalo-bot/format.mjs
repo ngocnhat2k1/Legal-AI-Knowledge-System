@@ -268,11 +268,24 @@ const EFFECT = {
 /** A red effectiveness line, worded from the enum, never from model text (R8). */
 function effectLine(c, ns = []) {
   const marks = ns.length ? `${ns.map((n) => `[${n}]`).join(' ')} ` : '';
+  // Only a partial expiry leaves provisions that may still apply; a fully expired document has none.
   const tail =
     c.effectiveness === 'chua_co_hieu_luc'
       ? c.effectiveFrom ? ` (từ ${dmy(c.effectiveFrom)})` : ''
-      : ' — kiểm tra điều khoản còn áp dụng';
+      : c.effectiveness === 'het_hieu_luc_mot_phan' ? ' — kiểm tra điều khoản còn áp dụng' : '';
   return L([`${marks}${c.documentNumber} ${EFFECT[c.effectiveness]}${tail}.`], 'red');
+}
+
+/** Machine-fetched text never quietly acquires the standing of text a person checked (R18). */
+function unverifiedLines(rows) {
+  const nums = [...new Set(rows.filter((c) => c.verification === 'auto_unverified').map((c) => c.documentNumber))];
+  if (!nums.length) return [];
+  return [
+    L(
+      [`${nums.join(', ')} do bot tự nạp, chưa có người đối chiếu — đọc bản gốc trước khi dùng; đã đối chiếu thì nhắn "xác nhận văn bản ${nums.length === 1 ? nums[0] : '<số hiệu>'}".`],
+      'warn',
+    ),
+  ];
 }
 
 /**
@@ -325,16 +338,7 @@ export function formatLegal(r) {
   });
   for (const { c, ns } of groups.values()) lines.push(effectLine(c, ns));
 
-  // Machine-fetched text never quietly acquires the standing of text a person checked (R18).
-  const unverified = [...new Set(cites.filter((c) => c.verification === 'auto_unverified').map((c) => c.documentNumber))];
-  if (unverified.length) {
-    lines.push(
-      L(
-        [`${unverified.join(', ')} do bot tự nạp, chưa có người đối chiếu — đọc bản gốc trước khi dùng; đã đối chiếu thì nhắn "xác nhận văn bản ${unverified.length === 1 ? unverified[0] : '<số hiệu>'}".`],
-        'warn',
-      ),
-    );
-  }
+  lines.push(...unverifiedLines(cites));
 
   const items = cites.map((c, i) => {
     const ex = excerpt(c.verbatimText);
@@ -351,16 +355,20 @@ export function formatLegal(r) {
 
 /** A provision fetched by citation (no retrieval, no model in the path). */
 export function formatProvisions(rows) {
-  return rows.slice(0, 2).flatMap((p, k) => {
-    const body = (p.body || '').replace(/\s+/g, ' ').trim();
-    return [
-      ...(k ? [L([])] : []),
-      L(['Nguyên văn ', [p.citationLabel, 'b'], ':']),
-      L([body.length > 1200 ? `${body.slice(0, 1200)}…` : body]),
-      ...(EFFECT[p.effectiveness] ? [effectLine(p)] : []),
-      ...(p.gazetteUrl ? [L([`Toàn văn: ${p.gazetteUrl}`], 'note')] : []),
-    ];
-  });
+  const shown = rows.slice(0, 2);
+  return [
+    ...shown.flatMap((p, k) => {
+      const body = (p.body || '').replace(/\s+/g, ' ').trim();
+      return [
+        ...(k ? [L([])] : []),
+        L(['Nguyên văn ', [p.citationLabel, 'b'], ':']),
+        L([body.length > 1200 ? `${body.slice(0, 1200)}…` : body]),
+        ...(EFFECT[p.effectiveness] ? [effectLine(p)] : []),
+        ...(p.gazetteUrl ? [L([`Toàn văn: ${p.gazetteUrl}`], 'note')] : []),
+      ];
+    }),
+    ...unverifiedLines(shown),
+  ];
 }
 
 /**
