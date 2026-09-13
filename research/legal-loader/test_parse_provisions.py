@@ -12,7 +12,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from parse_provisions import split_articles
+from parse_provisions import split_articles, parse_clauses
 
 
 class SplitArticles(unittest.TestCase):
@@ -107,6 +107,29 @@ class SplitArticles(unittest.TestCase):
         self.assertEqual(arts[0]['heading'],
                          'Điều 9. Điều khoản thi hành đối với hàng hóa quá cảnh')
         self.assertEqual(arts[0]['body_lines'], [])
+
+
+class ParseClauses(unittest.TestCase):
+    def test_a_thousands_group_after_the_period_is_money_not_a_clause(self):
+        # 46/VBHN-BTC Điều 10, inside điểm d of khoản 4: the PDF wraps the amount onto
+        # its own line and the old regex read "20.000 tờ khai/năm." as khoản 20.
+        chapeau, khoan = parse_clauses([
+            '4. Điều kiện:',
+            'd) Đại lý thủ tục hải quan: số tờ khai làm thủ tục hải quan trong năm đạt',
+            '20.000 tờ khai/năm.',
+            '5. Không áp dụng điều kiện kim ngạch.',
+        ])
+        self.assertEqual([k['num'] for k in khoan], ['4', '5'])
+        self.assertIn('20.000 tờ khai/năm.', khoan[0]['lines'])
+
+    def test_a_plain_clause_number_still_opens_a_clause(self):
+        _, khoan = parse_clauses(['1. Người khai hải quan phải…', '2. Cơ quan hải quan…'])
+        self.assertEqual([k['num'] for k in khoan], ['1', '2'])
+
+    def test_a_fused_two_digit_footnote_is_still_tolerated(self):
+        # "1.33 …" = khoản 1 + footnote 33 fused by the PDF render (comment above KHOAN).
+        _, khoan = parse_clauses(['1.33 Hàng hóa xuất khẩu…'])
+        self.assertEqual([k['num'] for k in khoan], ['1'])
 
 
 if __name__ == '__main__':

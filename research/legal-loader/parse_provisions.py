@@ -52,7 +52,11 @@ DIEU_REFERENCE = re.compile(
     r'|\s+(?:của|này|nêu|hoặc|và|tại|theo|trên|Luật|Bộ luật|Nghị định|Nghị quyết'
     r'|Thông tư|Quyết định|Pháp lệnh|Hiệp định)\b)',
 )
-KHOAN = re.compile(r'^(\d+)\.\d*\s+(.+)$')
+# `\d*` right after the period tolerates a footnote fused by the PDF render ("1.33 …" =
+# khoản 1 + footnote 33). But "20.000 tờ khai/năm." is an AMOUNT with a thousands group —
+# exactly three digits then a word boundary — and it opened a phantom khoản 20 in Điều 10
+# of 46/VBHN-BTC (found by the 2026-09-10 audit). Exclude that shape; a footnote is 1–2 digits.
+KHOAN = re.compile(r'^(\d+)\.(?!\d{3}\b)\d*\s+(.+)$')
 DIEM = re.compile(r'^([a-zđ])\)\s+(.*)$')
 # A heading longer than one rendered line WRAPS, and its tail lands as the first line of
 # the body: "Điều 12. Thủ tục hải quan đối với hàng hóa xuất khẩu, nhập" / "khẩu tại chỗ".
