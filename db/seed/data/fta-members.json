@@ -1,0 +1,300 @@
+{
+  "version": 1,
+  "verifiedBy": null,
+  "verifiedAt": null,
+  "schedules": [
+    {
+      "schedule": "ACFTA",
+      "decree": "118/2022/NĐ-CP",
+      "coForm": "E",
+      "article": "Điều 4, khoản 2 (thành viên); Điều 5 (khu phi thuế quan); xem thêm Điều 3, khoản 5 (cột “Nước không được hưởng ưu đãi”)",
+      "quote": "2. Được nhập khẩu từ các nước là thành viên của Hiệp định Thương mại hàng hóa ASEAN - Trung Quốc, bao gồm các quốc gia và vùng lãnh thổ sau:\na) Bru-nây Đa-rút-xa-lam, ký hiệu là BN;\nb) Vương quốc Cam-pu-chia, ký hiệu là KH;\nc) Cộng hòa In-đô-nê-xi-a, ký hiệu là ID;\nd) Cộng hòa Dân chủ Nhân dân Lào, ký hiệu là LA;\nđ) Ma-lay-xi-a, ký hiệu là MY;\ne) Cộng hòa Liên bang Mi-an-ma, ký hiệu là MM;\ng) Cộng hòa Phi-líp-pin, ký hiệu là PH;\nh) Cộng hòa Xinh-ga-po, ký hiệu là SG;\ni) Vương quốc Thái Lan, ký hiệu là TH;\nk) Cộng hòa Nhân dân Trung Hoa, ký hiệu là CN;",
+      "sourceUrl": "https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-118-2022-nd-cp-38936.htm",
+      "members": [
+        {
+          "iso2": "BN",
+          "name": "Bru-nây Đa-rút-xa-lam"
+        },
+        {
+          "iso2": "KH",
+          "name": "Vương quốc Cam-pu-chia"
+        },
+        {
+          "iso2": "ID",
+          "name": "Cộng hòa In-đô-nê-xi-a"
+        },
+        {
+          "iso2": "LA",
+          "name": "Cộng hòa Dân chủ Nhân dân Lào"
+        },
+        {
+          "iso2": "MY",
+          "name": "Ma-lay-xi-a"
+        },
+        {
+          "iso2": "MM",
+          "name": "Cộng hòa Liên bang Mi-an-ma"
+        },
+        {
+          "iso2": "PH",
+          "name": "Cộng hòa Phi-líp-pin"
+        },
+        {
+          "iso2": "SG",
+          "name": "Cộng hòa Xinh-ga-po"
+        },
+        {
+          "iso2": "TH",
+          "name": "Vương quốc Thái Lan"
+        },
+        {
+          "iso2": "CN",
+          "name": "Cộng hòa Nhân dân Trung Hoa"
+        }
+      ],
+      "specialOrigins": [
+        "Hàng hóa từ khu phi thuế quan của Việt Nam nhập khẩu vào thị trường trong nước được áp dụng thuế suất thuế nhập khẩu ưu đãi đặc biệt theo Hiệp định ACFTA phải đáp ứng đủ các điều kiện quy định tại khoản 1 và khoản 3 Điều 4 Nghị định này."
+      ],
+      "notes": "CHẶN TRƯỚC KHI DÙNG: Điều 3 khoản 5 quy định “5. Cột “Nước không được hưởng ưu đãi”: Những mặt hàng nhập khẩu từ nước có thể hiện ký hiệu tên nước (được quy định tại khoản 2 Điều 4 Nghị định này) không được áp dụng thuế suất ACFTA quy định tại Nghị định này.” db/seed/data/fta-acfta.ndjson KHÔNG lưu cột này. Rà soát tự động 10 phần Công báo đếm được khoảng 3185 dòng HS có ký hiệu nước trong cột, trong đó 510 dòng loại trừ CN (446 dòng đang có thuế suất ACFTA 0 trong seed, ví dụ 0901.11.20 loại trừ CN, MM, TH). Kiểm tra thành viên thôi là KHÔNG đủ cho ACFTA. Số đếm là heuristic trên văn bản chuyển từ .doc, cần đối chiếu. Điều 4 khoản 2 viết “các quốc gia và vùng lãnh thổ” nhưng không liệt kê vùng lãnh thổ nào — Hồng Kông, Ma Cao, Đài Loan không có trong danh sách. Ký hiệu nước trong nghị định trùng mã ISO 3166-1 alpha-2. Điều 4 khoản 3 chấp nhận “C/O mẫu E hoặc có chứng từ chứng nhận xuất xứ hàng hóa”. Chưa rà soát văn bản sửa đổi, bổ sung nghị định sau ngày 30/12/2022 — danh sách phản ánh nguyên văn lúc ban hành."
+    },
+    {
+      "schedule": "AANZFTA",
+      "decree": "121/2022/NĐ-CP",
+      "coForm": "AANZ",
+      "article": "Điều 4, khoản 2 (thành viên); Điều 5 (khu phi thuế quan)",
+      "quote": "2. Được nhập khẩu từ các nước là thành viên của Hiệp định thành lập Khu vực Thương mại tự do ASEAN - Ôt-xtrây-lia - Niu Di-lân, bao gồm các nước sau:\na) Bru-nây Đa-rút-xa-lam;\nb) Vương quốc Cam-pu-chia;\nc) Cộng hòa In-đô-nê-xi-a;\nd) Cộng hòa Dân chủ Nhân dân Lào;\nđ) Ma-lay-xi-a;\ne) Cộng hòa Liên bang Mi-an-ma;\ng) Cộng hòa Phi-líp-pin;\nh) Cộng hòa Xinh-ga-po;\ni) Vương quốc Thái Lan;\nk) Ôt-xtrây-lia;\nl) Niu Di-lân.",
+      "sourceUrl": "https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-121-2022-nd-cp-38728.htm",
+      "members": [
+        {
+          "iso2": "BN",
+          "name": "Bru-nây Đa-rút-xa-lam"
+        },
+        {
+          "iso2": "KH",
+          "name": "Vương quốc Cam-pu-chia"
+        },
+        {
+          "iso2": "ID",
+          "name": "Cộng hòa In-đô-nê-xi-a"
+        },
+        {
+          "iso2": "LA",
+          "name": "Cộng hòa Dân chủ Nhân dân Lào"
+        },
+        {
+          "iso2": "MY",
+          "name": "Ma-lay-xi-a"
+        },
+        {
+          "iso2": "MM",
+          "name": "Cộng hòa Liên bang Mi-an-ma"
+        },
+        {
+          "iso2": "PH",
+          "name": "Cộng hòa Phi-líp-pin"
+        },
+        {
+          "iso2": "SG",
+          "name": "Cộng hòa Xinh-ga-po"
+        },
+        {
+          "iso2": "TH",
+          "name": "Vương quốc Thái Lan"
+        },
+        {
+          "iso2": "AU",
+          "name": "Ôt-xtrây-lia"
+        },
+        {
+          "iso2": "NZ",
+          "name": "Niu Di-lân"
+        }
+      ],
+      "specialOrigins": [
+        "Hàng hóa từ khu phi thuế quan của Việt Nam nhập khẩu vào thị trường trong nước được áp dụng thuế suất thuế nhập khẩu ưu đãi đặc biệt theo Hiệp định thành lập Khu vực Thương mại tự do ASEAN - Ôt-xtrây-lia - Niu Di-lân phải đáp ứng đủ các điều kiện quy định tại khoản 1 và khoản 3 Điều 4 Nghị định này."
+      ],
+      "notes": "Tiêu đề Biểu chỉ có Mã hàng / Mô tả hàng hóa / Thuế suất AANZFTA (%) — không có cột nước loại trừ như ACFTA; Điều 3 cũng không quy định cột này. Điều 4 khoản 3 chấp nhận “C/O Mẫu AANZ hoặc có chứng từ chứng nhận xuất xứ hàng hóa”. Điều 3 khoản 5 có Danh mục thuế suất AANZFTA ngoài hạn ngạch riêng (nhóm 04.07, 17.01, 24.01, 25.01) — ngoài phạm vi file này. Chưa rà soát văn bản sửa đổi, bổ sung nghị định sau ngày 30/12/2022 — danh sách phản ánh nguyên văn lúc ban hành."
+    },
+    {
+      "schedule": "ATIGA",
+      "decree": "126/2022/NĐ-CP",
+      "coForm": "D",
+      "article": "Điều 4, khoản 2 (thành viên); Điều 5 (khu phi thuế quan)",
+      "quote": "2. Được nhập khẩu vào Việt Nam từ các nước là thành viên của Hiệp định Thương mại Hàng hóa ASEAN, bao gồm các nước sau:\na) Bru-nây Đa-rút-xa-lam;\nb) Vương quốc Cam-pu-chia;\nc) Cộng hòa In-đô-nê-xi-a;\nd) Cộng hòa Dân chủ Nhân dân Lào;\nđ) Ma-lay-xi-a;\ne) Cộng hòa Liên bang Mi-an-ma;\ng) Cộng hòa Phi-líp-pin;\nh) Cộng hòa Xinh-ga-po;\ni) Vương quốc Thái Lan.",
+      "sourceUrl": "https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-126-2022-nd-cp-38868.htm",
+      "members": [
+        {
+          "iso2": "BN",
+          "name": "Bru-nây Đa-rút-xa-lam"
+        },
+        {
+          "iso2": "KH",
+          "name": "Vương quốc Cam-pu-chia"
+        },
+        {
+          "iso2": "ID",
+          "name": "Cộng hòa In-đô-nê-xi-a"
+        },
+        {
+          "iso2": "LA",
+          "name": "Cộng hòa Dân chủ Nhân dân Lào"
+        },
+        {
+          "iso2": "MY",
+          "name": "Ma-lay-xi-a"
+        },
+        {
+          "iso2": "MM",
+          "name": "Cộng hòa Liên bang Mi-an-ma"
+        },
+        {
+          "iso2": "PH",
+          "name": "Cộng hòa Phi-líp-pin"
+        },
+        {
+          "iso2": "SG",
+          "name": "Cộng hòa Xinh-ga-po"
+        },
+        {
+          "iso2": "TH",
+          "name": "Vương quốc Thái Lan"
+        }
+      ],
+      "specialOrigins": [
+        "Hàng hóa từ khu phi thuế quan của Việt Nam nhập khẩu vào thị trường trong nước được áp dụng thuế suất thuế nhập khẩu ưu đãi đặc biệt theo Hiệp định Thương mại hàng hóa ASEAN phải đáp ứng đủ các điều kiện quy định tại khoản 1 và khoản 3 Điều 4 Nghị định này."
+      ],
+      "notes": "Tiêu đề Biểu chỉ có Mã hàng / Mô tả hàng hóa / Thuế suất ATIGA (%) theo năm 2022–2027 — không có cột nước loại trừ. Điều 4 khoản 3 chấp nhận “C/O Mẫu D hoặc có chứng từ chứng nhận xuất xứ hàng hóa”. Đông Ti-mo (Timor-Leste) không có trong nghị định; theo hiểu biết bên ngoài (cần xác minh) nước này được kết nạp ASEAN tháng 10/2025, nhưng tham gia ATIGA là thủ tục riêng — KHÔNG thêm. Chưa rà soát văn bản sửa đổi, bổ sung nghị định sau ngày 30/12/2022 — danh sách phản ánh nguyên văn lúc ban hành."
+    },
+    {
+      "schedule": "EVFTA",
+      "decree": "116/2022/NĐ-CP",
+      "coForm": "EUR.1/REX",
+      "article": "Điều 5, khoản 3, điểm b và Phụ lục III (thành viên); Điều 6 (khu phi thuế quan)",
+      "quote": "b) Được nhập khẩu vào Việt Nam từ:\n- Lãnh thổ thành viên Liên minh châu Âu quy định tại Phụ lục III ban hành kèm theo Nghị định này;\n- Công quốc An-đô-ra; Cộng hòa San Ma-ri-nô; và\n- Vùng lãnh thổ Xớt-ta và Mê-li-la.\n\nPhụ lục III\nDANH SÁCH LÃNH THỔ THÀNH VIÊN LIÊN MINH CHÂU ÂU\n(Kèm theo Nghị định số 116/2022/NĐ-CP\nngày 30 tháng 12 năm 2022 của Chính phủ)\n1. Cộng hòa Pháp.\n2. Cộng hòa Liên bang Đức.\n3. Cộng hòa I-ta-li-a.\n4. Vương quốc Bỉ.\n5. Cộng hòa Hà Lan.\n6. Đại Công quốc Lúc-xăm-bua.\n7. Cộng hòa Ai-len.\n8. Vương quốc Đan Mạch.\n9. Cộng hòa Hy Lạp.\n10. Vương quốc Tây Ban Nha, không bao gồm vùng lãnh thổ Xớt-ta và Mê-li-la.\n11. Cộng hòa Bồ Đào Nha.\n12. Cộng hòa Áo.\n13. Vương quốc Thụy Điển.\n14. Cộng hòa Phần Lan.\n15. Cộng hòa Séc.\n16. Cộng hòa Hung-ga-ri.\n17. Cộng hòa Ba Lan.\n18. Cộng hòa Xlô-va-ki-a.\n19. Cộng hòa Xlô-ven-ni-a.\n20. Cộng hòa Lít-va.\n21. Cộng hòa Lát-vi-a.\n22. Cộng hòa E-xtô-ni-a.\n23. Cộng hòa Man-ta.\n24. Cộng hòa Síp.\n25. Cộng hòa Bun-ga-ri.\n26. Cộng hòa Ru-ma-ni.\n27. Cộng hòa Crô-a-ti-a.",
+      "sourceUrl": "https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-116-2022-nd-cp-38821.htm",
+      "members": [
+        {
+          "iso2": "FR",
+          "name": "Cộng hòa Pháp"
+        },
+        {
+          "iso2": "DE",
+          "name": "Cộng hòa Liên bang Đức"
+        },
+        {
+          "iso2": "IT",
+          "name": "Cộng hòa I-ta-li-a"
+        },
+        {
+          "iso2": "BE",
+          "name": "Vương quốc Bỉ"
+        },
+        {
+          "iso2": "NL",
+          "name": "Cộng hòa Hà Lan"
+        },
+        {
+          "iso2": "LU",
+          "name": "Đại Công quốc Lúc-xăm-bua"
+        },
+        {
+          "iso2": "IE",
+          "name": "Cộng hòa Ai-len"
+        },
+        {
+          "iso2": "DK",
+          "name": "Vương quốc Đan Mạch"
+        },
+        {
+          "iso2": "GR",
+          "name": "Cộng hòa Hy Lạp"
+        },
+        {
+          "iso2": "ES",
+          "name": "Vương quốc Tây Ban Nha, không bao gồm vùng lãnh thổ Xớt-ta và Mê-li-la"
+        },
+        {
+          "iso2": "PT",
+          "name": "Cộng hòa Bồ Đào Nha"
+        },
+        {
+          "iso2": "AT",
+          "name": "Cộng hòa Áo"
+        },
+        {
+          "iso2": "SE",
+          "name": "Vương quốc Thụy Điển"
+        },
+        {
+          "iso2": "FI",
+          "name": "Cộng hòa Phần Lan"
+        },
+        {
+          "iso2": "CZ",
+          "name": "Cộng hòa Séc"
+        },
+        {
+          "iso2": "HU",
+          "name": "Cộng hòa Hung-ga-ri"
+        },
+        {
+          "iso2": "PL",
+          "name": "Cộng hòa Ba Lan"
+        },
+        {
+          "iso2": "SK",
+          "name": "Cộng hòa Xlô-va-ki-a"
+        },
+        {
+          "iso2": "SI",
+          "name": "Cộng hòa Xlô-ven-ni-a"
+        },
+        {
+          "iso2": "LT",
+          "name": "Cộng hòa Lít-va"
+        },
+        {
+          "iso2": "LV",
+          "name": "Cộng hòa Lát-vi-a"
+        },
+        {
+          "iso2": "EE",
+          "name": "Cộng hòa E-xtô-ni-a"
+        },
+        {
+          "iso2": "MT",
+          "name": "Cộng hòa Man-ta"
+        },
+        {
+          "iso2": "CY",
+          "name": "Cộng hòa Síp"
+        },
+        {
+          "iso2": "BG",
+          "name": "Cộng hòa Bun-ga-ri"
+        },
+        {
+          "iso2": "RO",
+          "name": "Cộng hòa Ru-ma-ni"
+        },
+        {
+          "iso2": "HR",
+          "name": "Cộng hòa Crô-a-ti-a"
+        },
+        {
+          "iso2": "AD",
+          "name": "Công quốc An-đô-ra"
+        },
+        {
+          "iso2": "SM",
+          "name": "Cộng hòa San Ma-ri-nô"
+        }
+      ],
+      "specialOrigins": [
+        "Vùng lãnh thổ Xớt-ta và Mê-li-la.",
+        "Hàng hóa từ khu phi thuế quan của Việt Nam nhập khẩu vào thị trường trong nước được áp dụng thuế suất thuế nhập khẩu ưu đãi đặc biệt theo Hiệp định EVFTA phải đáp ứng đủ các điều kiện quy định tại điểm a, điểm c khoản 3 Điều 5 Nghị định này."
+      ],
+      "notes": "Phụ lục III liệt kê 27 nước, không có Vương quốc Anh (hàng Anh thuộc UKVFTA — nghị định khác, chưa nạp). Tây Ban Nha ghi “không bao gồm vùng lãnh thổ Xớt-ta và Mê-li-la”, nhưng Xớt-ta và Mê-li-la lại được hưởng riêng tại điểm b; vùng này không có mã ISO 3166-1 chính thức (chỉ có mã bảo lưu ngoại lệ EA) nên để trong specialOrigins — tờ khai có thể ghi nước xuất xứ ES. Nghị định không nêu Mô-na-cô, Greenland, Quần đảo Faroe, Aruba/Curaçao… — không thêm. Hy Lạp dùng mã ISO GR (EU đôi khi dùng EL). “Cộng hòa Hà Lan” giữ nguyên cách gọi của nghị định. coForm “EUR.1/REX” lấy từ db/seed/index.ts — Điều 5 khoản 3 điểm c chỉ ghi “có chứng từ chứng nhận xuất xứ hàng hóa theo quy định của Hiệp định EVFTA”, không nêu tên mẫu. Thành viên nằm ở Phụ lục III (Công báo số 421 + 422), phần thân nghị định ở số 391 + 392. Chưa rà soát văn bản sửa đổi, bổ sung nghị định sau ngày 30/12/2022 — danh sách phản ánh nguyên văn lúc ban hành."
+    }
+  ]
+}
