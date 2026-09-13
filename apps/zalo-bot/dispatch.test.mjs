@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
-import { sanitizeLead, withLead } from './format.mjs';
+import { formatAnswer, sanitizeLead, withLead } from './format.mjs';
 import { cleanGazetteTitle, corpusHas, docNumberStatedIn, parseDocRef } from './parse.mjs';
 
 // The bot's own legal answer, as it appears in a quote. Note it carries NO HS code.
@@ -223,4 +223,19 @@ test('a person can vouch for an auto-ingested document from chat', () => {
   // Not a vouch: no document number, or an unrelated confirmation.
   assert.equal(parseVerifyDocCommand('xác nhận đúng rồi'), null);
   assert.equal(parseVerifyDocCommand('đúng'), null);
+});
+
+test('an FTA line whose 10-digit sub-lines differ prints the API statement, with no single rate and no crash on percent null', () => {
+  const statement =
+    'Theo dòng 10 số: 1601.00.10.10 - - Từ côn trùng: 0%; 1601.00.10.90 - - Loại khác: 5% — nếu có C/O form E hợp lệ, ngược lại 15% (MFN)';
+  const r = {
+    import: {
+      mfn: { type: 'ad_valorem', percent: '15', statement: '15%', decree: '26/2023/NĐ-CP' },
+      preferential: [{ schedule: 'ACFTA', type: 'by_subline', percent: null, originExcluded: null, excludedOrigins: [], sublines: [], statement }],
+    },
+    antiDumping: [],
+    notes: [],
+  };
+  const text = formatAnswer({ dotted: '1601.00.10', origin: null, date: '2026-06-01' }, r, null, { showFooter: false });
+  assert.ok(text.includes(`• ACFTA: ${statement}`));
 });

@@ -13,8 +13,8 @@
 export interface RateView {
   schedule: string; // 'NK_uu_dai', 'ACFTA', 'XK'…
   scheduleName: string;
-  type: 'ad_valorem' | 'specific' | 'compound' | 'excluded' | 'trq';
-  /** Percent, as a string to preserve exactness (e.g. "10", "25.4"). */
+  type: 'ad_valorem' | 'specific' | 'compound' | 'excluded' | 'trq' | 'by_subline';
+  /** Percent, as a string to preserve exactness (e.g. "10", "25.4"). Null for by_subline: the sub-lines carry the rates. */
   percent: string | null;
   /** Absolute component (specific/compound), with unit and currency. */
   amount: string | null;
@@ -25,6 +25,23 @@ export interface RateView {
   effectiveTo: string | null; // inclusive end, or null = open
   /** Human-readable statement of what this rate means. Never just a number. */
   statement: string;
+}
+
+/**
+ * A 10-digit national sub-line of an FTA decree, carried on its 8-digit parent line (the lookup unit
+ * stays 8-digit). Its rate is the one in force for the parent row's interval.
+ */
+export interface SublineView {
+  code: string; // '1601001010'
+  codeDotted: string; // '1601.00.10.10'
+  desc: string;
+  /** `excluded` = the decree's `*` on this sub-line: not 0%, no preference. */
+  type: 'ad_valorem' | 'excluded';
+  percent: number | null;
+  /** Origins the decree excludes on this sub-line (ACFTA); [] when none. */
+  excludedOrigins: string[];
+  /** Whether the queried origin is excluded on this sub-line; null when no origin was given or the sub-line has no exclusion data. */
+  originExcluded: boolean | null;
 }
 
 /** A preferential (FTA / Chapter 98) rate — conditional by construction. */
@@ -38,6 +55,8 @@ export interface PreferentialView extends RateView {
   excludedOrigins: string[];
   /** Whether the queried origin is excluded on this line; null when no origin was given or the line has no exclusion data. */
   originExcluded: boolean | null;
+  /** The decree's 10-digit sub-lines of this code, in decree order; [] when the decree details it at 8 digits only. */
+  sublines: SublineView[];
 }
 
 /** Anti-dumping duty (CBPG) — a separate charge that STACKS on the import duty. */

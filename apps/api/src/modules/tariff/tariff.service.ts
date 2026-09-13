@@ -10,6 +10,7 @@ import type {
   RateView,
   SearchCandidate,
   StalenessView,
+  SublineView,
   TariffResponse,
 } from './tariff.types';
 
@@ -40,11 +41,14 @@ const arr = <T>(v: unknown): T[] => (Array.isArray(v) ? v : []);
 const originNames = (codes: string[]): string =>
   codes.map((c) => (ND118_ORIGINS[c] ? `${ND118_ORIGINS[c]} (${c})` : c)).join(', ');
 
-/** A 10-digit national sub-line exclusion, carried on its HS8 parent (conditions.excluded_sublines). */
-interface ExcludedSubline {
-  hs_dotted: string;
+/** A 10-digit national sub-line carried on its HS8 parent row (conditions.sublines), with that row's interval rate. */
+interface SublineCondition {
+  code: string;
+  code_dotted: string;
   desc: string;
-  excluded: string[];
+  rate_type: SublineView['type'];
+  rate_percent: string | null;
+  excluded_origins: string[];
 }
 
 /** Row shape of the point-in-time rate query. */
@@ -191,21 +195,6 @@ export class TariffService {
       );
     }
     const preferential = prefRows.map((r) => this.toPreferentialView(r, mfn, nd118Origin));
-    for (const r of prefRows) {
-      // The data is 8-digit: a sub-line exclusion is surfaced, never applied to the whole line.
-      // Codes the whole line already excludes (excluded_origins) are not repeated here.
-      const lineCodes = arr<string>(r.conditions?.excluded_origins);
-      const subs = arr<ExcludedSubline>(r.conditions?.excluded_sublines)
-        .map((s) => ({ ...s, excluded: arr<string>(s?.excluded).filter((c) => !lineCodes.includes(c)) }))
-        .filter((s) => s.excluded.length && (!nd118Origin || s.excluded.includes(nd118Origin)));
-      if (subs.length) {
-        notes.push(
-          `${r.schedule}: NĐ ${r.decree} chi tiết mã này ở cấp 10 số và loại trừ xuất xứ theo từng dòng 10 số — ${subs
-            .map((s) => `${s.hs_dotted} "${s.desc}": không áp dụng cho ${originNames(s.excluded)}`)
-            .join('; ')}. Dữ liệu chỉ nạp cấp 8 số nên loại trừ này KHÔNG áp cho cả mã 8 số; nếu hàng thuộc dòng 10 số trên, đối chiếu nghị định trước khi áp thuế suất ${r.schedule}.`,
-        );
-      }
-    }
     if (preferential.some((p) => p.requiresCo)) {
       notes.push(
         'Mức ưu đãi FTA chỉ áp dụng khi có C/O hợp lệ đúng form; nếu không, áp mức MFN. Không có con số 0% vô điều kiện.',
@@ -259,14 +248,50 @@ export class TariffService {
     const fallback = mfn ? `${mfn.statement} (MFN)` : 'mức MFN';
     const excludedOrigins = arr<string>(r.conditions?.excluded_origins);
     const originExcluded = origin && excludedOrigins.length ? excludedOrigins.includes(origin) : null;
-    let statement = requiresCo
-      ? `${base.statement} nếu có C/O${r.fta_form ? ` form ${r.fta_form}` : ''} hợp lệ, ngược lại ${fallback}`
-      : base.statement;
+    const sublines: SublineView[] = arr<SublineCondition>(r.conditions?.sublines).map((s) => {
+      const excluded = arr<string>(s?.excluded_origins);
+      return {
+        code: s.code,
+        codeDotted: s.code_dotted,
+        desc: s.desc,
+        type: s.rate_type,
+        percent: s.rate_percent == null ? null : Number(s.rate_percent),
+        excludedOrigins: excluded,
+        originExcluded: origin && excluded.length ? excluded.includes(origin) : null,
+      };
+    });
+    // A sub-line exclusion is stated for that sub-line only, never applied to the whole 8-digit line;
+    // codes the whole line already excludes are not repeated per sub-line.
+    const subExclusion = (s: SublineView): string | null => {
+      if (origin) return s.originExcluded ? `không áp dụng cho ${originNames([origin])}` : null;
+      const extra = s.excludedOrigins.filter((c) => !excludedOrigins.includes(c));
+      return extra.length ? `không áp dụng cho hàng xuất xứ ${originNames(extra)}` : null;
+    };
+    const condition = requiresCo ? `nếu có C/O${r.fta_form ? ` form ${r.fta_form}` : ''} hợp lệ, ngược lại ${fallback}` : null;
+    let statement: string;
+    if (r.rate_type === 'by_subline') {
+      // The sub-lines differ: no single number exists for the 8-digit line, so each one is stated.
+      const lines = sublines.map((s) => {
+        // pct(null) is '0': a malformed jsonb element must never read as 0%.
+        const rate = s.type === 'excluded' ? 'không hưởng (*)' : s.percent == null ? 'không rõ mức — đối chiếu nghị định' : `${this.pct(s.percent)}%`;
+        const excluded = subExclusion(s);
+        return `${s.codeDotted} ${s.desc}: ${!excluded ? rate : origin ? excluded : `${rate} (${excluded})`}`;
+      });
+      statement = `Theo dòng 10 số: ${lines.join('; ')}${condition ? ` — ${condition}` : ''}`;
+    } else {
+      statement = condition ? `${base.statement} ${condition}` : base.statement;
+    }
     if (originExcluded) {
       // Never print the preferential number here: for this origin it does not exist.
       statement = `Không áp dụng cho hàng xuất xứ ${originNames([origin!])}: NĐ ${r.decree} loại trừ nước này ở dòng thuế này — áp mức MFN${mfn ? ` ${mfn.statement}` : ''}`;
-    } else if (!origin && excludedOrigins.length) {
-      statement += `; không áp dụng cho hàng xuất xứ ${originNames(excludedOrigins)} (NĐ ${r.decree} loại trừ theo dòng)`;
+    } else {
+      if (!origin && excludedOrigins.length) {
+        statement += `; không áp dụng cho hàng xuất xứ ${originNames(excludedOrigins)} (NĐ ${r.decree} loại trừ theo dòng)`;
+      }
+      const excludedSubs = r.rate_type === 'by_subline' ? [] : sublines.filter((s) => subExclusion(s));
+      if (excludedSubs.length) {
+        statement += `; riêng dòng 10 số ${excludedSubs.map((s) => `${s.codeDotted} ${s.desc}: ${subExclusion(s)}`).join('; ')}`;
+      }
     }
     return {
       ...base,
@@ -275,6 +300,7 @@ export class TariffService {
       conditions: r.conditions,
       excludedOrigins,
       originExcluded,
+      sublines,
       statement,
     };
   }
@@ -302,6 +328,8 @@ export class TariffService {
         return 'Loại trừ khỏi biểu (không phải 0%)';
       case 'trq':
         return `Trong hạn ngạch ${this.pct(r.rate_percent)}%; ngoài hạn ngạch xem biểu ngoài hạn ngạch`;
+      case 'by_subline':
+        return 'Theo dòng 10 số (không có một mức chung cho mã 8 số)';
       default:
         return '';
     }

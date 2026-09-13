@@ -91,6 +91,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Nạp bản tiếng Việt của Chú giải chi tiết HS và SEN](architecture-decisions/2026-09-10-load-vietnamese-explanatory-notes.md) — thay thế một phần ADR 2026-09-09; bản tiếng Anh WCO vẫn không nạp
 - [Bảng bằng chứng chung và câu trả lời dài có kiểm nguyên văn](architecture-decisions/2026-09-13-evidence-sections-and-long-form-answers.md) — thay một phần ADR 2026-08-14: ngân sách 4 lần gọi/lượt; `quote ⊂ nguồn` là sàn kiểm căn cứ
 - [Host trên server dev dùng chung của MONA](architecture-decisions/2026-09-13-host-on-mona-dev-server.md) — thay VPS Contabo đã bị xoá: một compose project cô lập, nginx có sẵn thay Caddy, cổng 3060/5435, sao lưu lên Drive
+- [Dòng 10 số quốc gia của biểu FTA đi kèm mã 8 số; EVFTA chỉ nạp Phụ lục II](architecture-decisions/2026-09-13-fta-national-sublines.md) — dòng con khác mức → `by_subline`, không in một con số; 553 mã EVFTA từng nạp nhầm thuế XK
 
 ## Đánh giá (Reviews)
 

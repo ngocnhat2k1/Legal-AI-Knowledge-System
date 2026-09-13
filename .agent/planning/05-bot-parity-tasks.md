@@ -1217,7 +1217,7 @@ git commit -m "Baseline before the bot-parity upgrade: legal, HS, and the 14 not
 
 | File | Trách nhiệm |
 |---|---|
-| `db/migrations/0010_evidence_section.sql` + `db/migrations/meta/_journal.json` | bảng `evidence_section` (cột theo spec §2.1, HNSW cosine, GIN tsv, index `(kind)`, `(document_number)`, `(hs_heading)`, GIN `hs_codes`), bảng `decision_log(id, created_at, thread_id, plan jsonb, evidence_ids bigint[], citation_ids bigint[], violations jsonb, timing jsonb, calls smallint)` |
+| `db/migrations/0011_evidence_section.sql` + `db/migrations/meta/_journal.json` | bảng `evidence_section` (cột theo spec §2.1, HNSW cosine, GIN tsv, index `(kind)`, `(document_number)`, `(hs_heading)`, GIN `hs_codes`), bảng `decision_log(id, created_at, thread_id, plan jsonb, evidence_ids bigint[], citation_ids bigint[], violations jsonb, timing jsonb, calls smallint)` |
 | `db/schema/index.ts` | `evidenceSection`, `decisionLog` |
 | `db/seed/evidence.ts` | đọc các builder, embed theo lô ≤32 mục / ≤64.000 ký tự, upsert theo `(kind, instrument, source_ref)`, embed lại khi `meta.md5` đổi, `FORCE_RESEED` |
 | `db/seed/evidence/{notes,gri,en,sen,rulings,guidance,annex,status,decree,windows,agentNotes}.ts` | mỗi file một builder `build(): EvidenceRow[]` cho một kind (windows: local_doc/draft/internal theo mốc cấu trúc + 4.000/400 lặp header) |
@@ -1246,7 +1246,7 @@ export function statusSections(documents: DocRow[], relations: RelationRow[]): E
 
 **Việc (mỗi việc một chu kỳ test; thứ tự bắt buộc)**
 
-1. Migration 0010 + schema + `db:migrate` chạy sạch trên DB rỗng và DB đã có.
+1. Migration 0011 + schema + `db:migrate` chạy sạch trên DB rỗng và DB đã có. (0010 đã dùng cho `0010_tariff_by_subline` — ADR 2026-09-13-fta-national-sublines.)
 2. `extractHsCodes`, `windowText`, `statusSections` — thuần, test trước.
 3. Builder từng kind theo bảng spec §2.2 (11 builder), mỗi builder một test đếm và một test nội dung mẫu.
 4. `db/seed/evidence.ts` + compose service `seed-evidence` (sau `seed-legal`), idempotent.

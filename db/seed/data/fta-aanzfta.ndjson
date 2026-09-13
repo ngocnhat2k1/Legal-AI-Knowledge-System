@@ -454,7 +454,7 @@
 {"hs": "03071930", "hs_dotted": "0307.19.30", "desc": "- - - Hun khói", "rates": ["5"]}
 {"hs": "03072110", "hs_dotted": "0307.21.10", "desc": "- - - Sống", "rates": ["0"]}
 {"hs": "03072120", "hs_dotted": "0307.21.20", "desc": "- - - Tươi hoặc ướp lạnh", "rates": ["0"]}
-{"hs": "03072200", "hs_dotted": "0307.22.00", "desc": "- - Đông lạnh:", "rates": ["0"]}
+{"hs": "03072200", "hs_dotted": "0307.22.00", "desc": "- - Đông lạnh:", "rates": [], "sublines": [{"hs10": "0307220010", "hs_dotted": "0307.22.00.10", "desc": "- - - Điệp, kể cả Điệp nữ hoàng, thuộc giống Pecten, Chlamys hoặc Placopecten", "rates": ["0"], "excluded": []}, {"hs10": "0307220090", "hs_dotted": "0307.22.00.90", "desc": "- - - Loại khác", "rates": ["5"], "excluded": []}]}
 {"hs": "03072930", "hs_dotted": "0307.29.30", "desc": "- - - Khô, muối hoặc ngâm nước muối", "rates": ["0"]}
 {"hs": "03072940", "hs_dotted": "0307.29.40", "desc": "- - - Hun khói", "rates": ["0"]}
 {"hs": "03073110", "hs_dotted": "0307.31.10", "desc": "- - - Sống", "rates": ["0"]}
@@ -1322,8 +1322,8 @@
 {"hs": "15219020", "hs_dotted": "1521.90.20", "desc": "- - Sáp cá nhà táng", "rates": ["0"]}
 {"hs": "15220010", "hs_dotted": "1522.00.10", "desc": "- Chất nhờn", "rates": ["0"]}
 {"hs": "15220090", "hs_dotted": "1522.00.90", "desc": "- Loại khác", "rates": ["0"]}
-{"hs": "16010010", "hs_dotted": "1601.00.10", "desc": "- Đóng bao bì kín khí để bán lẻ:", "rates": ["0"]}
-{"hs": "16010090", "hs_dotted": "1601.00.90", "desc": "- Loại khác:", "rates": ["0"]}
+{"hs": "16010010", "hs_dotted": "1601.00.10", "desc": "- Đóng bao bì kín khí để bán lẻ:", "rates": [], "sublines": [{"hs10": "1601001010", "hs_dotted": "1601.00.10.10", "desc": "- - Từ côn trùng", "rates": ["0"], "excluded": []}, {"hs10": "1601001090", "hs_dotted": "1601.00.10.90", "desc": "- - Loại khác", "rates": ["5"], "excluded": []}]}
+{"hs": "16010090", "hs_dotted": "1601.00.90", "desc": "- Loại khác:", "rates": [], "sublines": [{"hs10": "1601009010", "hs_dotted": "1601.00.90.10", "desc": "- - Từ côn trùng", "rates": ["0"], "excluded": []}, {"hs10": "1601009090", "hs_dotted": "1601.00.90.90", "desc": "- - Loại khác", "rates": ["5"], "excluded": []}]}
 {"hs": "16021010", "hs_dotted": "1602.10.10", "desc": "- - Chứa thịt lợn, đóng bao bì kín khí để bán lẻ", "rates": ["0"]}
 {"hs": "16021090", "hs_dotted": "1602.10.90", "desc": "- - Loại khác", "rates": ["0"]}
 {"hs": "16022000", "hs_dotted": "1602.20.00", "desc": "- Từ gan động vật", "rates": ["0"]}
@@ -9779,17 +9779,17 @@
 {"hs": "87033129", "hs_dotted": "8703.31.29", "desc": "- - - - - Loại khác", "rates": ["*"]}
 {"hs": "87033131", "hs_dotted": "8703.31.31", "desc": "- - - - - Xe ba bánh", "rates": ["*"]}
 {"hs": "87033139", "hs_dotted": "8703.31.39", "desc": "- - - - - Loại khác", "rates": ["*"]}
-{"hs": "87033141", "hs_dotted": "8703.31.41", "desc": "- - - - Xe đua cỡ nhỏ:", "rates": ["17"]}
-{"hs": "87033142", "hs_dotted": "8703.31.42", "desc": "- - - - Xe địa hình ATV (All-Terrain Vehicles):", "rates": ["17"]}
+{"hs": "87033141", "hs_dotted": "8703.31.41", "desc": "- - - - Xe đua cỡ nhỏ:", "rates": [], "sublines": [{"hs10": "8703314110", "hs_dotted": "8703.31.41.10", "desc": "- - - - - Loại bốn bánh chủ động", "rates": ["17"], "excluded": []}, {"hs10": "8703314190", "hs_dotted": "8703.31.41.90", "desc": "- - - - - Loại khác", "rates": ["50"], "excluded": []}]}
+{"hs": "87033142", "hs_dotted": "8703.31.42", "desc": "- - - - Xe địa hình ATV (All-Terrain Vehicles):", "rates": [], "sublines": [{"hs10": "8703314210", "hs_dotted": "8703.31.42.10", "desc": "- - - - - Loại bốn bánh chủ động", "rates": ["17"], "excluded": []}, {"hs10": "8703314290", "hs_dotted": "8703.31.42.90", "desc": "- - - - - Loại khác", "rates": ["50"], "excluded": []}]}
 {"hs": "87033143", "hs_dotted": "8703.31.43", "desc": "- - - - Ô tô cứu thương", "rates": ["10"]}
-{"hs": "87033144", "hs_dotted": "8703.31.44", "desc": "- - - - Ô tô tang lễ:", "rates": ["17"]}
-{"hs": "87033145", "hs_dotted": "8703.31.45", "desc": "- - - - Ô tô chở phạm nhân:", "rates": ["17"]}
+{"hs": "87033144", "hs_dotted": "8703.31.44", "desc": "- - - - Ô tô tang lễ:", "rates": [], "sublines": [{"hs10": "8703314410", "hs_dotted": "8703.31.44.10", "desc": "- - - - - Loại bốn bánh chủ động", "rates": ["17"], "excluded": []}, {"hs10": "8703314490", "hs_dotted": "8703.31.44.90", "desc": "- - - - - Loại khác", "rates": ["50"], "excluded": []}]}
+{"hs": "87033145", "hs_dotted": "8703.31.45", "desc": "- - - - Ô tô chở phạm nhân:", "rates": [], "sublines": [{"hs10": "8703314510", "hs_dotted": "8703.31.45.10", "desc": "- - - - - Loại bốn bánh chủ động", "rates": ["17"], "excluded": []}, {"hs10": "8703314590", "hs_dotted": "8703.31.45.90", "desc": "- - - - - Loại khác", "rates": ["50"], "excluded": []}]}
 {"hs": "87033146", "hs_dotted": "8703.31.46", "desc": "- - - - Ô tô nhà ở lưu động (có nội thất được thiết kế như căn hộ) (Motor-homes)", "rates": ["50"]}
 {"hs": "87033147", "hs_dotted": "8703.31.47", "desc": "- - - - Ô tô kiểu Sedan", "rates": ["50"]}
 {"hs": "87033151", "hs_dotted": "8703.31.51", "desc": "- - - - - Loại bốn bánh chủ động", "rates": ["50"]}
 {"hs": "87033159", "hs_dotted": "8703.31.59", "desc": "- - - - - Loại khác", "rates": ["50"]}
 {"hs": "87033191", "hs_dotted": "8703.31.91", "desc": "- - - - - Xe ba bánh", "rates": ["50"]}
-{"hs": "87033199", "hs_dotted": "8703.31.99", "desc": "- - - - - Loại khác:", "rates": ["17"]}
+{"hs": "87033199", "hs_dotted": "8703.31.99", "desc": "- - - - - Loại khác:", "rates": [], "sublines": [{"hs10": "8703319910", "hs_dotted": "8703.31.99.10", "desc": "- - - - - - Loại bốn bánh chủ động", "rates": ["17"], "excluded": []}, {"hs10": "8703319990", "hs_dotted": "8703.31.99.90", "desc": "- - - - - - Loại khác", "rates": ["50"], "excluded": []}]}
 {"hs": "87033211", "hs_dotted": "8703.32.11", "desc": "- - - - Ô tô cứu thương", "rates": ["*"]}
 {"hs": "87033212", "hs_dotted": "8703.32.12", "desc": "- - - - Ô tô tang lễ", "rates": ["*"]}
 {"hs": "87033213", "hs_dotted": "8703.32.13", "desc": "- - - - Ô tô chở phạm nhân", "rates": ["*"]}

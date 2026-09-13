@@ -1,556 +1,3 @@
-{"hs": "12112010", "hs_dotted": "1211.20.10", "desc": "- - Tươi hoặc khô", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12112090", "hs_dotted": "1211.20.90", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12113000", "hs_dotted": "1211.30.00", "desc": "- Lá coca", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12114000", "hs_dotted": "1211.40.00", "desc": "- Thân cây anh túc", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12115000", "hs_dotted": "1211.50.00", "desc": "- Cây ma hoàng", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12119011", "hs_dotted": "1211.90.11", "desc": "- - - Cây gai dầu, đã cắt, nghiền hoặc dạng bột", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12119012", "hs_dotted": "1211.90.12", "desc": "- - - Cây gai dầu, ở dạng khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12119013", "hs_dotted": "1211.90.13", "desc": "- - - Rễ cây ba gạc hoa đỏ", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12119015", "hs_dotted": "1211.90.15", "desc": "- - - Rễ cây cam thảo", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12119017", "hs_dotted": "1211.90.17", "desc": "- - - Loại khác, tươi hoặc khô, đã cắt, nghiền hoặc dạng bột:", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "12119018", "hs_dotted": "1211.90.18", "desc": "- - - Loại khác, đã cắt, nghiền hoặc dạng bột:", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "12119019", "hs_dotted": "1211.90.19", "desc": "- - - Loại khác:", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "12119091", "hs_dotted": "1211.90.91", "desc": "- - - Cây kim cúc, đã cắt, nghiền hoặc dạng bột", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12119092", "hs_dotted": "1211.90.92", "desc": "- - - Cây kim cúc, ở dạng khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12119094", "hs_dotted": "1211.90.94", "desc": "- - - Mảnh gỗ đàn hương", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12119095", "hs_dotted": "1211.90.95", "desc": "- - - Mảnh gỗ trầm hương (Gaharu)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12119097", "hs_dotted": "1211.90.97", "desc": "- - - Vỏ cây persea (Persea Kurzii Kosterm)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12119098", "hs_dotted": "1211.90.98", "desc": "- - - Loại khác, đã cắt, nghiền hoặc dạng bột:", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "12119099", "hs_dotted": "1211.90.99", "desc": "- - - Loại khác:", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "25020000", "hs_dotted": "2502.00.00", "desc": "Pirít sắt chưa nung", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25030000", "hs_dotted": "2503.00.00", "desc": "Lưu huỳnh các loại, trừ lưu huỳnh thăng hoa, lưu huỳnh kết tủa và lưu huỳnh dạng keo", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25041000", "hs_dotted": "2504.10.00", "desc": "- Ở dạng bột hoặc dạng mảnh", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25049000", "hs_dotted": "2504.90.00", "desc": "- Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25051000", "hs_dotted": "2505.10.00", "desc": "- Cát oxit silic và cát thạch anh", "rates": ["30", "30", "30", "20", "20", "20"]}
-{"hs": "25059000", "hs_dotted": "2505.90.00", "desc": "- Loại khác", "rates": ["30", "30", "30", "20", "20", "20"]}
-{"hs": "25061000", "hs_dotted": "2506.10.00", "desc": "- Thạch anh", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25062000", "hs_dotted": "2506.20.00", "desc": "- Quartzite", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25070000", "hs_dotted": "2507.00.00", "desc": "Cao lanh và đất sét cao lanh khác, đã hoặc chưa nung", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25081000", "hs_dotted": "2508.10.00", "desc": "- Bentonite", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25083000", "hs_dotted": "2508.30.00", "desc": "- Đất sét chịu lửa", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25084010", "hs_dotted": "2508.40.10", "desc": "- - Đất hồ (đất tẩy màu)", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25084090", "hs_dotted": "2508.40.90", "desc": "- - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25085000", "hs_dotted": "2508.50.00", "desc": "- Andalusite, kyanite và sillimanite", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25086000", "hs_dotted": "2508.60.00", "desc": "- Mullite", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25087000", "hs_dotted": "2508.70.00", "desc": "- Đất chịu lửa hoặc đất dinas", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25090000", "hs_dotted": "2509.00.00", "desc": "Đá phấn", "rates": ["13,8", "12,7", "11,6", "10,6", "9,5", "8,5"]}
-{"hs": "25101010", "hs_dotted": "2510.10.10", "desc": "- - Apatít (apatite)", "rates": ["32,5", "30", "27,5", "25", "22,5", "20"]}
-{"hs": "25101090", "hs_dotted": "2510.10.90", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "25102010", "hs_dotted": "2510.20.10", "desc": "- - Apatít (apatite):", "rates": ["12,1", "11,2", "10,3", "9,3", "8,4", "7,5"]}
-{"hs": "25102090", "hs_dotted": "2510.20.90", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "25111000", "hs_dotted": "2511.10.00", "desc": "- Bari sulphat tự nhiên (barytes)", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25112000", "hs_dotted": "2511.20.00", "desc": "- Bari carbonat tự nhiên (witherite)", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25120000", "hs_dotted": "2512.00.00", "desc": "Bột hóa thạch silic (ví dụ, đất tảo cát, tripolite và diatomite) và đất silic tương tự, đã hoặc chưa nung, có trọng lượng riêng biểu kiến không quá 1", "rates": ["11,5", "10,3", "9,2", "8", "6,9", "5,7"]}
-{"hs": "25131000", "hs_dotted": "2513.10.00", "desc": "- Đá bọt", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25132000", "hs_dotted": "2513.20.00", "desc": "- Đá nhám, corundum tự nhiên, đá garnet tự nhiên và đá mài tự nhiên khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25140000", "hs_dotted": "2514.00.00", "desc": "Đá phiến, đã hoặc chưa đẽo thô hoặc mới chỉ cắt, bằng cưa hoặc cách khác, thành khối hoặc tấm hình chữ nhật (kể cả hình vuông)", "rates": ["17", "17", "17", "17", "17", "17"]}
-{"hs": "25151100", "hs_dotted": "2515.11.00", "desc": "- - Thô hoặc đã đẽo thô", "rates": ["13,8", "12,7", "11,6", "10,6", "9,5", "8,5"]}
-{"hs": "25151210", "hs_dotted": "2515.12.10", "desc": "- - - Dạng khối", "rates": ["13,8", "12,7", "11,6", "10,6", "9,5", "8,5"]}
-{"hs": "25151220", "hs_dotted": "2515.12.20", "desc": "- - - Dạng tấm", "rates": ["13,8", "12,7", "11,6", "10,6", "9,5", "8,5"]}
-{"hs": "25152000", "hs_dotted": "2515.20.00", "desc": "- Ecaussine và đá vôi khác để làm tượng đài hoặc đá xây dựng; thạch cao tuyết hoa:", "rates": ["24,3", "22,5", "20,6", "18,7", "16,8", "15"]}
-{"hs": "25161100", "hs_dotted": "2516.11.00", "desc": "- - Thô hoặc đã đẽo thô", "rates": ["17", "17", "17", "17", "17", "17"]}
-{"hs": "25161210", "hs_dotted": "2516.12.10", "desc": "- - - Dạng khối", "rates": ["25", "25", "25", "20", "20", "20"]}
-{"hs": "25161220", "hs_dotted": "2516.12.20", "desc": "- - - Dạng tấm", "rates": ["17", "17", "17", "17", "17", "17"]}
-{"hs": "25162010", "hs_dotted": "2516.20.10", "desc": "- - Thô hoặc đã đẽo thô", "rates": ["17", "17", "17", "17", "17", "17"]}
-{"hs": "25162020", "hs_dotted": "2516.20.20", "desc": "- - Mới chỉ cắt, bằng cưa hoặc cách khác, thành khối hoặc tấm hình chữ nhật (kể cả hình vuông)", "rates": ["17", "17", "17", "17", "17", "17"]}
-{"hs": "25169000", "hs_dotted": "2516.90.00", "desc": "- Đá khác để làm tượng đài hoặc làm đá xây dựng", "rates": ["17", "17", "17", "15", "15", "15"]}
-{"hs": "25171000", "hs_dotted": "2517.10.00", "desc": "- Đá cuội, sỏi, đá đã vỡ hoặc nghiền, chủ yếu để làm cốt bê tông, để rải đường bộ hoặc đường sắt hoặc đá ballast khác, đá cuội nhỏ và đá lửa tự nhiên (flint) khác, đã hoặc chưa qua xử lý nhiệt", "rates": ["13", "11,7", "10,4", "9,1", "7,8", "6,5"]}
-{"hs": "25172000", "hs_dotted": "2517.20.00", "desc": "- Đá dăm từ xỉ, từ xỉ luyện kim hoặc từ phế thải công nghiệp tương tự, có hoặc không kết hợp với các vật liệu của phân nhóm 2517.10", "rates": ["13", "11,7", "10,4", "9,1", "7,8", "6,5"]}
-{"hs": "25173000", "hs_dotted": "2517.30.00", "desc": "- Đá dăm trộn nhựa đường", "rates": ["13", "11,7", "10,4", "9,1", "7,8", "6,5"]}
-{"hs": "25174100", "hs_dotted": "2517.41.00", "desc": "- - Từ đá hoa (marble):", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "25174900", "hs_dotted": "2517.49.00", "desc": "- - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "25181000", "hs_dotted": "2518.10.00", "desc": "- Dolomite, chưa nung hoặc thiêu kết", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25182000", "hs_dotted": "2518.20.00", "desc": "- Dolomite đã nung hoặc thiêu kết", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25191000", "hs_dotted": "2519.10.00", "desc": "- Magiê carbonat tự nhiên (magnesite)", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25199010", "hs_dotted": "2519.90.10", "desc": "- - Magiê ôxít nấu chảy; magiê ôxít nung trơ (thiêu kết)", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25199090", "hs_dotted": "2519.90.90", "desc": "- - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25201000", "hs_dotted": "2520.10.00", "desc": "- Thạch cao; thạch cao khan", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25202010", "hs_dotted": "2520.20.10", "desc": "- - Loại phù hợp dùng trong nha khoa", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25202090", "hs_dotted": "2520.20.90", "desc": "- - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25210000", "hs_dotted": "2521.00.00", "desc": "Chất gây chảy gốc đá vôi; đá vôi và đá có chứa canxi khác, dùng để sản xuất vôi hoặc xi măng", "rates": ["17", "17", "17", "17", "17", "17"]}
-{"hs": "25221000", "hs_dotted": "2522.10.00", "desc": "- Vôi sống", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "25222000", "hs_dotted": "2522.20.00", "desc": "- Vôi tôi", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "25223000", "hs_dotted": "2522.30.00", "desc": "- Vôi thủy lực", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "25241000", "hs_dotted": "2524.10.00", "desc": "- Crocidolite", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25249000", "hs_dotted": "2524.90.00", "desc": "- Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25261000", "hs_dotted": "2526.10.00", "desc": "- Chưa nghiền, chưa làm thành bột", "rates": ["30", "30", "30", "20", "20", "20"]}
-{"hs": "25262010", "hs_dotted": "2526.20.10", "desc": "- - Bột talc", "rates": ["30", "30", "30", "20", "20", "20"]}
-{"hs": "25262090", "hs_dotted": "2526.20.90", "desc": "- - Loại khác", "rates": ["30", "30", "30", "20", "20", "20"]}
-{"hs": "25280000", "hs_dotted": "2528.00.00", "desc": "Quặng borat tự nhiên và tinh quặng borat (đã hoặc chưa nung), nhưng không kể borat tách từ nước biển tự nhiên; axit boric tự nhiên chứa không quá 85% H3BO3 tính theo trọng lượng khô", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25291010", "hs_dotted": "2529.10.10", "desc": "- - Potash tràng thạch; soda tràng thạch", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25291090", "hs_dotted": "2529.10.90", "desc": "- - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25292100", "hs_dotted": "2529.21.00", "desc": "- - Có chứa canxi florua không quá 97% tính theo khối lượng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25292200", "hs_dotted": "2529.22.00", "desc": "- - Có chứa canxi florua trên 97% tính theo khối lượng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25293000", "hs_dotted": "2529.30.00", "desc": "- Lơxit; nephelin và nephelin xienit", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25301000", "hs_dotted": "2530.10.00", "desc": "- Vermiculite, đá trân châu và clorit, chưa giãn nở", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25302010", "hs_dotted": "2530.20.10", "desc": "- - Kiezerit", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25302020", "hs_dotted": "2530.20.20", "desc": "- - Epsomite (magiê sulphat tự nhiên)", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25309010", "hs_dotted": "2530.90.10", "desc": "- - Cát zircon cỡ hạt micron (zircon silicat) loại dùng làm chất cản quang", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "25309090", "hs_dotted": "2530.90.90", "desc": "- - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "26011110", "hs_dotted": "2601.11.10", "desc": "- - - Hematite và tinh quặng hematite", "rates": ["30", "26,6", "23,3", "20", "20", "20"]}
-{"hs": "26011190", "hs_dotted": "2601.11.90", "desc": "- - - Loại khác", "rates": ["30", "26,6", "23,3", "20", "20", "20"]}
-{"hs": "26011210", "hs_dotted": "2601.12.10", "desc": "- - - Hematite và tinh quặng hematite", "rates": ["30", "26,6", "23,3", "20", "20", "20"]}
-{"hs": "26011290", "hs_dotted": "2601.12.90", "desc": "- - - Loại khác", "rates": ["30", "26,6", "23,3", "20", "20", "20"]}
-{"hs": "26012000", "hs_dotted": "2601.20.00", "desc": "- Pirit sắt đã nung", "rates": ["30", "26,6", "23,3", "20", "20", "20"]}
-{"hs": "26020000", "hs_dotted": "2602.00.00", "desc": "Quặng mangan và tinh quặng mangan, kể cả quặng mangan chứa sắt và tinh quặng mangan chứa sắt với hàm lượng mangan từ 20% trở lên, tính theo trọng lượng khô", "rates": ["25", "20", "15", "10", "10", "10"]}
-{"hs": "26030000", "hs_dotted": "2603.00.00", "desc": "Quặng đồng và tinh quặng đồng", "rates": ["40", "40", "40", "20", "20", "20"]}
-{"hs": "26040000", "hs_dotted": "2604.00.00", "desc": "Quặng niken và tinh quặng niken", "rates": ["25", "23,3", "21,6", "20", "20", "20"]}
-{"hs": "26050000", "hs_dotted": "2605.00.00", "desc": "Quặng coban và tinh quặng coban", "rates": ["30", "30", "30", "25", "25", "25"]}
-{"hs": "26060000", "hs_dotted": "2606.00.00", "desc": "Quặng nhôm và tinh quặng nhôm", "rates": ["30", "30", "30", "20", "20", "20"]}
-{"hs": "26070000", "hs_dotted": "2607.00.00", "desc": "Quặng chì và tinh quặng chì", "rates": ["40", "40", "40", "20", "20", "20"]}
-{"hs": "26080000", "hs_dotted": "2608.00.00", "desc": "Quặng kẽm và tinh quặng kẽm", "rates": ["30", "26,6", "23,3", "20", "20", "20"]}
-{"hs": "26090000", "hs_dotted": "2609.00.00", "desc": "Quặng thiếc và tinh quặng thiếc", "rates": ["24,3", "22,5", "20,6", "18,7", "16,8", "15"]}
-{"hs": "26100000", "hs_dotted": "2610.00.00", "desc": "Quặng crôm và tinh quặng crôm", "rates": ["24,3", "22,5", "20,6", "18,7", "16,8", "15"]}
-{"hs": "26110000", "hs_dotted": "2611.00.00", "desc": "Quặng vonfram và tinh quặng vonfram", "rates": ["24,3", "22,5", "20,6", "18,7", "16,8", "15"]}
-{"hs": "26121000", "hs_dotted": "2612.10.00", "desc": "- Quặng urani và tinh quặng urani:", "rates": ["30", "30", "30", "20", "20", "20"]}
-{"hs": "26122000", "hs_dotted": "2612.20.00", "desc": "- Quặng thori và tinh quặng thori:", "rates": ["30", "30", "30", "20", "20", "20"]}
-{"hs": "26131000", "hs_dotted": "2613.10.00", "desc": "- Đã nung", "rates": ["15,3", "13,8", "12,3", "10,7", "9,2", "7,6"]}
-{"hs": "26139000", "hs_dotted": "2613.90.00", "desc": "- Loại khác:", "rates": ["23", "20,7", "18,4", "16,1", "13,8", "11,5"]}
-{"hs": "26140010", "hs_dotted": "2614.00.10", "desc": "- Quặng inmenit và tinh quặng inmenit:", "rates": ["30", "30", "30", "30", "30", "30"]}
-{"hs": "26140090", "hs_dotted": "2614.00.90", "desc": "- Loại khác:", "rates": ["30", "30", "30", "30", "30", "30"]}
-{"hs": "26151000", "hs_dotted": "2615.10.00", "desc": "- Quặng zircon và tinh quặng zircon:", "rates": ["30", "30", "30", "20", "20", "20"]}
-{"hs": "26159000", "hs_dotted": "2615.90.00", "desc": "- Loại khác:", "rates": ["30", "30", "30", "25", "25", "25"]}
-{"hs": "26161000", "hs_dotted": "2616.10.00", "desc": "- Quặng bạc và tinh quặng bạc:", "rates": ["30", "30", "30", "30", "30", "30"]}
-{"hs": "26169000", "hs_dotted": "2616.90.00", "desc": "- Loại khác:", "rates": ["30", "30", "30", "30", "30", "30"]}
-{"hs": "26171000", "hs_dotted": "2617.10.00", "desc": "- Quặng antimon và tinh quặng antimon:", "rates": ["30", "30", "30", "25", "25", "25"]}
-{"hs": "26179000", "hs_dotted": "2617.90.00", "desc": "- Loại khác:", "rates": ["30", "30", "30", "20", "20", "20"]}
-{"hs": "26211000", "hs_dotted": "2621.10.00", "desc": "- Tro và cặn từ quá trình đốt rác thải đô thị", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "26219090", "hs_dotted": "2621.90.90", "desc": "- - Loại khác:", "rates": ["7", "7", "7", "7", "7", "7"]}
-{"hs": "27011100", "hs_dotted": "2701.11.00", "desc": "- - Anthracite", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "27011210", "hs_dotted": "2701.12.10", "desc": "- - - Than để luyện cốc", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "27011290", "hs_dotted": "2701.12.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "27011900", "hs_dotted": "2701.19.00", "desc": "- - Than đá loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "27012000", "hs_dotted": "2701.20.00", "desc": "- Than bánh, than quả bàng và nhiên liệu rắn tương tự sản xuất từ than đá", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "27021000", "hs_dotted": "2702.10.00", "desc": "- Than non, đã hoặc chưa nghiền thành bột, nhưng chưa đóng bánh", "rates": ["15", "15", "15", "15", "15", "15"]}
-{"hs": "27022000", "hs_dotted": "2702.20.00", "desc": "- Than non đã đóng bánh", "rates": ["15", "15", "15", "15", "15", "15"]}
-{"hs": "27030010", "hs_dotted": "2703.00.10", "desc": "- Than bùn, đã hoặc chưa ép thành kiện, nhưng chưa đóng bánh", "rates": ["15", "15", "15", "15", "15", "15"]}
-{"hs": "27030020", "hs_dotted": "2703.00.20", "desc": "- Than bùn đã đóng bánh", "rates": ["15", "15", "15", "15", "15", "15"]}
-{"hs": "27040010", "hs_dotted": "2704.00.10", "desc": "- Than cốc và than nửa cốc luyện từ than đá", "rates": ["13", "13", "13", "13", "13", "13"]}
-{"hs": "27040020", "hs_dotted": "2704.00.20", "desc": "- Than cốc và than nửa cốc luyện từ than non hoặc than bùn", "rates": ["13", "13", "13", "13", "13", "13"]}
-{"hs": "27040030", "hs_dotted": "2704.00.30", "desc": "- Muội bình chưng than đá", "rates": ["13", "13", "13", "13", "13", "13"]}
-{"hs": "27090010", "hs_dotted": "2709.00.10", "desc": "- Dầu mỏ thô", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "27090020", "hs_dotted": "2709.00.20", "desc": "- Condensate", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "27090090", "hs_dotted": "2709.00.90", "desc": "- Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28041000", "hs_dotted": "2804.10.00", "desc": "- Hydro", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28042100", "hs_dotted": "2804.21.00", "desc": "- - Argon", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28042900", "hs_dotted": "2804.29.00", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28043000", "hs_dotted": "2804.30.00", "desc": "- Nitơ", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28044000", "hs_dotted": "2804.40.00", "desc": "- Oxy", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28045000", "hs_dotted": "2804.50.00", "desc": "- Bo; telu", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28046100", "hs_dotted": "2804.61.00", "desc": "- - Có hàm lượng silic không dưới 99,99% tính theo trọng lượng", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28046900", "hs_dotted": "2804.69.00", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28047000", "hs_dotted": "2804.70.00", "desc": "- Phospho:", "rates": ["5", "5", "5", "5", "5", "0"]}
-{"hs": "28048000", "hs_dotted": "2804.80.00", "desc": "- Arsen", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28049000", "hs_dotted": "2804.90.00", "desc": "- Selen", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28170010", "hs_dotted": "2817.00.10", "desc": "- Kẽm oxit:", "rates": ["5", "5", "5", "5", "5", "0"]}
-{"hs": "28170020", "hs_dotted": "2817.00.20", "desc": "- Kẽm peroxit", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "28230000", "hs_dotted": "2823.00.00", "desc": "Titan oxit", "rates": ["10", "10", "10", "10", "10", "0"]}
-{"hs": "38160020", "hs_dotted": "3816.00.20", "desc": "- Hỗn hợp dolomite ramming", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "38241000", "hs_dotted": "3824.10.00", "desc": "- Các chất gắn đã điều chế dùng cho khuôn đúc hoặc lõi đúc", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38243000", "hs_dotted": "3824.30.00", "desc": "- Carbua kim loại không kết tụ trộn với nhau hoặc trộn với các chất gắn kim loại", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38244000", "hs_dotted": "3824.40.00", "desc": "- Phụ gia đã điều chế dùng cho xi măng, vữa hoặc bê tông", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38245000", "hs_dotted": "3824.50.00", "desc": "- Vữa và bê tông không chịu lửa", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38246000", "hs_dotted": "3824.60.00", "desc": "- Sorbitol trừ loại thuộc phân nhóm 2905.44", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38248100", "hs_dotted": "3824.81.00", "desc": "- - Chứa oxirane (ethylene oxide)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38248200", "hs_dotted": "3824.82.00", "desc": "- - Chứa polychlorinated biphenyls (PCBs), polychlorinated terphenyls (PCTs) hoặc polybrominated biphenyls (PBBs)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38248300", "hs_dotted": "3824.83.00", "desc": "- - Chứa tris(2,3-dibromopropyl) phosphate", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38248400", "hs_dotted": "3824.84.00", "desc": "- - Chứa aldrin (ISO), camphechlor (ISO) (toxaphene), chlordane (ISO), chlordecone (ISO), DDT (ISO) (clofenotane (INN), 1,1,1-trichloro-2,2-bis(p-chlorophenyl) ethane), dieldrin (ISO, INN), endosulfan (ISO), endrin (ISO), heptachlor (ISO) hoặc mirex (ISO):", "rates": ["3", "3", "3", "0", "0", "0"]}
-{"hs": "38248500", "hs_dotted": "3824.85.00", "desc": "- - Chứa 1,2,3,4,5,6-hexachlorocyclohexane (HCH (ISO)), kể cả lindane (ISO, INN):", "rates": ["3", "3", "3", "0", "0", "0"]}
-{"hs": "38248600", "hs_dotted": "3824.86.00", "desc": "- - Chứa pentachlorobenzene (ISO) hoặc hexachlorobenzene (ISO):", "rates": ["3", "3", "3", "0", "0", "0"]}
-{"hs": "38248700", "hs_dotted": "3824.87.00", "desc": "- - Chứa perfluorooctane sulphonic axit, muối của nó, perfluorooctane sulphonamides, hoặc perfluorooctane sulphonyl fluoride:", "rates": ["3", "3", "3", "0", "0", "0"]}
-{"hs": "38248800", "hs_dotted": "3824.88.00", "desc": "- - Chứa tetra-, penta-, hexa-, hepta- hoặc octabromodiphenyl ethers:", "rates": ["3", "3", "3", "0", "0", "0"]}
-{"hs": "38249100", "hs_dotted": "3824.91.00", "desc": "- - Hỗn hợp và chế phẩm chủ yếu chứa (5-ethyl-2- methyl-2-oxido-1,3,2-dioxaphosphinan-5-yl)methyl methyl methylphosphonate và bis[(5-ethyl-2-methyl-2-oxido-1,3,2- dioxaphosphinan-5-yl)methyl] methylphosphonate:", "rates": ["3", "3", "3", "0", "0", "0"]}
-{"hs": "38249910", "hs_dotted": "3824.99.10", "desc": "- - - Các chất tẩy mực, chất sửa giấy nến (stencil correctors), chất lỏng dùng để xóa và các băng để xóa khác (trừ những hàng hóa thuộc nhóm 96.12), đã đóng gói để bán lẻ", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38249930", "hs_dotted": "3824.99.30", "desc": "- - - Bột nhão để sao in với thành phần cơ bản là gelatin, ở dạng rời hoặc dùng ngay (ví dụ, bồi trên giấy hoặc trên vật liệu dệt)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38249940", "hs_dotted": "3824.99.40", "desc": "- - - Hỗn hợp dung môi vô cơ", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38249950", "hs_dotted": "3824.99.50", "desc": "- - - Dầu acetone", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38249960", "hs_dotted": "3824.99.60", "desc": "- - - Các chế phẩm hóa chất có chứa bột ngọt (monosodium glutamate)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38249970", "hs_dotted": "3824.99.70", "desc": "- - - Các chế phẩm hóa chất khác, dùng trong chế biến thực phẩm", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38249991", "hs_dotted": "3824.99.91", "desc": "- - - - Naphthenic axit, muối không tan trong nước của chúng và este của chúng", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38249999", "hs_dotted": "3824.99.99", "desc": "- - - - Loại khác:", "rates": ["3", "3", "3", "0", "0", "0"]}
-{"hs": "38271110", "hs_dotted": "3827.11.10", "desc": "- - - Dầu dùng cho máy biến điện (máy biến áp và máy biến dòng) và bộ phận ngắt mạch, có hàm lượng nhỏ hơn 70% tính theo trọng lượng là dầu có nguồn gốc từ dầu mỏ hoặc các loại dầu thu được từ các khoáng bi-tum", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38271190", "hs_dotted": "3827.11.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38271200", "hs_dotted": "3827.12.00", "desc": "- - Chứa hydrobromofluorocarbons (HBFCs)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38271300", "hs_dotted": "3827.13.00", "desc": "- - Chứa carbon tetrachloride", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38271400", "hs_dotted": "3827.14.00", "desc": "- - Chứa 1,1,1-trichloroethane (methyl chloroform)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38272000", "hs_dotted": "3827.20.00", "desc": "- Chứa bromochlorodifluoromethane (Halon-1211), bromotrifluoromethane (Halon-1301) hoặc dibromotetrafluoroethanes (Halon-2402)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38273100", "hs_dotted": "3827.31.00", "desc": "- - Chứa các chất của các phân nhóm từ 2903.41 đến 2903.48", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38273200", "hs_dotted": "3827.32.00", "desc": "- - Loại khác, chứa các chất của các phân nhóm từ 2903.71 đến 2903.75", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38273910", "hs_dotted": "3827.39.10", "desc": "- - - Dầu dùng cho máy biến điện (máy biến áp và máy biến dòng) và bộ phận ngắt mạch, có hàm lượng nhỏ hơn 70% tính theo trọng lượng là dầu có nguồn gốc từ dầu mỏ hoặc các loại dầu thu được từ các khoáng bi-tum", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38273990", "hs_dotted": "3827.39.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38274000", "hs_dotted": "3827.40.00", "desc": "- Chứa methyl bromide (bromomethane) hoặc bromochloromethane", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38275100", "hs_dotted": "3827.51.00", "desc": "- - Chứa trifluoromethane (HFC-23)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38275900", "hs_dotted": "3827.59.00", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38276110", "hs_dotted": "3827.61.10", "desc": "- - - Chứa hỗn hợp của HFC-125, HFC-143a và HFC-134a (HFC-404a)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38276120", "hs_dotted": "3827.61.20", "desc": "- - - Chứa hỗn hợp của HFC-125 và HFC-143a (HFC-507a)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38276190", "hs_dotted": "3827.61.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38276200", "hs_dotted": "3827.62.00", "desc": "- - Loại khác, chưa được chi tiết tại phân nhóm trên, chứa từ 55% trở lên tính theo khối lượng là pentafluoroethane (HFC-125) nhưng không chứa dẫn xuất flo hóa chưa no của các hydrocarbons mạch hở (HFOs)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38276310", "hs_dotted": "3827.63.10", "desc": "- - - Chứa hỗn hợp của HFC-32 và HFC-125 (HFC-410a)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38276390", "hs_dotted": "3827.63.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38276400", "hs_dotted": "3827.64.00", "desc": "- - Loại khác, chưa được chi tiết tại các phân nhóm trên, chứa từ 30% trở lên tính theo khối lượng là 1,1,1,2-tetrafluoroethane (HFC-134a) nhưng không chứa dẫn xuất flo hóa chưa no của các hydrocarbons mạch hở (HFOs)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38276500", "hs_dotted": "3827.65.00", "desc": "- - Loại khác, chưa được chi tiết tại các phân nhóm trên, chứa từ 20% trở lên tính theo khối lượng là difluoromethane (HFC-32) và từ 20% trở lên tính theo khối lượng là pentafluoroethane (HFC-125)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38276800", "hs_dotted": "3827.68.00", "desc": "- - Loại khác, chưa được chi tiết tại các phân nhóm trên, chứa các chất thuộc các phân nhóm từ 2903.41 đến 2903.48", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38276900", "hs_dotted": "3827.69.00", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "38279000", "hs_dotted": "3827.90.00", "desc": "- Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "40021100", "hs_dotted": "4002.11.00", "desc": "- - Dạng latex (dạng mủ cao su)", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40021910", "hs_dotted": "4002.19.10", "desc": "- - - Dạng nguyên sinh hoặc dạng tấm, tờ hoặc dải chưa lưu hóa, chưa pha trộn", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40021990", "hs_dotted": "4002.19.90", "desc": "- - - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40022010", "hs_dotted": "4002.20.10", "desc": "- - Dạng nguyên sinh", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40022090", "hs_dotted": "4002.20.90", "desc": "- - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40023110", "hs_dotted": "4002.31.10", "desc": "- - - Dạng tấm, tờ hoặc dải chưa lưu hóa, chưa pha trộn", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40023190", "hs_dotted": "4002.31.90", "desc": "- - - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40023910", "hs_dotted": "4002.39.10", "desc": "- - - Dạng tấm, tờ hoặc dải chưa lưu hóa, chưa pha trộn", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40023990", "hs_dotted": "4002.39.90", "desc": "- - - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40024100", "hs_dotted": "4002.41.00", "desc": "- - Dạng latex (dạng mủ cao su)", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40024910", "hs_dotted": "4002.49.10", "desc": "- - - Dạng nguyên sinh", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40024990", "hs_dotted": "4002.49.90", "desc": "- - - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40025100", "hs_dotted": "4002.51.00", "desc": "- - Dạng latex (dạng mủ cao su)", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40025910", "hs_dotted": "4002.59.10", "desc": "- - - Dạng nguyên sinh", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40025990", "hs_dotted": "4002.59.90", "desc": "- - - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40026010", "hs_dotted": "4002.60.10", "desc": "- - Dạng nguyên sinh", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40026090", "hs_dotted": "4002.60.90", "desc": "- - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40027010", "hs_dotted": "4002.70.10", "desc": "- - Dạng nguyên sinh", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40027090", "hs_dotted": "4002.70.90", "desc": "- - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40028010", "hs_dotted": "4002.80.10", "desc": "- - Hỗn hợp mủ cao su tự nhiên với mủ cao su tổng hợp", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40028090", "hs_dotted": "4002.80.90", "desc": "- - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40029100", "hs_dotted": "4002.91.00", "desc": "- - Dạng latex (dạng mủ cao su)", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40029940", "hs_dotted": "4002.99.40", "desc": "- - - Loại khác, dạng nguyên sinh hoặc dạng tấm, tờ hoặc dải chưa lưu hóa, chưa pha trộn:", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40029990", "hs_dotted": "4002.99.90", "desc": "- - - Loại khác:", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40051010", "hs_dotted": "4005.10.10", "desc": "- - Của nhựa tự nhiên", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40051090", "hs_dotted": "4005.10.90", "desc": "- - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40052000", "hs_dotted": "4005.20.00", "desc": "- Dạng hòa tan; dạng phân tán trừ các sản phẩm thuộc phân nhóm 4005.10", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40059110", "hs_dotted": "4005.91.10", "desc": "- - - Của nhựa tự nhiên", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40059190", "hs_dotted": "4005.91.90", "desc": "- - - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40059910", "hs_dotted": "4005.99.10", "desc": "- - - Dạng latex (dạng mủ cao su)", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40059920", "hs_dotted": "4005.99.20", "desc": "- - - Cao su tự nhiên được pha trộn với các chất trừ carbon hoặc silica", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "40059990", "hs_dotted": "4005.99.90", "desc": "- - - Loại khác", "rates": ["1", "1", "1", "1", "1", "1"]}
-{"hs": "41012000", "hs_dotted": "4101.20.00", "desc": "- Da sống nguyên con, chưa xẻ, khối lượng da một con không quá 8 kg khi làm khô đơn giản, 10 kg khi muối khô, hoặc 16 kg ở dạng tươi, dạng muối ướt hoặc được bảo quản cách khác", "rates": ["10", "10", "10", "0", "0", "0"]}
-{"hs": "41015000", "hs_dotted": "4101.50.00", "desc": "- Da sống nguyên con, khối lượng trên 16 kg", "rates": ["10", "10", "10", "0", "0", "0"]}
-{"hs": "41019010", "hs_dotted": "4101.90.10", "desc": "- - Đã được chuẩn bị để thuộc", "rates": ["10", "10", "10", "0", "0", "0"]}
-{"hs": "41019090", "hs_dotted": "4101.90.90", "desc": "- - Loại khác", "rates": ["10", "10", "10", "0", "0", "0"]}
-{"hs": "41021000", "hs_dotted": "4102.10.00", "desc": "- Loại còn lông", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "41022100", "hs_dotted": "4102.21.00", "desc": "- - Đã được axit hoá", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "41022900", "hs_dotted": "4102.29.00", "desc": "- - Loại khác", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "41032000", "hs_dotted": "4103.20.00", "desc": "- Của loài bò sát:", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "41033000", "hs_dotted": "4103.30.00", "desc": "- Của lợn", "rates": ["10", "10", "10", "0", "0", "0"]}
-{"hs": "41039000", "hs_dotted": "4103.90.00", "desc": "- Loại khác", "rates": ["10", "10", "10", "0", "0", "0"]}
-{"hs": "44011100", "hs_dotted": "4401.11.00", "desc": "- - Từ cây lá kim", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44011200", "hs_dotted": "4401.12.00", "desc": "- - Từ cây không thuộc loài lá kim", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44012100", "hs_dotted": "4401.21.00", "desc": "- - Từ cây lá kim", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "44012200", "hs_dotted": "4401.22.00", "desc": "- - Từ cây không thuộc loài lá kim", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "44013100", "hs_dotted": "4401.31.00", "desc": "- - Viên gỗ", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "44013200", "hs_dotted": "4401.32.00", "desc": "- - Đóng thành bánh (briquettes)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "44013900", "hs_dotted": "4401.39.00", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "44014100", "hs_dotted": "4401.41.00", "desc": "- - Mùn cưa", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "44014900", "hs_dotted": "4401.49.00", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "44021000", "hs_dotted": "4402.10.00", "desc": "- Của tre", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44022010", "hs_dotted": "4402.20.10", "desc": "- - Than gáo dừa", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "44022090", "hs_dotted": "4402.20.90", "desc": "- - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44029000", "hs_dotted": "4402.90.00", "desc": "- Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44031110", "hs_dotted": "4403.11.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44031190", "hs_dotted": "4403.11.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44031210", "hs_dotted": "4403.12.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44031290", "hs_dotted": "4403.12.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032110", "hs_dotted": "4403.21.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032190", "hs_dotted": "4403.21.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032210", "hs_dotted": "4403.22.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032290", "hs_dotted": "4403.22.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032310", "hs_dotted": "4403.23.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032390", "hs_dotted": "4403.23.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032410", "hs_dotted": "4403.24.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032490", "hs_dotted": "4403.24.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032510", "hs_dotted": "4403.25.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032590", "hs_dotted": "4403.25.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032610", "hs_dotted": "4403.26.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44032690", "hs_dotted": "4403.26.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44034110", "hs_dotted": "4403.41.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44034190", "hs_dotted": "4403.41.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44034210", "hs_dotted": "4403.42.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44034290", "hs_dotted": "4403.42.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44034910", "hs_dotted": "4403.49.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44034990", "hs_dotted": "4403.49.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039110", "hs_dotted": "4403.91.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039190", "hs_dotted": "4403.91.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039310", "hs_dotted": "4403.93.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039390", "hs_dotted": "4403.93.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039410", "hs_dotted": "4403.94.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039490", "hs_dotted": "4403.94.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039510", "hs_dotted": "4403.95.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039590", "hs_dotted": "4403.95.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039610", "hs_dotted": "4403.96.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039690", "hs_dotted": "4403.96.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039710", "hs_dotted": "4403.97.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039790", "hs_dotted": "4403.97.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039810", "hs_dotted": "4403.98.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039890", "hs_dotted": "4403.98.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039910", "hs_dotted": "4403.99.10", "desc": "- - - Cột sào, khúc gỗ xẻ và gỗ lạng", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44039990", "hs_dotted": "4403.99.90", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "44041000", "hs_dotted": "4404.10.00", "desc": "- Từ cây lá kim", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44042010", "hs_dotted": "4404.20.10", "desc": "- - Nan gỗ (Chipwood)", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44042090", "hs_dotted": "4404.20.90", "desc": "- - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44061100", "hs_dotted": "4406.11.00", "desc": "- - Từ cây lá kim", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "44061200", "hs_dotted": "4406.12.00", "desc": "- - Từ cây không thuộc loài lá kim", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "44069100", "hs_dotted": "4406.91.00", "desc": "- - Từ cây lá kim", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "44069200", "hs_dotted": "4406.92.00", "desc": "- - Từ cây không thuộc loài lá kim", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "44071110", "hs_dotted": "4407.11.10", "desc": "- - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44071190", "hs_dotted": "4407.11.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44071200", "hs_dotted": "4407.12.00", "desc": "- - Từ cây linh sam (Abies spp.) và cây vân sam (Picea spp.):", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44071300", "hs_dotted": "4407.13.00", "desc": "- - Từ cây thuộc nhóm S-P-F (cây vân sam (Picea spp.), cây thông (Pinus spp.) và cây linh sam (Abies spp.)):", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44071400", "hs_dotted": "4407.14.00", "desc": "- - Từ cây Độc cần (Western hemlock (Tsuga heterophylla) và linh sam (Abies spp.)):", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44071910", "hs_dotted": "4407.19.10", "desc": "- - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44071990", "hs_dotted": "4407.19.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072110", "hs_dotted": "4407.21.10", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072190", "hs_dotted": "4407.21.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072210", "hs_dotted": "4407.22.10", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072290", "hs_dotted": "4407.22.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072310", "hs_dotted": "4407.23.10", "desc": "- - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072320", "hs_dotted": "4407.23.20", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072390", "hs_dotted": "4407.23.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072512", "hs_dotted": "4407.25.12", "desc": "- - - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072513", "hs_dotted": "4407.25.13", "desc": "- - - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072519", "hs_dotted": "4407.25.19", "desc": "- - - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072521", "hs_dotted": "4407.25.21", "desc": "- - - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072529", "hs_dotted": "4407.25.29", "desc": "- - - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072620", "hs_dotted": "4407.26.20", "desc": "- - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072630", "hs_dotted": "4407.26.30", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072690", "hs_dotted": "4407.26.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072720", "hs_dotted": "4407.27.20", "desc": "- - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072730", "hs_dotted": "4407.27.30", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072790", "hs_dotted": "4407.27.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072810", "hs_dotted": "4407.28.10", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072890", "hs_dotted": "4407.28.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072912", "hs_dotted": "4407.29.12", "desc": "- - - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072913", "hs_dotted": "4407.29.13", "desc": "- - - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072919", "hs_dotted": "4407.29.19", "desc": "- - - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072922", "hs_dotted": "4407.29.22", "desc": "- - - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072923", "hs_dotted": "4407.29.23", "desc": "- - - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072929", "hs_dotted": "4407.29.29", "desc": "- - - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072932", "hs_dotted": "4407.29.32", "desc": "- - - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072933", "hs_dotted": "4407.29.33", "desc": "- - - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072939", "hs_dotted": "4407.29.39", "desc": "- - - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072942", "hs_dotted": "4407.29.42", "desc": "- - - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072943", "hs_dotted": "4407.29.43", "desc": "- - - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072949", "hs_dotted": "4407.29.49", "desc": "- - - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072951", "hs_dotted": "4407.29.51", "desc": "- - - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072959", "hs_dotted": "4407.29.59", "desc": "- - - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072972", "hs_dotted": "4407.29.72", "desc": "- - - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072973", "hs_dotted": "4407.29.73", "desc": "- - - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072979", "hs_dotted": "4407.29.79", "desc": "- - - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072982", "hs_dotted": "4407.29.82", "desc": "- - - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072983", "hs_dotted": "4407.29.83", "desc": "- - - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072989", "hs_dotted": "4407.29.89", "desc": "- - - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072991", "hs_dotted": "4407.29.91", "desc": "- - - - Gỗ Jongkong (Dactylocladus spp.) và gỗ Merbau (Intsia spp.), đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072992", "hs_dotted": "4407.29.92", "desc": "- - - - Gỗ Jongkong (Dactylocladus spp.) và gỗ Merbau (Intsia spp.), loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072994", "hs_dotted": "4407.29.94", "desc": "- - - - Gỗ Albizia (Paraserianthes falcataria), đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072995", "hs_dotted": "4407.29.95", "desc": "- - - - Gỗ Albizia (Paraserianthes falcataria), loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072996", "hs_dotted": "4407.29.96", "desc": "- - - - Gỗ cao su (Hevea Brasiliensis), đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072997", "hs_dotted": "4407.29.97", "desc": "- - - - Gỗ cao su (Hevea Brasiliensis), loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072998", "hs_dotted": "4407.29.98", "desc": "- - - - Loại khác, đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44072999", "hs_dotted": "4407.29.99", "desc": "- - - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079120", "hs_dotted": "4407.91.20", "desc": "- - - Đã xẻ dọc, chưa gia công thêm:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079130", "hs_dotted": "4407.91.30", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079190", "hs_dotted": "4407.91.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079210", "hs_dotted": "4407.92.10", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079290", "hs_dotted": "4407.92.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079310", "hs_dotted": "4407.93.10", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079390", "hs_dotted": "4407.93.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079410", "hs_dotted": "4407.94.10", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079490", "hs_dotted": "4407.94.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079510", "hs_dotted": "4407.95.10", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079590", "hs_dotted": "4407.95.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079610", "hs_dotted": "4407.96.10", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079690", "hs_dotted": "4407.96.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079710", "hs_dotted": "4407.97.10", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079790", "hs_dotted": "4407.97.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079910", "hs_dotted": "4407.99.10", "desc": "- - - Đã bào, đã chà nhám hoặc nối đầu:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44079990", "hs_dotted": "4407.99.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44081010", "hs_dotted": "4408.10.10", "desc": "- - Thanh mỏng bằng gỗ tuyết tùng loại sử dụng để sản xuất bút chì; gỗ thông Radiata loại sử dụng để sản xuất ván ghép (blockboard)", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44081030", "hs_dotted": "4408.10.30", "desc": "- - Làm lớp mặt (face veneer sheets)", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44081090", "hs_dotted": "4408.10.90", "desc": "- - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44083100", "hs_dotted": "4408.31.00", "desc": "- - Gỗ Meranti đỏ sẫm, gỗ Meranti đỏ nhạt và gỗ Meranti Bakau", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44083910", "hs_dotted": "4408.39.10", "desc": "- - - Thanh mỏng bằng gỗ Jelutong loại sử dụng để sản xuất bút chì", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44083920", "hs_dotted": "4408.39.20", "desc": "- - - Làm lớp mặt (face veneer sheets)", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44083990", "hs_dotted": "4408.39.90", "desc": "- - - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44089010", "hs_dotted": "4408.90.10", "desc": "- - Làm lớp mặt (face veneer sheets)", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44089090", "hs_dotted": "4408.90.90", "desc": "- - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44091000", "hs_dotted": "4409.10.00", "desc": "- Từ cây lá kim", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44092100", "hs_dotted": "4409.21.00", "desc": "- - Của tre", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44092200", "hs_dotted": "4409.22.00", "desc": "- - Từ gỗ nhiệt đới", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "44092900", "hs_dotted": "4409.29.00", "desc": "- - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "71021000", "hs_dotted": "7102.10.00", "desc": "- Kim cương chưa được phân loại:", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "71022100", "hs_dotted": "7102.21.00", "desc": "- - Chưa gia công hoặc mới chỉ được cắt, tách một cách đơn giản hoặc mới chỉ được chuốt hoặc mài sơ qua", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "71022900", "hs_dotted": "7102.29.00", "desc": "- - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "71023100", "hs_dotted": "7102.31.00", "desc": "- - Chưa gia công hoặc mới chỉ được cắt, tách một cách đơn giản hoặc mới chỉ được chuốt hoặc mài sơ qua", "rates": ["15", "15", "15", "15", "15", "15"]}
-{"hs": "71023900", "hs_dotted": "7102.39.00", "desc": "- - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "71031010", "hs_dotted": "7103.10.10", "desc": "- - Rubi", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "71031020", "hs_dotted": "7103.10.20", "desc": "- - Ngọc bích (nephrite và jadeite)", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "71031090", "hs_dotted": "7103.10.90", "desc": "- - Loại khác", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "71039110", "hs_dotted": "7103.91.10", "desc": "- - - Rubi", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "71039190", "hs_dotted": "7103.91.90", "desc": "- - - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "71039900", "hs_dotted": "7103.99.00", "desc": "- - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "71041010", "hs_dotted": "7104.10.10", "desc": "- - Chưa được gia công", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "71041020", "hs_dotted": "7104.10.20", "desc": "- - Đã gia công", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "71042100", "hs_dotted": "7104.21.00", "desc": "- - Kim cương", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "71042900", "hs_dotted": "7104.29.00", "desc": "- - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "71049100", "hs_dotted": "7104.91.00", "desc": "- - Kim cương", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "71049900", "hs_dotted": "7104.99.00", "desc": "- - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "71051000", "hs_dotted": "7105.10.00", "desc": "- Của kim cương", "rates": ["3", "3", "3", "3", "3", "3"]}
-{"hs": "71059000", "hs_dotted": "7105.90.00", "desc": "- Loại khác", "rates": ["3", "3", "3", "3", "3", "3"]}
-{"hs": "71061000", "hs_dotted": "7106.10.00", "desc": "- Dạng bột", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "71069100", "hs_dotted": "7106.91.00", "desc": "- - Chưa gia công", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "71069200", "hs_dotted": "7106.92.00", "desc": "- - Dạng bán thành phẩm", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "71081100", "hs_dotted": "7108.11.00", "desc": "- - Dạng bột", "rates": ["2", "2", "2", "2", "2", "2"]}
-{"hs": "71081210", "hs_dotted": "7108.12.10", "desc": "- - - Dạng cục, thỏi hoặc thanh đúc", "rates": ["2", "2", "2", "2", "2", "2"]}
-{"hs": "71081290", "hs_dotted": "7108.12.90", "desc": "- - - Loại khác", "rates": ["2", "2", "2", "2", "2", "2"]}
-{"hs": "71081300", "hs_dotted": "7108.13.00", "desc": "- - Dạng bán thành phẩm khác", "rates": ["2", "2", "2", "2", "2", "2"]}
-{"hs": "71082000", "hs_dotted": "7108.20.00", "desc": "- Dạng tiền tệ", "rates": ["2", "2", "2", "2", "2", "2"]}
-{"hs": "71131110", "hs_dotted": "7113.11.10", "desc": "- - - Bộ phận", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "71131190", "hs_dotted": "7113.11.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "71131910", "hs_dotted": "7113.19.10", "desc": "- - - Bộ phận", "rates": ["2", "2", "2", "2", "2", "2"]}
-{"hs": "71131990", "hs_dotted": "7113.19.90", "desc": "- - - Loại khác", "rates": ["2", "2", "2", "2", "2", "2"]}
-{"hs": "71132010", "hs_dotted": "7113.20.10", "desc": "- - Bộ phận", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "71132090", "hs_dotted": "7113.20.90", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "71141100", "hs_dotted": "7114.11.00", "desc": "- - Bằng bạc, đã hoặc chưa mạ hoặc dát phủ kim loại quý khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "71141900", "hs_dotted": "7114.19.00", "desc": "- - Bằng kim loại quý khác, đã hoặc chưa mạ hoặc dát phủ kim loại quý", "rates": ["2", "2", "2", "2", "2", "2"]}
-{"hs": "71142000", "hs_dotted": "7114.20.00", "desc": "- Bằng kim loại cơ bản dát phủ kim loại quý", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "71151000", "hs_dotted": "7115.10.00", "desc": "- Vật xúc tác ở dạng tấm đan hoặc lưới, bằng bạch kim", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "71159010", "hs_dotted": "7115.90.10", "desc": "- - Bằng vàng hoặc bạc", "rates": ["2", "2", "2", "2", "2", "2"]}
-{"hs": "71159020", "hs_dotted": "7115.90.20", "desc": "- - Bằng kim loại dát phủ vàng hoặc bạc", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "71159090", "hs_dotted": "7115.90.90", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "72041000", "hs_dotted": "7204.10.00", "desc": "- Phế liệu và mảnh vụn của gang đúc", "rates": ["17", "17", "17", "15", "15", "15"]}
-{"hs": "72042100", "hs_dotted": "7204.21.00", "desc": "- - Bằng thép không gỉ", "rates": ["15", "15", "15", "15", "15", "15"]}
-{"hs": "72042900", "hs_dotted": "7204.29.00", "desc": "- - Loại khác", "rates": ["17", "17", "17", "15", "15", "15"]}
-{"hs": "72043000", "hs_dotted": "7204.30.00", "desc": "- Phế liệu và mảnh vụn của sắt hoặc thép tráng thiếc", "rates": ["17", "17", "17", "15", "15", "15"]}
-{"hs": "72044100", "hs_dotted": "7204.41.00", "desc": "- - Phoi tiện, phoi bào, mảnh vỡ, vảy cán, mạt cưa, mạt giũa, phoi cắt và bavia, đã hoặc chưa được ép thành khối hoặc đóng thành kiện, bánh, bó", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "72044900", "hs_dotted": "7204.49.00", "desc": "- - Loại khác", "rates": ["17", "17", "17", "15", "15", "15"]}
-{"hs": "72045000", "hs_dotted": "7204.50.00", "desc": "- Thỏi đúc phế liệu nấu lại", "rates": ["17", "17", "17", "15", "15", "15"]}
-{"hs": "74010010", "hs_dotted": "7401.00.10", "desc": "- Sten đồng", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "74010020", "hs_dotted": "7401.00.20", "desc": "- Đồng xi măng hóa (đồng kết tủa)", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "74031100", "hs_dotted": "7403.11.00", "desc": "- - Ca-tốt và các phần của ca-tốt:", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "74031200", "hs_dotted": "7403.12.00", "desc": "- - Thanh để kéo dây", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "74031300", "hs_dotted": "7403.13.00", "desc": "- - Que", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "74031900", "hs_dotted": "7403.19.00", "desc": "- - Loại khác", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "74032100", "hs_dotted": "7403.21.00", "desc": "- - Hợp kim đồng-kẽm (đồng thau)", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "74032200", "hs_dotted": "7403.22.00", "desc": "- - Hợp kim đồng-thiếc (đồng thanh)", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "74032900", "hs_dotted": "7403.29.00", "desc": "- - Hợp kim đồng khác (trừ các loại hợp kim đồng chủ thuộc nhóm 74.05)", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "74040000", "hs_dotted": "7404.00.00", "desc": "Phế liệu và mảnh vụn của đồng", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "74050000", "hs_dotted": "7405.00.00", "desc": "Hợp kim đồng chủ", "rates": ["15", "15", "15", "0", "0", "0"]}
-{"hs": "74061000", "hs_dotted": "7406.10.00", "desc": "- Bột không có cấu trúc lớp", "rates": ["15", "15", "15", "0", "0", "0"]}
-{"hs": "74062000", "hs_dotted": "7406.20.00", "desc": "- Bột có cấu trúc lớp; vảy đồng", "rates": ["15", "15", "15", "0", "0", "0"]}
-{"hs": "74071030", "hs_dotted": "7407.10.30", "desc": "- - Dạng hình", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "74071041", "hs_dotted": "7407.10.41", "desc": "- - - Mặt cắt ngang hình vuông hoặc hình chữ nhật", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "74071049", "hs_dotted": "7407.10.49", "desc": "- - - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "74072100", "hs_dotted": "7407.21.00", "desc": "- - Bằng hợp kim đồng-kẽm (đồng thau)", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "74072900", "hs_dotted": "7407.29.00", "desc": "- - Loại khác", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "75011000", "hs_dotted": "7501.10.00", "desc": "- Sten niken", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "75012000", "hs_dotted": "7501.20.00", "desc": "- Oxit niken thiêu kết và các sản phẩm trung gian khác của quá trình luyện niken", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "75021000", "hs_dotted": "7502.10.00", "desc": "- Niken, không hợp kim", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "75022000", "hs_dotted": "7502.20.00", "desc": "- Hợp kim niken", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "75030000", "hs_dotted": "7503.00.00", "desc": "Phế liệu và mảnh vụn niken", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "75040000", "hs_dotted": "7504.00.00", "desc": "Bột và vảy niken", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "75051100", "hs_dotted": "7505.11.00", "desc": "- - Bằng niken, không hợp kim", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "75051200", "hs_dotted": "7505.12.00", "desc": "- - Bằng hợp kim niken", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "75052100", "hs_dotted": "7505.21.00", "desc": "- - Bằng niken, không hợp kim", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "75052200", "hs_dotted": "7505.22.00", "desc": "- - Bằng hợp kim niken", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "76011000", "hs_dotted": "7601.10.00", "desc": "- Nhôm, không hợp kim:", "rates": ["15", "15", "15", "15", "15", "15"]}
-{"hs": "76012000", "hs_dotted": "7601.20.00", "desc": "- Hợp kim nhôm:", "rates": ["15", "15", "15", "15", "15", "15"]}
-{"hs": "76020000", "hs_dotted": "7602.00.00", "desc": "Phế liệu và mảnh vụn nhôm", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "76031000", "hs_dotted": "7603.10.00", "desc": "- Bột không có cấu trúc lớp", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "76032010", "hs_dotted": "7603.20.10", "desc": "- - Vảy nhôm", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "76032020", "hs_dotted": "7603.20.20", "desc": "- - Bột có cấu trúc lớp", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "78011000", "hs_dotted": "7801.10.00", "desc": "- Chì tinh luyện:", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "78019100", "hs_dotted": "7801.91.00", "desc": "- - Có hàm lượng antimon tính theo khối lượng là lớn nhất so với hàm lượng của các nguyên tố khác ngoài chì:", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "78019900", "hs_dotted": "7801.99.00", "desc": "- - Loại khác:", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "78020000", "hs_dotted": "7802.00.00", "desc": "Phế liệu và mảnh vụn chì", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "78041110", "hs_dotted": "7804.11.10", "desc": "- - - Chiều dày không quá 0,15 mm", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "78041190", "hs_dotted": "7804.11.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "78041900", "hs_dotted": "7804.19.00", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "78042000", "hs_dotted": "7804.20.00", "desc": "- Bột và vảy chì", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "78060020", "hs_dotted": "7806.00.20", "desc": "- Thanh, que, dạng hình và dây:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "78060030", "hs_dotted": "7806.00.30", "desc": "- Các loại ống, ống dẫn và phụ kiện để ghép nối của ống hoặc ống dẫn (ví dụ, khớp nối đôi, nối khuỷu, măng sông)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "78060040", "hs_dotted": "7806.00.40", "desc": "- Len chì; vòng đệm; tấm điện a-nốt", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "78060090", "hs_dotted": "7806.00.90", "desc": "- Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "79011100", "hs_dotted": "7901.11.00", "desc": "- - Có hàm lượng kẽm từ 99,99% trở lên tính theo khối lượng:", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "79011200", "hs_dotted": "7901.12.00", "desc": "- - Có hàm lượng kẽm dưới 99,99% tính theo khối lượng:", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "79012000", "hs_dotted": "7901.20.00", "desc": "- Hợp kim kẽm:", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "79020000", "hs_dotted": "7902.00.00", "desc": "Phế liệu và mảnh vụn kẽm", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "79031000", "hs_dotted": "7903.10.00", "desc": "- Bụi kẽm", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "79039000", "hs_dotted": "7903.90.00", "desc": "- Loại khác", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "79040000", "hs_dotted": "7904.00.00", "desc": "Kẽm ở dạng thanh, que, hình và dây", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "80011000", "hs_dotted": "8001.10.00", "desc": "- Thiếc, không hợp kim:", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "80012000", "hs_dotted": "8001.20.00", "desc": "- Hợp kim thiếc:", "rates": ["10", "10", "10", "10", "10", "10"]}
-{"hs": "80020000", "hs_dotted": "8002.00.00", "desc": "Phế liệu và mảnh vụn thiếc", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "80030010", "hs_dotted": "8003.00.10", "desc": "- Thanh và que hàn", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "80030090", "hs_dotted": "8003.00.90", "desc": "- Loại khác:", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "80070020", "hs_dotted": "8007.00.20", "desc": "- Dạng tấm, lá và dải, có chiều dày trên 0,2 mm", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "80070030", "hs_dotted": "8007.00.30", "desc": "- Lá mỏng (đã hoặc chưa in hoặc bồi trên giấy, bìa, plastic hoặc vật liệu bồi tương tự), có chiều dày (trừ phần bồi) không quá 0,2 mm; dạng bột và vảy:", "rates": ["5", "5", "5", "0", "0", "0"]}
-{"hs": "80070040", "hs_dotted": "8007.00.40", "desc": "- Các loại ống, ống dẫn và phụ kiện để ghép nối của ống hoặc ống dẫn (ví dụ, khớp nối đôi, nối khuỷu, măng sông)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "80070091", "hs_dotted": "8007.00.91", "desc": "- - Hộp đựng thuốc lá điếu; gạt tàn thuốc lá", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "80070092", "hs_dotted": "8007.00.92", "desc": "- - Các sản phẩm gia dụng khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "80070093", "hs_dotted": "8007.00.93", "desc": "- - Ống có thể gấp lại được (collapsible tubes)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "80070099", "hs_dotted": "8007.00.99", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "81011000", "hs_dotted": "8101.10.00", "desc": "- Bột", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81019400", "hs_dotted": "8101.94.00", "desc": "- - Vonfram chưa gia công, kể cả thanh và que thu được từ quá trình thiêu kết", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81019600", "hs_dotted": "8101.96.00", "desc": "- - Dây", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81019700", "hs_dotted": "8101.97.00", "desc": "- - Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81019910", "hs_dotted": "8101.99.10", "desc": "- - - Thanh và que, trừ các loại thu được từ quá trình thiêu kết; dạng hình, lá, dải và lá mỏng", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81019990", "hs_dotted": "8101.99.90", "desc": "- - - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81021000", "hs_dotted": "8102.10.00", "desc": "- Bột", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81029400", "hs_dotted": "8102.94.00", "desc": "- - Molypđen chưa gia công, kể cả thanh và que thu được từ quá trình thiêu kết", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81029500", "hs_dotted": "8102.95.00", "desc": "- - Thanh và que, trừ các loại thu được từ quá trình thiêu kết, dạng hình, tấm, lá, dải và lá mỏng", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81029600", "hs_dotted": "8102.96.00", "desc": "- - Dây", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81029700", "hs_dotted": "8102.97.00", "desc": "- - Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81029900", "hs_dotted": "8102.99.00", "desc": "- - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81032000", "hs_dotted": "8103.20.00", "desc": "- Tantan chưa gia công, kể cả thanh và que thu được từ quá trình thiêu kết; bột", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81033000", "hs_dotted": "8103.30.00", "desc": "- Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81039100", "hs_dotted": "8103.91.00", "desc": "- - Chén nung (crucible)", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81039900", "hs_dotted": "8103.99.00", "desc": "- - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81041100", "hs_dotted": "8104.11.00", "desc": "- - Có chứa hàm lượng magiê ít nhất 99,8% tính theo khối lượng", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "81041900", "hs_dotted": "8104.19.00", "desc": "- - Loại khác", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "81042000", "hs_dotted": "8104.20.00", "desc": "- Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81043000", "hs_dotted": "8104.30.00", "desc": "- Mạt giũa, phoi tiện và hạt, đã được phân loại theo kích cỡ; bột", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "81049000", "hs_dotted": "8104.90.00", "desc": "- Loại khác", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "81052010", "hs_dotted": "8105.20.10", "desc": "- - Coban chưa gia công", "rates": ["5", "5", "5", "5", "5", "0"]}
-{"hs": "81052090", "hs_dotted": "8105.20.90", "desc": "- - Loại khác:", "rates": ["5", "5", "5", "5", "5", "0"]}
-{"hs": "81053000", "hs_dotted": "8105.30.00", "desc": "- Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81059000", "hs_dotted": "8105.90.00", "desc": "- Loại khác", "rates": ["5", "5", "5", "5", "5", "0"]}
-{"hs": "81061010", "hs_dotted": "8106.10.10", "desc": "- - Bismut chưa gia công; phế liệu và mảnh vụn; bột:", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81061090", "hs_dotted": "8106.10.90", "desc": "- - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81069010", "hs_dotted": "8106.90.10", "desc": "- - Bismut chưa gia công; phế liệu và mảnh vụn; bột:", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81069090", "hs_dotted": "8106.90.90", "desc": "- - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81082000", "hs_dotted": "8108.20.00", "desc": "- Titan chưa gia công; bột", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81083000", "hs_dotted": "8108.30.00", "desc": "- Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81089000", "hs_dotted": "8108.90.00", "desc": "- Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81092100", "hs_dotted": "8109.21.00", "desc": "- - Chứa hàm lượng hafini trong zircon dưới 1/500 tính theo khối lượng", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81092900", "hs_dotted": "8109.29.00", "desc": "- - Loại khác", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81093100", "hs_dotted": "8109.31.00", "desc": "- - Chứa hàm lượng hafini trong zircon dưới 1/500 tính theo khối lượng", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81093900", "hs_dotted": "8109.39.00", "desc": "- - Loại khác", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81099100", "hs_dotted": "8109.91.00", "desc": "- - Chứa hàm lượng hafini trong zircon dưới 1/500 tính theo khối lượng:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81099900", "hs_dotted": "8109.99.00", "desc": "- - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81101000", "hs_dotted": "8110.10.00", "desc": "- Antimon chưa gia công; bột", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81102000", "hs_dotted": "8110.20.00", "desc": "- Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81109000", "hs_dotted": "8110.90.00", "desc": "- Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81110010", "hs_dotted": "8111.00.10", "desc": "- Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81110090", "hs_dotted": "8111.00.90", "desc": "- Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81121200", "hs_dotted": "8112.12.00", "desc": "- - Chưa gia công; bột", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81121300", "hs_dotted": "8112.13.00", "desc": "- - Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81121900", "hs_dotted": "8112.19.00", "desc": "- - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81122100", "hs_dotted": "8112.21.00", "desc": "- - Chưa gia công; bột", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81122200", "hs_dotted": "8112.22.00", "desc": "- - Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81122900", "hs_dotted": "8112.29.00", "desc": "- - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81123100", "hs_dotted": "8112.31.00", "desc": "- - Chưa gia công; phế liệu và mảnh vụn; bột:", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81123900", "hs_dotted": "8112.39.00", "desc": "- - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81124100", "hs_dotted": "8112.41.00", "desc": "- - Chưa gia công; phế liệu và mảnh vụn; bột:", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81124900", "hs_dotted": "8112.49.00", "desc": "- - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81125100", "hs_dotted": "8112.51.00", "desc": "- - Chưa gia công; bột", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81125200", "hs_dotted": "8112.52.00", "desc": "- - Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81125900", "hs_dotted": "8112.59.00", "desc": "- - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81126100", "hs_dotted": "8112.61.00", "desc": "- - Phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81126910", "hs_dotted": "8112.69.10", "desc": "- - - Chưa gia công; bột", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81126990", "hs_dotted": "8112.69.90", "desc": "- - - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81129200", "hs_dotted": "8112.92.00", "desc": "- - Chưa gia công; phế liệu và mảnh vụn; bột:", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
-{"hs": "81129900", "hs_dotted": "8112.99.00", "desc": "- - Loại khác:", "rates": ["5", "5", "5", "5", "5", "5"]}
-{"hs": "81130000", "hs_dotted": "8113.00.00", "desc": "Gốm kim loại và các sản phẩm làm từ gốm kim loại, kể cả phế liệu và mảnh vụn", "rates": ["17,8", "16,5", "15,1", "13,7", "12,3", "11"]}
 {"hs": "01012100", "hs_dotted": "0101.21.00", "desc": "- - Loại thuần chủng để nhân giống", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "01012900", "hs_dotted": "0101.29.00", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "01013010", "hs_dotted": "0101.30.10", "desc": "- - Loại thuần chủng để nhân giống", "rates": ["0", "0", "0", "0", "0", "0"]}
@@ -842,7 +289,7 @@
 {"hs": "03038929", "hs_dotted": "0303.89.29", "desc": "- - - - Loại khác", "rates": ["5", "0", "0", "0", "0", "0"]}
 {"hs": "03039100", "hs_dotted": "0303.91.00", "desc": "- - Gan, sẹ và bọc trứng cá", "rates": ["3", "0", "0", "0", "0", "0"]}
 {"hs": "03039200", "hs_dotted": "0303.92.00", "desc": "- - Vây cá mập", "rates": ["3,7", "0", "0", "0", "0", "0"]}
-{"hs": "03039900", "hs_dotted": "0303.99.00", "desc": "- - Loại khác:", "rates": ["0", "0", "0", "0", "0", "0"]}
+{"hs": "03039900", "hs_dotted": "0303.99.00", "desc": "- - Loại khác:", "rates": [], "sublines": [{"hs10": "0303990010", "hs_dotted": "0303.99.00.10", "desc": "- - - Vây, đầu, đuôi, bong bóng và các phụ phẩm ăn được sau giết mổ của cá hồi vân (cá hồi nước ngọt) (Salmo trutta, Oncorhynchus mykiss, Oncorhynchus clarki, Oncorhynchus aguabonita, Oncorhynchus gilae, Oncorhynchus apache và Oncorhynchus chrysogaster) hoặc của cá bơn lưỡi ngựa (Halibut) (Reinhardtius hippoglossoides, Hippoglossus hippoglossus, Hippoglossus stenolepis)", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "0303990090", "hs_dotted": "0303.99.00.90", "desc": "- - - Loại khác", "rates": ["2,5", "0", "0", "0", "0", "0"], "excluded": []}]}
 {"hs": "03043100", "hs_dotted": "0304.31.00", "desc": "- - Cá rô phi (Oreochromis spp.)", "rates": ["3,7", "0", "0", "0", "0", "0"]}
 {"hs": "03043200", "hs_dotted": "0304.32.00", "desc": "- - Cá da trơn (Pangasius spp., Silurus spp., Clarias spp., Ictalurus spp.)", "rates": ["3,7", "0", "0", "0", "0", "0"]}
 {"hs": "03043300", "hs_dotted": "0304.33.00", "desc": "- - Cá rô sông Nile (Lates niloticus)", "rates": ["3,7", "0", "0", "0", "0", "0"]}
@@ -1632,7 +1079,7 @@
 {"hs": "12119092", "hs_dotted": "1211.90.92", "desc": "- - - Cây kim cúc, ở dạng khác", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "12119094", "hs_dotted": "1211.90.94", "desc": "- - - Mảnh gỗ đàn hương", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "12119095", "hs_dotted": "1211.90.95", "desc": "- - - Mảnh gỗ trầm hương (Gaharu)", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "12119097", "hs_dotted": "1211.90.97", "desc": "- - - Vỏ cây persea (Persea Kurzii Kosterm):", "rates": ["0", "0", "0", "0", "0", "0"]}
+{"hs": "12119097", "hs_dotted": "1211.90.97", "desc": "- - - Vỏ cây persea (Persea Kurzii Kosterm):", "rates": [], "sublines": [{"hs10": "1211909710", "hs_dotted": "1211.90.97.10", "desc": "- - - - Dạng tươi hoặc khô", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "1211909790", "hs_dotted": "1211.90.97.90", "desc": "- - - - Loại khác", "rates": ["25", "20", "15", "10", "5", "0"], "excluded": []}]}
 {"hs": "12119098", "hs_dotted": "1211.90.98", "desc": "- - - Loại khác, đã cắt, nghiền hoặc dạng bột", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "12119099", "hs_dotted": "1211.90.99", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "12122111", "hs_dotted": "1212.21.11", "desc": "- - - - Eucheuma spinosum", "rates": ["2,5", "0", "0", "0", "0", "0"]}
@@ -1709,7 +1156,7 @@
 {"hs": "15079020", "hs_dotted": "1507.90.20", "desc": "- - Dầu đậu tương đã tinh chế, tẩy và khử mùi (RBD)", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
 {"hs": "15079090", "hs_dotted": "1507.90.90", "desc": "- - Loại khác", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
 {"hs": "15081000", "hs_dotted": "1508.10.00", "desc": "- Dầu thô", "rates": ["3,6", "3,1", "2,7", "2,2", "1,8", "1,3"]}
-{"hs": "15089000", "hs_dotted": "1508.90.00", "desc": "- Loại khác:", "rates": ["3,6", "3,1", "2,7", "2,2", "1,8", "1,3"]}
+{"hs": "15089000", "hs_dotted": "1508.90.00", "desc": "- Loại khác:", "rates": [], "sublines": [{"hs10": "1508900010", "hs_dotted": "1508.90.00.10", "desc": "- - Các phần phân đoạn của dầu lạc chưa tinh chế", "rates": ["3,6", "3,1", "2,7", "2,2", "1,8", "1,3"], "excluded": []}, {"hs10": "1508900090", "hs_dotted": "1508.90.00.90", "desc": "- - Loại khác", "rates": ["18,1", "15,9", "13,6", "11,3", "9", "6,8"], "excluded": []}]}
 {"hs": "15092010", "hs_dotted": "1509.20.10", "desc": "- - Đóng gói với khối lượng tịnh không quá 30 kg", "rates": ["1,2", "0", "0", "0", "0", "0"]}
 {"hs": "15092090", "hs_dotted": "1509.20.90", "desc": "- - Loại khác", "rates": ["1,2", "0", "0", "0", "0", "0"]}
 {"hs": "15093000", "hs_dotted": "1509.30.00", "desc": "- Dầu ô liu nguyên chất (Virgin olive oil)", "rates": ["1,2", "0", "0", "0", "0", "0"]}
@@ -1867,7 +1314,7 @@
 {"hs": "15180038", "hs_dotted": "1518.00.38", "desc": "- - Của quả cọ dầu hoặc của hạt cọ, loại khác", "rates": ["3,6", "3,1", "2,7", "2,2", "1,8", "1,3"]}
 {"hs": "15180039", "hs_dotted": "1518.00.39", "desc": "- - Loại khác", "rates": ["3,6", "3,1", "2,7", "2,2", "1,8", "1,3"]}
 {"hs": "15180060", "hs_dotted": "1518.00.60", "desc": "- Các hỗn hợp hoặc các chế phẩm không ăn được từ mỡ hoặc dầu động vật hoặc từ các phần phân đoạn của chúng và chất béo hoặc dầu thực vật hoặc các phần phân đoạn của chúng", "rates": ["3,1", "2,5", "1,8", "1,2", "0,6", "0"]}
-{"hs": "15180090", "hs_dotted": "1518.00.90", "desc": "- Loại khác:", "rates": ["3,6", "3,1", "2,7", "2,2", "1,8", "1,3"]}
+{"hs": "15180090", "hs_dotted": "1518.00.90", "desc": "- Loại khác:", "rates": [], "sublines": [{"hs10": "1518009010", "hs_dotted": "1518.00.90.10", "desc": "- - Các hỗn hợp hoặc các chế phẩm không ăn được từ chất béo hoặc dầu vi sinh vật hoặc từ các phần phân đoạn của các loại chất béo hoặc dầu vi sinh vật khác nhau", "rates": ["3,6", "3,1", "2,7", "2,2", "1,8", "1,3"], "excluded": []}, {"hs10": "1518009090", "hs_dotted": "1518.00.90.90", "desc": "- - Loại khác", "rates": ["3,1", "2,5", "1,8", "1,2", "0,6", "0"], "excluded": []}]}
 {"hs": "15200010", "hs_dotted": "1520.00.10", "desc": "- Glyxerin thô", "rates": ["0,7", "0", "0", "0", "0", "0"]}
 {"hs": "15200090", "hs_dotted": "1520.00.90", "desc": "- Loại khác", "rates": ["0,7", "0", "0", "0", "0", "0"]}
 {"hs": "15211000", "hs_dotted": "1521.10.00", "desc": "- Sáp thực vật", "rates": ["0,7", "0", "0", "0", "0", "0"]}
@@ -1875,10 +1322,10 @@
 {"hs": "15219020", "hs_dotted": "1521.90.20", "desc": "- - Sáp cá nhà táng", "rates": ["0,7", "0", "0", "0", "0", "0"]}
 {"hs": "15220010", "hs_dotted": "1522.00.10", "desc": "- Chất nhờn", "rates": ["0,7", "0", "0", "0", "0", "0"]}
 {"hs": "15220090", "hs_dotted": "1522.00.90", "desc": "- Loại khác", "rates": ["0,7", "0", "0", "0", "0", "0"]}
-{"hs": "16010010", "hs_dotted": "1601.00.10", "desc": "- Đóng bao bì kín khí để bán lẻ:", "rates": ["7,5", "5", "2,5", "0", "0", "0"]}
-{"hs": "16010090", "hs_dotted": "1601.00.90", "desc": "- Loại khác:", "rates": ["7,5", "5", "2,5", "0", "0", "0"]}
-{"hs": "16021010", "hs_dotted": "1602.10.10", "desc": "- - Chứa thịt lợn, đóng bao bì kín khí để bán lẻ:", "rates": ["7,5", "5", "2,5", "0", "0", "0"]}
-{"hs": "16021090", "hs_dotted": "1602.10.90", "desc": "- - Loại khác:", "rates": ["7,5", "5", "2,5", "0", "0", "0"]}
+{"hs": "16010010", "hs_dotted": "1601.00.10", "desc": "- Đóng bao bì kín khí để bán lẻ:", "rates": [], "sublines": [{"hs10": "1601001010", "hs_dotted": "1601.00.10.10", "desc": "- - Từ côn trùng", "rates": ["7,5", "5", "2,5", "0", "0", "0"], "excluded": []}, {"hs10": "1601001090", "hs_dotted": "1601.00.10.90", "desc": "- - Loại khác", "rates": ["16", "14", "12", "10", "8", "6"], "excluded": []}]}
+{"hs": "16010090", "hs_dotted": "1601.00.90", "desc": "- Loại khác:", "rates": [], "sublines": [{"hs10": "1601009010", "hs_dotted": "1601.00.90.10", "desc": "- - Từ côn trùng", "rates": ["7,5", "5", "2,5", "0", "0", "0"], "excluded": []}, {"hs10": "1601009090", "hs_dotted": "1601.00.90.90", "desc": "- - Loại khác", "rates": ["16", "14", "12", "10", "8", "6"], "excluded": []}]}
+{"hs": "16021010", "hs_dotted": "1602.10.10", "desc": "- - Chứa thịt lợn, đóng bao bì kín khí để bán lẻ:", "rates": [], "sublines": [{"hs10": "1602101010", "hs_dotted": "1602.10.10.10", "desc": "- - - Từ côn trùng", "rates": ["7,5", "5", "2,5", "0", "0", "0"], "excluded": []}, {"hs10": "1602101090", "hs_dotted": "1602.10.10.90", "desc": "- - - Loại khác", "rates": ["21", "18", "15", "12", "9", "6"], "excluded": []}]}
+{"hs": "16021090", "hs_dotted": "1602.10.90", "desc": "- - Loại khác:", "rates": [], "sublines": [{"hs10": "1602109010", "hs_dotted": "1602.10.90.10", "desc": "- - - Từ côn trùng", "rates": ["7,5", "5", "2,5", "0", "0", "0"], "excluded": []}, {"hs10": "1602109090", "hs_dotted": "1602.10.90.90", "desc": "- - - Loại khác", "rates": ["21,8", "19", "16,3", "13,6", "10,9", "8,1"], "excluded": []}]}
 {"hs": "16022000", "hs_dotted": "1602.20.00", "desc": "- Từ gan động vật", "rates": ["21,8", "19", "16,3", "13,6", "10,9", "8,1"]}
 {"hs": "16023110", "hs_dotted": "1602.31.10", "desc": "- - - Đóng bao bì kín khí để bán lẻ", "rates": ["16", "14", "12", "10", "8", "6"]}
 {"hs": "16023191", "hs_dotted": "1602.31.91", "desc": "- - - - Từ thịt đã được lọc hoặc tách khỏi xương bằng phương pháp cơ học", "rates": ["16", "14", "12", "10", "8", "6"]}
@@ -1925,9 +1372,9 @@
 {"hs": "16041920", "hs_dotted": "1604.19.20", "desc": "- - - Cá sòng (horse mackerel), đóng bao bì kín khí để bán lẻ", "rates": ["18,7", "15", "11,2", "7,5", "3,7", "0"]}
 {"hs": "16041930", "hs_dotted": "1604.19.30", "desc": "- - - Loại khác, đóng bao bì kín khí để bán lẻ", "rates": ["18,7", "15", "11,2", "7,5", "3,7", "0"]}
 {"hs": "16041990", "hs_dotted": "1604.19.90", "desc": "- - - Loại khác", "rates": ["18,7", "15", "11,2", "7,5", "3,7", "0"]}
-{"hs": "16042020", "hs_dotted": "1604.20.20", "desc": "- - Xúc xích cá:", "rates": ["15", "10", "5", "0", "0", "0"]}
-{"hs": "16042030", "hs_dotted": "1604.20.30", "desc": "- - Cá viên:", "rates": ["15", "10", "5", "0", "0", "0"]}
-{"hs": "16042040", "hs_dotted": "1604.20.40", "desc": "- - Cá dạng bột nhão:", "rates": ["15", "10", "5", "0", "0", "0"]}
+{"hs": "16042020", "hs_dotted": "1604.20.20", "desc": "- - Xúc xích cá:", "rates": [], "sublines": [{"hs10": "1604202010", "hs_dotted": "1604.20.20.10", "desc": "- - - Đóng hộp kín khí", "rates": ["15", "10", "5", "0", "0", "0"], "excluded": []}, {"hs10": "1604202090", "hs_dotted": "1604.20.20.90", "desc": "- - - Loại khác", "rates": ["18,7", "15", "11,2", "7,5", "3,7", "0"], "excluded": []}]}
+{"hs": "16042030", "hs_dotted": "1604.20.30", "desc": "- - Cá viên:", "rates": [], "sublines": [{"hs10": "1604203010", "hs_dotted": "1604.20.30.10", "desc": "- - - Đóng hộp kín khí", "rates": ["15", "10", "5", "0", "0", "0"], "excluded": []}, {"hs10": "1604203090", "hs_dotted": "1604.20.30.90", "desc": "- - - Loại khác", "rates": ["18,7", "15", "11,2", "7,5", "3,7", "0"], "excluded": []}]}
+{"hs": "16042040", "hs_dotted": "1604.20.40", "desc": "- - Cá dạng bột nhão:", "rates": [], "sublines": [{"hs10": "1604204010", "hs_dotted": "1604.20.40.10", "desc": "- - - Đóng hộp kín khí", "rates": ["15", "10", "5", "0", "0", "0"], "excluded": []}, {"hs10": "1604204090", "hs_dotted": "1604.20.40.90", "desc": "- - - Loại khác", "rates": ["18,7", "15", "11,2", "7,5", "3,7", "0"], "excluded": []}]}
 {"hs": "16042091", "hs_dotted": "1604.20.91", "desc": "- - - Đóng bao bì kín khí để bán lẻ", "rates": ["15", "10", "5", "0", "0", "0"]}
 {"hs": "16042099", "hs_dotted": "1604.20.99", "desc": "- - - Loại khác", "rates": ["18,7", "15", "11,2", "7,5", "3,7", "0"]}
 {"hs": "16043100", "hs_dotted": "1604.31.00", "desc": "- - Trứng cá tầm muối", "rates": ["21,8", "17,5", "13,1", "8,7", "4,3", "0"]}
@@ -2001,8 +1448,8 @@
 {"hs": "18061000", "hs_dotted": "1806.10.00", "desc": "- Bột ca cao, đã pha thêm đường hoặc chất tạo ngọt khác", "rates": ["12,5", "10", "7,5", "5", "2,5", "0"]}
 {"hs": "18062010", "hs_dotted": "1806.20.10", "desc": "- - Kẹo sô cô la ở dạng khối, miếng hoặc thanh", "rates": ["12,5", "10", "7,5", "5", "2,5", "0"]}
 {"hs": "18062090", "hs_dotted": "1806.20.90", "desc": "- - Loại khác", "rates": ["11,2", "9", "6,7", "4,5", "2,2", "0"]}
-{"hs": "18063100", "hs_dotted": "1806.31.00", "desc": "- - Có nhân:", "rates": ["6", "4", "2", "0", "0", "0"]}
-{"hs": "18063200", "hs_dotted": "1806.32.00", "desc": "- - Không có nhân:", "rates": ["10", "6,6", "3,3", "0", "0", "0"]}
+{"hs": "18063100", "hs_dotted": "1806.31.00", "desc": "- - Có nhân:", "rates": [], "sublines": [{"hs10": "1806310010", "hs_dotted": "1806.31.00.10", "desc": "- - - Kẹo sô cô la", "rates": ["6", "4", "2", "0", "0", "0"], "excluded": []}, {"hs10": "1806310090", "hs_dotted": "1806.31.00.90", "desc": "- - - Loại khác", "rates": ["18,7", "15", "11,2", "7,5", "3,7", "0"], "excluded": []}]}
+{"hs": "18063200", "hs_dotted": "1806.32.00", "desc": "- - Không có nhân:", "rates": [], "sublines": [{"hs10": "1806320010", "hs_dotted": "1806.32.00.10", "desc": "- - - Kẹo sô cô la", "rates": ["10", "6,6", "3,3", "0", "0", "0"], "excluded": []}, {"hs10": "1806320090", "hs_dotted": "1806.32.00.90", "desc": "- - - Loại khác", "rates": ["18,7", "15", "11,2", "7,5", "3,7", "0"], "excluded": []}]}
 {"hs": "18069010", "hs_dotted": "1806.90.10", "desc": "- - Kẹo sô cô la ở dạng viên (tablets) hoặc viên ngậm (pastilles)", "rates": ["6", "4", "2", "0", "0", "0"]}
 {"hs": "18069030", "hs_dotted": "1806.90.30", "desc": "- - Các chế phẩm thực phẩm từ bột, bột thô, tinh bột hoặc chiết xuất malt, có chứa từ 40% trở lên nhưng không quá 50% tính theo khối lượng là ca cao đã khử toàn bộ chất béo", "rates": ["15,6", "12,5", "9,3", "6,2", "3,1", "0"]}
 {"hs": "18069040", "hs_dotted": "1806.90.40", "desc": "- - Các chế phẩm thực phẩm làm từ sản phẩm thuộc các nhóm từ 04.01 đến 04.04, có chứa từ 5% trở lên nhưng không quá 10% tính theo khối lượng là ca cao đã khử toàn bộ chất béo, được chế biến đặc biệt cho trẻ sơ sinh hoặc trẻ nhỏ, chưa đóng gói để bán lẻ", "rates": ["15,6", "12,5", "9,3", "6,2", "3,1", "0"]}
@@ -4083,14 +3530,14 @@
 {"hs": "39161020", "hs_dotted": "3916.10.20", "desc": "- - Dạng thanh, que và các dạng hình", "rates": ["2,5", "0", "0", "0", "0", "0"]}
 {"hs": "39162010", "hs_dotted": "3916.20.10", "desc": "- - Sợi monofilament", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "39162020", "hs_dotted": "3916.20.20", "desc": "- - Dạng thanh, que và các dạng hình", "rates": ["2,5", "0", "0", "0", "0", "0"]}
-{"hs": "39169011", "hs_dotted": "3916.90.11", "desc": "- - - Từ polypropylen:", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "39169012", "hs_dotted": "3916.90.12", "desc": "- - - Từ polystyren:", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "39169019", "hs_dotted": "3916.90.19", "desc": "- - - Loại khác:", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "39169021", "hs_dotted": "3916.90.21", "desc": "- - - Từ các nhựa phenolic; từ các nhựa amino:", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "39169022", "hs_dotted": "3916.90.22", "desc": "- - - Từ các polyamide:", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "39169029", "hs_dotted": "3916.90.29", "desc": "- - - Loại khác:", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "39169030", "hs_dotted": "3916.90.30", "desc": "- - Từ xenlulo tái sinh; từ xenlulo nitrat, xenlulo acetat và các este xenlulo, ete xenlulo và các dẫn xuất hóa học khác của xenlulo, đã hóa dẻo:", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "39169040", "hs_dotted": "3916.90.40", "desc": "- - Từ các protein đã được làm cứng:", "rates": ["0", "0", "0", "0", "0", "0"]}
+{"hs": "39169011", "hs_dotted": "3916.90.11", "desc": "- - - Từ polypropylen:", "rates": [], "sublines": [{"hs10": "3916901110", "hs_dotted": "3916.90.11.10", "desc": "- - - - Sợi monofilament", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "3916901190", "hs_dotted": "3916.90.11.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
+{"hs": "39169012", "hs_dotted": "3916.90.12", "desc": "- - - Từ polystyren:", "rates": [], "sublines": [{"hs10": "3916901210", "hs_dotted": "3916.90.12.10", "desc": "- - - - Sợi monofilament", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "3916901290", "hs_dotted": "3916.90.12.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
+{"hs": "39169019", "hs_dotted": "3916.90.19", "desc": "- - - Loại khác:", "rates": [], "sublines": [{"hs10": "3916901910", "hs_dotted": "3916.90.19.10", "desc": "- - - - Sợi monofilament", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "3916901990", "hs_dotted": "3916.90.19.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
+{"hs": "39169021", "hs_dotted": "3916.90.21", "desc": "- - - Từ các nhựa phenolic; từ các nhựa amino:", "rates": [], "sublines": [{"hs10": "3916902110", "hs_dotted": "3916.90.21.10", "desc": "- - - - Sợi monofilament", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "3916902190", "hs_dotted": "3916.90.21.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
+{"hs": "39169022", "hs_dotted": "3916.90.22", "desc": "- - - Từ các polyamide:", "rates": [], "sublines": [{"hs10": "3916902210", "hs_dotted": "3916.90.22.10", "desc": "- - - - Sợi monofilament", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "3916902290", "hs_dotted": "3916.90.22.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
+{"hs": "39169029", "hs_dotted": "3916.90.29", "desc": "- - - Loại khác:", "rates": [], "sublines": [{"hs10": "3916902910", "hs_dotted": "3916.90.29.10", "desc": "- - - - Sợi monofilament", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "3916902990", "hs_dotted": "3916.90.29.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
+{"hs": "39169030", "hs_dotted": "3916.90.30", "desc": "- - Từ xenlulo tái sinh; từ xenlulo nitrat, xenlulo acetat và các este xenlulo, ete xenlulo và các dẫn xuất hóa học khác của xenlulo, đã hóa dẻo:", "rates": [], "sublines": [{"hs10": "3916903010", "hs_dotted": "3916.90.30.10", "desc": "- - - Sợi monofilament", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "3916903090", "hs_dotted": "3916.90.30.90", "desc": "- - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
+{"hs": "39169040", "hs_dotted": "3916.90.40", "desc": "- - Từ các protein đã được làm cứng:", "rates": [], "sublines": [{"hs10": "3916904010", "hs_dotted": "3916.90.40.10", "desc": "- - - Sợi monofilament", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "3916904090", "hs_dotted": "3916.90.40.90", "desc": "- - - Dạng thanh, que và các dạng hình", "rates": ["2,5", "0", "0", "0", "0", "0"], "excluded": []}]}
 {"hs": "39169050", "hs_dotted": "3916.90.50", "desc": "- - Từ sợi lưu hóa", "rates": ["2,5", "0", "0", "0", "0", "0"]}
 {"hs": "39169060", "hs_dotted": "3916.90.60", "desc": "- - Từ các dẫn xuất hóa học của cao su tự nhiên", "rates": ["2,5", "0", "0", "0", "0", "0"]}
 {"hs": "39169091", "hs_dotted": "3916.90.91", "desc": "- - - Sợi monofilament", "rates": ["0", "0", "0", "0", "0", "0"]}
@@ -4429,14 +3876,14 @@
 {"hs": "40113000", "hs_dotted": "4011.30.00", "desc": "- Loại sử dụng cho phương tiện bay", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "40114000", "hs_dotted": "4011.40.00", "desc": "- Loại dùng cho xe mô tô", "rates": ["21,8", "17,5", "13,1", "8,7", "4,3", "0"]}
 {"hs": "40115000", "hs_dotted": "4011.50.00", "desc": "- Loại dùng cho xe đạp", "rates": ["25,4", "22,2", "19", "15,9", "12,7", "9,5"]}
-{"hs": "40117000", "hs_dotted": "4011.70.00", "desc": "- Loại dùng cho xe và máy nông nghiệp hoặc lâm nghiệp:", "rates": ["9,3", "7,5", "5,6", "3,7", "1,8", "0"]}
-{"hs": "40118011", "hs_dotted": "4011.80.11", "desc": "- - - Loại dùng cho xe kéo, máy thuộc nhóm 84.29 hoặc 84.30, xe nâng hàng, xe cút kít hoặc xe và máy xếp dỡ công nghiệp khác:", "rates": ["9,3", "7,5", "5,6", "3,7", "1,8", "0"]}
+{"hs": "40117000", "hs_dotted": "4011.70.00", "desc": "- Loại dùng cho xe và máy nông nghiệp hoặc lâm nghiệp:", "rates": [], "sublines": [{"hs10": "4011700011", "hs_dotted": "4011.70.00.11", "desc": "- - Loại có hoa lốp hình chữ chi hoặc tương tự: - - - Loại dùng cho máy kéo nông nghiệp hoặc lâm nghiệp thuộc nhóm 87.01 hoặc dùng cho máy nông nghiệp hoặc lâm nghiệp thuộc nhóm 84.29 hoặc 84.30", "rates": ["9,3", "7,5", "5,6", "3,7", "1,8", "0"], "excluded": []}, {"hs10": "4011700019", "hs_dotted": "4011.70.00.19", "desc": "- - Loại có hoa lốp hình chữ chi hoặc tương tự: - - - Loại khác", "rates": ["12,5", "10", "7,5", "5", "2,5", "0"], "excluded": []}, {"hs10": "4011700091", "hs_dotted": "4011.70.00.91", "desc": "- - Loại khác: - - - Loại dùng cho máy kéo, máy thuộc phân nhóm 84.29 hoặc 84.30 hoặc xe cút kít", "rates": ["7,5", "5", "2,5", "0", "0", "0"], "excluded": []}, {"hs10": "4011700099", "hs_dotted": "4011.70.00.99", "desc": "- - Loại khác: - - - Loại khác", "rates": ["10", "6,6", "3,3", "0", "0", "0"], "excluded": []}]}
+{"hs": "40118011", "hs_dotted": "4011.80.11", "desc": "- - - Loại dùng cho xe kéo, máy thuộc nhóm 84.29 hoặc 84.30, xe nâng hàng, xe cút kít hoặc xe và máy xếp dỡ công nghiệp khác:", "rates": [], "sublines": [{"hs10": "4011801110", "hs_dotted": "4011.80.11.10", "desc": "- - - - Loại có hoa lốp hình chữ chi hoặc tương tự, dùng cho xe kéo, máy thuộc nhóm 84.29 hoặc 84.30, xe nâng hàng hoặc xe và máy xếp dỡ công nghiệp khác", "rates": ["9,3", "7,5", "5,6", "3,7", "1,8", "0"], "excluded": []}, {"hs10": "4011801120", "hs_dotted": "4011.80.11.20", "desc": "- - - - Loại khác, có hoa lốp hình chữ chi hoặc tương tự", "rates": ["12,5", "10", "7,5", "5", "2,5", "0"], "excluded": []}, {"hs10": "4011801190", "hs_dotted": "4011.80.11.90", "desc": "- - - - Loại khác", "rates": ["9,3", "7,5", "5,6", "3,7", "1,8", "0"], "excluded": []}]}
 {"hs": "40118019", "hs_dotted": "4011.80.19", "desc": "- - - Loại khác", "rates": ["12,5", "10", "7,5", "5", "2,5", "0"]}
-{"hs": "40118031", "hs_dotted": "4011.80.31", "desc": "- - - Loại dùng cho máy thuộc nhóm 84.29 hoặc 84.30:", "rates": ["9,3", "7,5", "5,6", "3,7", "1,8", "0"]}
-{"hs": "40118039", "hs_dotted": "4011.80.39", "desc": "- - - Loại khác:", "rates": ["9,3", "7,5", "5,6", "3,7", "1,8", "0"]}
-{"hs": "40118040", "hs_dotted": "4011.80.40", "desc": "- - Lắp vành có đường kính trên 24 inch, loại khác:", "rates": ["12,5", "10", "7,5", "5", "2,5", "0"]}
-{"hs": "40119010", "hs_dotted": "4011.90.10", "desc": "- - Loại dùng cho xe thuộc Chương 87:", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
-{"hs": "40119020", "hs_dotted": "4011.90.20", "desc": "- - Loại dùng cho máy thuộc nhóm 84.29 hoặc 84.30:", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
+{"hs": "40118031", "hs_dotted": "4011.80.31", "desc": "- - - Loại dùng cho máy thuộc nhóm 84.29 hoặc 84.30:", "rates": [], "sublines": [{"hs10": "4011803110", "hs_dotted": "4011.80.31.10", "desc": "- - - - Có hoa lốp hình chữ chi hoặc tương tự", "rates": ["9,3", "7,5", "5,6", "3,7", "1,8", "0"], "excluded": []}, {"hs10": "4011803190", "hs_dotted": "4011.80.31.90", "desc": "- - - - Loại khác", "rates": ["7,5", "5", "2,5", "0", "0", "0"], "excluded": []}]}
+{"hs": "40118039", "hs_dotted": "4011.80.39", "desc": "- - - Loại khác:", "rates": [], "sublines": [{"hs10": "4011803910", "hs_dotted": "4011.80.39.10", "desc": "- - - - Có hoa lốp hình chữ chi hoặc tương tự", "rates": ["9,3", "7,5", "5,6", "3,7", "1,8", "0"], "excluded": []}, {"hs10": "4011803990", "hs_dotted": "4011.80.39.90", "desc": "- - - - Loại khác", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"], "excluded": []}]}
+{"hs": "40118040", "hs_dotted": "4011.80.40", "desc": "- - Lắp vành có đường kính trên 24 inch, loại khác:", "rates": [], "sublines": [{"hs10": "4011804010", "hs_dotted": "4011.80.40.10", "desc": "- - - Có hoa lốp hình chữ chi hoặc tương tự", "rates": ["12,5", "10", "7,5", "5", "2,5", "0"], "excluded": []}, {"hs10": "4011804090", "hs_dotted": "4011.80.40.90", "desc": "- - - Loại khác", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"], "excluded": []}]}
+{"hs": "40119010", "hs_dotted": "4011.90.10", "desc": "- - Loại dùng cho xe thuộc Chương 87:", "rates": [], "sublines": [{"hs10": "4011901010", "hs_dotted": "4011.90.10.10", "desc": "- - - Có hoa lốp hình chữ chi hoặc tương tự", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}, {"hs10": "4011901090", "hs_dotted": "4011.90.10.90", "desc": "- - - Loại khác", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"], "excluded": []}]}
+{"hs": "40119020", "hs_dotted": "4011.90.20", "desc": "- - Loại dùng cho máy thuộc nhóm 84.29 hoặc 84.30:", "rates": [], "sublines": [{"hs10": "4011902010", "hs_dotted": "4011.90.20.10", "desc": "- - - Có hoa lốp hình chữ chi hoặc tương tự", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}, {"hs10": "4011902090", "hs_dotted": "4011.90.20.90", "desc": "- - - Loại khác", "rates": ["7,5", "5", "2,5", "0", "0", "0"], "excluded": []}]}
 {"hs": "40119090", "hs_dotted": "4011.90.90", "desc": "- - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
 {"hs": "40121100", "hs_dotted": "4012.11.00", "desc": "- - Loại sử dụng cho ô tô con (motor car) (kể cả loại ô tô chở người có khoang chở hành lý chung (station wagons) và ô tô đua)", "rates": ["21,8", "19", "16,3", "13,6", "10,9", "8,1"]}
 {"hs": "40121210", "hs_dotted": "4012.12.10", "desc": "- - - Chiều rộng không quá 450 mm", "rates": ["21,8", "19", "16,3", "13,6", "10,9", "8,1"]}
@@ -4445,7 +3892,7 @@
 {"hs": "40121920", "hs_dotted": "4012.19.20", "desc": "- - - Loại dùng cho máy thuộc nhóm 84.27", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
 {"hs": "40121930", "hs_dotted": "4012.19.30", "desc": "- - - Loại dùng cho máy thuộc nhóm 84.29 hoặc 84.30", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
 {"hs": "40121941", "hs_dotted": "4012.19.41", "desc": "- - - - Loại dùng cho máy kéo nông nghiệp hoặc lâm nghiệp", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
-{"hs": "40121949", "hs_dotted": "4012.19.49", "desc": "- - - - Loại khác:", "rates": ["25,4", "22,2", "19", "15,9", "12,7", "9,5"]}
+{"hs": "40121949", "hs_dotted": "4012.19.49", "desc": "- - - - Loại khác:", "rates": [], "sublines": [{"hs10": "4012194910", "hs_dotted": "4012.19.49.10", "desc": "- - - - - Loại dùng cho xe mô tô hoặc xe đạp", "rates": ["25,4", "22,2", "19", "15,9", "12,7", "9,5"], "excluded": []}, {"hs10": "4012194990", "hs_dotted": "4012.19.49.90", "desc": "- - - - - Loại khác", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"], "excluded": []}]}
 {"hs": "40121990", "hs_dotted": "4012.19.90", "desc": "- - - Loại khác", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
 {"hs": "40122010", "hs_dotted": "4012.20.10", "desc": "- - Loại sử dụng cho ô tô con (motor car) (kể cả loại ô tô chở người có khoang chở hành lý chung (station wagons) và ô tô đua)", "rates": ["18,1", "15,9", "13,6", "11,3", "9", "6,8"]}
 {"hs": "40122021", "hs_dotted": "4012.20.21", "desc": "- - - Chiều rộng không quá 450 mm", "rates": ["18,1", "15,9", "13,6", "11,3", "9", "6,8"]}
@@ -4460,7 +3907,7 @@
 {"hs": "40122091", "hs_dotted": "4012.20.91", "desc": "- - - Lốp trơn", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
 {"hs": "40122099", "hs_dotted": "4012.20.99", "desc": "- - - Loại khác", "rates": ["14,5", "12,7", "10,9", "9", "7,2", "5,4"]}
 {"hs": "40129014", "hs_dotted": "4012.90.14", "desc": "- - - Lốp đặc có đường kính ngoài trên 250 mm, chiều rộng không quá 450 mm", "rates": ["3,6", "3,1", "2,7", "2,2", "1,8", "1,3"]}
-{"hs": "40129017", "hs_dotted": "4012.90.17", "desc": "- - - Lốp đặc có đường kính ngoài trên 250 mm, chiều rộng trên 450 mm:", "rates": ["3,6", "3,1", "2,7", "2,2", "1,8", "1,3"]}
+{"hs": "40129017", "hs_dotted": "4012.90.17", "desc": "- - - Lốp đặc có đường kính ngoài trên 250 mm, chiều rộng trên 450 mm:", "rates": [], "sublines": [{"hs10": "4012901710", "hs_dotted": "4012.90.17.10", "desc": "- - - - Dùng cho xe thuộc nhóm 87.09", "rates": ["3,6", "3,1", "2,7", "2,2", "1,8", "1,3"], "excluded": []}, {"hs10": "4012901790", "hs_dotted": "4012.90.17.90", "desc": "- - - - Loại khác", "rates": ["21,8", "19", "16,3", "13,6", "10,9", "8,1"], "excluded": []}]}
 {"hs": "40129019", "hs_dotted": "4012.90.19", "desc": "- - - Loại khác", "rates": ["21,8", "19", "16,3", "13,6", "10,9", "8,1"]}
 {"hs": "40129021", "hs_dotted": "4012.90.21", "desc": "- - - Chiều rộng không quá 450 mm", "rates": ["21,8", "19", "16,3", "13,6", "10,9", "8,1"]}
 {"hs": "40129022", "hs_dotted": "4012.90.22", "desc": "- - - Có chiều rộng trên 450 mm", "rates": ["3,6", "3,1", "2,7", "2,2", "1,8", "1,3"]}
@@ -5039,17 +4486,17 @@
 {"hs": "48092000", "hs_dotted": "4809.20.00", "desc": "- Giấy tự nhân bản", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
 {"hs": "48099010", "hs_dotted": "4809.90.10", "desc": "- - Giấy than và các loại giấy sao chép tương tự", "rates": ["12,5", "10", "7,5", "5", "2,5", "0"]}
 {"hs": "48099090", "hs_dotted": "4809.90.90", "desc": "- - Loại khác", "rates": ["12,5", "10", "7,5", "5", "2,5", "0"]}
-{"hs": "48101310", "hs_dotted": "4810.13.10", "desc": "- - - Đã in, loại dùng cho máy ghi tự động, có chiều rộng từ 150 mm trở xuống:", "rates": ["0", "0", "0", "0", "0", "0"]}
+{"hs": "48101310", "hs_dotted": "4810.13.10", "desc": "- - - Đã in, loại dùng cho máy ghi tự động, có chiều rộng từ 150 mm trở xuống:", "rates": [], "sublines": [{"hs10": "4810131010", "hs_dotted": "4810.13.10.10", "desc": "- - - - Dùng cho các máy điện tim, siêu âm, phế dung kế, não điện kế và kiểm tra thai nhi", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "4810131090", "hs_dotted": "4810.13.10.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
 {"hs": "48101391", "hs_dotted": "4810.13.91", "desc": "- - - - Có chiều rộng từ 150 mm trở xuống", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
 {"hs": "48101399", "hs_dotted": "4810.13.99", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
-{"hs": "48101410", "hs_dotted": "4810.14.10", "desc": "- - - Đã in, dùng cho máy ghi tự động, không có chiều nào trên 360 mm:", "rates": ["0", "0", "0", "0", "0", "0"]}
+{"hs": "48101410", "hs_dotted": "4810.14.10", "desc": "- - - Đã in, dùng cho máy ghi tự động, không có chiều nào trên 360 mm:", "rates": [], "sublines": [{"hs10": "4810141010", "hs_dotted": "4810.14.10.10", "desc": "- - - - Dùng cho các máy điện tim, siêu âm, phế dung kế, não điện kế và kiểm tra thai nhi", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "4810141090", "hs_dotted": "4810.14.10.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
 {"hs": "48101491", "hs_dotted": "4810.14.91", "desc": "- - - - Không có chiều nào trên 360 mm", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
 {"hs": "48101499", "hs_dotted": "4810.14.99", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
-{"hs": "48101910", "hs_dotted": "4810.19.10", "desc": "- - - Đã in, loại dùng cho máy ghi tự động, không có chiều nào trên 360 mm ở dạng không gấp:", "rates": ["0", "0", "0", "0", "0", "0"]}
+{"hs": "48101910", "hs_dotted": "4810.19.10", "desc": "- - - Đã in, loại dùng cho máy ghi tự động, không có chiều nào trên 360 mm ở dạng không gấp:", "rates": [], "sublines": [{"hs10": "4810191010", "hs_dotted": "4810.19.10.10", "desc": "- - - - Dùng cho các máy điện tim, siêu âm, phế dung kế, não điện kế và kiểm tra thai nhi", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "4810191090", "hs_dotted": "4810.19.10.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
 {"hs": "48101990", "hs_dotted": "4810.19.90", "desc": "- - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
-{"hs": "48102210", "hs_dotted": "4810.22.10", "desc": "- - - Đã in, loại dùng cho máy ghi tự động, ở dạng cuộn có chiều rộng không quá 150 mm, hoặc ở dạng tờ không có chiều nào trên 360 mm ở dạng không gấp:", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "48102290", "hs_dotted": "4810.22.90", "desc": "- - - Loại khác:", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "48102910", "hs_dotted": "4810.29.10", "desc": "- - - Đã in, loại dùng cho máy ghi tự động, ở dạng cuộn có chiều rộng không quá 150 mm, hoặc ở dạng tờ không có chiều nào trên 360 mm ở dạng không gấp:", "rates": ["0", "0", "0", "0", "0", "0"]}
+{"hs": "48102210", "hs_dotted": "4810.22.10", "desc": "- - - Đã in, loại dùng cho máy ghi tự động, ở dạng cuộn có chiều rộng không quá 150 mm, hoặc ở dạng tờ không có chiều nào trên 360 mm ở dạng không gấp:", "rates": [], "sublines": [{"hs10": "4810221010", "hs_dotted": "4810.22.10.10", "desc": "- - - - Dùng cho các máy điện tim, siêu âm, phế dung kế, não điện kế và kiểm tra thai nhi", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "4810221090", "hs_dotted": "4810.22.10.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
+{"hs": "48102290", "hs_dotted": "4810.22.90", "desc": "- - - Loại khác:", "rates": [], "sublines": [{"hs10": "4810229010", "hs_dotted": "4810.22.90.10", "desc": "- - - - Dạng cuộn có chiều rộng không quá 150 mm, hoặc dạng tờ không có chiều nào trên 360 mm ở dạng không gấp", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "4810229090", "hs_dotted": "4810.22.90.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
+{"hs": "48102910", "hs_dotted": "4810.29.10", "desc": "- - - Đã in, loại dùng cho máy ghi tự động, ở dạng cuộn có chiều rộng không quá 150 mm, hoặc ở dạng tờ không có chiều nào trên 360 mm ở dạng không gấp:", "rates": [], "sublines": [{"hs10": "4810291010", "hs_dotted": "4810.29.10.10", "desc": "- - - - Dùng cho các máy điện tim, siêu âm, phế dung kế, não điện kế và kiểm tra thai nhi", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "4810291090", "hs_dotted": "4810.29.10.90", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}]}
 {"hs": "48102991", "hs_dotted": "4810.29.91", "desc": "- - - - Dạng cuộn có chiều rộng không quá 150 mm, hoặc dạng tờ không có chiều nào trên 360 mm ở dạng không gấp", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "48102999", "hs_dotted": "4810.29.99", "desc": "- - - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
 {"hs": "48103130", "hs_dotted": "4810.31.30", "desc": "- - - Dạng cuộn có chiều rộng không quá 150 mm hoặc ở dạng tờ không có chiều nào trên 360 mm ở dạng không gấp", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
@@ -5062,8 +4509,8 @@
 {"hs": "48109290", "hs_dotted": "4810.92.90", "desc": "- - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
 {"hs": "48109940", "hs_dotted": "4810.99.40", "desc": "- - - Dạng cuộn có chiều rộng không quá 150 mm hoặc ở dạng tờ không có chiều nào trên 360 mm ở dạng không gấp", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
 {"hs": "48109990", "hs_dotted": "4810.99.90", "desc": "- - - Loại khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
-{"hs": "48111020", "hs_dotted": "4811.10.20", "desc": "- - Dạng cuộn có chiều rộng không quá 15cm hoặc ở dạng tờ hình chữ nhật (kể cả hình vuông) không có chiều nào trên 36 cm ở dạng không gấp:", "rates": ["15,6", "12,5", "9,3", "6,2", "3,1", "0"]}
-{"hs": "48111090", "hs_dotted": "4811.10.90", "desc": "- - Loại khác:", "rates": ["15,6", "12,5", "9,3", "6,2", "3,1", "0"]}
+{"hs": "48111020", "hs_dotted": "4811.10.20", "desc": "- - Dạng cuộn có chiều rộng không quá 15cm hoặc ở dạng tờ hình chữ nhật (kể cả hình vuông) không có chiều nào trên 36 cm ở dạng không gấp:", "rates": [], "sublines": [{"hs10": "4811102010", "hs_dotted": "4811.10.20.10", "desc": "- - - Tấm phủ sàn làm từ giấy hoặc bìa", "rates": ["15,6", "12,5", "9,3", "6,2", "3,1", "0"], "excluded": []}, {"hs10": "4811102090", "hs_dotted": "4811.10.20.90", "desc": "- - - Loại khác", "rates": ["1,2", "0", "0", "0", "0", "0"], "excluded": []}]}
+{"hs": "48111090", "hs_dotted": "4811.10.90", "desc": "- - Loại khác:", "rates": [], "sublines": [{"hs10": "4811109010", "hs_dotted": "4811.10.90.10", "desc": "- - - Tấm phủ sàn làm từ giấy hoặc bìa", "rates": ["15,6", "12,5", "9,3", "6,2", "3,1", "0"], "excluded": []}, {"hs10": "4811109090", "hs_dotted": "4811.10.90.90", "desc": "- - - Loại khác", "rates": ["1,2", "0", "0", "0", "0", "0"], "excluded": []}]}
 {"hs": "48114120", "hs_dotted": "4811.41.20", "desc": "- - - Dạng cuộn có chiều rộng không quá 15 cm hoặc ở dạng tờ hình chữ nhật (kể cả hình vuông) không có chiều nào trên 36 cm ở dạng không gấp", "rates": ["7,5", "5", "2,5", "0", "0", "0"]}
 {"hs": "48114190", "hs_dotted": "4811.41.90", "desc": "- - - Loại khác", "rates": ["7,5", "5", "2,5", "0", "0", "0"]}
 {"hs": "48114900", "hs_dotted": "4811.49.00", "desc": "- - Loại khác", "rates": ["7,5", "5", "2,5", "0", "0", "0"]}
@@ -6053,8 +5500,8 @@
 {"hs": "61159500", "hs_dotted": "6115.95.00", "desc": "- - Từ bông", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "61159600", "hs_dotted": "6115.96.00", "desc": "- - Từ sợi tổng hợp", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "61159900", "hs_dotted": "6115.99.00", "desc": "- - Từ các vật liệu dệt khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "61161010", "hs_dotted": "6116.10.10", "desc": "- - Găng tay của thợ lặn:", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "61161090", "hs_dotted": "6116.10.90", "desc": "- - Loại khác:", "rates": ["0", "0", "0", "0", "0", "0"]}
+{"hs": "61161010", "hs_dotted": "6116.10.10", "desc": "- - Găng tay của thợ lặn:", "rates": [], "sublines": [{"hs10": "6116101010", "hs_dotted": "6116.10.10.10", "desc": "- - - Được ngâm tẩm, tráng hoặc phủ với plastic hoặc cao su", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "6116101020", "hs_dotted": "6116.10.10.20", "desc": "- - - Loại khác, từ sợi tổng hợp", "rates": ["5", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "6116101090", "hs_dotted": "6116.10.10.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}]}
+{"hs": "61161090", "hs_dotted": "6116.10.90", "desc": "- - Loại khác:", "rates": [], "sublines": [{"hs10": "6116109010", "hs_dotted": "6116.10.90.10", "desc": "- - - Được ngâm tẩm, tráng hoặc phủ với plastic hoặc cao su", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "6116109020", "hs_dotted": "6116.10.90.20", "desc": "- - - Loại khác, từ sợi tổng hợp", "rates": ["5", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "6116109090", "hs_dotted": "6116.10.90.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}]}
 {"hs": "61169100", "hs_dotted": "6116.91.00", "desc": "- - Từ lông cừu hoặc lông động vật loại mịn", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "61169200", "hs_dotted": "6116.92.00", "desc": "- - Từ bông", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "61169300", "hs_dotted": "6116.93.00", "desc": "- - Từ sợi tổng hợp", "rates": ["5", "0", "0", "0", "0", "0"]}
@@ -6719,17 +6166,17 @@
 {"hs": "70196400", "hs_dotted": "7019.64.00", "desc": "- - Vải dệt thoi khổ đóng, dệt vân điểm, tù sợi xe, được tráng hoặc ép lớp", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "70196500", "hs_dotted": "7019.65.00", "desc": "- - Vải dệt thoi khổ mở có chiều rộng không quá 30 cm", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "70196600", "hs_dotted": "7019.66.00", "desc": "- - Vải dệt thoi khổ mở có chiều rộng trên 30 cm", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "70196900", "hs_dotted": "7019.69.00", "desc": "- - Loại khác:", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
+{"hs": "70196900", "hs_dotted": "7019.69.00", "desc": "- - Loại khác:", "rates": [], "sublines": [{"hs10": "7019690010", "hs_dotted": "7019.69.00.10", "desc": "- - - Mạng (webs), đệm, tấm và các sản phẩm không dệt tương tự", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}, {"hs10": "7019690090", "hs_dotted": "7019.69.00.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}]}
 {"hs": "70197100", "hs_dotted": "7019.71.00", "desc": "- - Voan (tấm mỏng)", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "70197200", "hs_dotted": "7019.72.00", "desc": "- - Vải dệt khổ đóng khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
 {"hs": "70197300", "hs_dotted": "7019.73.00", "desc": "- - Vải dệt khổ mở khác", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
 {"hs": "70198010", "hs_dotted": "7019.80.10", "desc": "- - Len thủy tinh", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "70198020", "hs_dotted": "7019.80.20", "desc": "- - Các sản phẩm từ len thủy tinh:", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
+{"hs": "70198020", "hs_dotted": "7019.80.20", "desc": "- - Các sản phẩm từ len thủy tinh:", "rates": [], "sublines": [{"hs10": "7019802010", "hs_dotted": "7019.80.20.10", "desc": "- - - Mạng (webs), đệm, tấm và các sản phẩm không dệt tương tự", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}, {"hs10": "7019802090", "hs_dotted": "7019.80.20.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}]}
 {"hs": "70199020", "hs_dotted": "7019.90.20", "desc": "- - Rèm (blinds)", "rates": ["18,7", "15", "11,2", "7,5", "3,7", "0"]}
 {"hs": "70199030", "hs_dotted": "7019.90.30", "desc": "- - Xơ thủy tinh, trừ len thủy tinh", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "70199040", "hs_dotted": "7019.90.40", "desc": "- - Vật liệu bọc ngoài đường ống bằng sợi thủy tinh đã được thấm tẩm nhựa đường hoặc nhựa than đá", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "70199050", "hs_dotted": "7019.90.50", "desc": "- - Vải dệt thoi từ sợi thô", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "70199090", "hs_dotted": "7019.90.90", "desc": "- - Loại khác:", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
+{"hs": "70199090", "hs_dotted": "7019.90.90", "desc": "- - Loại khác:", "rates": [], "sublines": [{"hs10": "7019909010", "hs_dotted": "7019.90.90.10", "desc": "- - - Mạng (webs), đệm, tấm và các sản phẩm không dệt tương tự", "rates": ["5", "3,3", "1,6", "0", "0", "0"], "excluded": []}, {"hs10": "7019909090", "hs_dotted": "7019.90.90.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}]}
 {"hs": "70200011", "hs_dotted": "7020.00.11", "desc": "- - Loại dùng để sản xuất các sản phẩm acrylic", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "70200019", "hs_dotted": "7020.00.19", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "70200020", "hs_dotted": "7020.00.20", "desc": "- Ống thạch anh dùng trong lò phản ứng và vòng kẹp được thiết kế để chèn vào lò luyện khuếch tán và lò ôxi hóa để sản xuất tấm bán dẫn mỏng", "rates": ["0", "0", "0", "0", "0", "0"]}
@@ -9882,7 +9329,7 @@
 {"hs": "85369029", "hs_dotted": "8536.90.29", "desc": "- - - Loại khác", "rates": ["10", "6,6", "3,3", "0", "0", "0"]}
 {"hs": "85369032", "hs_dotted": "8536.90.32", "desc": "- - - Dòng điện dưới 16 A", "rates": ["10", "6,6", "3,3", "0", "0", "0"]}
 {"hs": "85369039", "hs_dotted": "8536.90.39", "desc": "- - - Loại khác", "rates": ["10", "6,6", "3,3", "0", "0", "0"]}
-{"hs": "85369040", "hs_dotted": "8536.90.40", "desc": "- - Kẹp pin dùng cho xe có động cơ thuộc nhóm 87.02, 87.03, 87.04 hoặc 87.11:", "rates": ["12,5", "8,3", "4,1", "0", "0", "0"]}
+{"hs": "85369040", "hs_dotted": "8536.90.40", "desc": "- - Kẹp pin dùng cho xe có động cơ thuộc nhóm 87.02, 87.03, 87.04 hoặc 87.11:", "rates": [], "sublines": [{"hs10": "8536904010", "hs_dotted": "8536.90.40.10", "desc": "- - - Dòng điện dưới 16 A", "rates": ["12,5", "8,3", "4,1", "0", "0", "0"], "excluded": []}, {"hs10": "8536904090", "hs_dotted": "8536.90.40.90", "desc": "- - - Loại khác", "rates": ["10", "6,6", "3,3", "0", "0", "0"], "excluded": []}]}
 {"hs": "85369093", "hs_dotted": "8536.90.93", "desc": "- - - - Phiến đầu nối và khối đấu nối cáp điện thoại", "rates": ["7,5", "5", "2,5", "0", "0", "0"]}
 {"hs": "85369094", "hs_dotted": "8536.90.94", "desc": "- - - - Loại khác", "rates": ["12,5", "8,3", "4,1", "0", "0", "0"]}
 {"hs": "85369099", "hs_dotted": "8536.90.99", "desc": "- - - Loại khác", "rates": ["10", "6,6", "3,3", "0", "0", "0"]}
@@ -9945,12 +9392,12 @@
 {"hs": "85393990", "hs_dotted": "8539.39.90", "desc": "- - - Loại khác", "rates": ["4", "2,6", "1,3", "0", "0", "0"]}
 {"hs": "85394100", "hs_dotted": "8539.41.00", "desc": "- - Bóng đèn hồ quang", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "85394900", "hs_dotted": "8539.49.00", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "85395100", "hs_dotted": "8539.51.00", "desc": "- - Mô-đun đi-ốt phát quang (LED):", "rates": ["5", "0", "0", "0", "0", "0"]}
+{"hs": "85395100", "hs_dotted": "8539.51.00", "desc": "- - Mô-đun đi-ốt phát quang (LED):", "rates": [], "sublines": [{"hs10": "8539510010", "hs_dotted": "8539.51.00.10", "desc": "- - - Dùng cho đèn và bộ đèn kể cả đèn pha và đèn rọi; biển hiệu được chiếu sáng, biển đề tên được chiếu sáng và các loại tương tự, có nguồn sáng cố định thường xuyên, trừ loại bằng thủy tinh hoặc plastic", "rates": ["5", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "8539510020", "hs_dotted": "8539.51.00.20", "desc": "- - - Loại khác, dùng cho đèn của xe có động cơ", "rates": ["9,3", "7,5", "5,6", "3,7", "1,8", "0"], "excluded": []}, {"hs10": "8539510090", "hs_dotted": "8539.51.00.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}]}
 {"hs": "85395210", "hs_dotted": "8539.52.10", "desc": "- - - Loại đầu đèn ren xoáy", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "85395290", "hs_dotted": "8539.52.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "85399010", "hs_dotted": "8539.90.10", "desc": "- - Nắp bịt nhôm dùng cho bóng đèn huỳnh quang; đui xoáy nhôm dùng cho bóng đèn dây tóc", "rates": ["2,5", "1,6", "0,8", "0", "0", "0"]}
 {"hs": "85399020", "hs_dotted": "8539.90.20", "desc": "- - Loại khác, dùng cho đèn của xe có động cơ", "rates": ["9,3", "7,5", "5,6", "3,7", "1,8", "0"]}
-{"hs": "85399030", "hs_dotted": "8539.90.30", "desc": "- - Loại khác, của phân nhóm 8539.51.00:", "rates": ["5", "0", "0", "0", "0", "0"]}
+{"hs": "85399030", "hs_dotted": "8539.90.30", "desc": "- - Loại khác, của phân nhóm 8539.51.00:", "rates": [], "sublines": [{"hs10": "8539903010", "hs_dotted": "8539.90.30.10", "desc": "- - - Dùng cho đèn và bộ đèn kể cả đèn pha và đèn rọi; biển hiệu được chiếu sáng, biển đề tên được chiếu sáng và các loại tương tự, có nguồn sáng cố định thường xuyên, trừ loại bằng thủy tinh hoặc plastic", "rates": ["5", "0", "0", "0", "0", "0"], "excluded": []}, {"hs10": "8539903090", "hs_dotted": "8539.90.30.90", "desc": "- - - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"], "excluded": []}]}
 {"hs": "85399090", "hs_dotted": "8539.90.90", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "85401100", "hs_dotted": "8540.11.00", "desc": "- - Loại màu", "rates": ["2,5", "1,6", "0,8", "0", "0", "0"]}
 {"hs": "85401200", "hs_dotted": "8540.12.00", "desc": "- - Loại đơn sắc", "rates": ["5", "3,3", "1,6", "0", "0", "0"]}
@@ -10418,7 +9865,7 @@
 {"hs": "87034033", "hs_dotted": "8703.40.33", "desc": "- - - - Dung tích xi lanh trên 1.000 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87034034", "hs_dotted": "8703.40.34", "desc": "- - - - Dung tích xi lanh trên 1.000 cc nhưng không quá 1.500 cc", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
 {"hs": "87034035", "hs_dotted": "8703.40.35", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 3.000 cc", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "87034036", "hs_dotted": "8703.40.36", "desc": "- - - - Loại khác:", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
+{"hs": "87034036", "hs_dotted": "8703.40.36", "desc": "- - - - Loại khác:", "rates": [], "sublines": [{"hs10": "8703403610", "hs_dotted": "8703.40.36.10", "desc": "- - - - - Dung tích xi lanh không quá 1.000 cc", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"], "excluded": []}, {"hs10": "8703403690", "hs_dotted": "8703.40.36.90", "desc": "- - - - - Loại khác", "rates": ["10,5", "9", "7,5", "6", "4,5", "3"], "excluded": []}]}
 {"hs": "87034041", "hs_dotted": "8703.40.41", "desc": "- - - - Dung tích xi lanh không quá 1.000 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87034042", "hs_dotted": "8703.40.42", "desc": "- - - - Dung tích xi lanh trên 1.000 cc nhưng không quá 1.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87034043", "hs_dotted": "8703.40.43", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 1.800 cc", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
@@ -10433,7 +9880,7 @@
 {"hs": "87034055", "hs_dotted": "8703.40.55", "desc": "- - - - Dung tích xi lanh trên 3.000 cc", "rates": ["10,5", "9", "7,5", "6", "4,5", "3"]}
 {"hs": "87034056", "hs_dotted": "8703.40.56", "desc": "- - - - Dung tích xi lanh không quá 1.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87034057", "hs_dotted": "8703.40.57", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 2.000 cc", "rates": ["53,8", "47", "40,3", "33,6", "26,9", "20,1"]}
-{"hs": "87034058", "hs_dotted": "8703.40.58", "desc": "- - - - Dung tích xi lanh trên 2.000 cc:", "rates": ["53,8", "47", "40,3", "33,6", "26,9", "20,1"]}
+{"hs": "87034058", "hs_dotted": "8703.40.58", "desc": "- - - - Dung tích xi lanh trên 2.000 cc:", "rates": [], "sublines": [{"hs10": "8703405810", "hs_dotted": "8703.40.58.10", "desc": "- - - - - Dung tích xi lanh trên 2.000 cc nhưng không quá 3.000 cc", "rates": ["53,8", "47", "40,3", "33,6", "26,9", "20,1"], "excluded": []}, {"hs10": "8703405890", "hs_dotted": "8703.40.58.90", "desc": "- - - - - Loại khác", "rates": ["51,8", "44,4", "37", "29,6", "22,2", "14,8"], "excluded": []}]}
 {"hs": "87034061", "hs_dotted": "8703.40.61", "desc": "- - - - Dung tích xi lanh không quá 1.000 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87034062", "hs_dotted": "8703.40.62", "desc": "- - - - Dung tích xi lanh trên 1.000 cc nhưng không quá 1.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87034063", "hs_dotted": "8703.40.63", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 1.800 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
@@ -10501,7 +9948,7 @@
 {"hs": "87035055", "hs_dotted": "8703.50.55", "desc": "- - - - Dung tích xi lanh trên 2.500 cc", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
 {"hs": "87035056", "hs_dotted": "8703.50.56", "desc": "- - - - Dung tích xi lanh không quá 1.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87035057", "hs_dotted": "8703.50.57", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 2.000 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
-{"hs": "87035058", "hs_dotted": "8703.50.58", "desc": "- - - - Dung tích xi lanh trên 2.000 cc:", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
+{"hs": "87035058", "hs_dotted": "8703.50.58", "desc": "- - - - Dung tích xi lanh trên 2.000 cc:", "rates": [], "sublines": [{"hs10": "8703505810", "hs_dotted": "8703.50.58.10", "desc": "- - - - - Dung tích xi lanh trên 2.000 cc nhưng không quá 2.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"], "excluded": []}, {"hs10": "8703505890", "hs_dotted": "8703.50.58.90", "desc": "- - - - - Loại khác", "rates": ["54,6", "46,8", "39", "31,2", "23,4", "15,6"], "excluded": []}]}
 {"hs": "87035061", "hs_dotted": "8703.50.61", "desc": "- - - - Dung tích xi lanh không quá 1.000 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87035062", "hs_dotted": "8703.50.62", "desc": "- - - - Dung tích xi lanh trên 1.000 cc nhưng không quá 1.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87035063", "hs_dotted": "8703.50.63", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 1.800 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
@@ -10552,7 +9999,7 @@
 {"hs": "87036033", "hs_dotted": "8703.60.33", "desc": "- - - - Dung tích xi lanh trên 1.000 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87036034", "hs_dotted": "8703.60.34", "desc": "- - - - Dung tích xi lanh trên 1.000 cc nhưng không quá 1.500 cc", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
 {"hs": "87036035", "hs_dotted": "8703.60.35", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 3.000 cc", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "87036036", "hs_dotted": "8703.60.36", "desc": "- - - - Loại khác:", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
+{"hs": "87036036", "hs_dotted": "8703.60.36", "desc": "- - - - Loại khác:", "rates": [], "sublines": [{"hs10": "8703603610", "hs_dotted": "8703.60.36.10", "desc": "- - - - - Dung tích xi lanh không quá 1.000 cc", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"], "excluded": []}, {"hs10": "8703603690", "hs_dotted": "8703.60.36.90", "desc": "- - - - - Loại khác", "rates": ["10,5", "9", "7,5", "6", "4,5", "3"], "excluded": []}]}
 {"hs": "87036041", "hs_dotted": "8703.60.41", "desc": "- - - - Dung tích xi lanh không quá 1.000 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87036042", "hs_dotted": "8703.60.42", "desc": "- - - - Dung tích xi lanh trên 1.000 cc nhưng không quá 1.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87036043", "hs_dotted": "8703.60.43", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 1.800 cc", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
@@ -10567,7 +10014,7 @@
 {"hs": "87036055", "hs_dotted": "8703.60.55", "desc": "- - - - Dung tích xi lanh trên 3.000 cc", "rates": ["10,5", "9", "7,5", "6", "4,5", "3"]}
 {"hs": "87036056", "hs_dotted": "8703.60.56", "desc": "- - - - Dung tích xi lanh không quá 1.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87036057", "hs_dotted": "8703.60.57", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 2.000 cc", "rates": ["53,8", "47", "40,3", "33,6", "26,9", "20,1"]}
-{"hs": "87036058", "hs_dotted": "8703.60.58", "desc": "- - - - Dung tích xi lanh trên 2.000 cc:", "rates": ["53,8", "47", "40,3", "33,6", "26,9", "20,1"]}
+{"hs": "87036058", "hs_dotted": "8703.60.58", "desc": "- - - - Dung tích xi lanh trên 2.000 cc:", "rates": [], "sublines": [{"hs10": "8703605810", "hs_dotted": "8703.60.58.10", "desc": "- - - - - Dung tích xi lanh trên 2.000 cc nhưng không quá 3.000 cc", "rates": ["53,8", "47", "40,3", "33,6", "26,9", "20,1"], "excluded": []}, {"hs10": "8703605890", "hs_dotted": "8703.60.58.90", "desc": "- - - - - Loại khác", "rates": ["51,8", "44,4", "37", "29,6", "22,2", "14,8"], "excluded": []}]}
 {"hs": "87036061", "hs_dotted": "8703.60.61", "desc": "- - - - Dung tích xi lanh không quá 1.000 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87036062", "hs_dotted": "8703.60.62", "desc": "- - - - Dung tích xi lanh trên 1.000 cc nhưng không quá 1.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87036063", "hs_dotted": "8703.60.63", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 1.800 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
@@ -10635,7 +10082,7 @@
 {"hs": "87037055", "hs_dotted": "8703.70.55", "desc": "- - - - Dung tích xi lanh trên 2.500 cc", "rates": ["10,5", "9", "7,5", "6", "4,5", "3"]}
 {"hs": "87037056", "hs_dotted": "8703.70.56", "desc": "- - - - Dung tích xi lanh không quá 1.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87037057", "hs_dotted": "8703.70.57", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 2.000 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
-{"hs": "87037058", "hs_dotted": "8703.70.58", "desc": "- - - - Dung tích xi lanh trên 2.000 cc:", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
+{"hs": "87037058", "hs_dotted": "8703.70.58", "desc": "- - - - Dung tích xi lanh trên 2.000 cc:", "rates": [], "sublines": [{"hs10": "8703705810", "hs_dotted": "8703.70.58.10", "desc": "- - - - - Dung tích xi lanh trên 2.000 cc nhưng không quá 2.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"], "excluded": []}, {"hs10": "8703705890", "hs_dotted": "8703.70.58.90", "desc": "- - - - - Loại khác", "rates": ["54,6", "46,8", "39", "31,2", "23,4", "15,6"], "excluded": []}]}
 {"hs": "87037061", "hs_dotted": "8703.70.61", "desc": "- - - - Dung tích xi lanh không quá 1.000 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87037062", "hs_dotted": "8703.70.62", "desc": "- - - - Dung tích xi lanh trên 1.000 cc nhưng không quá 1.500 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
 {"hs": "87037063", "hs_dotted": "8703.70.63", "desc": "- - - - Dung tích xi lanh trên 1.500 cc nhưng không quá 1.800 cc", "rates": ["56,7", "49,6", "42,5", "35,4", "28,3", "21,2"]}
@@ -10866,7 +10313,7 @@
 {"hs": "87044363", "hs_dotted": "8704.43.63", "desc": "- - - - - Ô tô xi téc; ô tô chở xi măng kiểu bồn", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
 {"hs": "87044364", "hs_dotted": "8704.43.64", "desc": "- - - - - Ô tô bọc thép để chở hàng hóa có giá trị", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
 {"hs": "87044365", "hs_dotted": "8704.43.65", "desc": "- - - - - Ô tô chở bùn có thùng rời nâng hạ được", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"]}
-{"hs": "87044369", "hs_dotted": "8704.43.69", "desc": "- - - - - Loại khác:", "rates": ["7,2", "6,3", "5,4", "4,5", "3,6", "2,7"]}
+{"hs": "87044369", "hs_dotted": "8704.43.69", "desc": "- - - - - Loại khác:", "rates": [], "sublines": [{"hs10": "8704436910", "hs_dotted": "8704.43.69.10", "desc": "- - - - - - Ô tô tự đổ", "rates": ["7,2", "6,3", "5,4", "4,5", "3,6", "2,7"], "excluded": []}, {"hs10": "8704436990", "hs_dotted": "8704.43.69.90", "desc": "- - - - - - Loại khác", "rates": ["10,9", "9,5", "8,1", "6,8", "5,4", "4"], "excluded": []}]}
 {"hs": "87044371", "hs_dotted": "8704.43.71", "desc": "- - - - - Ô tô tải đông lạnh", "rates": ["*", "*", "*", "*", "*", "*"]}
 {"hs": "87044379", "hs_dotted": "8704.43.79", "desc": "- - - - - Loại khác", "rates": ["*", "*", "*", "*", "*", "*"]}
 {"hs": "87044381", "hs_dotted": "8704.43.81", "desc": "- - - - - Ô tô tải đông lạnh", "rates": ["0", "0", "0", "0", "0", "0"]}
@@ -11099,15 +10546,15 @@
 {"hs": "87111094", "hs_dotted": "8711.10.94", "desc": "- - - Xe \"powered kick scooter\"; xe “pocket motorcycle”", "rates": ["54,5", "47,7", "40,9", "34", "27,2", "20,4"]}
 {"hs": "87111095", "hs_dotted": "8711.10.95", "desc": "- - - Xe mô tô và xe scooter khác", "rates": ["54,5", "47,7", "40,9", "34", "27,2", "20,4"]}
 {"hs": "87111099", "hs_dotted": "8711.10.99", "desc": "- - - Loại khác", "rates": ["54,5", "47,7", "40,9", "34", "27,2", "20,4"]}
-{"hs": "87112011", "hs_dotted": "8711.20.11", "desc": "- - - Xe mô tô địa hình:", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "0"]}
-{"hs": "87112012", "hs_dotted": "8711.20.12", "desc": "- - - Xe gắn máy có bàn đạp (moped) hoặc xe đạp có động cơ:", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "0"]}
+{"hs": "87112011", "hs_dotted": "8711.20.11", "desc": "- - - Xe mô tô địa hình:", "rates": [], "sublines": [{"hs10": "8711201110", "hs_dotted": "8711.20.11.10", "desc": "- - - - Loại dung tích xi lanh trên 150 cc", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "0"], "excluded": []}, {"hs10": "8711201190", "hs_dotted": "8711.20.11.90", "desc": "- - - - Loại khác", "rates": ["54,5", "47,7", "40,9", "34", "27,2", "20,4"], "excluded": []}]}
+{"hs": "87112012", "hs_dotted": "8711.20.12", "desc": "- - - Xe gắn máy có bàn đạp (moped) hoặc xe đạp có động cơ:", "rates": [], "sublines": [{"hs10": "8711201210", "hs_dotted": "8711.20.12.10", "desc": "- - - - Loại dung tích xi lanh trên 150 cc", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "0"], "excluded": []}, {"hs10": "8711201290", "hs_dotted": "8711.20.12.90", "desc": "- - - - Loại khác", "rates": ["54,5", "47,7", "40,9", "34", "27,2", "20,4"], "excluded": []}]}
 {"hs": "87112013", "hs_dotted": "8711.20.13", "desc": "- - - Xe “pocket motorcycle”", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "20,4"]}
 {"hs": "87112014", "hs_dotted": "8711.20.14", "desc": "- - - - Dung tích xi lanh trên 150 cc nhưng không quá 200 cc", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "20,4"]}
 {"hs": "87112015", "hs_dotted": "8711.20.15", "desc": "- - - - Dung tích xi lanh trên 200 cc nhưng không quá 250 cc", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "20,4"]}
 {"hs": "87112016", "hs_dotted": "8711.20.16", "desc": "- - - - Loại khác", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "20,4"]}
-{"hs": "87112019", "hs_dotted": "8711.20.19", "desc": "- - - Loại khác:", "rates": ["54,5", "47,7", "40,9", "34", "27,2", "20,4"]}
-{"hs": "87112091", "hs_dotted": "8711.20.91", "desc": "- - - Xe mô tô địa hình:", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "0"]}
-{"hs": "87112092", "hs_dotted": "8711.20.92", "desc": "- - - Xe gắn máy có bàn đạp (moped) hoặc xe đạp có động cơ:", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "0"]}
+{"hs": "87112019", "hs_dotted": "8711.20.19", "desc": "- - - Loại khác:", "rates": [], "sublines": [{"hs10": "8711201910", "hs_dotted": "8711.20.19.10", "desc": "- - - - Loại có dung tích xi lanh không quá 200 cc", "rates": ["54,5", "47,7", "40,9", "34", "27,2", "20,4"], "excluded": []}, {"hs10": "8711201990", "hs_dotted": "8711.20.19.90", "desc": "- - - - Loại khác", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "20,4"], "excluded": []}]}
+{"hs": "87112091", "hs_dotted": "8711.20.91", "desc": "- - - Xe mô tô địa hình:", "rates": [], "sublines": [{"hs10": "8711209110", "hs_dotted": "8711.20.91.10", "desc": "- - - - Loại dung tích xi lanh trên 150 cc", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "0"], "excluded": []}, {"hs10": "8711209190", "hs_dotted": "8711.20.91.90", "desc": "- - - - Loại khác", "rates": ["54,5", "47,7", "40,9", "34", "27,2", "20,4"], "excluded": []}]}
+{"hs": "87112092", "hs_dotted": "8711.20.92", "desc": "- - - Xe gắn máy có bàn đạp (moped) hoặc xe đạp có động cơ:", "rates": [], "sublines": [{"hs10": "8711209210", "hs_dotted": "8711.20.92.10", "desc": "- - - - Loại dung tích xi lanh trên 150 cc", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "0"], "excluded": []}, {"hs10": "8711209290", "hs_dotted": "8711.20.92.90", "desc": "- - - - Loại khác", "rates": ["54,5", "47,7", "40,9", "34", "27,2", "20,4"], "excluded": []}]}
 {"hs": "87112093", "hs_dotted": "8711.20.93", "desc": "- - - Xe “pocket motorcycle”", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "0"]}
 {"hs": "87112094", "hs_dotted": "8711.20.94", "desc": "- - - - Dung tích xi lanh trên 150 cc nhưng không quá 200 cc", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "20,4"]}
 {"hs": "87112095", "hs_dotted": "8711.20.95", "desc": "- - - - Dung tích xi lanh trên 200 cc nhưng không quá 250 cc", "rates": ["46,8", "37,5", "28,1", "18,7", "9,3", "20,4"]}
@@ -11964,4 +11411,4 @@
 {"hs": "97053100", "hs_dotted": "9705.31.00", "desc": "- - Có tuổi trên 100 năm", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "97053900", "hs_dotted": "9705.39.00", "desc": "- - Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}
 {"hs": "97061000", "hs_dotted": "9706.10.00", "desc": "- Có tuổi trên 250 năm", "rates": ["0", "0", "0", "0", "0", "0"]}
-{"hs": "97069000", "hs_dotted": "9706.90.00", "desc": "- Loại khác", "rates": ["0", "0", "0", "0", "0", "0", "*", "*", "*", "*", "*", "*", "*", "*"]}
+{"hs": "97069000", "hs_dotted": "9706.90.00", "desc": "- Loại khác", "rates": ["0", "0", "0", "0", "0", "0"]}

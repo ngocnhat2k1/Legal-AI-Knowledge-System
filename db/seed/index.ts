@@ -38,8 +38,15 @@ const FTA_YEARS = [2022, 2023, 2024, 2025, 2026, 2027];
 interface Nd26Row { annex: string; chapter98: boolean; hs: string; hs_dotted: string; desc: string; rate: string | null; corresponding?: string | null }
 // Type aliases, not interfaces: sql.json() needs index-signature-compatible objects.
 type FtaSubline = { hs10: string; hs_dotted: string; desc: string; rates: string[]; excluded: string[] };
-/** `excluded` / `excluded_sublines`: ACFTA only — ND 118/2022 column "Nước không được hưởng ưu đãi". */
-type FtaRow = { hs: string; hs_dotted: string; desc: string; rates: string[]; excluded?: string[]; excluded_sublines?: FtaSubline[] };
+/**
+ * `excluded` (and a sub-line's `excluded`): ACFTA only — ND 118/2022 column "Nước không được hưởng ưu đãi".
+ * `sublines`: the 10-digit national lines of an 8-digit parent that has no rate cell of its own (`rates: []`).
+ */
+type FtaRow = { hs: string; hs_dotted: string; desc: string; rates: string[]; excluded?: string[]; sublines?: FtaSubline[] };
+
+/** One rate cell as tariff_rate columns: `*` is an exclusion (no number), never 0%. */
+const rateCell = (cell: string) =>
+  cell === '*' ? { rate_type: 'excluded', rate_percent: null } : { rate_type: 'ad_valorem', rate_percent: cell.replace(',', '.') };
 
 /** FTA schedules: single-rate (whole 2022–2027) unless `years` maps six columns. */
 const FTA = [
@@ -200,30 +207,49 @@ async function main(): Promise<void> {
     const [ann] = await sql`INSERT INTO annex (decree_id, code, name, trade_direction)
       VALUES (${fdec}, ${f.schedule}, ${'Biểu thuế NK ưu đãi đặc biệt ' + f.schedule}, 'import') RETURNING id`;
     const rows = readNdjson<FtaRow>(`fta-${f.key}.ndjson`);
+    const intervals = f.years
+      ? f.years.map((y) => ({ from: `${y}-01-01`, to: `${y}-12-31` }))
+      : [{ from: '2022-12-30', to: '2027-12-31' }];
     const seen = new Set<string>();
     const inserts: Record<string, unknown>[] = [];
+    let parents = 0;
+    let bySubline = 0;
     for (const r of rows) {
-      if (seen.has(r.hs) || r.rates.length === 0) continue;
+      // One row per code: a repeat (EVFTA's export Phụ lục I once) is never resolved by first-row-wins.
+      if (seen.has(r.hs)) throw new Error(`fta-${f.key}.ndjson: HS ${r.hs_dotted} is repeated`);
       seen.add(r.hs);
-      const cond = {
-        ...(r.excluded?.length ? { excluded_origins: r.excluded } : {}),
-        ...(r.excluded_sublines?.length ? { excluded_sublines: r.excluded_sublines } : {}),
-      };
-      // Always set the key: a multi-row insert takes its column list from the first row.
-      const conditions = Object.keys(cond).length ? sql.json(cond) : null;
-      const intervals = f.years && r.rates.length === f.years.length
-        ? r.rates.map((rate, idx) => ({ rate, from: `${f.years![idx]}-01-01`, to: `${f.years![idx]}-12-31` }))
-        : [{ rate: r.rates[0]!, from: '2022-12-30', to: '2027-12-31' }];
-      for (const ivl of intervals) {
-        const excl = ivl.rate === '*';
+      const subs = r.sublines ?? [];
+      if (subs.length && r.rates.length) throw new Error(`fta-${f.key}.ndjson: ${r.hs_dotted} has both its own rates and sub-lines`);
+      for (const line of subs.length ? subs : [r]) {
+        if (line.rates.length !== intervals.length) {
+          throw new Error(`fta-${f.key}.ndjson: ${line.hs_dotted} has ${line.rates.length} rate cells, ${f.schedule} has ${intervals.length}`);
+        }
+      }
+      if (subs.length) parents++;
+      intervals.forEach((ivl, idx) => {
+        // Sub-lines carry this interval's rate. When they agree the parent keeps that common rate
+        // (true for every sub-line); when they differ it carries no number at all (by_subline).
+        const cells = subs.map((s) => s.rates[idx]!);
+        const common = new Set(cells.map((c) => (c === '*' ? c : String(Number(c.replace(',', '.')))))).size === 1;
+        const rate = subs.length ? (common ? rateCell(cells[0]!) : { rate_type: 'by_subline', rate_percent: null }) : rateCell(r.rates[idx]!);
+        if (rate.rate_type === 'by_subline') bySubline++;
+        const cond = {
+          ...(r.excluded?.length ? { excluded_origins: r.excluded } : {}),
+          ...(subs.length
+            ? { sublines: subs.map((s) => ({ code: s.hs10, code_dotted: s.hs_dotted, desc: s.desc, ...rateCell(s.rates[idx]!), excluded_origins: s.excluded })) }
+            : {}),
+        };
+        const cell = subs.length ? subs.map((s) => `${s.hs_dotted} ${s.rates[idx]}`).join('; ') : r.rates[idx];
         inserts.push({
           hs_code: r.hs, hs_version_id: hsV, annex_id: ann.id as number, schedule_id: schedId[f.schedule]!,
-          rate_type: excl ? 'excluded' : 'ad_valorem', rate_percent: excl ? null : ivl.rate!.replace(',', '.'),
-          effective_from: ivl.from, effective_to: ivl.to, source_decree_id: fdec as number,
-          source_cell_text: `${f.schedule} | ${r.hs_dotted} | ${r.desc} | ${ivl.rate}`, conditions,
+          ...rate, effective_from: ivl.from, effective_to: ivl.to, source_decree_id: fdec as number,
+          source_cell_text: `${f.schedule} | ${r.hs_dotted} | ${r.desc} | ${cell}`,
+          // Always set the key: a multi-row insert takes its column list from the first row.
+          conditions: Object.keys(cond).length ? sql.json(cond) : null,
         });
-      }
+      });
     }
+    console.log(`  ${f.schedule}: ${parents} codes with 10-digit sub-lines, ${bySubline} by_subline intervals`);
     await insertRates(inserts, `${f.schedule} (${seen.size} HS)`);
   }
 

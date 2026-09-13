@@ -93,6 +93,9 @@ export const rateType = pgEnum('rate_type', [
   'compound', // both a percentage and an absolute amount
   'excluded', // the `*` marker: good is excluded from the schedule, NOT 0%
   'trq', // tariff-rate quota: in-quota rate here, over-quota rate in out_of_quota_annex_id
+  // FTA 8-digit parent whose 10-digit national sub-lines differ for this interval: NO number on
+  // the row, the rates are in conditions.sublines (migration 0010, ADR 2026-09-13-fta-national-sublines)
+  'by_subline',
 ]);
 
 /** Annex I is the export schedule; Annex II the (preferential) import schedule. The two-annex trap. */
@@ -232,14 +235,18 @@ export const tariffRate = pgTable(
     ),
     // The rate SHAPE must match its type — no ad_valorem row carrying a USD amount,
     // no `*` exclusion carrying a number, no specific duty without a currency and unit.
+    // rate_type is compared as text: see migration 0010 (a new enum label is unusable in the
+    // migration transaction that adds it).
     check(
       'tariff_rate_shape',
-      sql`CASE ${t.rateType}
+      sql`CASE ${t.rateType}::text
         WHEN 'ad_valorem' THEN ${t.ratePercent} IS NOT NULL AND ${t.amount} IS NULL AND ${t.amountCurrency} IS NULL
         WHEN 'specific'   THEN ${t.amount} IS NOT NULL AND ${t.amountCurrency} IS NOT NULL AND ${t.amountUnit} IS NOT NULL AND ${t.ratePercent} IS NULL
         WHEN 'compound'   THEN ${t.ratePercent} IS NOT NULL AND ${t.amount} IS NOT NULL AND ${t.amountCurrency} IS NOT NULL AND ${t.amountUnit} IS NOT NULL
         WHEN 'excluded'   THEN ${t.ratePercent} IS NULL AND ${t.amount} IS NULL
         WHEN 'trq'        THEN ${t.ratePercent} IS NOT NULL AND ${t.outOfQuotaAnnexId} IS NOT NULL
+        WHEN 'by_subline' THEN ${t.ratePercent} IS NULL AND ${t.amount} IS NULL
+                               AND COALESCE(jsonb_typeof(${t.conditions} -> 'sublines') = 'array', false)
         ELSE false
       END`,
     ),

@@ -246,33 +246,55 @@ mà mọi dòng 10 số đều loại trừ cùng một nước (xem giới hạ
 số** có loại trừ — KH 1.166, ID 948, PH 895, TH 842, MM 692, MY 689, **CN 509** (446 dòng trong đó đang có
 thuế suất 0), BN 371, LA 121, SG 4. Dòng CN thứ 510 là dòng 10 số `4810.14.10.10`.
 
-Biểu diễn: extract `fta-acfta.ndjson` có `excluded` / `excluded_sublines`; seed ghi vào
-`tariff_rate.conditions` = `{"excluded_origins": [...]}` / `{"excluded_sublines": [...]}`; API trả
-`excludedOrigins`, `originExcluded` và câu `statement` nói rõ “Không áp dụng cho hàng xuất xứ … — áp mức
-MFN …” (không in con số ưu đãi). Không truyền xuất xứ thì statement liệt kê các nước bị loại trừ.
+Biểu diễn: extract `fta-acfta.ndjson` có `excluded` (mã 8 số) và `excluded` của từng dòng 10 số trong `sublines`;
+seed ghi vào `tariff_rate.conditions` = `{"excluded_origins": [...]}` và `excluded_origins` trong từng phần tử
+`conditions.sublines`; API trả `excludedOrigins`, `originExcluded` và câu `statement` nói rõ “Không áp dụng cho hàng
+xuất xứ … — áp mức MFN …” (không in con số ưu đãi). Không truyền xuất xứ thì statement liệt kê các nước bị loại trừ.
 `origin` phải là mã nước 2 chữ; API đổi `TQ` → `CN` (và `UK` → `GB`), giá trị khác (vd “Trung Quốc”) trả 400
 để không lặng lẽ bỏ qua loại trừ và thuế chống bán phá giá. Mã 2 chữ không thuộc Điều 4 khoản 2 (vd `JP`)
 được trả lời như không truyền xuất xứ (liệt kê nước bị loại trừ, `originExcluded = null`), không bao giờ là
 “không bị loại trừ”.
 
-**Giới hạn dòng 10 số:** Điều 3 khoản 2 cho phép biểu chi tiết đến cấp 10 số, nhưng mô hình dữ liệu là 8
-số (NĐ 26/2023 cũng không có các dòng này). 34 dòng 10 số có loại trừ (vd `1211.60.00.10` loại trừ MM, TH)
-**không** được nạp thành dòng riêng; chúng chỉ đi kèm mã 8 số cha để API ghi chú “đối chiếu nghị định”, và
-**không** được áp thành loại trừ cho cả mã 8 số — trừ khi **mọi** dòng 10 số của mã cha cùng loại trừ một nước
-(các dòng 10 số chia trọn mã 8 số, dòng cuối là “Loại khác”): khi đó nước đó bị loại trừ cả mã 8 số. Hiện chỉ
-có ID ở `4011.80.31`, `4011.80.39`, `4011.80.40` (`.10` loại trừ ID, MY; `.90` “Loại khác” loại trừ ID) — MY
-vẫn chỉ là ghi chú dòng 10 số. Rủi ro còn mở, chưa sửa (hotfix cố ý giữ nguyên
-mọi thuế suất): với 34 mã cha này, thuế suất nạp cho mã 8 số là ô thuế đầu tiên sau mã cha, tức là của
-dòng 10 số đầu tiên; ở 10 mã cha các dòng 10 số có thuế suất khác nhau (vd `1601.00.10`: `.10` = 0 loại
-trừ KH, `.90` = 5), nên mức 8 số đã nạp có thể sai với dòng 10 số còn lại. Lỗi này **không riêng ACFTA**
-(đo 2026-09-13 bằng cùng cách đọc ô): AANZFTA 8/8 mã cha có dòng 10 số mang thuế suất khác nhau (vd
-`0307.22.00`, `8703.31.41`); EVFTA 139/155 mã cha chỉ trong 2/16 phần Công báo có tại máy. Cần một thay đổi
-riêng cho mọi biểu FTA, có đủ nguồn và cổng kiểm riêng.
+Loại trừ của một dòng 10 số (34 dòng, vd `1211.60.00.10` loại trừ MM, TH) chỉ áp cho dòng đó — **không** thành loại
+trừ cả mã 8 số, trừ khi **mọi** dòng 10 số của mã cha cùng loại trừ một nước (các dòng 10 số chia trọn mã 8 số, dòng
+cuối là “Loại khác”). Hiện chỉ có ID ở `4011.80.31`, `4011.80.39`, `4011.80.40` (`.10` loại trừ ID, MY; `.90` “Loại
+khác” loại trừ ID) — MY chỉ ở dòng `.10`. API nêu nó trong `statement` (“; riêng dòng 10 số … không áp dụng cho …”)
+và `sublines[].originExcluded`.
 
-**AANZFTA (121/2022), ATIGA (126/2022), EVFTA (116/2022) không có cột này** — chỉ có ký hiệu `*` (loại
-trừ toàn dòng, không phải 0%). Đã kiểm parser mới cho ra kết quả giống hệt từng byte với parser cũ trên nguồn
-có tại máy: AANZFTA đầy đủ (.docx, 11.414 dòng; và phần 293–294), ATIGA **chỉ** phần 461–462, EVFTA **chỉ**
-phần 391–392 và 421–422. Các phần ATIGA/EVFTA còn lại chưa kiểm; ba file seed của các biểu này không đổi.
+### ⚠️ Dòng 10 số quốc gia trong biểu FTA — mã cha không có thuế suất riêng (2026-09-13)
+
+Nghị định biểu FTA cho phép chi tiết tới cấp 10 số: ACFTA (118/2022) Điều 3 khoản 2 và EVFTA (116/2022) Điều 3
+khoản 3 — *“… chi tiết theo cấp mã 8 số hoặc 10 số.”*; ATIGA (126/2022) Điều 3 khoản 2 — *“… chi tiết theo cấp
+mã 8 số.”* Mã 8 số cha có mô tả và **ô thuế trống**; mỗi dòng 10 số mang thuế suất riêng, vd ACFTA `1601.00.10`:
+`.10` “Từ côn trùng” = 0 (loại trừ KH), `.90` “Loại khác” = 5.
+
+**Lỗi đã xảy ra (sửa 2026-09-13):** loader lấy ô thuế đầu tiên sau mã cha, tức mức của dòng 10 số đầu tiên → mã
+`1601.00.10` trả “0% nếu có C/O form E” cho cả hàng thuộc dòng `.90` (5%). Quy mô: ACFTA 74 dòng 10 số / 34 mã
+cha (10 khác mức), AANZFTA 16 / 8 (cả 8 khác mức), EVFTA Phụ lục II 122 / 58 (cả 58 khác mức ở ít nhất một năm),
+ATIGA 0. MFN (NĐ 26/2023) không có dòng 10 số.
+
+Biểu diễn ([ADR](../architecture-decisions/2026-09-13-fta-national-sublines.md)): đơn vị tra cứu vẫn là mã 8 số.
+Dòng 10 số nằm trong `tariff_rate.conditions.sublines` của mã cha, mỗi phần tử mang mức của khoảng hiệu lực đó.
+Trong một khoảng, các dòng 10 số **cùng mức** → mã cha mang mức chung; **khác mức** → `rate_type = 'by_subline'`,
+**không có con số** (CHECK `tariff_rate_shape`, migration 0010). API trả `type: 'by_subline'`, `percent: null`,
+`sublines[]` và `statement` liệt kê từng dòng
+(“Theo dòng 10 số: 1601.00.10.10 - - Từ côn trùng: 0% …; 1601.00.10.90 - - Loại khác: 5% — nếu có C/O form E hợp lệ, ngược lại <MFN>”). Không bao giờ in một con số ưu đãi duy nhất cho mã
+`by_subline` — người khai phải biết hàng thuộc dòng 10 số nào.
+
+### ⚠️ EVFTA: NĐ 116/2022 có HAI biểu — chỉ Phụ lục II là thuế nhập khẩu (2026-09-13)
+
+Điều 3 khoản 1: Biểu thuế **xuất khẩu** ưu đãi “tại Phụ lục I”; khoản 2: Biểu thuế **nhập khẩu** ưu đãi đặc biệt “tại
+Phụ lục II”. Phụ lục I (553 mã) in trước Phụ lục II (11.414 mã) trong cùng chuỗi Công báo 391+392 → 421+422.
+Extract cũ chứa cả hai bảng và seed giữ hàng đầu tiên mỗi mã → 553 mã được phục vụ **thuế xuất khẩu** như ưu đãi
+EVFTA nhập khẩu: 464 vector sáu năm sai, 422 sai ở năm 2026, 408 trong đó mức đã nạp **cao hơn** mức thật (nhiều nhất
+ở chương 44, 25, 81, 71, 40). Vd `1211.20.90`: Phụ lục I `0/0/0/0/0/0`, Phụ lục II `25/20/15/10/5/0`. Đúng kiểu R3.
+Nay parser chỉ đọc dưới tiêu đề “BIỂU THUẾ NHẬP KHẨU”, “Phụ lục III” kết thúc bảng, và parser lẫn seed dừng có lỗi
+nếu một mã lặp. **Thuế xuất khẩu ưu đãi EVFTA (Phụ lục I) chưa được nạp** — `/tariff` không trả mức XK EVFTA.
+
+**AANZFTA (121/2022), ATIGA (126/2022), EVFTA (116/2022) không có cột loại trừ theo nước** — chỉ có ký hiệu `*`
+(loại trừ toàn dòng, không phải 0%). Cả bốn biểu đã kiểm trên nguồn đầy đủ (ACFTA 10 phần, AANZFTA `.docx`, ATIGA 9
+phần, EVFTA 16 phần): 11.414 mã mỗi biểu, một hàng mỗi mã; ngoài mã cha có dòng 10 số, 553 mã EVFTA Phụ lục I và hình
+khoảng của EVFTA `9706.90.00`, không thuế suất nào đổi so với extract `19b6222` (`db/seed/fta-extracts.spec.ts`).
 
 ### ⚠️ VÁCH ĐÁ 2027
 
