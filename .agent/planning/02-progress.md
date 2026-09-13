@@ -1,7 +1,7 @@
 ---
 type: planning
 status: active
-updated: 2026-09-10
+updated: 2026-09-13
 related:
   - 00-bootstrap.md
   - 01-task-list.md
@@ -22,12 +22,13 @@ thực sự đã xảy ra**, thường khác đi.
 
 | | |
 |---|---|
-| **Giai đoạn hiện tại** | **🔴 Giai đoạn 9 — đường ống hộp thư đến, KHÔNG CÒN MÁY CHỦ. VPS Contabo chết 2026-09-10 (ping/SSH/HTTP đều không). Chủ dự án quyết định tạm không host. Bot Zalo + API tra cứu OFFLINE.** Giai đoạn 8 (mở rộng LLM) **đóng băng** — nó cần hạ tầng không còn tồn tại. |
-| **Công việc tiếp theo** | **Chủ dự án thêm 16 nguồn mới vào notebook** (Thêm nguồn → Google Drive → thư mục `Legal-AI-Notebook`) — 16 nguồn cũ đã tự cập nhật. Rồi chạy lại bộ câu hỏi test. **Sau mỗi lần đẩy: `verify_drive.py` phải ra `0 lệch`.** Sau đó: tài liệu mới làm theo [runbook](../../research/inbox-loader/README.md). Việc phát sinh: [04-inbox-ingest-tasks.md](04-inbox-ingest-tasks.md#việc-phát-sinh-từ-đợt-đầu). |
-| **⚠️ GẤP, không thuộc đường ống** | **`lookup_confirmation` — phán quyết chuyên viên + bộ nhớ áp mã HS — chỉ tồn tại trên VPS, KHÔNG có trong repo, KHÔNG tái tạo được.** Nếu Contabo còn snapshot/disk, lấy dump ra ngay; nhà cung cấp xoá dữ liệu sau khi huỷ một thời gian ngắn. `gazette_document` (~15.500 văn bản) cũng mất, crawl lại được nhưng tốn ~8 giờ. |
-| **Đang bị chặn bởi** | Không chặn đường ống mới (nó cố ý không cần Postgres). Ba câu hỏi chờ chủ dự án: (1) cứu được dữ liệu VPS không; (2) có nạp **NĐ 336/2026** không (mới hơn NĐ 292, đụng địa hạt NĐ 08/2015, không có trong hộp thư đến); (3) số hiệu **R9 đang bị dùng cho hai quy tắc khác nhau** trong `business-rules.md`. |
+| **Giai đoạn hiện tại** | **🟡 Đã host lại trên server dev dùng chung của MONA (2026-09-13).** API + web UI + kho pháp lý + worker ingest đang chạy (chỉ nghe `127.0.0.1:3060`), token đã gõ, `/health` báo `llm: up`; **bot Zalo đã đăng nhập, `ALLOWED_THREADS` đã đặt** (Task 9 đang làm — còn kiểm thử đầu-cuối). Giai đoạn 9 (đường ống hộp thư đến) và kế hoạch 05 (bot ngang notebook) tiếp tục. |
+| **Công việc tiếp theo** | **Tiếp theo (chủ dự án chốt tối 2026-09-13):** trình bày kiểu notebook + định dạng Zalo (đậm, nghiêng, màu theo ngữ nghĩa), sửa lỗi 69/2018, rồi Mảng 2 của [kế hoạch 05](05-bot-parity-tasks.md) ngay sau. — **Chờ chủ dự án cho kế hoạch 06:** (a) kiểm thử đầu-cuối bot trong nhóm được phép (Task 9 Step 5: tra mã HS, câu pháp lý có trích dẫn, ảnh hàng hoá; thread ngoài danh sách → im lặng) — ~~quét QR, `ALLOWED_THREADS`~~ xong 2026-09-13; (b) Q2 domain + mật khẩu basic auth → Task 8; (c) `rclone.conf` → Task 10. ~~Token~~ đã gõ 2026-09-13, `llm: up`. Việc của agent: `docker rm customs-assistant-gazette-full` (crawl đã thoát). Vận hành server: [runbook](../docs/mona-dev-server-operations.md); vì sao chọn server này: [ADR](../architecture-decisions/2026-09-13-host-on-mona-dev-server.md). — **Mảng 1 của [05-bot-parity-tasks.md](05-bot-parity-tasks.md) xong phần làm được tại máy** (Task 1–4, 6–8; Task 5 bước 1–5). **Chờ chủ dự án:** (1) đọc `research/legal-loader/out/diff-report.md`, quyết Task 5 Bước 6 theo từng văn bản (`merge_into_seed.py --only`); (2) sửa `gazette_issue` của 128/2020/NĐ-CP thành `1027+1028` trong `corpus.json` rồi sinh lại `out/` trước Bước 7; (3) ~~commit~~ đã commit 2026-09-13; (4) kế hoạch 05, server đã chạy → Task 6 bước 6 (đo embed), Task 7 bước 2–3 (đã đạt qua kế hoạch 06 Task 7: CLI 2.1.270 trong image, `llm: up`), Task 8 bước 4 (→ kế hoạch 06 Task 10), Task 9 baseline. Sổ theo dõi thực thi (ngoài git): `.superpowers/sdd/05-bot-parity-tasks/progress.md`. Trước đó: **chủ dự án thêm 16 nguồn mới vào notebook** (Thêm nguồn → Google Drive → thư mục `Legal-AI-Notebook`) — 16 nguồn cũ đã tự cập nhật. Rồi chạy lại bộ câu hỏi test. **Sau mỗi lần đẩy: `verify_drive.py` phải ra `0 lệch`.** Sau đó: tài liệu mới làm theo [runbook](../../research/inbox-loader/README.md). Việc phát sinh: [04-inbox-ingest-tasks.md](04-inbox-ingest-tasks.md#việc-phát-sinh-từ-đợt-đầu). |
+| **🔴 Đã mất vĩnh viễn (xác nhận 2026-09-13)** | Contabo hết dịch vụ, **VPS đã bị xoá**. Không còn cách lấy lại `lookup_confirmation` (phán quyết của chuyên viên + bộ nhớ áp mã HS), session Zalo và `.env` cũ; bộ nhớ áp mã phải học lại từ đầu. `gazette_document` (~15.500 văn bản) cũng mất, crawl lại được, khoảng 1 giờ (lần 2026-09-13: ~51 phút). |
+| **Triển khai lại (2026-09-13)** | **Đang chạy** trên server dev dùng chung của MONA (`<MONA_DEV_HOST>`; giá trị thật ngoài git trong `.agent/local/mona-dev-server.md` — repo public): stack `/opt/docker-projects/customs-assistant` (compose project `customs-assistant`, cổng 127.0.0.1 3060/5435/8060). Seed mới: 172.962 dòng thuế; 15 văn bản / 6.637 điều khoản / 2.806 chunk (corpus cũ đã commit). `gazette_document` crawl lại xong 11:34 UTC (~51 phút, 24.581 văn bản; còn xoá container `customs-assistant-gazette-full`). Gỡ hẳn: `bash /opt/docker-projects/customs-assistant/teardown.sh`. Kết quả và phần còn lại: [06-deploy-mona-dev-server.md](06-deploy-mona-dev-server.md#kết-quả-thực-thi-2026-09-13); [runbook](../docs/mona-dev-server-operations.md); [ADR](../architecture-decisions/2026-09-13-host-on-mona-dev-server.md). |
+| **Đang bị chặn bởi** | Không chặn đường ống mới (nó cố ý không cần Postgres). Ba câu hỏi chờ chủ dự án: (1) ~~cứu được dữ liệu VPS không~~ — không, VPS đã bị xoá (2026-09-13); (2) có nạp **NĐ 336/2026** không (mới hơn NĐ 292, đụng địa hạt NĐ 08/2015, không có trong hộp thư đến); (3) số hiệu **R9 đang bị dùng cho hai quy tắc khác nhau** trong `business-rules.md`. |
 | **Code đã viết** | Khung repo (006) + schema (007) + loader ND 26/2023 (008) + chuỗi sửa đổi/hồi quy (009) + **API `/tariff` + staleness** (010/011) + **loader 4 FTA** + **validator nghiệm thu** (012) + **Legal RAG** (`modules/legal/`) + **bộ nhớ hội thoại** (`modules/conversation/`, migration 0006) + **bot Zalo dạng module** (`apps/zalo-bot/*.mjs`, `yarn test:bot`) + **M0 mở rộng LLM**: `health.llm.ts`, CLI trong image, sửa parser tiêu đề, `apps/eval/` (`yarn eval`). |
-| **Phiên gần nhất** | 2026-09-10 tối (xem nhật ký bên dưới) |
+| **Phiên gần nhất** | 2026-09-13 (xem nhật ký bên dưới) |
 
 ### ⚠️ TASK-001 — phần còn lại cần con người, không phải agent
 
@@ -69,8 +70,8 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | TASK-009 — Xác lập chuỗi sửa đổi MFN 2026 | ✅ xong 2026-07-18 | Chuỗi xác lập từ nguồn chính thức (R10+R12 bù nhau; 201/2026 là XK; 72/2026 gia hạn NQ 25/2026). Hồi quy 72/2026 nạp bằng cắt-khoảng append-only, live 6/6. Xem [research/task-009-amendment-chain](../../research/task-009-amendment-chain/README.md) |
 | TASK-010 — Phát hiện độ cũ | ✅ xong 2026-07-18 | Trong API: snapshotDate + reliableThrough (−48 ngày lag) + stale/warning. Acceptance PASS (snapshot 2026-03-15/query 2026-03-10 → stale). |
 | TASK-011 — API tra cứu | ✅ xong 2026-07-18 | `GET /tariff` SQL keyed, vị từ khoảng, không LLM; rate có kiểu + statement, FTA/Ch.98 có điều kiện, CBPG riêng, staleness. FTA `preferential[]` chờ nạp biểu FTA. Xem [research/task-010-011-lookup-api](../../research/task-010-011-lookup-api/README.md) |
-| TASK-013 — Bot Zalo: bộ nhớ hội thoại + định tuyến theo chủ đề | ✅ xong + LIVE 2026-08-13 | Postgres `conversation`/`conversation_turn` (0006) + `/conversation` API; bot tách 8 module; `guardIntent` chặn cả regex lẫn LLM; router thấy transcript + viết lại `search_query`; lead có guard. 20/20 test thuần. Thiết kế: [zalo-bot-conversation-memory](../docs/zalo-bot-conversation-memory.md); quy tắc [R13/R14](../business-rules.md) |
-| TASK-015 — Kho tự mở rộng (chỉ mục → nạp theo yêu cầu → thăng cấp) | ✅ xong + LIVE 2026-08-14 | `gazette_document` ~15.5k văn bản (0007/0008); worker `apps/ingest` + cổng tự kiểm; `verification`/`verified_by` (0009). Nghiệm thu: 36/2016/TT-BCT nạp tự động 14 điều/57 chunk rồi thăng cấp. 11 test đơn vị cho parser chỉ mục. Thiết kế: [legal-corpus-self-extension](../docs/legal-corpus-self-extension.md) |
+| TASK-013 — Bot Zalo: bộ nhớ hội thoại + định tuyến theo chủ đề | ✅ xong + LIVE 2026-08-13 (Contabo tới 2026-09-10; host lại 2026-09-13) | Postgres `conversation`/`conversation_turn` (0006) + `/conversation` API; bot tách 8 module; `guardIntent` chặn cả regex lẫn LLM; router thấy transcript + viết lại `search_query`; lead có guard. 20/20 test thuần. Thiết kế: [zalo-bot-conversation-memory](../docs/zalo-bot-conversation-memory.md); quy tắc [R13/R14](../business-rules.md) |
+| TASK-015 — Kho tự mở rộng (chỉ mục → nạp theo yêu cầu → thăng cấp) | ✅ xong + LIVE 2026-08-14 (Contabo tới 2026-09-10; host lại 2026-09-13) | `gazette_document` ~15.5k văn bản (0007/0008); worker `apps/ingest` + cổng tự kiểm; `verification`/`verified_by` (0009). Nghiệm thu: 36/2016/TT-BCT nạp tự động 14 điều/57 chunk rồi thăng cấp. 11 test đơn vị cho parser chỉ mục. Thiết kế: [legal-corpus-self-extension](../docs/legal-corpus-self-extension.md) |
 | TASK-014 — Mở rộng corpus pháp luật 4 → 7 văn bản | ✅ xong + LIVE 2026-08-13 | +54/VBHN-VPQH (8/104), +25/VBHN-BTC = TT 38/2015+39/2018 (9/149), +33/2023/TT-BTC (5/23). **4475 provisions · 1806 chunks đã embed**, 7/7 qua cổng `expect`. Parser thêm 3 luật (dấu chấm+thứ tự; "Phụ lục" viết thường; tham chiếu chéo rơi đúng `điều+1`). **NĐ 134/2016 KHÔNG nạp** — không có VBHN công bố, vướng ADR |
 | TASK-012 — Nghiệm thu Giai đoạn 1 | ✅ xong 2026-07-18 | **Corpus 249/249 khớp 100%** (MFN + 4 FTA); random 20/20 khớp source; star-case đủ 4 FTA 0%. Xem [research/task-012-acceptance](../../research/task-012-acceptance/README.md) + [fta-loader](../../research/fta-loader/README.md) |
 
@@ -85,6 +86,13 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | TASK-020 — Manifest + rclone | ✅ xong | `hash_exported`/`hash_pushed` tách bạch; giữ `fileId` |
 | TASK-021 — Nạp 20 tài liệu + chuyển notebook sang Google Docs | 🟡 chờ chủ dự án thêm nguồn | Lần upload lại **cuối cùng** |
 | TASK-022 — Vá snapshot drizzle 0007–0009, mở enum | ⛔ bị chặn | Hoãn có chủ đích; công văn + lớp C chỉ vào notebook cho tới lúc đó |
+
+### Kế hoạch 05 và 06
+
+| Kế hoạch | Trạng thái | Ghi chú |
+|---|---|---|
+| [06 — Triển khai lại lên server dev dùng chung của MONA](06-deploy-mona-dev-server.md) | 🟡 đang tiến hành | Task 1–7 xong (crawl Công báo xong, còn xoá container); Task 9 bot: đăng nhập + `ALLOWED_THREADS` xong, còn kiểm thử đầu-cuối; Task 8, 10 chờ chủ dự án |
+| [05 — Bot ngang notebook, Mảng 1](05-bot-parity-tasks.md) | 🟡 đang tiến hành | Đã commit (`e332360`, `ad04ef2`, `41ac65a`); Task 5 từ Bước 6 chờ chủ dự án quyết corpus; baseline (Task 9) chưa chạy |
 
 Chú thích: ✅ xong · 🟡 đang tiến hành · 🔲 chưa làm · ⛔ bị chặn · ❌ bỏ dở (nói lý do)
 
@@ -129,6 +137,78 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-09-13 (tối) — Host lại trên server dev dùng chung của MONA: API + kho pháp lý chạy, LLM up, bot đã đăng nhập
+
+- **Chủ dự án thử bot:** trả lời "quá cứng nhắc, nhiều câu không biết"; văn phong và trình bày khác notebook. Nguyên nhân: server chạy bot cũ — Mảng 2 (nạp 32 nguồn notebook vào CSDL) và Mảng 3 (đường trả lời mới) chưa xây. Baseline trên server (kho cũ, `/legal`): pháp luật recall@5 90%, HS top-1 20% / top-3 27,3%, notebook 1/14, nhóm an toàn 0/8.
+- **Lỗi tìm ra:** hỏi "Nghị định 69/2018/NĐ-CP còn áp dụng không" → bot nói không tìm thấy rồi liệt kê chính văn bản đó dưới "cùng số nhưng của cơ quan khác". `answerLegal` gọi API với `doc: ref.core` (mất đuôi `/NĐ-CP`), API chỉ khớp theo đầu số (`gazetteMatchKind: similar`); gọi thẳng API bằng câu hỏi thì ra `exact`.
+- **Quyết định mới:** làm trình bày kiểu notebook + định dạng Zalo trước — `zca-js` 2.1.2 gửi được đậm, nghiêng, gạch chân, 4 màu, cỡ chữ, danh sách qua `styles`; màu do dữ liệu quyết, không để mô hình tô — rồi Mảng 2 ngay sau. Đã gửi một tin mẫu định dạng vào nhóm để kiểm hiển thị trên điện thoại và máy tính.
+
+- **Commit:** `e332360` (parser + công cụ diff/merge), `ad04ef2` (eval notebook), `41ac65a` (chuẩn bị deploy: CLI trong image, cổng tham số, sao lưu). Tài liệu (spec, ADR, kế hoạch 05–06, runbook) commit sau khi làm sạch chi tiết server — repo GitHub public. Chưa push GitHub.
+- **Cô lập trên máy dùng chung:** một compose project `customs-assistant`; không cài gì lên host; không đụng dịch vụ dùng chung trên host; giới hạn RAM cứng từng container thay cho hạ bộ nhớ dịch vụ dùng chung hay thêm swap; log 10m×3. Gỡ hẳn bằng `teardown.sh` trong thư mục stack.
+- **Số đo:** build ~5 phút; seed thuế 30 giây; seed pháp lý ~18 phút, embedder đỉnh 1,19 GiB/3,4 GiB; lúc ổn định (trước khi có token và bot) cả stack ~1,5 GiB, host còn 3,8 GB available; sau khi có token và bot (11:44 UTC) api ~215 MiB, zalo-bot ~58 MiB, embedder ~1,3 GiB. Crawl Công báo 10:43 → 11:34 UTC (~51 phút), 24.581 văn bản — nhanh hơn nhiều so với ước tính ~8 giờ.
+- **Không ảnh hưởng:** các site khác giữ nguyên mã HTTP so với baseline; container của team khác vẫn Up, không restart; không OOM.
+- **Token + bot:** ~11:23 UTC chủ dự án gõ `CLAUDE_CODE_OAUTH_TOKEN`, recreate `api` → `/health` `llm: up`. Bật `zalo-bot` (`mem_limit` 1g) với `ALLOWED_THREADS` trống; đăng nhập QR ~11:33 UTC; `ALLOWED_THREADS` đặt ~11:36 UTC (cửa sổ mở ~3 phút), recreate và bot khôi phục session không cần QR. Kiểm chứng đầu-cuối **chưa có** (đang làm).
+- **Bài học:**
+  - `ssh 'bash -s' <<heredoc` + `docker-compose run/exec` nuốt phần còn lại của script — thêm `</dev/null`.
+  - Sửa `.env` không tới container đang chạy: phải recreate (`docker-compose up -d --no-deps <service>`).
+  - Bot bỏ im lặng, không log, mọi tin ngoài `ALLOWED_THREADS` (`apps/zalo-bot/index.mjs:229`), và trong nhóm chỉ trả lời khi được @tag — lấy threadId cần một cửa sổ ngắn để trống allowlist; trong cửa sổ đó ai nhắn riêng cho tài khoản bot, và nhóm nào có bot mà @tag bot, cũng được trả lời.
+  - QR đăng nhập: quét **ảnh** `/session/qr.png` (tạo lại ~90 giây một lần) bằng tài khoản bot, không quét QR vẽ trong log.
+  - Chi tiết server (IP, hostname, dự án khác trên host) không ghi vào git — repo public; tài liệu dùng `<MONA_DEV_HOST>`, giá trị thật ở `.agent/local/mona-dev-server.md`.
+- **Còn lại:** kiểm thử đầu-cuối bot (Task 9 Step 5), domain + basic auth (Task 8), rclone (Task 10), `docker rm customs-assistant-gazette-full`. [ADR host trên server MONA dev](../architecture-decisions/2026-09-13-host-on-mona-dev-server.md) và [runbook vận hành](../docs/mona-dev-server-operations.md) viết cùng ngày. Corpus trên server là bản đã commit (cũ).
+
+### 2026-09-13 — Nâng cấp bot ngang notebook: spec duyệt, Mảng 1 thực thi (đã commit tối cùng ngày)
+
+**Kết quả** — Spec [bot-answer-parity-design.md](../docs/bot-answer-parity-design.md) (bản 2, qua đợt kiểm độc lập
+25 agent) + ADR 2026-09-13 + kế hoạch [05-bot-parity-tasks.md](05-bot-parity-tasks.md). Mảng 1 chạy theo từng task, mỗi
+task một agent + rà soát, cuối cùng rà soát toàn bộ + một lượt sửa:
+- `apps/eval/notebook.ts` — chấm 14 câu notebook (`fixtures/legal-golden/notebook-qa.json`) trong `yarn eval`; câu không
+  kiểm được gì là "chưa chấm", không phải "đạt".
+- Parser: `KHOAN` không còn đọc "20.000 tờ khai/năm." thành khoản 20.
+- Kho 7 văn bản corpus sinh lại vào `research/legal-loader/out/` (8 văn bản Công báo sinh lại giống hệt từng byte):
+  sửa 5 tiêu đề bị cướp + khoản ma, 124 tiêu đề bị cắt dòng nay đủ, 6 chỗ khoản gắn nhầm điều về đúng chỗ; **không
+  mất chữ** (kiểm bằng code trên cả 15 văn bản). **Chưa gộp vào `db/seed/`** — chờ chủ dự án đọc `out/diff-report.md`.
+- `diff_provisions.py` (báo cáo diff có tóm tắt 3 phần) + `merge_into_seed.py --only` (quyết định xác minh theo từng văn bản).
+- Embedder: `EMBED_MAX_TOKENS`, cổng `EMBEDDER_HOST_PORT`; `measure_embed.py`. CLI `claude` vào `apps/api/Dockerfile`.
+- `db/backup.sh` (chỉ `lookup_confirmation` + trạng thái xác minh, lên Drive, không chat — R14) + README "Triển khai máy chủ".
+
+**Đã học**
+- **🔴 Kế hoạch M0 đánh dấu "CLI trong image" là xong, nhưng Dockerfile chưa bao giờ có dòng đó** — VPS cũ chỉ có qua
+  override ngoài git. Checkbox trong kế hoạch không phải bằng chứng.
+- **🔴 Báo cáo diff bản đầu in "không mất chữ" mà không tính** — đúng lần này chỉ vì agent kiểm toán kiểm riêng. Rà soát
+  toàn bộ bắt được; nay tính thật. Cùng họ lỗi: bộ chấm tính câu "bỏ qua hết" là đạt; script gộp áp một quyết định cho
+  cả 7 văn bản; cron sao lưu chết vì PATH thiếu `/usr/local/bin`.
+- **5 tiêu đề vẫn cụt** (25/VBHN-BTC Điều 14, 76; 46/VBHN-BTC Điều 18; 54/VBHN-VPQH Điều 55, 101): parser chỉ nối dòng
+  bắt đầu chữ thường. Cố ý không sửa lần này (nối dòng chữ hoa/số có thể nuốt thân điều) — ghi ở "Việc phát sinh" của kế hoạch 05.
+- **128/2020/NĐ-CP ghi sai số Công báo** từ đầu: trang Công báo ghi `1027 + 1028`, kho ghi `1023+1024`.
+- Hai phiên Claude cùng sửa một working tree (phiên kế hoạch 06): phải chia file rõ và nhắn nhau; hai cơ chế sao lưu đã
+  thống nhất về một (`db/backup.sh`, cron 02:00).
+- zsh không tách từ biến chưa trích dẫn: `git diff -- $F` với nhiều đường dẫn trong một biến ra rỗng — dùng mảng.
+
+---
+
+### 2026-09-13 — Khảo sát server dev dùng chung của MONA, lập kế hoạch triển khai lại
+
+**Kết quả** — Server dev dùng chung của MONA: không swap, RAM trống khoảng 4,9 GB lúc khảo sát, cổng 3000 và 5433
+đã bị dự án khác chiếm. Chi tiết khảo sát nằm ngoài git (`.agent/local/mona-dev-server.md`) vì repo public. Kế hoạch triển khai:
+[06-deploy-mona-dev-server.md](06-deploy-mona-dev-server.md) (nháp).
+
+**Đã học**
+- **Compose v2.15.1 standalone không hỗ trợ `!reset`** — `ports` trong override bị cộng dồn. Cổng 3000/5433
+  đã có dự án khác dùng, nên phải tham số hoá cổng ngay trong `docker-compose.yml` (Task 1 của kế hoạch).
+- **Không có plugin buildx vẫn build được bằng BuildKit** qua `docker-compose build` — đã thử với
+  `RUN --mount`. Giả định ban đầu "thiếu buildx thì Dockerfile ingest (`ADD --checksum`) không build được" là sai.
+- **Trên host dùng chung, chỉ xoá hoặc dừng những gì thuộc compose project `customs-assistant`**; mọi thứ khác thuộc
+  quản trị MONA.
+- **API không có xác thực, còn web UI ghi vào `lookup_confirmation`** (`POST /tariff/confirm`) — bản
+  Contabo chặn bằng `basic_auth` của Caddy (`bieuthue.ngocnhat.info`). Server mới phải chặn tương đương ở nginx.
+
+**Chủ dự án xác nhận** — Contabo hết dịch vụ, VPS đã bị xoá: không còn đường khôi phục dữ liệu. Deploy đi
+nhánh seed mới; `lookup_confirmation`, session Zalo, `.env` và danh sách `ALLOWED_THREADS` đều phải làm lại.
+
+**Còn tồn** — 5 câu hỏi chặn trong kế hoạch 06. Chưa commit gì.
 
 ---
 

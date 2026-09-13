@@ -1,0 +1,90 @@
+{
+  "at": "2026-09-13T11:45:19.349Z",
+  "api": "http://localhost:3061",
+  "llm": "up",
+  "legal": {
+    "cases": 20,
+    "k": 5,
+    "recallAtK": 0.9,
+    "abstainCorrect": 2,
+    "abstainTotal": 2,
+    "citationsValid": 1,
+    "misses": [
+      "tt-kiemtrahoso: mong Điều 27 46/VBHN-BTC — nhận Điều 142 Thông tư 38/2015/TT-BTC về thủ tục hải quan (VBHN 25/VBHN-BTC) · Điều 143 Thông tư 38/2015/TT-BTC về thủ tục hải quan (VBHN 25/VBHN-BTC) · Điều 25 Thông tư 38/2015/TT-BTC về thủ tục hải quan (VBHN 25/VBHN-BTC)",
+      "tt-thongquan: mong Điều 32 46/VBHN-BTC — nhận Điều 37 Luật Hải quan (VBHN 54/VBHN-VPQH)"
+    ]
+  },
+  "hs": {
+    "cases": 55,
+    "top1": 0.2,
+    "top3": 0.2727272727272727,
+    "empty": 0,
+    "misses": [
+      "gs-001: mong nhóm 7210 — nhận 7211",
+      "gs-003: mong nhóm 7212 — nhận 7218/7222/7224",
+      "gs-004: mong nhóm 3207 — nhận 2102/3212/2206",
+      "gs-005: mong nhóm 8477 — nhận 8466/8473/8522",
+      "gs-006: mong nhóm 3926 — nhận 6001/9029/2906",
+      "gs-007: mong nhóm 7326 — nhận 3923/4819/7606",
+      "gs-008: mong nhóm 7007 — nhận 7004/7005/7006",
+      "gs-009: mong nhóm 7411 — nhận 8443",
+      "gs-010: mong nhóm 7412 — nhận 1901/6212",
+      "gs-013: mong nhóm 8504 — nhận 4801/3702",
+      "gs-016: mong nhóm 9032 — nhận 7322/8540/9025",
+      "gs-018: mong nhóm 8418 — nhận 8413",
+      "gs-022: mong nhóm 8451 — nhận 8405/8415",
+      "gs-023: mong nhóm 8443 — nhận 8405/8415",
+      "gs-024: mong nhóm 9030 — nhận 8405/8415",
+      "gs-025: mong nhóm 8471 — nhận 8405/8415",
+      "gs-026: mong nhóm 8471 — nhận 8405/8415",
+      "gs-028: mong nhóm 8471 — nhận 0106/0208/0210",
+      "gs-029: mong nhóm 8544 — nhận 3603/4601/5607",
+      "gs-030: mong nhóm 7616 — nhận 0907/7317/7415",
+      "gs-031: mong nhóm 8544 — nhận 3603/4601/5607",
+      "gs-032: mong nhóm 8536 — nhận 8416/8601/8602",
+      "gs-033: mong nhóm 6914 — nhận 7227/7228/8204",
+      "gs-034: mong nhóm 3917 — nhận 4822/8307/9005",
+      "gs-035: mong nhóm 8501 — nhận 4011/4012/4013",
+      "gs-038: mong nhóm 8537 — nhận 8534/8542/1002",
+      "gs-039: mong nhóm 9030 — nhận 7324/8404/8419",
+      "gs-040: mong nhóm 8533 — nhận 7324/8404/8419",
+      "gs-041: mong nhóm 8471 — nhận 8405/8415",
+      "gs-043: mong nhóm 8412 — nhận 5301/5306/5309",
+      "gs-044: mong nhóm 8483 — nhận 8480/9208/4415",
+      "gs-046: mong nhóm 8537 — nhận 8534/8542/1002",
+      "gs-047: mong nhóm 7326 — nhận 7227/7228/8204",
+      "gs-048: mong nhóm 8451 — nhận 8405/8415",
+      "gs-049: mong nhóm 9031 — nhận 7324/8404/8419",
+      "gs-050: mong nhóm 8479 — nhận 8405/8415",
+      "gs-051: mong nhóm 3926 — nhận 8416/8601/8602",
+      "gs-052: mong nhóm 9025 — nhận 3603/4601/5607",
+      "gs-053: mong nhóm 4016 — nhận 6001/9029/2906",
+      "gs-055: mong nhóm 8482 — nhận 4822/8307/9005"
+    ]
+  },
+  "notebook": {
+    "cases": 14,
+    "passed": 1,
+    "safetyPassed": 0,
+    "safetyTotal": 8,
+    "unscored": 1,
+    "unscoredCases": [
+      "nb-07-tariff-no-prose (bỏ qua: expectIntent)"
+    ],
+    "skippedChecks": 18,
+    "misses": [
+      "nb-01-nd69-replaced: mustSay:292/2026 · mustSay:05/09/2026",
+      "nb-02-nd336-upcoming: mustSay:15/10/2026 · mustSay:85/2019",
+      "nb-03-nd43-repealed: mustSay:37/2026 · mustSay:23/01/2026 · mustSay:Điều 97",
+      "nb-04-ttlt58-repealed: mustSay:36/2026 · mustSay:01/07/2026",
+      "nb-05-draft-bnv: mustSay:chưa xác định",
+      "nb-06-nd336-not-nd08: mustSay:85/2019",
+      "nb-08-dehumidifier: mustSay:1483/TCHQ-GSQL",
+      "nb-10-helmet-qcvn: mustSay:QCVN 2:2021/BKHCN · mustSay:6506.10.10",
+      "nb-11-note1g-section16: mustSay:không bao gồm",
+      "nb-12-flycam: mustSay:88.06 · mustSay:3831/TCHQ-TXNK",
+      "nb-13-en-8418: mustSay:không bao gồm",
+      "nb-14-cv18648-qe-ko: mustSay:QE · mustSay:KO · mustSay:18648/CHQ-GSQL"
+    ]
+  }
+}

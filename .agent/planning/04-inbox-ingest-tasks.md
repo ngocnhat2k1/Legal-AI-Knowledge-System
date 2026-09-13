@@ -167,7 +167,6 @@ quét lại mỗi lần.
 | Việc | Vì sao |
 |---|---|
 | Tạo OAuth client_id riêng cho rclone (publishing = In production) | `client_id` dùng chung đang bị Google khai tử trong 2026 và đã gặp rate-limit |
-| `yarn install` khi có lại máy | `node_modules` hỏng: TypeScript, `@types/node`, `postgres` thiếu file — chưa kiểm kiểu được `db/seed/legal.ts` |
 | Đo lại `yarn eval` / golden recall@k | Kho từ 7 lên 15 văn bản; recall trên câu hỏi cũ có thể dịch chuyển |
 | Rà định kỳ nguồn 90 | 3 tài liệu lớp C có thể được ban hành sau này |
 | (Đề xuất) nạp 5 thông tư danh mục rủi ro còn lại | BYT 27, BCA 125, BNNMT 27, BXD 49, BCT 33/2026 — bản gốc của thứ file Excel nội bộ đang tổng hợp |
@@ -175,6 +174,7 @@ quét lại mỗi lần.
 | Giữ bộ câu hỏi test notebook trong repo, chạy lại sau mỗi đợt nạp | Câu test bắt được lỗi đánh số lại mà đường ống không bắt |
 | **Parser nhận nhầm dòng viện dẫn thành tiêu đề điều** — dòng bắt đầu bằng "Điều N …" giữa thân điều bị coi là tiêu đề, còn tiêu đề thật thành chữ thường: 25/VBHN-BTC (TT 38/2015) Điều 18, 33, 51, 71; 33/2023/TT-BTC Điều 9, 20. Và một **khoản ma** "khoản 20 Điều 10" 46/VBHN-BTC (dòng gập "20.000 tờ khai/năm."). Khoản bị gán sai điều → trích dẫn sai | Tìm bởi đợt kiểm độc lập 2026-09-10. Dữ liệu `verified` từ các giai đoạn trước — **chờ chủ dự án quyết** sửa parser và parse lại |
 | **EN2022: đuôi danh sách của nhóm trước tràn sang bản ghi nhóm sau** — phần loại trừ cuối của 84.17 nằm dưới tiêu đề 84.18 | Chưa đo trên toàn bộ 1.306 bản ghi; có thể có hệ thống ở chỗ tiêu đề nhóm rơi giữa trang hai cột |
+| `yarn install` — xong 2026-09-13 (đã xoá `node_modules` hỏng và cài lại sạch) | kiểm kiểu `legal.ts`: không có lỗi enum `verification`/`verified_by` (đã khớp sẵn); chỉ còn 1 lỗi TS1343 `import.meta`/`module` dùng chung với `db/seed/index.ts` và `research/task-012-acceptance/validate.ts` — lỗi cấu hình `tsconfig.json` toàn dự án, không phải lỗi riêng của `legal.ts`, không sửa vì ngoài phạm vi Task 1 |
 
 ## Kiến thức liên quan
 

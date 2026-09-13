@@ -1,7 +1,7 @@
 ---
 type: index
 status: active
-updated: 2026-09-10
+updated: 2026-09-13
 related:
   - AGENTS.md
   - project-context.md
@@ -53,6 +53,8 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Nhật ký tiến độ](planning/02-progress.md) — **điểm tiếp tục**; những gì đã thực sự diễn ra
 - [Kế hoạch khởi tạo](planning/00-bootstrap.md) — các giai đoạn và cổng kiểm soát (gate)
 - [Danh sách công việc](planning/01-task-list.md) — chi tiết công việc và tiêu chí chấp nhận
+- [Triển khai lại lên server dev dùng chung của MONA](planning/06-deploy-mona-dev-server.md) — **đang thực thi (2026-09-13)**: API + kho pháp lý chạy, LLM up; bot Zalo đã đăng nhập, còn kiểm thử đầu-cuối (Task 9); chờ domain + mật khẩu basic auth (Task 8), `rclone.conf` (Task 10). Dữ liệu Contabo đã mất (VPS bị xoá) nên seed mới
+- [Nâng cấp bot ngang notebook — Mảng 1…4](planning/05-bot-parity-tasks.md) — **kế hoạch đang chạy (2026-09-13)**: mảng 1 chi tiết (nền, baseline), mảng 2–4 phác thảo
 - [Đường ống hộp thư đến — Giai đoạn 9](planning/04-inbox-ingest-tasks.md) — **kế hoạch đang chạy**; nạp tài liệu mới + gộp nguồn notebook, không cần máy chủ
 - [Kế hoạch mở rộng LLM (M0…M4)](planning/03-llm-expansion-tasks.md) — nền móng, kho rộng ra, truy hồi, bằng chứng HS, phân loại HS
 
@@ -65,6 +67,8 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Kho pháp luật tự mở rộng](docs/legal-corpus-self-extension.md) — chỉ mục Công báo → nạp theo yêu cầu có cổng tự kiểm → thăng cấp bởi con người
 - [Đường ống hộp thư đến](docs/inbox-ingest-workflow.md) — từ file nhận được qua Zalo/email tới kho tri thức và notebook; phân lớp tài liệu, thang ưu tiên lấy bản văn, đồng bộ Google Docs
 - [Runbook: nạp tài liệu mới — lần sau làm thế nào](../research/inbox-loader/README.md) — từng bước, từng lệnh, các cổng phải qua
+- [Runbook: vận hành server MONA dev](docs/mona-dev-server-operations.md) — vận hành stack trên server dev dùng chung của MONA sau khi deploy; đích ssh ghi là `<MONA_DEV_HOST>`, giá trị thật nằm ngoài git
+- [Bot trả lời ngang notebook](docs/bot-answer-parity-design.md) — **đã duyệt (2026-09-13, bản 2 sau đợt kiểm độc lập)**: bảng bằng chứng chung phủ 32/32 nguồn notebook, đường trả lời 5 bước đọc dài, kiểm trích dẫn neo theo câu, chế độ ứng viên HS, chấm mù với notebook
 - [Mở rộng LLM](docs/llm-expansion-design.md) — dùng nhiều LLM hơn mà không nới rào chắn: kho rộng ra, truy hồi đa truy vấn, bằng chứng phân loại HS
 - [Đánh giá](docs/evaluation.md) — bộ vàng (golden set) và các cổng ra mắt (ship gates)
 
@@ -85,6 +89,8 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Nguồn notebook là Google Docs trên Drive](architecture-decisions/2026-09-10-notebook-sources-as-google-docs.md) — file upload không bao giờ tự đồng bộ; Drive thì có, vài phút một lần
 - [Văn bản chưa xác định tình trạng và công văn nằm ngoài kho pháp lý](architecture-decisions/2026-09-10-drafts-and-cong-van-outside-legal-corpus.md) — ô số hiệu trống là NGHI VẤN, phải dò Công báo; ba lần "dự thảo" hoá ra đã ban hành
 - [Nạp bản tiếng Việt của Chú giải chi tiết HS và SEN](architecture-decisions/2026-09-10-load-vietnamese-explanatory-notes.md) — thay thế một phần ADR 2026-09-09; bản tiếng Anh WCO vẫn không nạp
+- [Bảng bằng chứng chung và câu trả lời dài có kiểm nguyên văn](architecture-decisions/2026-09-13-evidence-sections-and-long-form-answers.md) — thay một phần ADR 2026-08-14: ngân sách 4 lần gọi/lượt; `quote ⊂ nguồn` là sàn kiểm căn cứ
+- [Host trên server dev dùng chung của MONA](architecture-decisions/2026-09-13-host-on-mona-dev-server.md) — thay VPS Contabo đã bị xoá: một compose project cô lập, nginx có sẵn thay Caddy, cổng 3060/5435, sao lưu lên Drive
 
 ## Đánh giá (Reviews)
 

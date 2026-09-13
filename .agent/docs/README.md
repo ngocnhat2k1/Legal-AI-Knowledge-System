@@ -9,3 +9,5 @@ Thư mục `docs/` ở gốc là tùy chọn và chỉ nên được dùng cho t
 ## Các tài liệu bao gồm
 
 - `code-organization.md` định nghĩa việc ánh xạ cấu trúc theo hướng framework-first, bố cục mã nguồn cơ sở được khuyến nghị, ranh giới module, quy tắc mã dùng chung, và các kiểm tra tái sử dụng.
+- `bot-answer-parity-design.md` thiết kế nâng cấp bot Zalo để trả lời ngang hoặc hơn Gemini Notebook: bảng `evidence_section`, `POST /answer` năm bước, nguyên tắc câu trả lời, chấm mù.
+- `mona-dev-server-operations.md` runbook vận hành stack trên server dev dùng chung của MONA sau khi deploy; đích ssh ghi là `<MONA_DEV_HOST>`, giá trị thật và chi tiết host nằm ngoài git trong `.agent/local/mona-dev-server.md`.

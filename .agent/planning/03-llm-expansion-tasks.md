@@ -221,6 +221,8 @@ Trong `check()`: gọi `const llm = await probeLlm();` trước khối `try`, v�
 
 - [x] **Bước 6: cài CLI vào image**
 
+> **Ghi chú 2026-09-13:** trước ngày này Dockerfile KHÔNG có dòng cài CLI — VPS cũ chỉ có CLI qua `docker-compose.override.yml` ngoài git. Đã thêm vào `apps/api/Dockerfile` theo [05-bot-parity-tasks.md](05-bot-parity-tasks.md) Task 7; đã build và kiểm trên server 2026-09-13: CLI 2.1.270 trong image, `/health` báo `llm: up`.
+
 Trong `apps/api/Dockerfile`, stage `runtime`, ngay sau `ENV NODE_ENV=production`:
 
 ```dockerfile
