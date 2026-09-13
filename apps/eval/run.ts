@@ -2,6 +2,8 @@
  * The measurement gate. One command, one baseline.
  *
  *   EVAL_API_URL=http://localhost:3000 corepack yarn eval
+ *   EVAL_ANSWER_ENDPOINT=/answer …   # notebook block against POST /answer (default /legal;
+ *                                    # any other value falls back to /legal)
  *
  * Every prompt change from here on is a software change and has to come through this:
  * "the answers feel better" is not a result, and the failure mode of this product is a
@@ -16,6 +18,7 @@ import { join } from 'node:path';
 
 import { evalHs } from './hs';
 import { evalLegal } from './legal';
+import { evalNotebook } from './notebook';
 import { renderReport } from './report';
 
 interface Health {
@@ -42,12 +45,18 @@ async function main(): Promise<void> {
     console.warn('CẢNH BÁO: tầng LLM chưa sẵn sàng — chỉ số "trả lời có trích dẫn" đang đo đường KHÔNG-LLM.');
   }
 
+  // A typo in EVAL_ANSWER_ENDPOINT must not send requests to a wrong path — only the
+  // two real shapes are accepted, anything else falls back to the default.
+  const rawEndpoint = process.env.EVAL_ANSWER_ENDPOINT;
+  const endpoint: '/legal' | '/answer' = rawEndpoint === '/answer' ? '/answer' : '/legal';
+
   const legal = await evalLegal(apiUrl);
   const hs = await evalHs(apiUrl);
-  console.log(renderReport(legal, hs));
+  const notebook = await evalNotebook(apiUrl, endpoint);
+  console.log(renderReport(legal, hs, notebook));
 
   const out = join(process.cwd(), 'fixtures', 'eval-baseline.json');
-  const record = { at: new Date().toISOString(), api: apiUrl, llm: health.llm ?? null, legal, hs };
+  const record = { at: new Date().toISOString(), api: apiUrl, llm: health.llm ?? null, legal, hs, notebook };
   writeFileSync(out, `${JSON.stringify(record, null, 2)}\n`);
   console.log(`Đã ghi ${out}`);
 }

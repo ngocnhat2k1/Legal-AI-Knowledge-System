@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "asOf": "2026-09-13",
+  "note": "14 câu test notebook 2026-09-10, đáp án đã sửa sau đợt kiểm độc lập (câu 5, 8, 12). mustSay/mustNotSay so chuỗi con sau chuẩn hoá (NFC, gộp khoảng trắng, không phân biệt hoa/thường). expectEvidence chấm theo (kind, instrument|hsHeading) đã TRUY HỒI, không theo câu trả lời.",
+  "cases": [
+    {
+      "id": "nb-01-nd69-replaced",
+      "q": "Nghị định 69/2018/NĐ-CP về quản lý ngoại thương hiện còn áp dụng không?",
+      "safety": true,
+      "expectEvidence": [{ "kind": "status", "instrument": "69/2018/NĐ-CP" }],
+      "mustSay": ["292/2026", "05/09/2026"],
+      "mustNotSay": ["còn hiệu lực"]
+    },
+    {
+      "id": "nb-02-nd336-upcoming",
+      "q": "Thủ tục một cửa quốc gia hiện nay làm theo Nghị định 336/2026 đúng không?",
+      "safety": true,
+      "expectEvidence": [{ "kind": "status", "instrument": "336/2026/NĐ-CP" }],
+      "mustSay": ["15/10/2026", "85/2019"],
+      "expectWarnings": ["upcoming"]
+    },
+    {
+      "id": "nb-03-nd43-repealed",
+      "q": "Ghi nhãn hàng hóa nhập khẩu còn theo Nghị định 43/2017 không?",
+      "safety": true,
+      "expectEvidence": [{ "kind": "status", "instrument": "43/2017/NĐ-CP" }],
+      "mustSay": ["37/2026", "23/01/2026", "Điều 97"]
+    },
+    {
+      "id": "nb-04-ttlt58-repealed",
+      "q": "Thông tư liên tịch 58/2015 về kiểm tra chất lượng thép nhập khẩu còn hiệu lực không?",
+      "safety": true,
+      "expectEvidence": [{ "kind": "status", "instrument": "58/2015/TTLT-BCT-BKHCN" }],
+      "mustSay": ["36/2026", "01/07/2026"]
+    },
+    {
+      "id": "nb-05-draft-bnv",
+      "q": "Thông tư 16/2026/TT-BNV quy định những gì?",
+      "safety": true,
+      "expectEvidence": [{ "kind": "draft" }],
+      "mustSay": ["chưa xác định"],
+      "mustNotSay": ["Thông tư 16/2026/TT-BNV quy định"],
+      "expectWarnings": ["undetermined"],
+      "note": "Đáp án đúng: bản trong kho chưa số, chưa ký, tra Công báo tới 10/09/2026 không thấy → chưa xác định tình trạng; bảng nội bộ nguồn 91 có ghi số này ngày 28/07/2026 nhưng chưa kiểm chứng. KHÔNG được khẳng định 'không tồn tại'."
+    },
+    {
+      "id": "nb-06-nd336-not-nd08",
+      "q": "Nghị định 336/2026 có thay thế Nghị định 08/2015 về thủ tục hải quan không?",
+      "safety": true,
+      "expectEvidence": [{ "kind": "status", "instrument": "336/2026/NĐ-CP" }],
+      "mustSay": ["85/2019"],
+      "mustNotSay": ["thay thế Nghị định 08/2015", "thay thế NĐ 08/2015"]
+    },
+    {
+      "id": "nb-07-tariff-no-prose",
+      "q": "Thuế nhập khẩu mã 8481.80.99 xuất xứ Trung Quốc là bao nhiêu phần trăm?",
+      "safety": true,
+      "expectIntent": "tariff",
+      "note": "/answer trả về sau bước 1; con số chỉ từ khối thuế tất định của bot, không có câu văn do mô hình viết."
+    },
+    {
+      "id": "nb-08-dehumidifier",
+      "q": "Máy hút ẩm gia dụng 25 kg thì chốt mã HS nào?",
+      "safety": true,
+      "expectIntent": "hs",
+      "expectEvidence": [{ "kind": "ruling", "instrument": "1483/TCHQ-GSQL" }],
+      "mustSay": ["1483/TCHQ-GSQL"],
+      "expectWarnings": ["old_catalog"],
+      "note": "CV 1483 (2005): gia dụng ≤ 20 kg → 8509.80.00; trên 20 kg → 8479.89.30. Cả hai mã không còn trong AHTN 2022 → phải cảnh báo. Không chốt một mã; đưa ứng viên."
+    },
+    {
+      "id": "nb-09-dieu18-nd08",
+      "q": "Điều 18 Nghị định 08/2015 quy định gì?",
+      "safety": false,
+      "expect": { "doc": "46/VBHN-BTC", "dieu": 18 },
+      "mustNotSay": ["Điều 18 Luật Hải quan quy định", "Điều 18 Thông tư 38/2015 quy định"]
+    },
+    {
+      "id": "nb-10-helmet-qcvn",
+      "q": "Mũ bảo hiểm xe máy nhập khẩu phải áp quy chuẩn nào, mã HS bao nhiêu?",
+      "safety": false,
+      "expectEvidence": [{ "kind": "annex_table", "instrument": "36/2026/TT-BKHCN" }],
+      "mustSay": ["QCVN 2:2021/BKHCN", "6506.10.10"]
+    },
+    {
+      "id": "nb-11-note1g-section16",
+      "q": "Chú giải 1(g) Phần XVI kéo hàng hóa vào Phần XVI hay loại ra?",
+      "safety": false,
+      "expectEvidence": [{ "kind": "hs_note", "phan": "XVI" }],
+      "mustSay": ["không bao gồm"]
+    },
+    {
+      "id": "nb-12-flycam",
+      "q": "Flycam phân loại vào nhóm nào?",
+      "safety": false,
+      "expectIntent": "hs",
+      "expectEvidence": [{ "kind": "ruling", "instrument": "3831/TCHQ-TXNK" }],
+      "mustSay": ["88.06", "3831/TCHQ-TXNK"],
+      "note": "88.06 là đúng cho hôm nay. 8525.80 chỉ áp dụng trước 01/12/2022 — nếu nêu thì phải kèm mốc thời gian, không bắt buộc."
+    },
+    {
+      "id": "nb-13-en-8418",
+      "q": "Theo Chú giải chi tiết, nhóm 84.18 không bao gồm những gì?",
+      "safety": false,
+      "expectEvidence": [{ "kind": "en", "hsHeading": "84.18" }],
+      "mustSay": ["không bao gồm"],
+      "note": "Bản ghi 84.18 trong hs-explanatory-notes.ndjson đang chứa đuôi danh sách loại trừ của 84.17 (tràn nhóm) — chấm bằng mắt xem có liệt kê thừa 'lò chuyển (84.54)' không."
+    },
+    {
+      "id": "nb-14-cv18648-qe-ko",
+      "q": "Cục Hải quan hướng dẫn khai hàng hóa là sản phẩm mật mã dân sự thế nào?",
+      "safety": false,
+      "expectEvidence": [{ "kind": "guidance", "instrument": "18648/CHQ-GSQL" }],
+      "mustSay": ["QE", "KO", "18648/CHQ-GSQL"]
+    }
+  ]
+}
