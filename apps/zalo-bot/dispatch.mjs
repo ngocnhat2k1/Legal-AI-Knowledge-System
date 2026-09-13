@@ -24,7 +24,7 @@
  * so a cue that does not match the current topic is never allowed to reach a handler
  * that would write to the audit trail.
  */
-import { hasHs } from './parse.mjs';
+import { hasHs, parseDocRef } from './parse.mjs';
 
 /** Whole-message confirmations. Matched EXACTLY, so a real caption never trips them. */
 export const CONFIRM_WORDS = {
@@ -144,5 +144,6 @@ export function guardIntent(intentRaw, { topic = null, tariffFresh = false, quot
 export function fallbackIntent({ topic = null, text = '' }) {
   if (topic === 'legal') return 'legal';
   if (isDisagreement(text) && topic === 'general') return 'general';
+  if (parseDocRef(text)?.confident) return 'legal'; // "Nghị định 69/2018/NĐ-CP còn áp dụng không" is no product
   return 'tariff';
 }

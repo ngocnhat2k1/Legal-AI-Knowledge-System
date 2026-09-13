@@ -27,7 +27,7 @@ import { loadContext, saveContext } from './conversation.mjs';
 import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
 import { formatGeneral, formatIngestQueued, formatIngestReport } from './format.mjs';
-import { docNumberStatedIn, mergeQuote, parseQuery, stripMentions } from './parse.mjs';
+import { docNumberStatedIn, mergeQuote, parseQuery, statedDocNumber, stripMentions, todayVN } from './parse.mjs';
 import { L, render } from './render.mjs';
 import { route } from './router.mjs';
 
@@ -181,7 +181,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     // bot went on to report that document missing and list unrelated circulars.
     const statedDoc =
       routed?.docNumber && docNumberStatedIn(`${text} ${quoteText}`, routed.docNumber)
-        ? routed.docNumber
+        ? statedDocNumber(`${text} ${quoteText}`, routed.docNumber) // an issuer the user did not write is dropped (39/2018)
         : undefined;
     return {
       ...(await answerLegal(query, {
@@ -208,7 +208,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
       hs: ctx.tariff.hs,
       dotted: ctx.tariff.dotted,
       origin: routed.origin ?? ctx.tariff.origin ?? null,
-      date: routed.date || new Date().toISOString().slice(0, 10),
+      date: routed.date || todayVN(),
     };
     return { ...(await answerByHs(q, { showFooter: false })), intent };
   }

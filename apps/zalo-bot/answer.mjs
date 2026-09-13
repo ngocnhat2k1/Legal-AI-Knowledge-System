@@ -24,11 +24,9 @@ import {
 import { stampTariff } from './conversation.mjs';
 import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
-import { citationFrom, cleanGazetteTitle, corpusHas, detectOrigin, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff } from './parse.mjs';
+import { citationFrom, cleanGazetteTitle, corpusHas, detectOrigin, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
 import { L } from './render.mjs';
 import { claudeVision } from './router.mjs';
-
-const today = () => new Date().toISOString().slice(0, 10);
 
 // --- Tariff by explicit HS code ---------------------------------------------
 
@@ -42,14 +40,15 @@ export async function answerByHs(q, { showFooter = true } = {}) {
   }
   if (res.status === 404) {
     return {
-      text: `Không tìm thấy thuế cho HS ${q.dotted} (ngày ${q.date}). Có thể là dòng không mang thuế, dòng đặc biệt, hoặc ngoài dữ liệu đã nạp.`,
+      text: `Không tìm thấy thuế cho HS ${q.dotted} (ngày ${dmy(q.date)}). Có thể là dòng không mang thuế, dòng đặc biệt, hoặc ngoài dữ liệu đã nạp.`,
       topic: 'tariff',
       tariff: null,
     };
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    return { text: `Lỗi tra cứu: ${body.message || res.status}. Thử "8481.80.99 TQ".`, topic: 'tariff', tariff: null };
+    console.error(`[tariff] ${res.status} ${body.message ?? ''}`); // the API message is English and technical: log it, never show it
+    return { text: `Mình chưa tra được mã ${q.dotted}. Bạn kiểm tra lại mã (8 chữ số, ví dụ "8481.80.99 xuất xứ Trung Quốc") nhé.`, topic: 'tariff', tariff: null };
   }
   const data = await res.json();
   const confirm = await confirmations(q.hs, q.origin);
@@ -136,11 +135,13 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   const full = await lookupFull(top.hsDotted, origin, date);
   const confirm = full ? await confirmations(top.hsDotted, origin) : null;
   const tail = (c) => (c.path || '').split(' › ').slice(-2).join(' › ');
-  // /tariff/search prices MFN at the server's CURRENT_DATE: print it only when that is the lookup date (R8).
-  const mfnOf = (c) => (date === today() && c.mfn != null ? `${Number(c.mfn)}%` : '—');
+  // /tariff/search prices MFN at Postgres CURRENT_DATE (UTC): print it only when that is the lookup date (R8).
+  // ponytail: between 00:00 and 07:00 Vietnam time the menus show "—"; pass the date to /tariff/search if that matters.
+  const mfnOf = (c) => (date === new Date().toISOString().slice(0, 10) && c.mfn != null ? `${Number(c.mfn)}%` : '—');
   const menu = (c) => L([[c.hsDotted, 'b'], ' · MFN ', [mfnOf(c), 'b'], ' · ', [tail(c), 'i']], 'ul');
 
-  // R2: always said, and the LLM lead can only stand above it — a lead naming the top code passes the gate.
+  // R2: always said, and the LLM lead can only stand above it. The lead is gated with no block, so it names no
+  // code: "thuộc mã 7307.99.90" above the candidates reads as settled, and a quoted "sai" would hit that code.
   const said = 'mình tra được các mã ứng viên dưới đây — đây là ứng viên để bạn chốt, chưa phải mã đã xác định.';
   const lines = [L(desc ? ['Với mô tả ', [desc, 'i'], `, ${said}`] : [said[0].toUpperCase() + said.slice(1)])];
   if (citedRuling) {
@@ -187,7 +188,7 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
     full || citedRuling
       ? stampTariff({ hs: top.hsDotted.replace(/\./g, ''), dotted: top.hsDotted, origin, date, snapshot: full || null, desc, keywords: productKw })
       : null;
-  return { text: withLead(clues?.lead, lines), topic: 'tariff', tariff };
+  return { text: withLead(sanitizeLead(clues?.lead, ''), lines), topic: 'tariff', tariff };
 }
 
 // --- Legal -------------------------------------------------------------------
@@ -210,6 +211,8 @@ export async function answerLegal(query, { asOf, doc, article, clause, lead } = 
     // "we don't hold it" reads very differently with the document's real title attached.
     // The full number when the user wrote one: the API can then match that ONE document (69/2018 bug).
     const probe = await legalAnswer(query, { asOf, doc: ref.full ?? ref.core });
+    // No answer from the API is not "no such document": the catalogue was never consulted (and the manifest was empty).
+    if (!probe) return { text: 'Không gọi được dịch vụ tra cứu văn bản. Thử lại sau nhé.', topic: 'legal', legal: null };
     return missingDocAnswer(query, ref.label, probe, asOf);
   }
 

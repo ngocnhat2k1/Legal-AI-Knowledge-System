@@ -118,7 +118,10 @@ background:#fff; padding:16px; border-radius:12px; box-shadow:0 1px 3px rgba(0,0
         }
         if (d.import?.mfn) h += rateRow(d.import.mfn);
         // Same condition as the bot's only green line: verified member, not excluded, one rate for the 8-digit line.
-        (d.import?.preferential || []).forEach((p) => (h += rateRow(p, p.originEligible === true && ['ad_valorem', 'specific', 'compound'].includes(p.type) ? 'pref' : '')));
+        // A verified non-member origin: shown greyed with the reason, never as an available rate (the bot hides it).
+        (d.import?.preferential || []).forEach((p) => (h += p.originEligible === false
+          ? rateRow({ ...p, statement: p.statement + ' — xuất xứ này không thuộc biểu' }, 'muted')
+          : rateRow(p, p.originEligible === true && ['ad_valorem', 'specific', 'compound'].includes(p.type) ? 'pref' : '')));
         (d.import?.chapter98 || []).forEach((p) => (h += rateRow(p))); // conditional alternative, never green
         if (d.import?.outOfQuota) h += rateRow(d.import.outOfQuota);
         if (d.export) h += rateRow(d.export);

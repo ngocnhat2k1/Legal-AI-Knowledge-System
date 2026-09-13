@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
-import { handleConfirm, tariffByClues } from './answer.mjs';
+import { answerByHs, answerLegal, handleConfirm, tariffByClues } from './answer.mjs';
 import {
   CAPABILITIES,
   formatAnswer,
@@ -23,7 +23,7 @@ import {
   withLead,
 } from './format.mjs';
 import { L, render, toText } from './render.mjs';
-import { cleanGazetteTitle, corpusHas, docNumberStatedIn, missingKind, parseDocRef, parseQuotedTariff, sameDocNumber } from './parse.mjs';
+import { cleanGazetteTitle, corpusHas, docNumberStatedIn, missingKind, parseDocRef, parseQuotedTariff, sameDocNumber, statedDocNumber } from './parse.mjs';
 
 // The bot's own legal answer, as it appears in a quote. Note it carries NO HS code.
 const LEGAL_ANSWER_QUOTE =
@@ -126,6 +126,7 @@ test('an unknown intent falls back to tariff, the historical default', () => {
 test('without an LLM the bot stays on the current topic instead of keyword-searching', () => {
   assert.equal(fallbackIntent({ topic: 'legal', text: 'không phải cái đó' }), 'legal');
   assert.equal(fallbackIntent({ topic: 'tariff', text: 'van bi từ TQ' }), 'tariff');
+  assert.equal(fallbackIntent({ topic: null, text: 'Nghị định 69/2018/NĐ-CP còn áp dụng không' }), 'legal', 'số hiệu văn bản rõ ràng không đi tra mã HS');
 });
 
 // --- The lead/facts split ---------------------------------------------------
@@ -201,6 +202,14 @@ test('a document number the user never wrote is rejected', () => {
   assert.equal(docNumberStatedIn('nghị định 8/2015', '08/2015/NĐ-CP'), true);
   // A digit inside a longer number must not count as a match.
   assert.equal(docNumberStatedIn('lô hàng 3620161234', '36/2016/TT-BKHCN'), false);
+});
+
+test('the router keeps an issuer only when the user wrote it (39/2018)', () => {
+  // The user wrote no issuer; a guessed TT-BTC would make a document we hold look missing.
+  assert.equal(statedDocNumber('Thông tư 39/2018 còn áp dụng không', '39/2018/TT-BTC'), '39/2018');
+  assert.equal(statedDocNumber('39/2018/TT-BTC hết hiệu lực chưa', '39/2018/TT-BTC'), '39/2018/TT-BTC');
+  assert.equal(statedDocNumber('nghị định 69/2018/nđ-cp còn áp dụng không', '69/2018/NĐ-CP'), '69/2018/NĐ-CP');
+  assert.equal(statedDocNumber('văn bản 46/VBHN-BTC', '46/VBHN-BTC'), '46/VBHN-BTC');
 });
 
 test('gazette titles read as titles, not as the number three times', () => {
@@ -302,6 +311,8 @@ test('thuế CN, bảng thành viên đã xác nhận: đúng một chỗ xanh, 
   const sources = lineWith(p, 'Tra theo ngày 13/09/2026');
   assert.ok(sources.includes('[1] NĐ 118/2022/NĐ-CP') && sources.includes('[2] NĐ 26/2023/NĐ-CP'));
   assert.ok(lineWith(p, 'Đã ẩn AANZFTA, ATIGA, EVFTA'), 'phải nói rõ đã ẩn biểu nào');
+  assert.ok(p.msg.split('\n').at(-1).startsWith('Mã đúng với lô hàng'), 'dòng "Đã ẩn" đã mời nhắn tên nước, dòng kết không hỏi lại');
+  assert.ok(one(formatAnswer({ ...CN, origin: 'EU' }, tariff8481({ origin: 'EU', verified: true }), null)).msg.split('\n').at(-1).startsWith('Muốn xem xuất xứ khác'));
   assert.ok(styled(p, 'f_13').some((t) => t.startsWith('Đã ẩn')), 'dòng "Đã ẩn" là dòng note');
   for (const s of ['AANZFTA', 'ATIGA', 'EVFTA']) {
     assert.equal(p.msg.split('\n').filter((l) => l.includes(s)).length, 1, `${s} chỉ được nêu ở dòng "Đã ẩn"`);
@@ -333,6 +344,8 @@ test('thuế không có xuất xứ: dòng gọn, không xanh, ACFTA nêu các n
   // Quoted back: "ASEAN–Trung Quốc (ACFTA)" in the rows and sources is not an origin; the date is the looked-up one.
   const quoted = parseQuotedTariff(toText(formatAnswer(NO_ORIGIN, { ...tariff8481(), date: '2026-01-05' }, null)));
   assert.deepEqual([quoted.hs, quoted.origin, quoted.date], ['84818099', null, '2026-01-05']);
+  // A country inside the heading in brackets is not the origin.
+  assert.equal(parseQuotedTariff('Hàng hóa có mã HS 0902.10.10 (Chè (trà) xanh kiểu Nhật Bản…) có thuế nhập khẩu').origin, null);
 });
 
 test('xuất xứ bị NĐ 118 loại trừ ở dòng: "không được hưởng" màu đỏ, không con số ưu đãi, vẫn có MFN', () => {
@@ -502,6 +515,40 @@ test('ứng viên HS: MFN từ /tariff/search (giá hôm nay) không in dưới 
   assert.doesNotMatch(past + border, /· MFN \d/);
   const now = await byClues({ hsHints: ['8481'], date: new Date().toISOString().slice(0, 10) });
   assert.match(now, /8481\.80\.91 · MFN 5% ·/, 'ngày tra là hôm nay thì in MFN ứng viên');
+});
+
+test('ứng viên HS: lời dẫn LLM nêu mã HS bị bỏ, dòng đầu vẫn là dòng ứng viên cố định (R2)', async () => {
+  const named = await byClues({ hsHints: ['8481', '7307'], date: '2026-09-13', lead: 'Sản phẩm này thuộc mã 7307.99.90 là hợp lý nhất.' });
+  assert.ok(named.startsWith('Với mô tả van'), named.slice(0, 80));
+  assert.equal(parseQuotedTariff(named).hs, '84818099', 'tin quote lại phải chỉ về mã đầu, không về mã lời dẫn nêu');
+  const plain = await byClues({ hsHints: ['8481'], date: '2026-09-13', lead: 'Mình tra theo mô tả bạn gửi.' });
+  assert.ok(plain.startsWith('Mình tra theo mô tả bạn gửi.'), plain.slice(0, 80));
+});
+
+test('pháp luật: API không trả lời thì không nói văn bản "không có trên Công báo"', async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('ECONNREFUSED'); };
+  try {
+    const text = toText((await answerLegal('Nghị định 69/2018/NĐ-CP còn áp dụng không')).text);
+    assert.ok(!text.includes('không tìm thấy') && text.includes('Không gọi được'), text);
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test('answerByHs: lỗi tra cứu viết tiếng Việt, ngày dd/mm/yyyy, không lộ thông điệp API', async () => {
+  const real = globalThis.fetch;
+  const q = { hs: '27101221', dotted: '2710.12.21', origin: null, date: '2026-05-15' };
+  try {
+    globalThis.fetch = async () => ({ ok: false, status: 404, json: async () => ({}) });
+    const nf = await answerByHs(q);
+    assert.ok(nf.text.includes('ngày 15/05/2026') && !nf.text.includes('2026-05-15'), nf.text);
+    globalThis.fetch = async () => ({ ok: false, status: 400, json: async () => ({ message: 'hs must be 8 digits' }) });
+    const bad = await answerByHs(q);
+    assert.ok(!bad.text.includes('hs must') && !bad.text.includes('400'), bad.text);
+  } finally {
+    globalThis.fetch = real;
+  }
 });
 
 test('ứng viên HS nằm ranh giới vẫn in lịch sử xác nhận của mã đầu (R18)', async () => {

@@ -533,7 +533,7 @@ code, không bằng prompt.
 | `small` | cỡ nhỏ | `f_13` (Small) |
 | `ul` / `ol` | nhãn dòng: danh sách | `lst_1` / `lst_2` |
 | `note` (bí danh) | nguồn, ghi chú, chân trang | `f_13` + `i` |
-| `warn` (bí danh dòng) | dòng cảnh báo | mọi dòng `warn` của một lần `render` **gộp thành một** dòng `c_f27806` ở vị trí dòng `warn` đầu tiên, nối bằng `; `. Không dòng nào bị hạ thành chữ nhỏ: cảnh báo "bot tự nạp, chưa có người đối chiếu" (R18) hay dòng phạm vi kho không bao giờ bị thu nhỏ chỉ vì đứng sau |
+| `warn` (bí danh dòng) | dòng cảnh báo | mọi dòng `warn` của một lần `render` **gộp thành một** dòng `c_f27806` ở vị trí dòng `warn` đầu tiên, nối bằng `; ` (một khoảng trắng khi dòng trước đã kết bằng `.`, `!` hoặc `?`). Không dòng nào bị hạ thành chữ nhỏ: cảnh báo "bot tự nạp, chưa có người đối chiếu" (R18) hay dòng phạm vi kho không bao giờ bị thu nhỏ chỉ vì đứng sau |
 
 Không dùng `u`, `s`, `c_f7b503` (Yellow), `f_18` (Big), `ind_$`. Bảng nhãn là hằng trong `render.mjs`;
 test so nó với `TextStyle` import từ `zca-js` để bắt lệch khi nâng phiên bản.
@@ -563,7 +563,8 @@ dời gốc nào để sai:
 
 1. Gom dòng thành đoạn (ngăn bởi dòng trống). Xếp tham lam từng đoạn vào tin hiện tại khi tổng độ dài
    ≤ `budget − 8` (chừa chỗ `(k/n)`).
-2. Một đoạn dài hơn ngân sách → xếp theo dòng. Một dòng dài hơn ngân sách → cắt ở ranh giới đoạn chữ;
+2. Một đoạn dài hơn ngân sách → xếp theo dòng, nối tiếp tin hiện tại (đoạn ngắn đứng trước không bị gửi
+   thành một tin riêng). Một dòng dài hơn ngân sách → cắt ở ranh giới đoạn chữ;
    đoạn không nhãn được cắt ở khoảng trắng cuối cùng trước ngưỡng; **đoạn có nhãn không bị cắt**, trừ
    khi chính nó dài hơn ngân sách (builder không sinh đoạn như vậy) — khi đó cắt ở khoảng trắng và hai
    nửa cùng giữ nhãn. Nhãn dòng lặp trên cả hai nửa.
@@ -707,7 +708,8 @@ Hai hàng đỏ đầu gọi chung là **dòng không được hưởng**.
      Đoạn cam là **đoạn**, không phải dòng cảnh báo. Không in gợi ý.
    - Không có lịch sử, `showFooter` → một câu nghiêng = gợi ý (nếu có) + lời mời. Gợi ý chỉ khi bảng đã
      xác nhận: không có xuất xứ "Cho mình biết xuất xứ để lọc đúng biểu ưu đãi; ", có xuất xứ "Muốn xem
-     xuất xứ khác, nhắn tên nước; ". Lời mời: `mã đúng với lô hàng thì trả lời "đúng", chưa đúng thì trả
+     xuất xứ khác, nhắn tên nước; " — bỏ khi câu trả lời đã có dòng "Đã ẩn …" hoặc "Các biểu FTA đã nạp
+     khác …", vì dòng đó đã mời nhắn tên nước (một lời mời là đủ). Lời mời: `mã đúng với lô hàng thì trả lời "đúng", chưa đúng thì trả
      lời "sai" hoặc gửi mã đúng.` (viết hoa chữ đầu câu khi đứng một mình).
    - Không có lịch sử, không `showFooter` → không có dòng kết.
 
@@ -737,7 +739,7 @@ nồi hơi, bể chứa hoặc các loại tương tự, kể cả van giảm á
 
 {cam: Biểu thuế trong kho cập nhật tới NĐ 26/2023/NĐ-CP (hiệu lực 15/07/2023); chưa nạp dòng thuế của 4 nghị định biểu thuế còn hiệu lực — đối chiếu trước khi khai.}
 {nhỏ: Tra theo ngày 13/09/2026 · [1] NĐ 118/2022/NĐ-CP — ASEAN–Trung Quốc (ACFTA) · [2] NĐ 26/2023/NĐ-CP — Biểu thuế nhập khẩu ưu đãi (MFN, Mục I) · Chưa nạp: NĐ 144/2024/NĐ-CP, NĐ 108/2025/NĐ-CP, NĐ 199/2025/NĐ-CP, NĐ 201/2026/NĐ-CP}
-*Muốn xem xuất xứ khác, nhắn tên nước; mã đúng với lô hàng thì trả lời "đúng", chưa đúng thì trả lời "sai" hoặc gửi mã đúng.*
+*Mã đúng với lô hàng thì trả lời "đúng", chưa đúng thì trả lời "sai" hoặc gửi mã đúng.*
 ```
 
 *Ví dụ 2 — xuất xứ CN, bảng thành viên không có hiệu lực* (thiếu file, thiếu `verifiedBy`, hoặc `verifiedHash`
@@ -958,9 +960,10 @@ không xanh, không ẩn biểu.
 
 1. **Dòng ứng viên cố định, luôn in**, là dòng đầu của khối đưa vào `withLead`: "Với mô tả *{desc}*,
    mình tra được các mã ứng viên dưới đây — đây là ứng viên để bạn chốt, chưa phải mã đã xác định."
-   `clues.lead` (nếu còn sau cổng) đứng **trước** dòng này, không bao giờ thay nó. Lý do: `sanitizeLead`
-   giữ lời dẫn có mã HS trùng khối, nên "Sản phẩm này thuộc mã 8543.70.90" qua được cổng; dòng cố định
-   cùng câu dẫn điều kiện mới là thứ giữ R2. `clues.note` (LLM, hôm nay **không** gác) qua cổng văn xuôi
+   `clues.lead` (nếu còn sau cổng) đứng **trước** dòng này, không bao giờ thay nó. Cổng dùng khối rỗng
+   (`sanitizeLead(lead, '')`): lời dẫn nêu mã HS, số hiệu hay điều khoản bị bỏ, vì "Sản phẩm này thuộc mã
+   8543.70.90" đứng trên dòng ứng viên đọc như mã đã chốt (R2), và khi hết trí nhớ `parseQuotedTariff` đọc
+   tin quote lại thành mã lời dẫn nêu thay vì mã đầu. Dòng cố định cùng câu dẫn điều kiện vẫn giữ R2. `clues.note` (LLM, hôm nay **không** gác) qua cổng văn xuôi
    §5b.7 trước khi vào `desc`; bị gác thì dùng từ khoá.
 2. **Có ÁP MÃ đã xác nhận** (`citedRuling`): dòng thuần "Mã **{dotted}** đã được **{staffName}** xác
    nhận cho hàng tương tự ({cite}) — mình ưu tiên mã này, bạn vẫn đối chiếu căn cứ." Nếu đồng thời
@@ -1020,7 +1023,8 @@ cứ, `abstain`, một lần gọi, trần 45s:
      `; ` và xuống dòng. Trong mỗi câu, mọi `\d+([.,]\d+)?\s*%`, tiền `\d[\d.,]*\s*(USD|VND|đồng|đ)\b`,
      ngày `\d{1,2}/\d{1,2}/\d{4}`, thời hạn `\d+\s*(ngày|tháng)`, số hiệu `\d{1,4}/(\d{4}|VBHN)[^\s,;)*"'“”‘’[\]]*` (đuôi dừng ở `*`, dấu nháy, ngoặc vuông: số hiệu
      in **đậm**, trong ngoặc kép hay dính `[n]` vẫn neo được),
-     mã HS `\d{4}(\.\d{2}){1,2}` phải nằm (sau NFC, gộp khoảng trắng, không phân biệt hoa/thường) trong
+     mã HS `\d{4}(\.\d{2}){1,2}` phải nằm (sau NFC, gộp khoảng trắng, không phân biệt hoa/thường; trên ranh giới chữ số, bỏ số 0 đầu:
+     `0%` không nằm trong `10%`, `30 ngày` không nằm trong `130 ngày`, `08/2015/NĐ-CP` khớp `8/2015/NĐ-CP`) trong
      `sources[n-1]` của một `[n]` **có trong chính câu đó**; câu không có dấu thì trong một nguồn thuộc
      `cited`. Miễn trừ: số hiệu, mã HS, ngày mà người dùng đã viết trong `userText` (so như
      `docNumberStatedIn`, bỏ số 0 đầu). `%` và tiền **không** được miễn.
@@ -1136,7 +1140,9 @@ quan khác".
 2. **Bot gửi số đầy đủ.** `parseDocRef` trả thêm `full` như API: `issuer ? label : null`. Đoạn cơ quan
    ban hành có thể kết bằng chữ số (`107/2016/QH13`, `NQ-UBTVQH14`): cả hai phía đọc nó bằng
    `\/\s*[a-zà-ỹ][a-zà-ỹ\d-]*`, vì cắt ở chữ số đầu sẽ làm luật kho đang giữ (qua VBHN) thành "không có". Ba chỗ gọi gửi
-   `ref.full ?? ref.core`. Khi có `ref.full`, `corpusHas` so bằng `sameDocNumber` với `number` /
+   `ref.full ?? ref.core`. Số hiệu router trả chỉ giữ đoạn cơ quan ban hành khi người dùng đã viết đoạn đó
+   (`statedDocNumber`, gọi ở `index.mjs`); không thì gửi số/năm: hỏi "Thông tư 39/2018" mà router đoán
+   39/2018/TT-BNNPTNT sẽ biến văn bản kho đang giữ thành "không có". Khi có `ref.full`, `corpusHas` so bằng `sameDocNumber` với `number` /
    `consolidates` thay vì so tiền tố `core`: kho có 69/2018/NĐ-CP mà người dùng hỏi 69/2018/TT-BTC thì
    **không** coi là có.
 3. **API.**

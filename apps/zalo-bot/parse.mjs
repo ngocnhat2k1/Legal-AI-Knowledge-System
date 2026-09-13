@@ -59,6 +59,9 @@ export function detectOrigin(raw) {
   return null;
 }
 
+/** Today's date in Vietnam (yyyy-mm-dd): the UTC date is the previous day until 07:00. */
+export const todayVN = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
+
 /** An 8-digit HS code (with optional separators) plus any origin/date around it, or null. */
 export function parseQuery(text) {
   const t = String(text || '').toLowerCase().trim();
@@ -68,7 +71,7 @@ export function parseQuery(text) {
   return {
     hs: m[1] + m[2] + m[3],
     origin: detectOrigin(t),
-    date: dm ? dm[1] : new Date().toISOString().slice(0, 10),
+    date: dm ? dm[1] : todayVN(),
     dotted: `${m[1]}.${m[2]}.${m[3]}`,
   };
 }
@@ -79,11 +82,13 @@ export const hasHs = (text) => HS_RE.test(String(text || ''));
 /**
  * The code, origin and date a quoted tariff reply was looked up with. Reads only the first line naming a
  * code (the lead): the rows and sources name schedules such as "ASEAN–Trung Quốc (ACFTA)", which are not
- * origins. The date comes back from "Tra theo ngày dd/mm/yyyy".
+ * origins, and neither is a country inside the bracketed heading ("Chè xanh kiểu Nhật Bản"). A bracket
+ * opening with "xuất xứ" is the bot's own "(xuất xứ CN, ngày …)" and stays. The date comes back from
+ * "Tra theo ngày dd/mm/yyyy".
  */
 export function parseQuotedTariff(text) {
   const s = String(text || '');
-  const q = parseQuery(s.split('\n').find(hasHs));
+  const q = parseQuery(s.split('\n').find(hasHs)?.replace(/\((?!xuất xứ)(?:[^()]|\([^()]*\))*\)/g, ''));
   // A quoted confirm ("… (xuất xứ CN, ngày dd/mm/yyyy). Cảm ơn …") carries the date only there.
   const d = s.match(/Tra theo ngày (\d{2})\/(\d{2})\/(\d{4})/) ?? s.match(/ngày (\d{2})\/(\d{2})\/(\d{4})\)\. Cảm ơn/);
   if (q && d) q.date = `${d[3]}-${d[2]}-${d[1]}`;
@@ -242,6 +247,16 @@ export function docNumberStatedIn(text, number) {
     const bare = g.replace(/^0+/, '') || '0';
     return new RegExp(`(?<!\\d)0*${bare}(?!\\d)`).test(hay);
   });
+}
+
+/**
+ * The router's number with its issuer only when the user wrote that issuer, else serial/year. The API
+ * matches a full number exactly, so a guessed issuer ("Thông tư 39/2018" → 39/2018/TT-BNNPTNT) would
+ * report a document we hold as missing.
+ */
+export function statedDocNumber(text, number) {
+  const parts = String(number || '').split('/');
+  return foldDocNumber(text).includes(foldDocNumber(parts.slice(2).join('/'))) ? number : parts.slice(0, 2).join('/');
 }
 
 /**

@@ -35,13 +35,13 @@ export function toText(input) {
   return typeof input === 'string' ? input.normalize('NFC') : input.map(lineText).join('\n');
 }
 
-/** Merge every `warn` line into one orange line at the first one's place, joined by "; ". */
+/** Merge every `warn` line into one orange line at the first one's place, joined by "; " (a space after "." "!" "?"). */
 function mergeWarnings(lines) {
   const isWarn = (ln) => ln.marks?.includes('warn');
   const warns = lines.filter(isWarn);
   if (warns.length < 2) return lines;
   const merged = L(
-    warns.flatMap((ln, k) => (k ? ['; ', ...ln.segs] : ln.segs)),
+    warns.flatMap((ln, k) => (k ? [/[.!?]$/.test(lineText(warns[k - 1])) ? ' ' : '; ', ...ln.segs] : ln.segs)),
     'warn',
   );
   // By position, not identity: the same warn Line object may be passed twice.
@@ -146,13 +146,18 @@ export function render(input, { budget = 1800 } = {}) {
       cur.push(...next);
       continue;
     }
-    flush();
     if (size(p) <= limit) {
+      flush();
       cur.push(...p);
       continue;
     }
+    // Too long for any message: continue the current one line by line, so a short paragraph is not sent alone.
+    if (cur.length) cur.push(BLANK);
     for (const ln of p.flatMap((l) => (lineText(l).length > limit ? splitLine(l, limit) : [l]))) {
-      if (cur.length && size([...cur, ln]) > limit) flush();
+      if (cur.length && size([...cur, ln]) > limit) {
+        if (lineText(cur.at(-1)) === '') cur.pop();
+        flush();
+      }
       cur.push(ln);
     }
   }

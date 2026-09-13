@@ -89,6 +89,18 @@ test('đoạn có nhãn dài hơn ngân sách bị cắt ở khoảng trắng, h
   assert.equal(parts.map((p) => texts(p, ST.red)[0]).join(' '), long);
 });
 
+test('đoạn dài xếp tiếp vào tin hiện tại, không đẩy đoạn ngắn trước nó thành một tin riêng', () => {
+  const src = Array.from({ length: 6 }, (_, k) => L([`Dòng nguồn số ${k + 1} dài vừa phải cho đủ.`], 'note'));
+  const parts = render([L(['Mở đầu ngắn.']), L([]), ...src], { budget: 120 });
+  assert.ok(parts[0].msg.startsWith('Mở đầu ngắn.\n\nDòng nguồn số 1'), parts[0].msg);
+  const near = render([L(['x'.repeat(100)]), L([]), ...src], { budget: 120 });
+  for (const p of [...parts, ...near]) {
+    assert.ok(p.msg.length <= 120, `tin dài ${p.msg.length}`);
+    assert.ok(!p.msg.includes('\n\n('), 'không có dòng trống thừa trước (k/n)');
+    for (const s of p.styles) assert.ok(s.start + s.len <= p.msg.length, 'style vượt khỏi tin');
+  }
+});
+
 test('thoát ký tự: chỉ chuỗi đưa vào md() mới bị đọc ký hiệu', () => {
   for (const s of ['173.6*162.6*12.1', '**không**']) {
     const [p] = render([L([s])]);
@@ -141,4 +153,6 @@ test('mọi dòng warn gộp thành một dòng cam, không bị thu nhỏ', () 
   const [r] = render([W, L(['thân']), W]);
   assert.equal(texts(r, ST.orange).length, 1, 'cùng một đối tượng warn dùng hai lần vẫn chỉ một dòng cam');
   assert.equal(r.msg.split('\n').length, 2);
+  const [s] = render([L(['Cần chốt mã trước khi khai.'], 'warn'), L(['thân']), L(['Biểu thuế trong kho'], 'warn')]);
+  assert.deepEqual(texts(s, ST.orange), ['Cần chốt mã trước khi khai. Biểu thuế trong kho'], 'câu đã có dấu chấm thì nối bằng khoảng trắng, không ".; "');
 });

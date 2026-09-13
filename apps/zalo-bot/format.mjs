@@ -250,7 +250,8 @@ export function formatAnswer(q, r, confirm, { showFooter = true, candidate = fal
     lines.push(history);
   } else if (showFooter) {
     // Suggest only what the bot can do now; an origin changes nothing until the membership table is signed.
-    const hint = !verified ? '' : origin ? 'Muốn xem xuất xứ khác, nhắn tên nước; ' : 'Cho mình biết xuất xứ để lọc đúng biểu ưu đãi; ';
+    // The hidden-schedules line already asks for the origin country: one closing prompt, not two.
+    const hint = !verified ? '' : origin ? (hidden.length ? '' : 'Muốn xem xuất xứ khác, nhắn tên nước; ') : 'Cho mình biết xuất xứ để lọc đúng biểu ưu đãi; ';
     const sentence = `${hint}mã đúng với lô hàng thì trả lời "đúng", chưa đúng thì trả lời "sai" hoặc gửi mã đúng.`;
     lines.push(L([[sentence[0].toUpperCase() + sentence.slice(1), 'i']]));
   }
