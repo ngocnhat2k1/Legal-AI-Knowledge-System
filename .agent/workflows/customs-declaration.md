@@ -68,7 +68,7 @@ Liên quan: **Quyết định 117/QĐ-CHQ (2026)**, Quy trình xác định trư
 
 **Không có một danh mục tổng thể duy nhất nào cả.** Mỗi bộ ban hành thông tư "bảng mã số HS" của riêng mình, và **chính thông tư đó là khóa nối (join key)** giữa một mã HS và một yêu cầu. Một tính năng hứa hẹn "cho tôi biết cần những giấy phép gì" thực chất là lời hứa tập hợp và duy trì các thông tư bảng HS riêng biệt của khoảng 6 bộ, mà sự thật gốc nằm ở các phụ lục PDF/Word (đã xác minh 2026-07-17, nguồn: research 08 §3 và §8).
 
-Nghị định khung là **NĐ 69/2018/NĐ-CP** (hàng cấm, hàng theo giấy phép, hàng có điều kiện, TNTX/chuyển khẩu), vẫn còn hiệu lực; một bản thay thế đang ở dạng dự thảo và không được lập trình dựa vào nó (đã xác minh 2026-07-17, nguồn: https://vanban.chinhphu.vn/?pageid=27160&docid=193756).
+Nghị định khung **từng là NĐ 69/2018/NĐ-CP** (hàng cấm, hàng theo giấy phép, hàng có điều kiện, TNTX/chuyển khẩu); ngày 2026-07-17 nó còn hiệu lực và bản thay thế mới là dự thảo (nguồn: https://vanban.chinhphu.vn/?pageid=27160&docid=193756). **Cập nhật 2026-09-10:** NĐ 69/2018 đã bị **NĐ 292/2026/NĐ-CP thay thế từ 05/09/2026** (khoản 1 Điều 65 NĐ 292/2026, đã đọc toàn văn trên Công báo).
 
 **Bộ Công Thương**
 - Hàng cấm/có điều kiện theo HS: **TT 12/2018/TT-BCT** + **TT 08/2023/TT-BCT**, thay thế Phụ lục I của TT 12/2018 (đã xác minh 2026-07-17, nguồn: https://www.vietnamtradeportal.gov.vn/kcfinder/upload/files/12_2018_TT-BCT.pdf, https://vanban.vcci.com.vn/thong-tu-082023tt-bct-sua-doi-quy-dinh-danh-muc-chi-tiet-theo-ma-so-hs-cua-hang-hoa-xuat-khau-nhap-khau-kem-theo-mot-so-thong-tu-cua-bo-truong-bo-cong-thuong).

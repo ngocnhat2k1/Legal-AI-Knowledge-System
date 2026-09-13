@@ -63,6 +63,14 @@ interface DocRow {
   gazette_issue: string | null;
   source_url: string | null;
   summary: string | null;
+  /**
+   * `verified` only when a person produced and checked the extract (R18). Rows written
+   * before 2026-09-10 omit it and are hand-built, so they default to `verified`; rows
+   * from the inbox pipeline carry `auto_unverified` and MUST keep it — seeding them at
+   * the column default would silently strip the warning from every citation.
+   */
+  verification?: 'verified' | 'auto_unverified';
+  verified_by?: string | null;
 }
 interface ProvRow {
   document_number: string;
@@ -147,6 +155,8 @@ async function main(): Promise<void> {
       source_url: d.source_url,
       doc_summary: d.summary ? d.summary.slice(0, 200) : null,
       embed_model: embedId,
+      verification: d.verification ?? 'verified',
+      verified_by: d.verified_by ?? null,
     })} RETURNING id`;
     docId.set(d.number, row.id as number);
   }

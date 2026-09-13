@@ -60,3 +60,7 @@ research/legal-loader/doc/
 research/legal-loader/*.page.html
 research/legal-loader/page.html
 research/legal-loader/out/
+
+# Python bytecode — research loaders run on the host (research/inbox-loader, research/legal-loader, apps/ingest)
+__pycache__/
+*.pyc

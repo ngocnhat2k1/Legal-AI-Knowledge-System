@@ -198,6 +198,16 @@ Bảng cơ sở là một công việc một-lần vài giờ. Giữ cho đúng 
 
 **Quy tắc nguồn-chân-lý theo sau.** Công báo `.doc` là nguồn nạp duy nhất (robots.txt = `User-agent: * / Allow: /`, đã xác minh 2026-07-17, nguồn: https://congbao.chinhphu.vn/robots.txt). Phân tích cú pháp bằng một parser Word/OOXML thật đọc `w:tbl/w:tr/w:tc` — **không phải** `textutil`. Xem [R9](#r9--ranh-giới-phụ-lục-là-chịu-lực) và [Chưa xác minh](#chưa-xác-minh--không-được-dựa-vào).
 
+> **Đính chính 2026-09-10 — vế "không phải `textutil`" đã bị bằng chứng lật.** TASK-003
+> ([research/task-003-evfta-parser](../research/task-003-evfta-parser/README.md)) chứng minh
+> `textutil` **giữ nguyên ranh giới ô** qua dấu ô Word `\x07`, và toàn bộ đường nạp ND 26/2023,
+> 4 biểu FTA, Chú giải/GRI đều đã đi qua nó. Điều **còn đúng** là: phải là parser **NHẬN BIẾT
+> Ô/PHỤ LỤC**. Công cụ nào đạt được điều đó là chuyện đã đo, không phải chuyện quy định.
+> Cạm bẫy thật vẫn còn nguyên và nằm ở chỗ khác: `research/legal-loader/parse_provisions.py`
+> **cố ý vứt bỏ mọi dòng chứa `\x07`** — đúng cho văn xuôi, nhưng nó bỏ **toàn bộ bảng**. Văn
+> bản dạng danh mục phải đi thêm nhánh parser bảng. Xem
+> [Đường ống hộp thư đến](docs/inbox-ingest-workflow.md).
+
 ---
 
 ## R8 — Đừng bao giờ mô hình hóa "phiên bản mới nhất"
@@ -351,7 +361,7 @@ phải câu trả lời tôi muốn. bạn tìm đúng thông tư mà tôi yêu 
 và xin mã HS đúng. Vị từ gác cổng khi đó là `(có kết quả tra gần đây) || (tin này là reply)` — chỉ cần
 bấm reply là lọt, và cụm "không phải" khớp tín hiệu đính chính.
 
-**Hậu quả của việc phá vỡ nó.** Sổ verify-on-use ([R9](#r9--xác-minh-tại-điểm-sử-dụng-không-chứng-nhận-trước))
+**Hậu quả của việc phá vỡ nó.** Sổ verify-on-use ([R18](#r18--xác-minh-tại-điểm-sử-dụng-không-chứng-nhận-trước))
 là bộ nhớ dài hạn của hệ thống về áp mã: một bản ghi `wrong` sẽ làm mã đó nổi cảnh báo cho mọi lần tra
 sau, và một bản ghi `correct` có mô tả sẽ được **đẩy lên đầu** cho hàng tương tự. Ghi nhầm từ một câu
 nói về văn bản pháp luật là **đầu độc sổ bằng dữ liệu không liên quan**, âm thầm, và không ai biết để
@@ -376,6 +386,116 @@ và **echo chéo ngữ cảnh** sang hội thoại của người khác.
 
 ---
 
+## R15 — Ô số hiệu trống là NGHI VẤN, không phải kết luận
+
+**Quy tắc.** Một file văn bản có ô số hiệu hoặc ô ngày để trống chỉ chứng minh **bản trong tay
+chưa ký**. Nó **không** chứng minh văn bản chưa tồn tại. Trước khi dán bất kỳ nhãn nào về tình
+trạng, phải **dò cơ quan công bố bằng tiêu đề + cơ quan + năm** — không bằng số hiệu, vì bản chưa
+ký không có số. Khớp ⇒ lấy bản chính thức. Không khớp **và có bản ghi tra cứu** ⇒ mới được gọi là
+chưa xác định tình trạng.
+
+**Cờ đỏ năm lệch.** Bản chưa ký mang năm nhỏ hơn năm hiện tại phải chặn thủ công. Dự thảo treo qua
+năm là bất thường — gần như luôn là bản trước khi ký của văn bản đã ban hành.
+
+**Tên file là manh mối, không bao giờ là căn cứ.** Dùng làm đầu vào cho bước dò; không dùng để
+kết luận.
+
+**Vì sao.** Đã xảy ra, và bị chặn đúng lúc (2026-09-10). Trong 5 file có ô số hiệu trống ở đợt
+kiểm kê đầu, **2 file là bản chưa ký của văn bản ĐÃ ban hành**: `THONG TU 36 KHCN.pdf` chính là
+**Thông tư 36/2026/TT-BKHCN** (Công báo id 469968, cùng 113 trang), và `KO QE.pdf` chính là **Công văn
+18648/CHQ-GSQL** (thân văn bản giống 0,99). Luật cứng *"ô trống ⇒ dự thảo"* sẽ dán nhãn **"KHÔNG CÓ
+GIÁ TRỊ PHÁP LÝ"** lên hai văn bản đang áp dụng. Chỉ 3/5 thật sự không tìm được bản đã ký. Cùng đợt,
+hai file mang số hiệu **do người gửi tự gán** trong tên file mà nội dung không có số nào.
+
+**Hậu quả của việc phá vỡ nó.** Hệ thống tự phát ra một khẳng định sai về hiệu lực của một quy
+phạm đang áp dụng — cùng hạng nguy hiểm với [R3](#r3--error-but-valid-là-chế-độ-thất-bại-đặc-trưng),
+chỉ ngược chiều. Và mục kiểm chứng ngây thơ (*"câu trả lời có nêu chưa ban hành không?"*) sẽ
+**nghiệm thu chính cái sai**, nên tiêu chí đạt phải gồm cả bản ghi tra cứu.
+
+**Liên quan.** [ADR dự thảo và công văn nằm ngoài kho pháp lý](architecture-decisions/2026-09-10-drafts-and-cong-van-outside-legal-corpus.md).
+
+---
+
+## R16 — File nhận được là con trỏ; bản văn lấy từ nơi công bố
+
+**Quy tắc.** File tài liệu đến qua Zalo, email, nhóm nội bộ chỉ dùng để trả lời *"văn bản nào đáng
+quan tâm"*. Bản văn để nạp lấy từ Công báo, **ưu tiên VBHN hiện hành**; văn bản gốc chỉ khi không
+có VBHN, và phải ghi lại vì sao.
+
+**Thang bậc xếp hạng ĐỘ TIN CẬY CỦA BẢN VĂN, không cấp trạng thái xác minh.** Mọi văn bản máy nạp
+đều vào kho ở `auto_unverified` bất kể lấy từ đâu; chỉ chuyên viên đọc và **đứng tên** mới thăng
+lên `verified`. Trộn hai trục này là cách âm thầm gỡ cảnh báo khỏi toàn bộ văn bản tự nạp.
+
+**Vì sao.** Kiểm kê 2026-09-10: 7/20 file là bản scan không có lớp text (224 trang), 1 cặp trùng
+byte-for-byte, ít nhất 2 file mang số hiệu bịa trong tên. Bản trong tay có thể là bản chụp lại,
+bản thiếu phụ lục, hoặc bản lưu hành trước khi ký. Bản Công báo là bản duy nhất có ngày đăng và
+số Công báo để truy vết.
+
+**Liên quan.** [ADR file nhận được là con trỏ](architecture-decisions/2026-09-10-received-file-is-a-pointer-not-a-source.md) ·
+[R8](#r8--đừng-bao-giờ-mô-hình-hóa-phiên-bản-mới-nhất) · [R11](#r11--không-scrape-thuvienphapluatvn-hay-luatvietnamvn).
+
+---
+
+## R17 — Notebook là bề mặt ĐỌC, không phải bề mặt TRẢ LỜI
+
+**Quy tắc.** Gemini Notebook (trước là NotebookLM) dùng để **tra và đọc văn bản**. Nó **không**
+được dùng để hỏi thuế suất, số tiền thuế, hay chốt mã HS. Những câu đó chỉ đi qua đường tra khoá
+chính xác `(hs_code, schedule, as_of)`.
+
+**Vì sao.** Notebook không chạy được kiểm căn cứ trích dẫn ([R10](#r10--kiểm-tra-căn-cứ-trích-dẫn-phải-xác-minh-sự-hậu-thuẫn-không-phải-sự-tồn-tại)),
+không có bộ lọc hiệu lực cứng ([R8](#r8--đừng-bao-giờ-mô-hình-hóa-phiên-bản-mới-nhất)), và không
+từ chối theo độ cũ ([R7](#r7--mọi-câu-trả-lời-viện-dẫn-nghị-định-và-ngày-chụp-dữ-liệu-và-từ-chối-khi-ảnh-chụp-có-thể-lỗi-thời)).
+Việc VPS ngừng hoạt động (2026-09-10) làm notebook thành nơi duy nhất còn tra được văn bản — đó là
+**trạng thái vận hành tạm thời**, không phải sự cho phép mở rộng phạm vi câu hỏi.
+
+**Cưỡng chế bằng code, không bằng trí nhớ.** Mỗi file nguồn đẩy lên notebook mang một dòng cảnh
+báo cố định ở đầu, do bộ sinh chèn. Bảng kiểm chứng có hàng riêng chứng minh notebook thật sự từ
+chối con số thuế.
+
+**Liên quan.** [R1](#r1--mức-thuế-quan-không-bao-giờ-được-sinh-ra-bởi-một-llm) ·
+[R2](#r2--không-bao-giờ-xuất-ra-một-mã-hs-trần-trụi) ·
+[ADR nguồn notebook là Google Docs](architecture-decisions/2026-09-10-notebook-sources-as-google-docs.md).
+
+---
+
+## R18 — Xác minh tại điểm sử dụng, không chứng nhận trước
+
+**Quy tắc.** Thẩm quyền của một dữ liệu **chỉ do con người cấp, và dấu vết phải nói ai cấp**. Máy
+lấy về, máy parse, máy qua cổng tự kiểm — tất cả đều dừng ở mức "chưa ai đọc". Việc thăng cấp xảy
+ra **lúc dùng**, khi một chuyên viên đối chiếu và đứng tên, chứ không phải một đợt chứng nhận
+trước hàng loạt.
+
+Áp cho cả hai trục dữ liệu của dự án:
+
+| Trục | Vào ở mức | Thăng cấp bởi |
+|---|---|---|
+| Văn bản pháp luật | `legal_document.verification = auto_unverified` | `IngestService.verify(number, staffName)` ghi `verified_by` |
+| Áp mã HS | ứng viên top-3 kèm bằng chứng, không phải đáp án | Chuyên viên xác nhận đúng/sai, ghi vào `lookup_confirmation` |
+
+**Mọi trích dẫn từ dữ liệu chưa thăng cấp phải mang nhãn cảnh báo.**
+
+**Vì sao.** Không ai có thể chứng nhận trước một văn bản chưa ai đọc, và cổng tự kiểm cấu trúc chỉ
+chứng minh *parse đúng hình dạng*, không chứng minh *nội dung đúng*. Nguyên văn trong
+`apps/ingest/ingest_document.py`: *"Machine-fetched text never quietly acquires the standing of
+text a human read."*
+
+**Hậu quả của việc phá vỡ nó.** Suýt xảy ra 2026-09-10: một bản thiết kế gán `verified` theo
+**nguồn lấy** (Công báo) thay vì theo **hành vi con người**. Làm theo thì mọi văn bản máy tải về
+vào kho ở mức đã-xác-minh và **âm thầm mất nhãn cảnh báo trên mọi trích dẫn** — đúng
+[R3](#r3--error-but-valid-là-chế-độ-thất-bại-đặc-trưng), và nó lọt qua chính người đã viết ra
+tầng `auto_unverified`.
+
+**Ghi chú lịch sử.** Nguyên tắc này bị viện dẫn là "R9" ở nhiều nơi (R13, `02-progress.md`,
+`legal-corpus-self-extension.md`) trong khi R9 thật là *Ranh giới phụ lục*. Nó chưa từng có mục
+riêng cho tới 2026-09-10. Số **R18** được cấp mới thay vì đánh số lại R9, để không phá các tham
+chiếu đang đúng.
+
+**Liên quan.** [R2](#r2--không-bao-giờ-xuất-ra-một-mã-hs-trần-trụi) ·
+[R16](#r16--file-nhận-được-là-con-trỏ-bản-văn-lấy-từ-nơi-công-bố) ·
+[Kho pháp luật tự mở rộng](docs/legal-corpus-self-extension.md).
+
+---
+
 ## Chưa xác minh / Không được dựa vào
 
 Tái tạo từ chính các cờ trung thực của nghiên cứu. **Đừng "tẩy trắng" bất kỳ mục nào trong số này thành một khẳng định tự tin.**
@@ -390,7 +510,7 @@ Tái tạo từ chính các cờ trung thực của nghiên cứu. **Đừng "t�
 - **`data.gov.vn` / `open.data.gov.vn`.** Research 10 không phân giải được chúng (`getaddrinfo ENOTFOUND`) và **đánh dấu là chưa xác minh, không phải xác nhận đã chết**. Research 04 đi xa hơn: DNS có thẩm quyền nói **NXDOMAIN** từ vùng `gov.vn` (SOA `dns-master.vnnic.vn`) qua cả 8.8.8.8 và 1.1.1.1, với các domain đối chứng phân giải bình thường — **nên không phải chặn theo địa lý**; `opendata.gov.vn` và `dulieuquocgia.gov.vn` cũng NXDOMAIN. **Kết luận làm việc: không có API dữ liệu mở quốc gia cho văn bản pháp luật.** Nghị định 278/2025/NĐ-CP (có hiệu lực 22/10/2025) yêu cầu kết nối/chia sẻ dữ liệu **cơ-quan-với-cơ-quan qua Nền tảng chia sẻ dữ liệu, không phải dữ liệu mở công khai**; thời hạn chuẩn hóa 31/12/2026. Không phải một kênh sẵn có cho dự án này. (nguồn: research 04 §6, research 10 §5b)
 - **Xác minh kéo theo hậu kiểm ("Faithful Passage Grounding"), được báo cáo là loại bỏ 63% trích dẫn ảo giác trên án lệ.** Từ **chỉ các mẩu tìm kiếm; nguồn sơ cấp chưa được xác minh.** Hấp dẫn cho [R10](#r10--kiểm-tra-căn-cứ-trích-dẫn-phải-xác-minh-sự-hậu-thuẫn-không-phải-sự-tồn-tại) — xác minh trước khi áp dụng. Cùng trạng thái cho arXiv:2606.00898 "Citation Grounding … via Legal Citation Graphs" (chỉ có mẩu, chưa fetch). (nguồn: research 02 §6)
 - **Liệu `APIBieuThue` có giới hạn tốc độ hay không.** Chưa thăm dò. (nguồn: research 10 §5c)
-- **vbpl.vn `provisionTree` / `referenceProvisions` — ĐÃ GIẢI QUYẾT (2026-07-18, TASK-004, một phần).** Lấy mẫu 21 văn bản đã công bố: trường `provisionTree` = `null` trên 21/21; `referenceProvisions` = `null` trên mọi tham chiếu (chỉ ở cấp văn bản). **NHƯNG cây điều khoản Chương→Điều→Khoản→Điểm CÓ qua một Server Action khác** (research 04 không thấy). Kết luận: cấu trúc cấp điều khoản để chunk RAG **có sẵn**; **cạnh trích dẫn cấp điều khoản phải tự dựng.** Xem [research/task-004-vbpl-provisiontree](../../research/task-004-vbpl-provisiontree/README.md). **Vẫn chưa xác minh (từ cùng báo cáo):** gateway `vbpl-bientap-gateway.moj.gov.vn/api` còn sống (`/actuator/health` UP) nhưng route **vẫn chưa ánh xạ được từ client**; `referenceType` int→nhãn **vẫn không có phép join** (nay thấy 8 giá trị: 1,3,4,7,8,9,10,12); hành vi crawl tốc-độ-bền-vững ở quy mô 158k **chưa kiểm thử** (~65 request tổng cộng qua 2 phiên, không thấy throttle — không phải bằng chứng ở quy mô lớn). (nguồn: research 04 §1; TASK-004 2026-07-18)
+- **vbpl.vn `provisionTree` / `referenceProvisions` — ĐÃ GIẢI QUYẾT (2026-07-18, TASK-004, một phần).** Lấy mẫu 21 văn bản đã công bố: trường `provisionTree` = `null` trên 21/21; `referenceProvisions` = `null` trên mọi tham chiếu (chỉ ở cấp văn bản). **NHƯNG cây điều khoản Chương→Điều→Khoản→Điểm CÓ qua một Server Action khác** (research 04 không thấy). Kết luận: cấu trúc cấp điều khoản để chunk RAG **có sẵn**; **cạnh trích dẫn cấp điều khoản phải tự dựng.** Xem [research/task-004-vbpl-provisiontree](../research/task-004-vbpl-provisiontree/README.md). **Vẫn chưa xác minh (từ cùng báo cáo):** gateway `vbpl-bientap-gateway.moj.gov.vn/api` còn sống (`/actuator/health` UP) nhưng route **vẫn chưa ánh xạ được từ client**; `referenceType` int→nhãn **vẫn không có phép join** (nay thấy 8 giá trị: 1,3,4,7,8,9,10,12); hành vi crawl tốc-độ-bền-vững ở quy mô 158k **chưa kiểm thử** (~65 request tổng cộng qua 2 phiên, không thấy throttle — không phải bằng chứng ở quy mô lớn). (nguồn: research 04 §1; TASK-004 2026-07-18)
 - **ASEAN Tariff Finder** — kết nối hết thời gian chờ; không xác minh được. **tongcuc.customs.gov.vn** — host chỉ-nội-bộ, không phân giải công khai. **VNTR (vntr.moit.gov.vn)** — kho chính thức của Bộ Công Thương bao trùm mọi FTA + quy tắc xuất xứ, nhưng **không tìm thấy API công khai hay tải hàng loạt nào**; chỉ dựa trên biểu mẫu, và bảng phán quyết hành chính của nó nói rõ là "chỉ để tham khảo". (nguồn: research 10 §5b, research 09 §3)
 - **Không có tương đương CROSS/EBTI nào tồn tại tại Việt Nam.** Không có một kho phán quyết phân loại sạch, đầy đủ, máy-đọc-được, có thể truy vấn công khai nào tương đương với US CBP CROSS hay EU EBTI. Các Thông báo kết quả phân loại về cơ bản là nội bộ (được đẩy vào **Customslab**, tìm kiếm được bởi các đơn vị hải quan, không phải công chúng); khối lượng nhỏ (~2.500 mẫu được xử lý; nửa đầu 2026 → **257 hồ sơ nhận, 143 thông báo phân loại được ban hành**). **Điều này giới hạn chất lượng truy hồi bởi khả năng tiếp cận dữ liệu, không phải bởi năng lực mô hình** — hãy nêu giới hạn đó với người dùng thay vì che đậy nó. (đã xác minh 2026-07-17, nguồn: research 09 §3 · https://thuehaiquan.tapchikinhtetaichinh.vn/hai-quan-xu-ly-gan-2-500-mam-phan-tich-phan-loai-hang-hoa-xuat-nhap-khau-160924.html)
 

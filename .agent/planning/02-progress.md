@@ -1,7 +1,7 @@
 ---
 type: planning
 status: active
-updated: 2026-07-18
+updated: 2026-09-10
 related:
   - 00-bootstrap.md
   - 01-task-list.md
@@ -22,11 +22,12 @@ thực sự đã xảy ra**, thường khác đi.
 
 | | |
 |---|---|
-| **Giai đoạn hiện tại** | **Giai đoạn 8 — mở rộng LLM. M0 (nền móng) đã viết xong, test xanh trên máy dev (2026-08-14). CHƯA deploy, CHƯA nạp lại kho, CHƯA có baseline.** |
-| **Công việc tiếp theo** | Ba việc, đúng thứ tự: (1) `docker compose build api` — chứng minh dòng cài CLI `claude` trong image chạy được (máy dev không có Docker nên chưa kiểm được); (2) `FORCE_RESEED=1 yarn db:seed:legal` để bản sửa tiêu đề vào kho, rồi **kiểm tra ngẫu nhiên nội dung**, không tin số đếm; (3) `yarn eval` lấy **baseline** và chép nguyên văn con số vào file này. Sau đó viết kế hoạch M1. |
-| **Đang bị chặn bởi** | Không. Một câu hỏi chờ chủ dự án: có nạp NĐ 134/2016 khi Công báo **không có VBHN** hợp nhất nó không (xem nhật ký 2026-08-13). |
+| **Giai đoạn hiện tại** | **🔴 Giai đoạn 9 — đường ống hộp thư đến, KHÔNG CÒN MÁY CHỦ. VPS Contabo chết 2026-09-10 (ping/SSH/HTTP đều không). Chủ dự án quyết định tạm không host. Bot Zalo + API tra cứu OFFLINE.** Giai đoạn 8 (mở rộng LLM) **đóng băng** — nó cần hạ tầng không còn tồn tại. |
+| **Công việc tiếp theo** | **Chủ dự án thêm 16 nguồn mới vào notebook** (Thêm nguồn → Google Drive → thư mục `Legal-AI-Notebook`) — 16 nguồn cũ đã tự cập nhật. Rồi chạy lại bộ câu hỏi test. **Sau mỗi lần đẩy: `verify_drive.py` phải ra `0 lệch`.** Sau đó: tài liệu mới làm theo [runbook](../../research/inbox-loader/README.md). Việc phát sinh: [04-inbox-ingest-tasks.md](04-inbox-ingest-tasks.md#việc-phát-sinh-từ-đợt-đầu). |
+| **⚠️ GẤP, không thuộc đường ống** | **`lookup_confirmation` — phán quyết chuyên viên + bộ nhớ áp mã HS — chỉ tồn tại trên VPS, KHÔNG có trong repo, KHÔNG tái tạo được.** Nếu Contabo còn snapshot/disk, lấy dump ra ngay; nhà cung cấp xoá dữ liệu sau khi huỷ một thời gian ngắn. `gazette_document` (~15.500 văn bản) cũng mất, crawl lại được nhưng tốn ~8 giờ. |
+| **Đang bị chặn bởi** | Không chặn đường ống mới (nó cố ý không cần Postgres). Ba câu hỏi chờ chủ dự án: (1) cứu được dữ liệu VPS không; (2) có nạp **NĐ 336/2026** không (mới hơn NĐ 292, đụng địa hạt NĐ 08/2015, không có trong hộp thư đến); (3) số hiệu **R9 đang bị dùng cho hai quy tắc khác nhau** trong `business-rules.md`. |
 | **Code đã viết** | Khung repo (006) + schema (007) + loader ND 26/2023 (008) + chuỗi sửa đổi/hồi quy (009) + **API `/tariff` + staleness** (010/011) + **loader 4 FTA** + **validator nghiệm thu** (012) + **Legal RAG** (`modules/legal/`) + **bộ nhớ hội thoại** (`modules/conversation/`, migration 0006) + **bot Zalo dạng module** (`apps/zalo-bot/*.mjs`, `yarn test:bot`) + **M0 mở rộng LLM**: `health.llm.ts`, CLI trong image, sửa parser tiêu đề, `apps/eval/` (`yarn eval`). |
-| **Phiên gần nhất** | 2026-08-14 (xem nhật ký bên dưới) |
+| **Phiên gần nhất** | 2026-09-10 tối (xem nhật ký bên dưới) |
 
 ### ⚠️ TASK-001 — phần còn lại cần con người, không phải agent
 
@@ -73,6 +74,18 @@ Phản chiếu [01-task-list.md](01-task-list.md), vốn giữ chi tiết và ti
 | TASK-014 — Mở rộng corpus pháp luật 4 → 7 văn bản | ✅ xong + LIVE 2026-08-13 | +54/VBHN-VPQH (8/104), +25/VBHN-BTC = TT 38/2015+39/2018 (9/149), +33/2023/TT-BTC (5/23). **4475 provisions · 1806 chunks đã embed**, 7/7 qua cổng `expect`. Parser thêm 3 luật (dấu chấm+thứ tự; "Phụ lục" viết thường; tham chiếu chéo rơi đúng `điều+1`). **NĐ 134/2016 KHÔNG nạp** — không có VBHN công bố, vướng ADR |
 | TASK-012 — Nghiệm thu Giai đoạn 1 | ✅ xong 2026-07-18 | **Corpus 249/249 khớp 100%** (MFN + 4 FTA); random 20/20 khớp source; star-case đủ 4 FTA 0%. Xem [research/task-012-acceptance](../../research/task-012-acceptance/README.md) + [fta-loader](../../research/fta-loader/README.md) |
 
+### Giai đoạn 9 — đường ống hộp thư đến (chi tiết ở [04-inbox-ingest-tasks.md](04-inbox-ingest-tasks.md))
+
+| Công việc | Trạng thái | Ghi chú |
+|---|---|---|
+| TASK-016 — Chuyển bộ sinh notebook vào repo + render tất định | ✅ xong | Hiện ở `~/Desktop/…/_scripts/`, ngoài git; nhúng ngày chạy vào thân file |
+| TASK-017 — `triage.py` phân lớp + dò Công báo | ✅ xong | [R15](../business-rules.md): ô số trống là nghi vấn, không phải kết luận |
+| TASK-018 — Parse hai nhánh + cổng `\x07` | ✅ xong | 4 văn bản đợt này là danh mục dạng bảng |
+| TASK-019 — `render_notebook.py` Docs-safe + gộp 30→15 nguồn | ✅ xong | Bỏ 152 khối `<details>`; mỗi tiêu đề mang số hiệu |
+| TASK-020 — Manifest + rclone | ✅ xong | `hash_exported`/`hash_pushed` tách bạch; giữ `fileId` |
+| TASK-021 — Nạp 20 tài liệu + chuyển notebook sang Google Docs | 🟡 chờ chủ dự án thêm nguồn | Lần upload lại **cuối cùng** |
+| TASK-022 — Vá snapshot drizzle 0007–0009, mở enum | ⛔ bị chặn | Hoãn có chủ đích; công văn + lớp C chỉ vào notebook cho tới lúc đó |
+
 Chú thích: ✅ xong · 🟡 đang tiến hành · 🔲 chưa làm · ⛔ bị chặn · ❌ bỏ dở (nói lý do)
 
 ## Các quyết định đã đưa ra — Đừng tranh luận lại
@@ -116,6 +129,151 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-09-10 (tối) — Câu test trên notebook lộ lỗi: Google Docs đánh số lại khoản
+
+**Bắt đầu từ đâu** — chủ dự án chạy bộ câu hỏi test. Câu về CV 18648 (mật mã dân sự) trả lời "không có
+trong nguồn"; câu Flycam chỉ nêu 88.06. Kiểm Drive: CV 18648 CÓ đủ trong Doc nguồn 40 — nhiều khả năng
+nguồn 40 chưa được thêm vào notebook (câu trả lời chỉ nhắc Danh mục HS, biểu thuế, thủ tục chung = đúng
+16 nguồn cũ). Nhưng cũng trong lần kiểm đó, Doc hiện toàn văn công văn thành **một đoạn liền**.
+
+**Phát hiện thật — đắt hơn hai câu test** — Google Docs convert markdown: nối các dòng liền nhau, và coi
+`1.` đầu dòng là danh sách rồi **tự đánh số lại**. Luật Hải quan Điều 47a khoản 1 hiện trên Doc là `4.`
+(dòng tiêu đề Điều 47a bị nối vào khoản 3 của điều trước, danh sách chạy tiếp). So từng dòng: **31/32
+nguồn lệch**; nguồn 11 còn 912/9.660 dòng. Đợt chiều kiểm round-trip bằng **đếm từ** và đã ĐẠT — đếm từ
+mù với lỗi này. Probe thêm: `3)` về thành `2.`; `-------`/`_______` biến mất; dòng chỉ có NBSP dán hai
+đoạn lại; `- - Tranh khảm` (gạch = cấp phân nhóm HS) thành bullet lồng, mất gạch.
+
+**Sửa** — `docs_safe._protect_line_structure` (thoát `1\.` `3\)` `\+` `\- -`, ngắt dòng cứng, dòng NBSP →
+dòng trống, thoát dòng kẻ, bỏ thụt, nhận bảng GFM thật) + 17 test. `manifest.is_extension` so trên **chữ
+nhìn thấy** → việc sửa qua luật chỉ-thêm mà không cần `--force` và **chứng minh** không đổi chữ nào (29
+nguồn `reformatted`, 3 nguồn phái sinh `changed`). Công cụ mới `verify_drive.py`: export Doc sang text
+thuần, so từng dòng. Đẩy lại 32 nguồn — cùng `fileId`, notebook tự cập nhật, chủ dự án không upload gì.
+
+**Kết quả đo** — trước: 31/32 nguồn lệch. Sau: **`32 nguồn · 0 lệch · 0 thiếu`**, số dòng Doc = số dòng cục
+bộ ở cả 32 nguồn; đẩy lần hai `0 đẩy`; không fileId nào đổi. Test `research/inbox-loader`: 55/55.
+
+**Đợt kiểm độc lập (workflow 23 agent, 5 góc, mỗi phát hiện một agent phản biện)** — tìm được thứ `verify_drive`
+che: `*` trong chữ gốc bị Docs ăn thành in nghiêng (`173.6*162.6*12.1` → `173.6162.612.1`), `- -X` mất một cấp
+gạch. Sửa bằng `docs_safe.literal_text` tại mọi chỗ chèn dữ liệu, và bộ kiểm tra thôi xoá mọi `*` (bẫy 17). Nó
+cũng xác nhận **733/734 điều, 2.651 khoản trên Doc khớp số khoản của dữ liệu Công báo** (điều lệch duy nhất là
+lỗi của chính dữ liệu). Lỗi dữ liệu có sẵn tìm thêm: quan hệ 292→69/2018 ghi "khoản 2" (đúng: khoản 1 — đã
+sửa); ghi chú `.agent` còn nói NĐ 69/2018 còn hiệu lực (đã sửa); parser cũ nhận nhầm tiêu đề điều ở TT 38/2015
+và TT 33/2023 + một khoản ma (chưa sửa — dữ liệu verified, chờ quyết); EN2022 84.17 tràn sang 84.18 (chưa đo).
+Hai đáp án test sai: câu 8 (máy hút ẩm gia dụng ≤ 20 kg là 8509.80.00) và câu 5 (không được khẳng định "không
+tồn tại" — nguồn 91 có bảng nội bộ ghi 16/2026/TT-BNV ngày 28/7/2026, chưa kiểm chứng).
+
+**Bản vá của chính mình cũng gây lỗi, và luật chỉ-thêm bắt được** — bản `literal_text` đầu tiên thoát chữ TRƯỚC
+bước chống lặp của renderer (bước so chữ khoản con với thân điều), nên so không khớp và in 4 khoản của TT
+33/2023 hai lần. Đợt định dạng lại lẽ ra mọi nguồn phải báo `reformatted`; nguồn 12 báo `extended` = có chữ MỚI
+xuất hiện → dừng lại xem → tìm ra. Sửa: thoát chữ chỉ ở lúc in. Kiểm: render bản trước/sau vào thư mục tạm,
+31/32 nguồn giống hệt từng dòng nhìn thấy (nguồn 01 chỉ khác 16 con số đếm ký tự).
+
+**Chốt cuối** — bộ kiểm tra nghiêm ngặt (không xoá `*` bừa, bảo vệ code nội dòng, bỏ nhấn mạnh theo đoạn):
+**`32 nguồn · 0 lệch · 0 thiếu`**; đẩy lần hai `0 đẩy`; test 60/60. Kiểm tay trên Doc: `173.6*162.6*12.1`,
+`Axit α-Naphthylacetic`, `Ômêga hoa (Ω)`, `□ Tiền tố mã doanh nghiệp`, `- -Vây cá mập`, khoản 1 Điều 47a Luật HQ
+đều đúng; 4 khoản TT 33/2023 Điều 8 xuất hiện đúng một lần.
+
+**Đã học**
+- **🔴 Kiểm bằng chỉ số tổng hợp (đếm từ, đếm ký tự) không phải kiểm.** Lần thứ tư bài học này lặp lại
+  trong dự án. Chỉ so với văn bản thật, từng dòng, mới thấy.
+- **🔴 Câu test trên notebook là lớp kiểm cuối có giá trị** — nó bắt được thứ đường ống không bắt. Bộ
+  câu hỏi nên được giữ và chạy lại sau mỗi đợt nạp.
+- Tiêu chí câu Flycam trong bộ test quá chặt: chỉ nêu 88.06 là ĐÚNG cho hôm nay; tách mốc 01/12/2022
+  chỉ cần khi hỏi về tờ khai trước ngày đó.
+- **Docs xoá ký tự vùng riêng (PUA)** — α β Ω của font Symbol trong Chú giải chi tiết, □ ✓ của Wingdings 2
+  trong biểu mẫu NĐ 37. Cùng mã, khác font, khác chữ → giải mã lúc trích xuất theo font (bẫy 16).
+- Chạy lại `ingest_congbao.py` lộ một hồi quy có sẵn: `summary` ghép tiêu đề đã viết hoa ("…NĐ-CP Quy
+  định…"), lệch dữ liệu đã có. Đã sửa code về quy ước cũ; ingest lại khớp từng dòng.
+
+---
+
+### 2026-09-10 (chiều) — Đợt nạp đầu chạy thật: 15 văn bản trong kho, 32 nguồn trên Drive
+
+**Kết quả** — 8 VBQPPL từ Công báo vào `db/seed/data/legal/` (2.165 điều khoản, 999 chunk, 134 bảng phụ
+lục, `auto_unverified`); 19 quan hệ bãi bỏ/thay thế chép từ toàn văn; Chú giải chi tiết EN2022 + SEN 2022
+(cột tiếng Việt, 5 triệu ký tự); 29 công văn phân loại đọc kép; 10 tài liệu chỉ-notebook. Notebook: **32
+nguồn** trên Drive, fileId 16 nguồn cũ giữ nguyên 16/16, đẩy lần hai `0 đẩy`. Runbook "lần sau làm thế
+nào": [research/inbox-loader/README.md](../../research/inbox-loader/README.md). Chi tiết và 14 cái bẫy:
+[inbox-ingest-workflow.md](../docs/inbox-ingest-workflow.md#đợt-đầu--đã-chạy-thật-2026-09-10).
+
+**Đã học — ba cái đắt nhất**
+- **🔴 R15 bắt được 2/5 ca ngay đợt đầu.** Hai file "trông như dự thảo" là bản chưa ký của văn bản ĐÃ ban
+  hành (TT 36/2026/TT-BKHCN; CV 18648/CHQ-GSQL giống 0,99). Luật cứng "ô trống ⇒ dự thảo" sẽ dán nhãn
+  "không có giá trị pháp lý" lên hai văn bản đang áp dụng. Và một khẳng định của rà soát phản biện
+  (09-bvhttdl là thông tư 2023 đã ban hành) **không kiểm chứng được** — người phản biện cũng cần bị kiểm.
+- **🔴 Mọi bước trích xuất đều có một dạng hỏng âm thầm riêng**: pypdf vỡ âm tiết (85/100 file), pdfplumber
+  lẫn hai cột, docx Công báo có đường dẫn zip kiểu Windows, ngắt dòng mềm nuốt điều khoản, PDF lai giấu
+  trang ảnh, OCR sai mã HS (103 chỗ), agent tự gõ lệch chữ số. Không cái nào báo lỗi; tất cả bị bắt bằng
+  so với văn bản thật.
+- **🔴 Quy tắc "không ghi đè" ban đầu mâu thuẫn với cách chủ dự án dùng** (nạp dần). Nguồn gộp thì mỗi
+  lần thêm văn bản đều đổi file. Sửa thành **chỉ thêm, không sửa** (`manifest.is_extension`, có test):
+  thêm thì qua, sửa/xoá chữ đã đẩy thì chặn.
+
+**Còn tồn** — xem [việc phát sinh](04-inbox-ingest-tasks.md#việc-phát-sinh-từ-đợt-đầu). Nổi bật: chưa
+kiểm kiểu được `legal.ts` vì `node_modules` hỏng; `client_id` dùng chung của rclone sắp bị khai tử.
+Chưa commit gì — chờ chủ dự án.
+
+---
+
+### 2026-09-10 — VPS CHẾT. Giai đoạn 9: đường ống hộp thư đến, notebook thành nơi tra duy nhất
+
+**Sự kiện chi phối** — VPS Contabo `164.68.126.127` không phản hồi ping, SSH, lẫn HTTP. Chủ dự án
+xác nhận **tạm không dùng máy chủ nữa**. Bot Zalo và API `/tariff` offline. Giai đoạn 8 đóng băng
+vì nó cần đúng hạ tầng vừa mất.
+
+**🔴 Mất dữ liệu — ghi lại để không ai phải phát hiện lại.** Repo có `.ndjson` chuẩn cho biểu
+thuế, FTA, mã HS, 7 văn bản pháp luật, Chú giải/GRI. **Không có** trong repo, chỉ sống trong DB
+trên VPS: `lookup_confirmation` (phán quyết đúng/sai của chuyên viên + bộ nhớ áp mã HS từ commit
+`fb5118e`) — **không tái tạo được**, là thứ gần "sự thật nền" nhất dự án có; `gazette_document`
+(~15.500 văn bản, crawl lại ~8 giờ); `conversation` (TTL 30 ngày, không tiếc). Bài học kiến trúc:
+**bảng nào là tri thức thì phải có đường xuất ra `.ndjson` commit được**, đừng để nó chỉ sống
+trong Postgres.
+
+**Đã làm** — chủ dự án đưa 20 tài liệu mới trong `~/Downloads/THÔNG TƯ` và muốn một quy trình lặp
+lại được, tối thiểu hoá việc upload lại notebook. Thiết kế:
+[Đường ống hộp thư đến](../docs/inbox-ingest-workflow.md) + 3 ADR + [R15/R16/R17](../business-rules.md)
++ [04-inbox-ingest-tasks.md](04-inbox-ingest-tasks.md).
+
+**Đã học — địa hình thật**
+
+- **🔴 File upload thẳng lên NotebookLM KHÔNG BAO GIỜ đồng bộ; nguồn từ Google Drive thì tự đồng
+  bộ vài phút một lần** (bật từ 2026-05-26, không tắt được). Chủ dự án chỉ ra điều này; giả định
+  ban đầu của agent — rằng phải upload lại — là sai. Kiến trúc đổi hẳn: nội dung sống trên Drive
+  dạng Google Docs, rclone đẩy cập nhật **giữ nguyên `fileId`**.
+- **🔴 Convert markdown → Google Docs XOÁ thẻ `<details>` và GỘP nội dung vào đoạn trên.** Bộ xuất
+  có **152 khối** `<details>`, tất cả bọc nguyên văn tiếng Anh WCO trong 4 file Chú giải/GRI —
+  tức phần quan trọng nhất cho áp mã. Không sửa thì tiếng Anh chảy vào cuối đoạn tiếng Việt không
+  còn ranh giới. Blockquote, code fence, và bold-trong-ô-bảng cũng mất.
+- **🔴 Quy tắc "ô số hiệu trống ⇒ dự thảo" cho kết quả SAI.** `09-bvhttdl.pdf` có ô số trống nhưng
+  ô ngày ghi *tháng 8 năm 2023* — nhiều khả năng là bản trước khi ký của thông tư đã ban hành.
+  Nhãn "KHÔNG CÓ GIÁ TRỊ PHÁP LÝ" lên đó là hệ thống tự phát ra khẳng định sai. Ô trống là thuộc
+  tính của **hiện vật**, không phải của **quy phạm** → [R15](../business-rules.md).
+- **🔴 `parse_provisions.py:172` vứt mọi dòng chứa `\x07`, tức bỏ TOÀN BỘ bảng.** Đúng cho văn
+  xuôi, chết người với văn bản dạng danh mục — 4/9 văn bản lớp A đợt này là danh mục. Parse sẽ ra
+  đủ điều khoản và **mất sạch phụ lục, không báo lỗi**.
+- **Vế "không phải `textutil`" trong `business-rules.md:199` đã bị TASK-003 lật** — textutil giữ
+  nguyên ranh giới ô. Điều còn đúng là "phải là parser nhận biết ô/phụ lục". Đã ghi đính chính tại chỗ.
+- **`build_legal.py` không nằm trong repo** mà ở `~/Desktop/Legal-AI-NotebookLM-Export/_scripts/`,
+  ngoài git, trên thư mục iCloud. Và nó **nhúng ngày chạy vào thân file** → chạy lại cùng dữ liệu
+  vào ngày khác cũng đổi hash.
+- **Công báo còn sống và dò được không cần DB.** Tìm ra NĐ 292/2026 ở trang 5 danh sách nghị định
+  (congbao id `470149`). Nhân tiện phát hiện **NĐ 336/2026** — thủ tục hành chính với hàng XNK,
+  quá cảnh — mới hơn, **không có trong hộp thư đến**.
+- **Docker nay ĐÃ có trên máy dev** (`/usr/local/bin/docker`), khác ghi chú cũ 2026-08-14.
+
+**Rà soát phản biện đã cứu bản thiết kế.** 4 nhóm phê bình độc lập + thẩm tra từng phát hiện: 45
+phát hiện thô → **38 xác nhận thật, 7 mức CHẶN**. Nặng nhất: bản nháp gán `verified` cho văn bản
+máy tải từ Công báo — trong khi `db/schema/index.ts:393` định nghĩa `verified` = *"a human
+produced and checked the extract"*. Làm theo bản nháp thì **mọi trích dẫn tự nạp âm thầm mất nhãn
+cảnh báo**. Cùng loại sai mà cả tầng `auto_unverified` được dựng lên để chặn — và nó lọt qua
+chính người viết ra tầng đó. Bài học: **rà soát phản biện độc lập trên tài liệu thiết kế đáng
+tiền ngang với trên mã nguồn.**
+
+**Còn tồn** — chưa viết một dòng code nào; toàn bộ Giai đoạn 9 mới ở mức thiết kế đã chốt. rclone
+**chưa từng chạy thật** trên máy này. Chưa biết bao nhiêu trong 7 văn bản scan có trên Công báo.
 
 ---
 
@@ -195,7 +353,7 @@ lên ngang hàng với dữ liệu đã đối chiếu tay**. Thiết kế: [leg
   MỘT transaction. Bot hỏi trước, người trả lời "nạp", worker chạy vài phút rồi **tự nhắn lại** thread đã hỏi.
 - **Lớp 3 — thăng cấp**: cột `verification` + `verified_by` (migration 0009). Văn bản tự nạp vào ở
   `auto_unverified`, **mọi trích dẫn từ nó hiện cảnh báo**; chuyên viên đối chiếu xong thì thăng lên
-  `verified` kèm tên — chính là [R9 verify-on-use](../business-rules.md) mở rộng từ mã HS sang văn bản.
+  `verified` kèm tên — chính là [R18 verify-on-use](../business-rules.md) mở rộng từ mã HS sang văn bản.
 
 **Nghiệm thu toàn tuyến (2026-08-14)**: hỏi `36/2016/TT-BKHCN` → không có thật → bot nêu *"số hiệu gần
 giống, KHÁC văn bản bạn hỏi"*, không mời nạp. Hỏi `36/2016/TT-BCT` → có thật → mời nạp → xếp hàng →

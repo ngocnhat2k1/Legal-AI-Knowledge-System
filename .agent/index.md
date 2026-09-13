@@ -1,7 +1,7 @@
 ---
 type: index
 status: active
-updated: 2026-07-18
+updated: 2026-09-10
 related:
   - AGENTS.md
   - project-context.md
@@ -53,6 +53,7 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Nhật ký tiến độ](planning/02-progress.md) — **điểm tiếp tục**; những gì đã thực sự diễn ra
 - [Kế hoạch khởi tạo](planning/00-bootstrap.md) — các giai đoạn và cổng kiểm soát (gate)
 - [Danh sách công việc](planning/01-task-list.md) — chi tiết công việc và tiêu chí chấp nhận
+- [Đường ống hộp thư đến — Giai đoạn 9](planning/04-inbox-ingest-tasks.md) — **kế hoạch đang chạy**; nạp tài liệu mới + gộp nguồn notebook, không cần máy chủ
 - [Kế hoạch mở rộng LLM (M0…M4)](planning/03-llm-expansion-tasks.md) — nền móng, kho rộng ra, truy hồi, bằng chứng HS, phân loại HS
 
 ## Tài liệu (Documentation)
@@ -62,6 +63,8 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Bot Zalo: hiểu ảnh + tin quote](docs/zalo-bot-image-and-quote-context.md) — vision → đường thuế tất định; confine Read chống prompt-injection
 - [Bot Zalo: bộ nhớ hội thoại + định tuyến theo chủ đề](docs/zalo-bot-conversation-memory.md) — vì sao "không phải" trên luồng pháp luật từng bị ghi thành đính chính mã HS
 - [Kho pháp luật tự mở rộng](docs/legal-corpus-self-extension.md) — chỉ mục Công báo → nạp theo yêu cầu có cổng tự kiểm → thăng cấp bởi con người
+- [Đường ống hộp thư đến](docs/inbox-ingest-workflow.md) — từ file nhận được qua Zalo/email tới kho tri thức và notebook; phân lớp tài liệu, thang ưu tiên lấy bản văn, đồng bộ Google Docs
+- [Runbook: nạp tài liệu mới — lần sau làm thế nào](../research/inbox-loader/README.md) — từng bước, từng lệnh, các cổng phải qua
 - [Mở rộng LLM](docs/llm-expansion-design.md) — dùng nhiều LLM hơn mà không nới rào chắn: kho rộng ra, truy hồi đa truy vấn, bằng chứng phân loại HS
 - [Đánh giá](docs/evaluation.md) — bộ vàng (golden set) và các cổng ra mắt (ship gates)
 
@@ -78,6 +81,10 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 - [Công cụ repo: Drizzle + Yarn + Docker (khung TASK-006)](architecture-decisions/2026-07-18-repo-tooling-drizzle-yarn.md)
 - [LLM sinh giả thuyết, không bao giờ khẳng định](architecture-decisions/2026-08-14-llm-generates-hypotheses-never-assertions.md) — LLM ở chỗ tìm và điều hướng, không ở chỗ khẳng định; ngân sách 2 lần gọi mỗi lượt chat
 - [Nạp Chú giải Phần/Chương và 6 quy tắc GRI](architecture-decisions/2026-09-09-load-hs-notes-and-gri.md) — bằng chứng pháp lý cho phân loại HS; trước đó kho dữ liệu có đúng 1 lần xuất hiện chữ "Chú giải"
+- [File nhận được là con trỏ, không phải nguồn](architecture-decisions/2026-09-10-received-file-is-a-pointer-not-a-source.md) — bản văn lấy từ Công báo theo số hiệu, không từ file trong tay; 233 trang scan không cần OCR
+- [Nguồn notebook là Google Docs trên Drive](architecture-decisions/2026-09-10-notebook-sources-as-google-docs.md) — file upload không bao giờ tự đồng bộ; Drive thì có, vài phút một lần
+- [Văn bản chưa xác định tình trạng và công văn nằm ngoài kho pháp lý](architecture-decisions/2026-09-10-drafts-and-cong-van-outside-legal-corpus.md) — ô số hiệu trống là NGHI VẤN, phải dò Công báo; ba lần "dự thảo" hoá ra đã ban hành
+- [Nạp bản tiếng Việt của Chú giải chi tiết HS và SEN](architecture-decisions/2026-09-10-load-vietnamese-explanatory-notes.md) — thay thế một phần ADR 2026-09-09; bản tiếng Anh WCO vẫn không nạp
 
 ## Đánh giá (Reviews)
 
