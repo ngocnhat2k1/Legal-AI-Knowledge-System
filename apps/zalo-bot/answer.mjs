@@ -22,10 +22,10 @@ import {
   tariffResponse,
 } from './api.mjs';
 import { stampTariff } from './conversation.mjs';
-import { formatAnswer, formatLegal, formatMissingDoc, formatProvisions, withLead } from './format.mjs';
+import { dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
 import { citationFrom, cleanGazetteTitle, corpusHas, detectOrigin, keywordFrom, parseDocRef, parseQuery, parseQuotedTariff } from './parse.mjs';
-import { L, toText } from './render.mjs';
+import { L } from './render.mjs';
 import { claudeVision } from './router.mjs';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -86,7 +86,13 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
 
   if (!cands.length) {
     return {
-      text: `Chưa tìm được mã HS phù hợp${keywords.length ? ` cho "${keywords.join(', ')}"` : ''}.${clues?.note ? ` (${clues.note})` : ''} Thử mô tả rõ hơn, hoặc gõ thẳng mã HS.`,
+      text: [
+        L([
+          'Mình chưa tìm được mã HS phù hợp',
+          ...(keywords.length ? [' cho ', [keywords.join(', '), 'i']] : []),
+          '. Bạn mô tả rõ hơn (chất liệu, công dụng) hoặc gõ thẳng mã HS nhé.',
+        ]),
+      ],
       topic: 'tariff',
       tariff: null,
     };
@@ -94,7 +100,8 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
 
   // Chữ ký sản phẩm để (a) tra ruling đã xác nhận, (b) đính kèm khi có đính chính sau này.
   const productKw = (clues?.keywords?.length ? clues.keywords : keywords).filter((k) => k && k.length >= 2).slice(0, 6);
-  const desc = (clues?.note || productKw.join(', ') || text).replace(/\s+/g, ' ').trim().slice(0, 300);
+  // `note` is LLM text: it passes the prose gate before it is shown or stored; rejected → keywords.
+  const desc = (sanitizeLead(clues?.note, '') || productKw.join(', ') || text).replace(/\s+/g, ' ').trim().slice(0, 300);
 
   // Một ÁP MÃ đã được con người xác nhận cho hàng tương tự > phỏng đoán của LLM (verify-on-use).
   // Ngưỡng thích nghi: cụm nhiều token cần ≥2 token khớp (chống một từ chung promote nhầm);
@@ -128,41 +135,55 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   const top = cands[0];
   const full = await lookupFull(top.hsDotted, origin, date);
   const confirm = full ? await confirmations(top.hsDotted, origin) : null;
-  const out = [];
-  if (clues?.note) out.push(`💡 ${clues.note}`);
+  const tail = (c) => (c.path || '').split(' › ').slice(-2).join(' › ');
+  const mfnOf = (c) => (c.mfn != null ? `${Number(c.mfn)}%` : '—');
+  const menu = (c) => L([[c.hsDotted, 'b'], ' · MFN ', [mfnOf(c), 'b'], ' · ', [tail(c), 'i']], 'ul');
+
+  // R2: always said, and the LLM lead can only stand above it — a lead naming the top code passes the gate.
+  const lines = [L(['Với mô tả ', [desc, 'i'], ', mình tra được các mã ứng viên dưới đây — đây là ứng viên để bạn chốt, chưa phải mã đã xác định.'])];
   if (citedRuling) {
     const cite = String(citedRuling.note || '').replace(/\s+/g, ' ').trim().slice(0, 90);
-    out.push(`✅ Đã có ÁP MÃ xác nhận cho hàng tương tự: ${citedRuling.dotted} — theo ${citedRuling.staffName}${cite ? ` (${cite})` : ''}. Ưu tiên mã này; vẫn đối chiếu căn cứ.`);
-    if (borderline) out.push('ℹ️ Mặt hàng nghiêng nhiều nhóm — mã trên là ÁP MÃ đã ghi (không phải bot tự suy).');
-  } else if (borderline) {
-    out.push('⚠️ Mặt hàng NGHIÊNG NHIỀU NHÓM — đây là ỨNG VIÊN, CẦN bạn/chuyên viên chốt (kèm số công văn nếu có); đừng coi mã đầu là chắc chắn.');
+    lines.push(L(['Mã ', [citedRuling.dotted, 'b'], ' đã được ', [citedRuling.staffName, 'b'], ` xác nhận cho hàng tương tự${cite ? ` (${cite})` : ''} — mình ưu tiên mã này, bạn vẫn đối chiếu căn cứ.`]));
+    if (borderline) lines.push(L(['Mặt hàng có thể thuộc nhiều nhóm; mã trên là mã đã được người xác nhận, không phải bot tự suy.'], 'note'));
   }
-  out.push(
-    full
-      ? toText(formatAnswer({ dotted: top.hsDotted, origin, date }, full, confirm, { showFooter })) // bridge: Task 4 builds Line[]
-      : citedRuling
-        ? `📋 ${top.hsDotted} — theo ÁP MÃ đã ghi (${citedRuling.staffName}); chưa có dòng thuế hiệu lực tại ${date}, đối chiếu nguồn trước khi dùng.`
-        : `📋 ${top.hsDotted} — ${top.path}`,
-  );
 
-  if (borderline) {
-    out.push('— Các NHÓM ứng viên khác:');
-    for (const c of reps.filter((c) => c.hs !== top.hs).slice(0, 3)) {
-      out.push(`• ${c.hsDotted} · MFN ${c.mfn != null ? Number(c.mfn) + '%' : '—'} · ${(c.path || '').split(' › ').slice(-2).join(' › ')}`);
+  if (borderline && !citedRuling) {
+    // Three candidates side by side, none looking settled: no FTA block, no rate lead of its own.
+    const top3 = [top, ...reps.filter((c) => c.hs !== top.hs).slice(0, 2)];
+    lines.push(
+      L(['Mặt hàng có thể thuộc nhiều nhóm — cần bạn hoặc chuyên viên chốt mã (kèm số công văn nếu có) trước khi khai.'], 'warn'),
+      ...top3.map((c) => L([[c.hsDotted, 'b'], ' · ', [cleanGazetteTitle('', c.heading || tail(c), 50), 'i'], ' · MFN ', [mfnOf(c), 'b']], 'ul')),
+      L([]),
+      ...(full?.staleness?.warning ? [L([full.staleness.warning], 'warn')] : []),
+      L([`Tra theo ngày ${dmy(date)} · MFN theo Biểu thuế nhập khẩu ưu đãi đã nạp${full?.import?.mfn ? ` (mã đầu: NĐ ${full.import.mfn.decree})` : ''}`], 'note'),
+      L(['Nhắn mã bạn chốt (kèm xuất xứ) để mình tra đủ thuế ưu đãi, hoặc nhắn "HS đúng là <mã>" (kèm số công văn nếu có) để mình ghi nhận cho lần sau.'], 'note'),
+    );
+  } else {
+    lines.push(
+      ...(full
+        ? formatAnswer({ dotted: top.hsDotted, origin, date }, full, confirm, { showFooter: false, candidate: true })
+        : [L(['Chưa có dòng thuế hiệu lực cho ', [top.hsDotted, 'b'], ` tại ngày ${dmy(date)} — ${top.path}.`])]),
+    );
+    if (citedRuling && borderline) {
+      lines.push(L(['Các nhóm ứng viên khác:']), ...reps.filter((c) => c.hs !== top.hs).slice(0, 2).map(menu));
+    } else if (!borderline && cands.length > 1) {
+      lines.push(L(['Nếu chưa đúng loại hàng, bạn chọn mã khác:']), ...cands.slice(1, 6).map(menu));
     }
-    out.push(citedRuling ? '— Nếu ÁP MÃ trên chưa đúng cho lô này, nhắn "HS đúng là <mã>" (kèm số công văn).' : '— Chốt mã đúng: nhắn "HS đúng là <mã>" (kèm số công văn nếu có) để mình ghi nhận cho lần sau.');
-  } else if (cands.length > 1) {
-    out.push('— Nếu không đúng loại hàng, chọn mã khác:');
-    for (const c of cands.slice(1, 6)) {
-      out.push(`• ${c.hsDotted} · MFN ${c.mfn != null ? Number(c.mfn) + '%' : '—'} · ${(c.path || '').split(' › ').slice(-2).join(' › ')}`);
-    }
+    lines.push(
+      L(
+        [citedRuling
+          ? 'Nếu mã đã xác nhận trên chưa đúng cho lô này, nhắn "HS đúng là <mã>" (kèm số công văn).'
+          : 'Chốt mã đúng: nhắn "HS đúng là <mã>" (kèm số công văn nếu có) để mình ghi nhận cho lần sau.'],
+        'note',
+      ),
+    );
   }
-  const block = out.join('\n');
+
   const tariff =
     full || citedRuling
       ? stampTariff({ hs: top.hsDotted.replace(/\./g, ''), dotted: top.hsDotted, origin, date, snapshot: full || null, desc, keywords: productKw })
       : null;
-  return { text: withLead(clues?.lead, block), topic: 'tariff', tariff };
+  return { text: withLead(clues?.lead, lines), topic: 'tariff', tariff };
 }
 
 // --- Legal -------------------------------------------------------------------

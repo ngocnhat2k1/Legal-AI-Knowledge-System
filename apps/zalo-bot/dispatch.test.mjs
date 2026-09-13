@@ -430,3 +430,23 @@ test('chế độ ứng viên: câu dẫn có điều kiện, không xanh, khôn
   assert.ok(!p.msg.includes('Đã ẩn'));
   for (const s of ['AANZFTA (form AANZ)', 'ATIGA (form D)', 'EVFTA (form EUR.1/REX)']) assert.ok(lineWith(p, s), `thiếu dòng ${s}`);
 });
+
+test('lời dẫn LLM có mã HS vẫn không thay được dòng ứng viên cố định', () => {
+  const lines = [
+    L(['Với mô tả ', ['van điều áp', 'i'], ', mình tra được các mã ứng viên dưới đây — đây là ứng viên để bạn chốt, chưa phải mã đã xác định.']),
+    ...formatAnswer(CN, tariff8481({ origin: 'CN' }), null, { candidate: true, showFooter: false }),
+  ];
+  const text = toText(withLead('Sản phẩm này thuộc mã 8481.80.99', lines));
+  assert.ok(text.startsWith('Sản phẩm này thuộc mã 8481.80.99'), 'lời dẫn khớp khối thì được giữ');
+  assert.ok(text.includes('đây là ứng viên để bạn chốt, chưa phải mã đã xác định'));
+});
+
+test('cổng văn xuôi LLM: phần trăm, số hiệu, mã HS mọi dạng chỉ qua khi khối tất định có', () => {
+  assert.equal(sanitizeLead('khoảng mười phần trăm', 'MFN 10%'), '');
+  assert.equal(sanitizeLead('thuộc nhóm 8481 nhé', ''), '');
+  assert.equal(sanitizeLead('thuộc nhóm 8481 nhé', 'Mã 8481.80.99'), 'thuộc nhóm 8481 nhé');
+  assert.equal(sanitizeLead('theo Nghị định 26/2023/NĐ-CP', ''), '');
+  assert.equal(sanitizeLead('theo Nghị định 26/2023/NĐ-CP', '[1] NĐ 26/2023/NĐ-CP — MFN'), 'theo Nghị định 26/2023/NĐ-CP');
+  assert.equal(sanitizeLead('thuế suất tuỳ loại hàng', ''), '');
+  assert.equal(sanitizeLead('Hộp kim loại chắn sóng vô tuyến', ''), 'Hộp kim loại chắn sóng vô tuyến');
+});

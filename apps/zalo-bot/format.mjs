@@ -11,33 +11,36 @@
 import { cleanGazetteTitle, ORIGIN_LABEL } from './parse.mjs';
 import { L, toText } from './render.mjs';
 
-const PERCENT_RE = /\d+([.,]\d+)?\s*%/;
+const PERCENT_RE = /\d+([.,]\d+)?\s*%|phần\s*trăm/i;
 const CITATION_RE = /(?:điều|khoản|điểm)\s*\d+[a-zà-ỹ]?/gi;
 const HS_DOTTED_RE = /\d{4}\.\d{2}\.\d{2}/g;
+const DOC_NO_RE = /\d{1,4}\s*\/\s*(?:\d{4}|vbhn)[^\s,;)]*/gi;
+const HS_ANY_RE = /(?:mã|nhóm|hs)\s*(?:hs\s*)?(\d{4}(?:\.?\d{2}){0,2})(?!\d)/gi;
 
 /**
- * Enforce the lead/facts split IN CODE, not by asking the model nicely.
+ * The gate for LLM prose. Dropped outright: a rate ("%", "phần trăm") — a percentage in
+ * conversational prose is a tariff number produced by an LLM. Dropped unless the
+ * deterministic block carries the same thing: a provision, an HS code in any spelling,
+ * a document number. With `block === ''` every such fact is dropped, and so is "thuế suất".
  *
- * A lead is dropped outright if it states a rate — a percentage in conversational
- * prose is a tariff number produced by an LLM, which is the one thing this system
- * must never do. A lead that cites a provision or an HS code is dropped unless that
- * exact citation also appears in the deterministic block, i.e. unless it is echoing
- * something the database actually returned rather than recalling it from training.
- *
- * @param {string} lead   the model's opening sentences
- * @param {string} block  the deterministic answer it will be prefixed to
+ * @param {string} lead   the model's text
+ * @param {string} block  plain text of the deterministic reply it sits on ('' when none)
+ * @param {number} max    length cap
  */
-export function sanitizeLead(lead, block = '') {
+export function sanitizeLead(lead, block = '', max = 400) {
   const text = String(lead ?? '').replace(/\s+/g, ' ').trim();
   if (!text) return '';
   if (PERCENT_RE.test(text)) return '';
-
+  if (!block && /thuế suất/i.test(text)) return '';
+  const low = text.toLowerCase();
   const hay = String(block ?? '').toLowerCase().replace(/\s+/g, ' ');
-  const claims = [...(text.match(CITATION_RE) ?? []), ...(text.match(HS_DOTTED_RE) ?? [])];
-  for (const c of claims) {
-    if (!hay.includes(c.toLowerCase().replace(/\s+/g, ' '))) return '';
+  const bare = hay.replace(/[.\s]/g, '');
+  for (const c of [...(low.match(CITATION_RE) ?? []), ...(low.match(HS_DOTTED_RE) ?? [])]) {
+    if (!hay.includes(c.replace(/\s+/g, ' '))) return '';
   }
-  return text.slice(0, 400);
+  for (const c of low.match(DOC_NO_RE) ?? []) if (!bare.includes(c.replace(/[.:\s]/g, ''))) return '';
+  for (const [, code] of low.matchAll(HS_ANY_RE)) if (!bare.includes(code.replace(/\./g, ''))) return '';
+  return text.slice(0, max);
 }
 
 /** A gated lead as its own line above the reply; it never replaces a line of the reply. */
@@ -252,19 +255,6 @@ export function formatAnswer(q, r, confirm, { showFooter = true, candidate = fal
     lines.push(L([[sentence[0].toUpperCase() + sentence.slice(1), 'i']]));
   }
   return lines;
-}
-
-export function formatCandidates(kw, list, origin) {
-  const lines = [
-    `🔎 "${kw}"${origin ? ` · xuất xứ ${origin}` : ''} — ${list.length} mã phù hợp. Nhắn MÃ${origin ? '' : ' kèm xuất xứ'} để xem thuế đầy đủ:`,
-  ];
-  for (const c of list.slice(0, 8)) {
-    const tail = (c.path || '').split(' › ').slice(-2).join(' › ');
-    lines.push(`• ${c.hsDotted}  ·  MFN ${c.mfn != null ? Number(c.mfn) + '%' : '—'}  ·  ${tail}`);
-  }
-  if (list.length > 8) lines.push(`…và ${list.length - 8} mã nữa — gõ cụ thể hơn để thu hẹp.`);
-  lines.push(`Ví dụ: "${list[0]?.hsDotted || '8481.10.11'} ${origin || 'TQ'}".`);
-  return lines.join('\n');
 }
 
 // --- Legal ------------------------------------------------------------------
