@@ -84,7 +84,8 @@ export const hasHs = (text) => HS_RE.test(String(text || ''));
 export function parseQuotedTariff(text) {
   const s = String(text || '');
   const q = parseQuery(s.split('\n').find(hasHs));
-  const d = s.match(/Tra theo ngày (\d{2})\/(\d{2})\/(\d{4})/);
+  // A quoted confirm ("… (xuất xứ CN, ngày dd/mm/yyyy). Cảm ơn …") carries the date only there.
+  const d = s.match(/Tra theo ngày (\d{2})\/(\d{2})\/(\d{4})/) ?? s.match(/ngày (\d{2})\/(\d{2})\/(\d{4})\)\. Cảm ơn/);
   if (q && d) q.date = `${d[3]}-${d[2]}-${d[1]}`;
   return q;
 }

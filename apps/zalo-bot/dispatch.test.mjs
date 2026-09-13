@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
-import { tariffByClues } from './answer.mjs';
+import { handleConfirm, tariffByClues } from './answer.mjs';
 import {
   CAPABILITIES,
   formatAnswer,
@@ -607,4 +607,20 @@ test('formatGeneral: trả lời chung có dữ kiện bị thay bằng danh sá
     assert.equal(formatGeneral(reply), CAPABILITIES, `phải bác: ${reply}`);
   }
   assert.deepEqual(formatGeneral('- a\n- b').map((l) => l.marks), [['ul'], ['ul']]);
+});
+
+test('parseQuotedTariff: tin xác nhận quote lại sau khi hết trí nhớ giữ ngày đã tra (dd/mm/yyyy), không lấy hôm nay', async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({}) });
+  try {
+    for (const origin of ['CN', null]) {
+      const { text } = await handleConfirm({ hs: '84818099', dotted: '8481.80.99', origin, date: '2026-01-05' }, 'correct', 'An');
+      const q = parseQuotedTariff(toText(text));
+      assert.deepEqual([q.hs, q.date], ['84818099', '2026-01-05'], toText(text));
+    }
+  } finally {
+    globalThis.fetch = real;
+  }
+  // Other bracketed dates (effective-from and the like) are not the looked-up date.
+  assert.notEqual(parseQuotedTariff('Mã 8481.80.99 (hiệu lực từ ngày 01/07/2026).').date, '2026-07-01');
 });

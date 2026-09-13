@@ -38,6 +38,10 @@ const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
 // --- Session persistence ----------------------------------------------------
+// A plain part goes out as { msg } only: zca-js sends textProperties for any `styles`, even [], and an
+// empty list has never been tried against Zalo, while { msg } is what plain replies always sent.
+const wire = (p) => (p.styles.length ? p : { msg: p.msg });
+
 const loadSession = () => (existsSync(SESSION) ? JSON.parse(readFileSync(SESSION, 'utf8')) : null);
 const saveSession = (data) => {
   mkdirSync(dirname(SESSION), { recursive: true });
@@ -130,7 +134,7 @@ async function respond({ text, image, quote, ctx, senderName, threadId, userId }
     return {
       text: q
         ? formatIngestQueued(pending.number, Boolean(q.alreadyQueued))
-        : `Mình chưa xếp hàng nạp được ${pending.number}, thử lại sau nhé.`,
+        : [L(['Mình chưa xếp hàng nạp được ', [pending.number, 'b'], ', thử lại sau nhé.'])],
       topic: 'legal',
       // The offer has been taken up; leave it open and a later "ok" would queue it twice.
       legal: { ...ctx.legal, pendingIngest: null },
@@ -257,7 +261,7 @@ async function main() {
 
       // Vision mất ~15-30s: báo ngay để người dùng không tưởng bot treo.
       if (image) {
-        await api.sendMessage({ ...render('Mình đang xem ảnh, bạn chờ khoảng 20 giây nhé.')[0], quote: msg.data }, msg.threadId, msg.type).catch(() => {});
+        await api.sendMessage({ ...wire(render('Mình đang xem ảnh, bạn chờ khoảng 20 giây nhé.')[0]), quote: msg.data }, msg.threadId, msg.type).catch(() => {});
       }
 
       const result = await respond({ text, image, quote: msg.data?.quote, ctx, senderName, threadId: msg.threadId, userId });
@@ -267,7 +271,7 @@ async function main() {
       // Only the first part quotes the question. Memory is saved right after it, so a later part
       // failing never costs the "đúng"/"sai" that follows (tariffFresh).
       const parts = render(result.text);
-      await api.sendMessage({ ...parts[0], quote: msg.data }, msg.threadId, msg.type);
+      await api.sendMessage({ ...wire(parts[0]), quote: msg.data }, msg.threadId, msg.type);
 
       // Ghi nhớ SAU khi đã trả lời — lỗi lưu trí nhớ không được làm mất câu trả lời.
       // `tariff`/`legal` vắng mặt = giữ nguyên phần trí nhớ đó; null = xoá (không còn gì để trỏ tới).
@@ -286,12 +290,12 @@ async function main() {
       });
       for (const p of parts.slice(1)) {
         // Part 1 is delivered and remembered: a later failure only logs, never sends the generic error.
-        await api.sendMessage(p, msg.threadId, msg.type).catch((e) => console.warn('[zalo] send part failed:', e?.message));
+        await api.sendMessage(wire(p), msg.threadId, msg.type).catch((e) => console.warn('[zalo] send part failed:', e?.message));
       }
     } catch (e) {
       console.error('[zalo] lỗi xử lý tin:', e?.message);
       try {
-        await api.sendMessage(render('Xin lỗi, có lỗi khi tra cứu. Thử lại sau.')[0], msg.threadId, msg.type);
+        await api.sendMessage(wire(render('Xin lỗi, có lỗi khi tra cứu. Thử lại sau.')[0]), msg.threadId, msg.type);
       } catch {
         /* ignore */
       }
@@ -313,7 +317,7 @@ async function main() {
         let sent = false;
         for (const type of [ThreadType.Group, ThreadType.User]) {
           try {
-            for (const p of render(formatIngestReport(r))) await api.sendMessage(p, r.threadId, type);
+            for (const p of render(formatIngestReport(r))) await api.sendMessage(wire(p), r.threadId, type);
             sent = true;
             break;
           } catch {
