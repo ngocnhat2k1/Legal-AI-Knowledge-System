@@ -70,7 +70,8 @@ export function parseQuery(text) {
   const dm = t.match(/(\d{4}-\d{2}-\d{2})/);
   return {
     hs: m[1] + m[2] + m[3],
-    origin: detectOrigin(t),
+    // detectOrigin reads codes typed in capitals ("TQ", "CN"), so it gets the text as typed, not lowercased.
+    origin: detectOrigin(String(text || '')),
     date: dm ? dm[1] : todayVN(),
     dotted: `${m[1]}.${m[2]}.${m[3]}`,
   };

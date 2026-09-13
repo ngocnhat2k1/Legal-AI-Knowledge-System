@@ -23,7 +23,7 @@ import {
   withLead,
 } from './format.mjs';
 import { L, render, toText } from './render.mjs';
-import { cleanGazetteTitle, corpusHas, docNumberStatedIn, missingKind, parseDocRef, parseQuotedTariff, sameDocNumber, statedDocNumber } from './parse.mjs';
+import { cleanGazetteTitle, corpusHas, docNumberStatedIn, missingKind, parseDocRef, parseQuery, parseQuotedTariff, sameDocNumber, statedDocNumber } from './parse.mjs';
 
 // The bot's own legal answer, as it appears in a quote. Note it carries NO HS code.
 const LEGAL_ANSWER_QUOTE =
@@ -670,4 +670,11 @@ test('parseQuotedTariff: tin xác nhận quote lại sau khi hết trí nhớ gi
   }
   // Other bracketed dates (effective-from and the like) are not the looked-up date.
   assert.notEqual(parseQuotedTariff('Mã 8481.80.99 (hiệu lực từ ngày 01/07/2026).').date, '2026-07-01');
+});
+
+test('an origin code typed in capitals after the HS code is read (TQ, CN); a country name still works', () => {
+  assert.equal(parseQuery('8481.80.99 TQ')?.origin, 'CN', '"8481.80.99 TQ" phải hiểu là xuất xứ Trung Quốc');
+  assert.equal(parseQuery('Thuế 8481.80.99 CN bao nhiêu')?.origin, 'CN', 'mã CN viết hoa phải được đọc');
+  assert.equal(parseQuery('8481.80.99 xuất xứ Trung Quốc')?.origin, 'CN', 'tên nước vẫn phải được đọc');
+  assert.equal(parseQuery('8481.80.99')?.origin, null, 'không nêu xuất xứ thì để trống, không đoán');
 });
