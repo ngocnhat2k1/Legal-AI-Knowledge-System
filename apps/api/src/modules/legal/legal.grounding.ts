@@ -54,6 +54,26 @@ const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean }> = [
   { re: /\d{4}(?:\.\d{2}){1,2}/g, exempt: true, fatal: false },
 ];
 
+/** A sentence saying an instrument applies or has yet to end. "không/chưa còn hiệu lực" and "đã hết hiệu lực" do not match. */
+const IN_FORCE_CLAIM = /(?<!không\s)(?<!chưa\s)còn hiệu lực|vẫn\s+(?:còn\s+)?(?:được\s+)?áp dụng|sẽ hết hiệu lực|chưa hết hiệu lực/i;
+
+/**
+ * Drop sentences that call an expired instrument in force (R8). The API compared the status row's end date with the
+ * as-of date and told the model so; on 14/09/2026 it still opened with "Còn hiệu lực tại thời điểm hiện tại
+ * (14/09/2026), nhưng sẽ hết hiệu lực từ 23/01/2026" about NĐ 43/2017. A claim survives only in a sentence that names
+ * a source still in force and no expired one; the bot prints the expiry as its own red line in any case.
+ */
+export function dropInForceClaims(answer: string, expired: string[], current: string[]): string {
+  if (!expired.length) return answer;
+  const core = (n: string) => n.match(/\d{1,4}\/\d{4}/)?.[0] ?? n;
+  const namesAny = (s: string, list: string[]) => list.map(core).some((c) => s.includes(c));
+  return answer
+    .split(/(?<=[.?!;…])(?= )|(?<=\n)/)
+    .filter((s) => !IN_FORCE_CLAIM.test(s) || (namesAny(s, current) && !namesAny(s, expired)))
+    .join('')
+    .trim();
+}
+
 /**
  * Map the model's [n] markers onto the retrieved provisions and prove the numbers next to them (R10).
  * `sources[i]` is "{articleCitation}\n{articleBody}" of the i-th provision given to the model.

@@ -1,4 +1,28 @@
-import { numberMarkers } from './legal.grounding';
+import { dropInForceClaims, numberMarkers } from './legal.grounding';
+
+describe('dropInForceClaims — an instrument the data says has ended is never called in force (R8)', () => {
+  const expired = ['43/2017/NĐ-CP'];
+
+  it('drops the opening the model wrote on 14/09/2026 and keeps the correct sentence', () => {
+    const answer =
+      'Còn hiệu lực tại thời điểm hiện tại (14/09/2026), nhưng sẽ hết hiệu lực từ 23/01/2026. Phần nhãn hàng hóa đã hết hiệu lực từ 23/01/2026 [1].';
+    expect(dropInForceClaims(answer, expired, [])).toBe('Phần nhãn hàng hóa đã hết hiệu lực từ 23/01/2026 [1].');
+  });
+
+  it('keeps a negated claim', () => {
+    expect(dropInForceClaims('Nghị định 43/2017/NĐ-CP không còn hiệu lực [1].', expired, [])).toBe('Nghị định 43/2017/NĐ-CP không còn hiệu lực [1].');
+  });
+
+  it('keeps a claim about a source still in force; drops one that also names the expired instrument', () => {
+    const current = 'Nghị định 85/2019/NĐ-CP vẫn được áp dụng tới 15/10/2026 [2].';
+    expect(dropInForceClaims(current, expired, ['85/2019/NĐ-CP'])).toBe(current);
+    expect(dropInForceClaims('Nghị định 43/2017/NĐ-CP vẫn còn hiệu lực, 37/2026/NĐ-CP bổ sung [1].', expired, ['37/2026/NĐ-CP'])).toBe('');
+  });
+
+  it('changes nothing when no source has ended', () => {
+    expect(dropInForceClaims('Nghị định 08/2015/NĐ-CP còn hiệu lực [1].', [], ['08/2015/NĐ-CP'])).toBe('Nghị định 08/2015/NĐ-CP còn hiệu lực [1].');
+  });
+});
 
 /** Five provisions as the model saw them: "{articleCitation}\n{articleBody}". */
 const five = [

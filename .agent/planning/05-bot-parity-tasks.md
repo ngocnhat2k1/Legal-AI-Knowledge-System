@@ -222,6 +222,16 @@ export function statusSections(documents: DocRow[], relations: RelationRow[]): E
 > - Mã HS 8 số trong câu hỏi cũng không khớp bằng từ khoá ("6506.10.10"), và RRF để các đoạn mở đầu chương lặp từ của
 >   câu hỏi vượt mục đúng ("Chú giải Phần XVI"). **Mục có mã HS câu hỏi nêu (`hs_codes`) luôn đi kèm, nguồn ràng buộc
 >   trước** (`hsCodeSections`); các mục còn lại qua cổng rồi **xếp theo khoảng cách cosine**, không theo RRF.
+> - Deploy `0bf25af` (qua CI/CD) lúc LLM đã có lại hạn mức: văn xuôi dùng đúng bằng chứng (69/2018 "hết hiệu lực từ
+>   05/09/2026, thay bởi 292/2026"; 336/2026 "chưa có hiệu lực, vẫn theo 85/2019"; mũ bảo hiểm 6506.10.10 "rủi ro trung
+>   bình, Phụ lục II TT 36/2026"). Hai lỗi, sửa ngay sau đó: (1) bot chạy khô câu "NĐ 43/2017 về nhãn hàng hóa còn áp dụng
+>   không" → LLM viết "vẫn còn hiệu lực… sẽ hết hiệu lực từ 23/01/2026" từ chính mục ghi hết hiệu lực ngày đó. **So ngày
+>   không giao cho LLM:** mục `status` mang `meta.ends` (ngày, văn bản, phần), API so với ngày hỏi → nhãn "ĐÃ HẾT HIỆU LỰC"
+>   trong prompt và `expired` trên citation → bot in dòng đỏ từ dữ liệu; mục có cửa sổ `upcoming` vì sắp bị thay (85/2019)
+>   không còn bị gắn "CHƯA CÓ HIỆU LỰC". Sau deploy phải chạy `seed-evidence` một lần (không nhúng lại). (2) câu có mã HS hỏi
+>   về danh mục văn bản đi đường tắt tra thuế → `legalAboutCode` (`dispatch.mjs`) đưa sang pháp luật khi có dấu hiệu văn
+>   bản/danh mục và không có dấu hiệu thuế. Còn mở: "Chú giải Phần XVI loại trừ gì" — LLM không trả văn xuôi (chưa rõ do
+>   timeout 90 s hay JSON hỏng; `generate` nuốt lỗi, cần log).
 
 **Cấu trúc file**
 

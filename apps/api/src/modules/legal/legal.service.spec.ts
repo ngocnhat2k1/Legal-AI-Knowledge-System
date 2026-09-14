@@ -165,9 +165,27 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
     const [nd43, nd85] = res.citations;
     expect(nd43!.expired).toBe('43/2017/NĐ-CP ĐÃ HẾT HIỆU LỰC từ 23/01/2026 theo 37/2026/NĐ-CP (phần: 43/2017/NĐ-CP (nhãn hàng hóa))');
     expect(lastSources()[0]!.note).toContain('ĐÃ HẾT HIỆU LỰC từ 23/01/2026');
+    expect((generate as jest.Mock).mock.calls.at(-1)![3]).toEqual([nd43!.expired]); // stated as a fact above the question
     expect(nd85!.expired).toBeNull();
     expect(nd85!.note).toContain('sẽ hết hiệu lực từ 15/10/2026 theo 336/2026/NĐ-CP');
     expect(nd85!.note).not.toContain('CHƯA CÓ HIỆU LỰC'); // 85/2019 is in force until then
+  });
+
+  it('drops a sentence calling an expired document in force, keeping the rest of the prose', async () => {
+    (evidenceInstruments as jest.Mock).mockResolvedValueOnce(['43/2017/NĐ-CP']);
+    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([
+      ev({
+        instrument: '43/2017/NĐ-CP', documentNumber: '43/2017/NĐ-CP', title: 'Tình trạng hiệu lực — 43/2017/NĐ-CP',
+        body: '43/2017/NĐ-CP hết hiệu lực — phần bị tác động: 43/2017/NĐ-CP (nhãn hàng hóa) — từ 23/01/2026 bởi 37/2026/NĐ-CP',
+        ends: [{ from: '2026-01-23', by: '37/2026/NĐ-CP', relation: 'het_hieu_luc', scope: '43/2017/NĐ-CP (nhãn hàng hóa)' }],
+      }),
+    ]);
+    (generate as jest.Mock).mockResolvedValueOnce({
+      answer: 'Còn hiệu lực tại thời điểm hiện tại, nhưng sẽ hết hiệu lực từ 23/01/2026. Phần nhãn hàng hóa đã hết hiệu lực từ 23/01/2026 [1].',
+      citations: [1], abstain: false, reason: null,
+    });
+    const res = await svc().ask('Nghị định 43/2017 về nhãn hàng hóa còn áp dụng không', '2026-09-14');
+    expect(res.answer).toBe('Phần nhãn hàng hóa đã hết hiệu lực từ 23/01/2026 [1].');
   });
 
   it('labels a section that is not yet in force with the date it starts', async () => {

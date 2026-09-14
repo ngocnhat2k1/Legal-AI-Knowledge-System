@@ -13,7 +13,7 @@ import {
   type StatusEnd,
 } from './legal.evidence';
 import { generate, type PromptSource } from './legal.generation';
-import { keepRelevant, numberMarkers } from './legal.grounding';
+import { dropInForceClaims, keepRelevant, numberMarkers } from './legal.grounding';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
 import {
   inIds,
@@ -263,7 +263,13 @@ export class LegalService {
       };
     }
 
-    const gen = await generate(query, asOf, sources);
+    const expired = sources.map((s) => s.citation).filter((c) => c.expired);
+    const gen = await generate(
+      query,
+      asOf,
+      sources,
+      expired.map((c) => c.expired!),
+    );
 
     /**
      * The model READ these provisions and judged them insufficient. Returning them
@@ -305,7 +311,15 @@ export class LegalService {
 
     // Exactly what the model read for each [n], label and standing included.
     const texts = sources.map((s) => `${s.label}\n${s.note ?? ''}\n${s.text}`);
-    const marked = numberMarkers(gen.answer, gen.citations, texts, query);
+    const numbered = numberMarkers(gen.answer, gen.citations, texts, query);
+    const marked = {
+      ...numbered,
+      answer: dropInForceClaims(
+        numbered.answer,
+        expired.map((c) => c.documentNumber),
+        sources.map((s) => s.citation).filter((c) => !c.expired).map((c) => c.documentNumber),
+      ),
+    };
     if (!marked.answer || marked.order.length === 0) {
       // The model cited nothing we retrieved, or stated a rate or amount its source does not
       // contain → ungrounded. Drop the prose, keep the verbatim provisions as references.

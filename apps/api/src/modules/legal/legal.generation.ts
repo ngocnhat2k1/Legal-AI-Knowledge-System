@@ -53,7 +53,8 @@ export interface GenerationResult {
   reason: string | null;
 }
 
-export function buildPrompt(query: string, asOf: string, sources: PromptSource[]): string {
+/** `facts`: statements the API established from data and the model must not contradict ("X ĐÃ HẾT HIỆU LỰC từ …"). */
+export function buildPrompt(query: string, asOf: string, sources: PromptSource[], facts: string[] = []): string {
   // An article arrives as the FULL Điều, not just the matched Khoản — an enumeration question ("các trường hợp
   // miễn thuế") needs every clause of it. stdin has no arg-size limit, so whole articles are fine.
   const blocks = sources
@@ -92,6 +93,9 @@ export function buildPrompt(query: string, asOf: string, sources: PromptSource[]
     'Trả về JSON MỘT dòng, không kèm giải thích. Xuống dòng trong câu trả lời viết là \\n bên trong chuỗi JSON:',
     '{"answer":"<Markdown tiếng Việt, tối đa khoảng 350 từ>","citations":[<n>],"abstain":false,"reason":null}',
     '',
+    ...(facts.length
+      ? [`SỰ KIỆN ĐÃ XÁC ĐỊNH TỪ DỮ LIỆU, TÍNH ĐẾN NGÀY HỎI ${asOf} — câu trả lời không được mâu thuẫn:`, ...facts.map((f) => `- ${f}`), '']
+      : []),
     `CÂU HỎI: ${query}`,
     '',
     'NGUỒN:',
@@ -99,13 +103,21 @@ export function buildPrompt(query: string, asOf: string, sources: PromptSource[]
   ].join('\n');
 }
 
-export async function generate(query: string, asOf: string, sources: PromptSource[]): Promise<GenerationResult | null> {
+export async function generate(
+  query: string,
+  asOf: string,
+  sources: PromptSource[],
+  facts: string[] = [],
+): Promise<GenerationResult | null> {
   if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) return null;
-  const prompt = buildPrompt(query, asOf, sources);
+  const prompt = buildPrompt(query, asOf, sources, facts);
   try {
     const stdout = await runClaude(prompt);
     const m = stdout.match(/\{[\s\S]*\}/);
-    if (!m) return null;
+    if (!m) {
+      console.warn(`[legal] generation returned no JSON (${stdout.length} chars)`);
+      return null;
+    }
     const j = JSON.parse(m[0]) as {
       answer?: unknown;
       citations?: unknown;
@@ -121,7 +133,9 @@ export async function generate(query: string, asOf: string, sources: PromptSourc
       abstain: Boolean(j.abstain),
       reason: j.reason ? String(j.reason) : null,
     };
-  } catch {
-    return null; // CLI missing, timeout, or unparseable — fall back to citations-only.
+  } catch (e) {
+    // CLI missing, timeout, or unparseable — fall back to citations-only. Only the error goes to the log, never the prompt.
+    console.warn(`[legal] generation failed after ${sources.length} sources: ${String((e as Error)?.message ?? e).slice(0, 200)}`);
+    return null;
   }
 }
