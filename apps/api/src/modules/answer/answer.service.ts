@@ -8,14 +8,15 @@ import { BadRequestException, HttpException, Inject, Injectable, Logger } from '
 import { sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/database';
-import { extractAsOf } from '../legal/legal.asof';
-import { type DocScope, type GatherOpts, LegalService, type Source } from '../legal/legal.service';
+import { extractAsOf, isIsoDate, todayVN } from '../legal/legal.asof';
+import { expandMarkers } from '../legal/legal.grounding';
+import { AUTHORITY_NOTE, type DocScope, type GatherOpts, LegalService, type Source } from '../legal/legal.service';
 import { ConfirmationService } from '../tariff/confirmation.service';
 import { TariffService } from '../tariff/tariff.service';
 import type { RateView, TariffResponse } from '../tariff/tariff.types';
 import type { Effort } from './claude';
 import { buildComposeInput, buildRepairPrompt, type ComposeMode, parseDraft, parseRepair, SYSTEM } from './compose';
-import { type Source as GuardSource, splitSentences, verify } from './guards';
+import { type Source as GuardSource, quoteInBody, splitSentences, verify } from './guards';
 import {
   assertNoUserCodes,
   CODE_MARK,
@@ -43,7 +44,6 @@ const MAX_Q_CHARS = 2000;
 /** The p95 gate of a composed turn (owner decision Q3): `deadlineAt` is clamped to it. */
 const BUDGET_MS = 120_000;
 const MAX_SOURCES = 12;
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const PROSE = ['hs', 'legal', 'status', 'mixed'];
 const LEGAL = ['legal', 'status', 'mixed'];
 
@@ -147,23 +147,31 @@ export class AnswerService {
     let sourceCount = 0;
     const leakDrops: string[] = [];
 
-    // Every code the conversation carries, the message's first: [mã n] in any plan is codes[n - 1].
-    const { codes } = planParts({ text: q, quote, topic, state, turns, documents: [] });
+    // Every code the conversation carries, the message's first: [mã n] in any plan is codes[n - 1]. The whole message
+    // extends the book, since the plan read only its first 600 characters.
+    const { codes } = maskCodes(q, planParts({ text: q, quote, topic, state, turns, documents: [] }).codes);
     const forced = INTENTS.includes(body.forceIntent as Intent) ? (body.forceIntent as Intent) : null;
     let plan: Plan;
     if (body.plan != null) {
       const given = normalizePlan(body.plan, [q, quote ?? '', ...turns.filter((t) => t.role === 'user').map((t) => t.body)]);
       fallback = !given;
       const p = given ?? defaultPlan(q, topic);
-      // A plan from the client is text a prompt reads: masked again, so no raw code reaches a model (R4). A partial
-      // plan (the bot's tariff branch) has no question: the masked message stands in.
+      // A plan from the client is text a prompt reads: every text of it masked again, so no raw code reaches a model (R4).
+      // A partial plan (the bot's tariff branch) has no question: the masked message stands in.
       const mask = (s: string): string => maskCodes(s, codes).text;
-      plan = { ...p, question: mask(p.question || q), queries: p.queries.map(mask) };
+      plan = {
+        ...p,
+        understanding: p.understanding && mask(p.understanding),
+        question: mask(p.question || q),
+        queries: p.queries.map(mask),
+        goods: { facts: p.goods.facts.map(mask), missing: p.goods.missing.map(mask) },
+      };
     } else if (forced) {
       plan = defaultPlan(q, topic);
     } else {
-      const documents = await this.legal.documents().catch(() => []);
-      const step = await timed('plan', () => planStep({ text: q, quote, topic, state, turns, documents }, this.run));
+      const step = await timed('plan', async () =>
+        planStep({ text: q, quote, topic, state, turns, documents: await this.legal.documents().catch(() => []) }, this.run),
+      );
       plan = step.plan;
       calls += step.calls;
       fallback = step.fallback;
@@ -184,18 +192,21 @@ export class AnswerService {
     const mode: ComposeMode | null = PROSE.includes(intent) ? (intent as ComposeMode) : intent === 'tariff' && role === 'key' ? 'tariff' : null;
 
     const finish = async (part: Partial<AnswerResponse>, lines?: Map<string, string | null>): Promise<AnswerResponse> => {
-      const known = lines ?? (await this.hsLines(users.map((u) => digits(u.code))));
+      const known = lines ?? (await timed('verify', () => this.hsLines(users.map((u) => digits(u.code)))));
       const candidates = part.candidates ?? [];
       const res: AnswerResponse = {
         plan,
         codeRole: role,
         mode,
-        // Candidates are four digits or deeper, so "the user's heading is a prefix of a candidate" covers both directions.
-        userCodes: users.map((u) => ({
-          ...u,
-          exists: known.has(digits(u.code)),
-          inCandidates: candidates.some((c) => digits(c.hs).startsWith(digits(u.code).slice(0, 4))),
-        })),
+        // A chapter has no heading to compare (§2.4). The user's heading meets each candidate's heading, as the bot's line
+        // speaks of groups (§5 item 3): a deeper candidate under that heading counts.
+        userCodes: users
+          .filter((u) => u.heading)
+          .map((u) => ({
+            ...u,
+            exists: known.has(digits(u.code)),
+            inCandidates: candidates.some((c) => digits(c.hs).startsWith(digits(u.code).slice(0, 4))),
+          })),
         ack: ackOf(plan.understanding, q),
         asOf: null,
         answerMd: '',
@@ -223,33 +234,64 @@ export class AnswerService {
       return res;
     };
 
-    if (body.planOnly) return finish(scoped(await timed('retrieve', () => this.legal.scope(q, plan.scope.doc))));
+    if (body.planOnly === true) return finish(scoped(await timed('retrieve', () => this.legal.scope(q, plan.scope.doc))));
     if (!mode) return finish({}); // general, confirm, correction, a tariff question without a code: the bot's branches
 
-    const today = new Date().toISOString().slice(0, 10);
-    const asOf = typeof body.asOf === 'string' && ISO_DATE.test(body.asOf) ? body.asOf : (extractAsOf(q) ?? today);
+    const asOf = isIsoDate(body.asOf) ? body.asOf : (extractAsOf(q) ?? todayVN());
     const code8 = users.find((u) => u.level === 8);
     const tariff =
       code8 && (mode === 'tariff' || (mode === 'mixed' && role === 'subject'))
-        ? await timed('retrieve', () => this.lookup(digits(code8.code), plan.origin, plan.date ?? today))
+        ? await timed('retrieve', () => this.lookup(digits(code8.code), plan.origin, plan.date ?? asOf))
         : null;
     if (mode === 'tariff' && !tariff) return finish({ asOf });
-    const tariffLines = tariff ? rateLines(tariff) : [];
 
     const doc = LEGAL.includes(mode) ? await timed('retrieve', () => this.legal.scope(q, plan.scope.doc)) : undefined;
     if (doc?.missingDoc) return finish({ asOf, tariff, ...scoped(doc) });
+    const common = { asOf, tariff, ...scoped(doc) };
 
-    // Premise, key and none: the [mã n] labels go before retrieval and compose; a subject's codes come back as written.
+    // Premise, key and none: the [mã n] labels go before retrieval and compose. A subject gets back its own codes, the
+    // message's; a code from the quote, an old turn or the state line was given no role and never comes back (§6.2).
+    const own = new Set(users.map((u) => digits(u.code)));
     const unmask = (s: string): string =>
-      (role === 'subject' ? s.replace(CODE_MARK, (m) => codes[Number(m.replace(/\D/g, '')) - 1] ?? '') : s.replace(CODE_MARK, ''))
+      s
+        .replace(CODE_MARK, (m) => {
+          const code = codes[Number(m.replace(/\D/g, '')) - 1] ?? '';
+          return role === 'subject' && own.has(digits(code)) ? code : '';
+        })
         .replace(/\s+([,.?!;:])/g, '$1')
         .replace(/\s{2,}/g, ' ')
         .trim();
     const message = unmask(maskCodes(q, codes).text);
     const question = unmask(plan.question) || message;
+    const understanding = unmask(plan.understanding ?? '');
+    const goods = { facts: plan.goods.facts.map(unmask).filter(Boolean), missing: plan.goods.missing.map(unmask).filter(Boolean) };
     const previousQuestion = plan.intent === 'refine' || plan.refines ? unmask(maskCodes(state.answer?.question ?? '', codes).text) || null : null;
+    // R4 on rate lines: a key's statements stay, that code's digits taken out with a sub-line's tail ("8481.80.99.10" →
+    // "dòng"); a premise code is never looked up, and a line still naming a user code is dropped by the latch below.
+    const key = role === 'key' && code8 ? new RegExp(String.raw`(?<!\d)${digits(code8.code).match(/\d{2}/g)!.join(String.raw`[.\s]?`)}(?:[.\s]?\d{2})?(?!\d)`, 'g') : null;
+    const tariffLines = tariff ? rateLines(tariff).map((line) => (key ? line.replace(key, 'dòng') : line)) : [];
 
-    const queries = [...new Set([question, ...plan.queries.map(unmask)])].filter(Boolean).slice(0, 3);
+    let parts: PromptPart[] = [
+      { name: 'message', text: message },
+      { name: 'question', text: question },
+      { name: 'understanding', text: understanding },
+      { name: 'goods', text: [...goods.facts, ...goods.missing].join('\n') },
+      { name: 'previousQuestion', text: previousQuestion ?? '' },
+      // One part per rate line and per query: the latch drops only the one naming the code.
+      ...tariffLines.map((text) => ({ name: 'tariffLines', text })),
+      ...plan.queries.map((query) => ({ name: 'queries', text: unmask(query) })),
+    ];
+    if (role === 'premise' || role === 'key') {
+      // What the model is told about the question and what retrieval runs on, never the evidence: D1 lets a premise heading's notes in.
+      const latch = assertNoUserCodes(parts, users, role);
+      parts = latch.parts;
+      leakDrops.push(...latch.leakDrops);
+    }
+    const kept = (name: string): string[] => parts.filter((p) => p.name === name).map((p) => p.text);
+    // Fail closed before retrieval: nothing is left to ask, and no query runs on the user's code.
+    if (!kept('message').length || !kept('question').length) return finish(common);
+
+    const queries = [...new Set([question, ...kept('queries')])].filter(Boolean).slice(0, 3);
     const ownHeadings = [...new Set(users.flatMap((u) => (u.heading ? [u.heading] : [])))];
     const hints = [...new Set(plan.hsHints.map(headingOf))].slice(0, 5);
     // Pins go on the first query only, and always explicitly: a default would read the user's code from the question (D1).
@@ -271,43 +313,31 @@ export class AnswerService {
       .filter((s) => !seen.has(s.key) && Boolean(seen.add(s.key)))
       .slice(0, MAX_SOURCES);
     sourceCount = sources.length;
-    const common = { asOf, tariff, ...scoped(doc) };
-    if (!sources.length && mode !== 'tariff') return finish(common);
-
-    let parts: PromptPart[] = [
-      { name: 'message', text: message },
-      { name: 'question', text: question },
-      { name: 'understanding', text: plan.understanding ?? '' },
-      { name: 'goods', text: [...plan.goods.facts, ...plan.goods.missing].join('\n') },
-      { name: 'previousQuestion', text: previousQuestion ?? '' },
-      { name: 'tariffLines', text: tariffLines.join('\n') },
-    ];
-    if (role === 'premise' || role === 'key') {
-      // What the model is told about the question, never the evidence: D1 lets a premise heading's notes in.
-      const latch = assertNoUserCodes(parts, users, role);
-      parts = latch.parts;
-      leakDrops.push(...latch.leakDrops);
-    }
-    const kept = (name: string): boolean => parts.some((p) => p.name === name);
+    // Tariff mode explains from the statements alone; with none left, the bot prints the rate block by itself (Q1).
+    if (!sources.length && (mode !== 'tariff' || !kept('tariffLines').length)) return finish(common);
+    // Compose skipped or failed: the sources alone, so the bot still prints them and their end-of-force line from data
+    // (§10 risk 1, G7). No prose cites them, so they claim no quote (R10).
+    const sourcesOnly = { ...common, citations: sources.slice(0, 3).map((s, i) => citationOf(i + 1, s, [])) };
     const timeoutMs = Math.min(100_000, deadline - Date.now() - 5_000);
-    if (!kept('message') || !kept('question') || timeoutMs < 15_000) return finish(common); // fail closed
+    if (timeoutMs < 15_000) return finish(sourcesOnly);
 
     const tariffMode = mode === 'tariff';
     const prompt = buildComposeInput({
       mode,
       asOf,
       message,
-      understanding: kept('understanding') ? (plan.understanding ?? '') : '',
+      understanding: kept('understanding')[0] ?? '',
       question,
-      goods: kept('goods') ? plan.goods : { facts: [], missing: [] },
-      previousQuestion: kept('previousQuestion') ? previousQuestion : null,
+      goods: kept('goods').length ? goods : { facts: [], missing: [] },
+      previousQuestion: kept('previousQuestion')[0] || null,
       facts: [...new Set(sources.flatMap((s) => (s.citation.expired ? [s.citation.expired] : [])))],
-      tariffLines: kept('tariffLines') ? tariffLines : [],
+      tariffLines: kept('tariffLines'),
       sources: sources.map(({ label, note, text }) => ({ label, note, text })),
       maxSourceChars: Number(process.env.ANSWER_PROMPT_CHARS) || 40_000,
     });
     calls++;
     // ponytail: in hs mode compose's interim hs prompt stands in for the classification walkthrough until walkthrough.ts (c8) exports a non-empty walkthroughSchema.
+    // R4: where ClassifyInput is built here, the rate-line filter above applies to its tariffLines and to every candidate line singling out the user's code.
     const reply = await timed('compose', () =>
       this.run(prompt, {
         timeoutMs,
@@ -316,8 +346,11 @@ export class AnswerService {
         effort: tariffMode ? 'medium' : (process.env.ANSWER_COMPOSE_EFFORT as Effort | undefined) || 'high',
       }),
     );
-    const draft = reply && !reply.isError ? parseDraft(reply.text) : null;
-    if (!draft) return finish(common);
+    const parsed = reply && !reply.isError ? parseDraft(reply.text) : null;
+    if (!parsed) return finish(sourcesOnly);
+    // Markers as verify reads them ("[1, 2]" → "[1] [2]", one out of range gone), so the sentence verify names is the
+    // draft's own for a repair and for the first-sentence rule.
+    const draft = { ...parsed, answerMd: expandMarkers(parsed.answerMd, sources.length) };
 
     const guardSources = sources.map(guardSource);
     const lines = await timed('verify', () => this.hsLines([...draft.candidates.map((c) => digits(c.hs).slice(0, 4)), ...users.map((u) => digits(u.code))]));
@@ -331,16 +364,32 @@ export class AnswerService {
     let checked = await timed('verify', async () => verify(draft, guardSources, ctx));
 
     let repaired = false;
+    let gone: string[] = [];
     const broken = [...new Set(checked.violations.flatMap((v) => (v.sentence && !v.repairOnly ? [v.sentence] : [])))];
-    if (broken.length && Date.now() - start < 90_000 && deadline - Date.now() >= 30_000) {
-      const violations = checked.violations;
-      const items = broken.map((sentence) => ({
+    const violations = checked.violations;
+    const items = broken
+      .map((sentence) => ({
         sentence,
         rule: [...new Set(violations.filter((v) => v.sentence === sentence).map((v) => v.rule))].join(', '),
-        quotes: [...sentence.matchAll(/\[(\d+(?:\s*,\s*\d+)*)\]/g)]
-          .flatMap(([, list]) => list!.split(',').map(Number))
-          .flatMap((n) => draft.citations.find((c) => c.n === n)?.quotes ?? []),
-      }));
+        // Only quotes G2 holds: a made-up quote would license the very figure that was cut.
+        quotes: [
+          ...new Set(
+            [...sentence.matchAll(/\[(\d+)\]/g)].flatMap(([, k]) => {
+              const n = Number(k);
+              return (draft.citations.find((c) => c.n === n)?.quotes ?? []).filter((text) => sources[n - 1] && quoteInBody(text, sources[n - 1]!.body));
+            }),
+          ),
+        ],
+      }))
+      .filter((it) => {
+        // The latch before every spawn (§4.2 step 4): a sentence or quote copied from evidence may name the user's own code.
+        // D1 lets its heading in, never a deeper code; such an item is not sent, and its sentence stays cut.
+        if (role !== 'premise' && role !== 'key') return true;
+        const drops = assertNoUserCodes([{ name: 'repair', text: [it.sentence, ...it.quotes].join('\n') }], users.filter((u) => u.level > 4), 'key').leakDrops;
+        leakDrops.push(...drops);
+        return !drops.length;
+      });
+    if (items.length && Date.now() - start < 90_000 && deadline - Date.now() >= 30_000) {
       calls++;
       const out = await timed('repair', () =>
         this.run(buildRepairPrompt(items), { timeoutMs: Math.min(30_000, deadline - Date.now() - 3_000), model: 'sonnet', effort: 'low' }),
@@ -348,16 +397,20 @@ export class AnswerService {
       const rewritten = out && !out.isError ? parseRepair(out.text, items.length) : null;
       if (rewritten) {
         repaired = true;
+        // A sentence the repair gave up on ('') is cut, like one still in violation (§4.1).
+        gone = items.flatMap((it, i) => (rewritten[i] ? [] : [it.sentence]));
         const answerMd = items.reduce((md, it, i) => md.replace(it.sentence, () => rewritten[i]!), draft.answerMd);
         final = { ...draft, answerMd };
         checked = await timed('verify', async () => verify({ ...draft, answerMd }, guardSources, ctx));
       }
     }
 
-    // First sentence cut, or more than a third of them: sources only (§4.1).
-    const said = splitSentences(final.answerMd);
-    const firstCut = checked.violations.some((v) => v.sentence !== undefined && v.sentence.trim() === said[0]);
-    const answerMd = firstCut || checked.cut * 3 > said.length ? '' : checked.answerMd;
+    // First sentence cut, or more than a third of the draft's sentences: sources only (§4.1).
+    const said = splitSentences(draft.answerMd);
+    const cut = checked.cut + gone.length;
+    const firstCut =
+      gone.includes(said[0] ?? '') || checked.violations.some((v) => v.sentence !== undefined && v.sentence.trim() === splitSentences(final.answerMd)[0]);
+    const answerMd = firstCut || cut * 3 > said.length ? '' : checked.answerMd;
     const candidates = checked.candidates.map((c) => ({
       hs: c.hs,
       level: digits(c.hs).length,
@@ -371,14 +424,18 @@ export class AnswerService {
         answerMd,
         citations: checked.citations.map((c) => citationOf(c.n, sources[c.source]!, c.quotes)),
         candidates,
-        ruling: mode === 'hs' ? await this.rulingFor(plan.goods.facts, candidates) : null,
-        missingFacts: final.missingFacts,
+        // G11's ruling is optional: a failed lookup never costs the verified answer.
+        ruling: mode === 'hs' ? await timed('verify', () => this.rulingFor(goods.facts, candidates).catch(() => null)) : null,
+        // G4 asks for the deciding facts once two candidates stand: none from compose, so the plan's stand in (filtered, latched).
+        missingFacts: final.missingFacts.length || candidates.length < 2 ? final.missingFacts : kept('goods').length ? goods.missing.slice(0, 3) : [],
         coverage: answerMd ? final.coverage : 'none',
         warnings: [
           ...(cited.some((s) => s.citation.verification === 'auto_unverified') ? ['unverified'] : []),
+          ...(cited.some((s) => s.note?.includes(AUTHORITY_NOTE.undetermined!)) ? ['undetermined'] : []),
           ...(cited.some((s) => s.note?.includes('CHƯA CÓ HIỆU LỰC')) ? ['upcoming'] : []),
+          ...(cited.some(oldCatalog) ? ['old_catalog'] : []),
         ],
-        cut: checked.cut,
+        cut,
         repaired,
       },
       lines,
@@ -450,6 +507,12 @@ const rateLines = (t: TariffResponse): string[] => [
     .map((v) => `${v.scheduleName}: ${v.statement}`),
   ...t.antiDumping.map((a) => a.statement),
 ];
+
+/** A row's catalogue standing as its evidence meta records it: anything but "hien_hanh…" names codes of an old catalogue. */
+const oldCatalog = (s: Source): boolean => {
+  const status = (s.meta?.ahtn_2022 as { trang_thai?: unknown } | undefined)?.trang_thai;
+  return typeof status === 'string' && !status.startsWith('hien_hanh');
+};
 
 /**
  * The label is the one the model read above the body. For a clause that is the article citation: the body is the whole
