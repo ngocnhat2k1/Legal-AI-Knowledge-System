@@ -225,7 +225,7 @@ const lookup = (dotted) => ({
   confirm: null,
 });
 
-test('formatAnswerMd câu ảnh (hs): không câu mẫu cũ, một câu so mã, một đầu mục ứng viên, ≤ 2 tin, không khớp tariffReply (R13)', () => {
+test('formatAnswerMd câu ảnh (hs): không câu mẫu cũ, một câu so mã, một đầu mục ứng viên, ≤ 2 tin', () => {
   const lines = formatAnswerMd(HS_PHOTO);
   const text = toText(lines);
   for (const s of ['MFN', 'Căn cứ phân loại', 'Với mô tả', 'trả lời "đúng"']) assert.ok(!text.includes(s), `không được có "${s}"`);
@@ -233,12 +233,43 @@ test('formatAnswerMd câu ảnh (hs): không câu mẫu cũ, một câu so mã, 
   assert.deepEqual(rows.filter((l) => l.includes('bạn nêu')), ['Mã 3005.10.10 bạn nêu thuộc nhóm 30.05 — nằm trong các nhóm dưới đây.']);
   const head = rows.indexOf('Ứng viên để chuyên viên chốt:');
   assert.equal(rows.filter((l) => l === 'Ứng viên để chuyên viên chốt:').length, 1);
-  assert.match(rows[head + 1], /^30\.05 · .{1,51} · \[1\]$/);
-  assert.match(rows[head + 2], /^38\.24 · .{1,51} · \[3\]$/);
+  assert.match(rows[head + 1], /^30\.05 · .{1,50} · \[1\]$/);
+  assert.match(rows[head + 2], /^38\.24 · .{1,50} · \[3\]$/);
+  const unbroken = rowsOf(formatAnswerMd({ ...HS_PHOTO, candidates: [{ ...HS_PHOTO.candidates[0], title: 'Bông-gạc-băng-'.repeat(6) }] }));
+  assert.match(unbroken[unbroken.indexOf('Ứng viên để chuyên viên chốt:') + 1], /^30\.05 · .{1,50} · \[1\]$/, 'đầu mục ≤ 50 ký tự kể cả dấu …');
   assert.equal(rows[head + 3], R5);
   assert.ok(render(lines).length <= 2, `${render(lines).length} tin`);
   assert.equal(all(lines, ST.orange).length, 0, 'câu so mã không bao giờ tô cam');
-  assert.equal(tariffReply(text), false, 'một "sai rồi" quote câu trả lời này không được thành đính chính mã');
+});
+
+test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp tariffReply — brief, full, mixed', () => {
+  const tariffLines = ['3005.10.10', '3824.99.99'].map(lookup);
+  const replies = {
+    brief: formatAnswerMd(HS_PHOTO, { tariffLines }),
+    full: formatAnswerMd({ ...HS_PHOTO, depth: 'full' }, { tariffLines }),
+    mixed: formatAnswerMd({ ...HS_PHOTO, mode: 'mixed', userCodes: [], candidates: [] }, { tariffLines: tariffLines.slice(0, 1) }),
+  };
+  for (const [name, lines] of Object.entries(replies)) {
+    // A Zalo user quotes one message, not the whole reply.
+    for (const msg of render(lines).map((p) => p.msg)) assert.equal(tariffReply(msg), false, `${name}: ${msg.slice(0, 120)}`);
+  }
+});
+
+test('formatAnswerMd: ứng viên thiếu [n] bị bỏ, không làm hỏng cả câu trả lời (R2)', () => {
+  const candidates = [{ ...HS_PHOTO.candidates[0], evidence: undefined }, { ...HS_PHOTO.candidates[1], evidence: [] }, { hs: '33.07', level: 4, title: 'Chế phẩm dùng trước, trong hoặc sau khi cạo', evidence: [2] }];
+  const rows = rowsOf(formatAnswerMd({ ...HS_PHOTO, candidates }));
+  const head = rows.indexOf('Ứng viên để chuyên viên chốt:');
+  assert.deepEqual(rows.slice(head + 1), ['33.07 · Chế phẩm dùng trước, trong hoặc sau khi cạo · [2]', ...rows.slice(head + 2)]);
+  assert.ok(!rows.some((l) => /^\d{2}\.\d{2} · .* · $/.test(l)));
+  assert.ok(!rows.includes(R5), 'còn một ứng viên thì không có dòng R5');
+});
+
+test('formatAnswerMd: có ruling thì thêm một dòng dưới các ứng viên, lời văn như tra theo mô tả hôm nay', () => {
+  const ruling = { dotted: '3005.10.90', staffName: 'Chuyên Viên A', note: 'miếng dán hạ sốt có tẩm dược chất' };
+  const rows = rowsOf(formatAnswerMd({ ...HS_PHOTO, ruling }));
+  const head = rows.indexOf('Ứng viên để chuyên viên chốt:');
+  assert.equal(rows[head + 3], 'Mã 3005.10.90 đã được Chuyên Viên A xác nhận cho hàng tương tự (miếng dán hạ sốt có tẩm dược chất) — mình ưu tiên mã này, bạn vẫn đối chiếu căn cứ.');
+  assert.equal(rows[head + 4], R5);
 });
 
 test('formatAnswerMd: câu so mã do code viết từ userCodes, kể cả khi mã lệch nhóm hoặc không có trong Danh mục', () => {
@@ -247,6 +278,10 @@ test('formatAnswerMd: câu so mã do code viết từ userCodes, kể cả khi m
   assert.deepEqual(said({ ...u, inCandidates: false }), ['Mã 3005.10.10 bạn nêu thuộc nhóm 30.05 — không nằm trong các nhóm dưới đây; nếu hàng có đặc điểm khiến nó thuộc nhóm đó, bạn gửi thêm để mình đọc lại.']);
   assert.deepEqual(said({ ...u, exists: false, inCandidates: false }), ['Mã 3005.10.10 không có trong Danh mục hàng hóa đã nạp.']);
   assert.deepEqual(said({ code: '30.05', level: 4, heading: '30.05', exists: true, inCandidates: true }), ['Nhóm 30.05 bạn nêu — nằm trong các nhóm dưới đây.']);
+  // coverage 'none': no list below, but a code that does not exist is still said.
+  const bare = (x) => rowsOf(formatAnswerMd({ ...HS_PHOTO, candidates: [], coverage: 'none', userCodes: [x] })).filter((l) => /^(Mã|Nhóm) \S+ (bạn nêu|không có)/.test(l));
+  assert.deepEqual(bare({ ...u, exists: false, inCandidates: false }), ['Mã 3005.10.10 không có trong Danh mục hàng hóa đã nạp.']);
+  assert.deepEqual(bare({ ...u, inCandidates: false }), [], 'không có danh sách thì không nói "các nhóm dưới đây"');
   assert.equal(all(formatAnswerMd({ ...HS_PHOTO, userCodes: [{ ...u, inCandidates: false }] }), ST.orange).length, 0);
 });
 
@@ -258,12 +293,20 @@ test('formatAnswerMd: dòng R5 chỉ khi từ 2 ứng viên và văn xuôi chưa
 });
 
 test('formatAnswerMd D3(a): walkthrough full in khối thuế gọn cho tối đa 2 mã, không xanh; brief không khối, một câu gợi ý', () => {
-  const tariffLines = ['3005.10.10', '3005.90.10', '3824.99.99'].map(lookup);
+  // A verdict history on a candidate code: its "trả lời đúng/sai" footer is a promise nothing keeps after a composed reply.
+  const confirm = { correct: 2, wrong: 0, unsure: 0, recent: [{ verdict: 'correct', staffName: 'Chuyên Viên A' }] };
+  const tariffLines = ['3005.10.10', '3005.90.10', '3824.99.99'].map((d) => ({ ...lookup(d), confirm }));
   const full = formatAnswerMd({ ...HS_PHOTO, depth: 'full' }, { tariffLines });
   const rows = rowsOf(full);
   assert.equal(rows.filter((l) => l.startsWith('Nếu hàng thuộc mã')).length, 2);
   assert.equal(all(full, ST.green).length, 0, 'mức ưu đãi của một mã chưa ai chốt không bao giờ xanh');
   assert.ok(!rows.includes(HINT) && !toText(full).includes('trả lời "đúng"'));
+  const [orange] = all(full, ST.orange);
+  assert.equal(orange.split('Biểu thuế trong kho').length - 1, 1, orange);
+  // R10: one [k] means one source across the tariff legends and the "Nguồn:" block.
+  const labels = rows.flatMap((l) => (l.startsWith('Tra theo ngày') ? [...l.matchAll(/\[(\d+)\] /g)].map((m) => m[1]) : (l.match(/^\[(\d+)\] /) ?? []).slice(1)));
+  assert.deepEqual(labels, [...new Set(labels)], labels.join(','));
+  assert.ok(labels.length > 3, labels.join(','));
   const brief = formatAnswerMd(HS_PHOTO, { tariffLines });
   assert.ok(!toText(brief).includes('MFN'));
   assert.equal(rowsOf(brief).filter((l) => l === HINT).length, 1);

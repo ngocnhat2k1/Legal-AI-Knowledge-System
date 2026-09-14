@@ -103,9 +103,10 @@ export function confirmFooter(c) {
  * @param {{dotted: string, origin: string|null, date: string}} q
  * @param {object} r         TariffResponse
  * @param {object|null} confirm  verdict history from /tariff/confirmations
- * @param {{showFooter?: boolean, candidate?: boolean}} opts  candidate: the code is not settled (R2)
+ * @param {{showFooter?: boolean, candidate?: boolean, refBase?: number}} opts  candidate: the code is not settled (R2);
+ *   refBase: [n] start after it, for a block printed under sources already numbered from [1] (R10)
  */
-export function formatAnswer(q, r, confirm, { showFooter = true, candidate = false } = {}) {
+export function formatAnswer(q, r, confirm, { showFooter = true, candidate = false, refBase = 0 } = {}) {
   const origin = r.origin ?? q.origin ?? null;
   const name = origin ? (ORIGIN_LABEL[origin] ?? origin) : null;
   const verified = Boolean(r.ftaMembership);
@@ -117,7 +118,7 @@ export function formatAnswer(q, r, confirm, { showFooter = true, candidate = fal
     let i = refs.findIndex((x) => x.key === key);
     if (i < 0) i = refs.push({ key, label }) - 1;
     else if (name && !refs[i].label.includes(name)) refs[i].label += `; ${name}`;
-    return ` [${i + 1}]`;
+    return ` [${refBase + i + 1}]`;
   };
   const dec = (v) => cite(v.decree, `NĐ ${v.decree} — ${v.scheduleName}`, v.scheduleName);
 
@@ -240,7 +241,7 @@ export function formatAnswer(q, r, confirm, { showFooter = true, candidate = fal
   const unloaded = r.staleness?.unloadedInstruments ?? [];
   const sources = [
     `Tra theo ngày ${date}`,
-    ...refs.map((x, i) => `[${i + 1}] ${x.label}`),
+    ...refs.map((x, i) => `[${refBase + i + 1}] ${x.label}`),
     ...(unloaded.length ? [`Chưa nạp: ${unloaded.map((u) => `NĐ ${u}`).join(', ')}`] : []),
   ];
   lines.push(L([sources.join(' · ')], 'note'));
@@ -378,6 +379,14 @@ export function formatLegal(r) {
 
 const ADVANCE_RULING = 'Hàng khó chốt thì có thể đề nghị hải quan xác định trước mã số.';
 const TARIFF_HINT = 'Cần xem thuế của mã nào thì nhắn mã đó kèm xuất xứ.';
+/** Heads a mixed-mode tariff block; dispatch.mjs tariffReply reads it as a composed-answer marker (R13). */
+const MIXED_TARIFF = 'Thuế của mã trong câu hỏi:';
+
+/** A code a person confirmed for similar goods (R18), one line: { dotted, staffName, note }. */
+export function rulingLine(r) {
+  const cite = String(r.note || '').replace(/\s+/g, ' ').trim().slice(0, 90);
+  return L(['Mã ', [r.dotted, 'b'], ' đã được ', [r.staffName, 'b'], ` xác nhận cho hàng tương tự${cite ? ` (${cite})` : ''} — mình ưu tiên mã này, bạn vẫn đối chiếu căn cứ.`]);
+}
 /** The API's warning codes; `unverified` is worded from the citations themselves (unverifiedLines). */
 const WARNING = {
   undetermined: 'Có nguồn chưa xác định được tình trạng hiệu lực — đối chiếu trước khi dùng làm căn cứ.',
@@ -395,35 +404,49 @@ const WARNING = {
  */
 export function formatAnswerMd(res, { tariffLines = [] } = {}) {
   const cites = res.citations ?? [];
-  const cands = (res.candidates ?? []).slice(0, 3);
+  // A candidate with no [n] has nothing standing behind it (R2), and would print "· " with nothing after.
+  const cands = (res.candidates ?? []).filter((c) => c.evidence?.length).slice(0, 3);
   const hs = res.mode === 'hs';
   const prose = md(res.answerMd);
   const lines = [...prose, L([])];
 
-  if (hs && cands.length) {
-    // Never orange: the user's code outside the candidates is a comparison, not a finding (R4).
-    for (const u of res.userCodes ?? []) {
-      const own = u.code === u.heading ? ['Nhóm ', [u.heading, 'b'], ' bạn nêu'] : ['Mã ', [u.code, 'b'], ' bạn nêu thuộc nhóm ', [u.heading, 'b']];
+  // Never orange: the user's code outside the candidates is a comparison, not a finding (R4). Only the two sentences
+  // pointing at "the groups below" need the list; a code missing from the catalogue is said either way.
+  for (const u of hs ? (res.userCodes ?? []) : []) {
+    const own = u.code === u.heading ? ['Nhóm ', [u.heading, 'b'], ' bạn nêu'] : ['Mã ', [u.code, 'b'], ' bạn nêu thuộc nhóm ', [u.heading, 'b']];
+    if (!u.exists) lines.push(L(['Mã ', [u.code, 'b'], ' không có trong Danh mục hàng hóa đã nạp.']));
+    else if (cands.length) {
       lines.push(
         L(
-          !u.exists
-            ? ['Mã ', [u.code, 'b'], ' không có trong Danh mục hàng hóa đã nạp.']
-            : u.inCandidates
-              ? [...own, ' — nằm trong các nhóm dưới đây.']
-              : [...own, ' — không nằm trong các nhóm dưới đây; nếu hàng có đặc điểm khiến nó thuộc nhóm đó, bạn gửi thêm để mình đọc lại.'],
+          u.inCandidates
+            ? [...own, ' — nằm trong các nhóm dưới đây.']
+            : [...own, ' — không nằm trong các nhóm dưới đây; nếu hàng có đặc điểm khiến nó thuộc nhóm đó, bạn gửi thêm để mình đọc lại.'],
         ),
       );
     }
+  }
+  if (hs && cands.length) {
     lines.push(
       L(['Ứng viên để chuyên viên chốt:']),
-      ...cands.map((c) => L([[c.hs, 'b'], ` · ${cleanGazetteTitle('', c.title, 50)} · ${c.evidence.map((n) => `[${n}]`).join(' ')}`], 'ul')),
+      // 49 leaves room for the ellipsis: a heading of at most 50 characters.
+      ...cands.map((c) => L([[c.hs, 'b'], ` · ${cleanGazetteTitle('', c.title, 49)} · ${c.evidence.map((n) => `[${n}]`).join(' ')}`], 'ul')),
+      ...(res.ruling ? [rulingLine(res.ruling)] : []),
     );
     if (cands.length >= 2 && !/xác định trước/i.test(toText(prose))) lines.push(L([ADVANCE_RULING], 'note'));
   }
 
   // D3(a): a candidate's rates only under a full walkthrough, for at most two codes, never green (R2).
   const blocks = hs ? (res.depth === 'full' ? tariffLines.slice(0, 2) : []) : res.mode === 'mixed' ? tariffLines : [];
-  for (const t of blocks) lines.push(L([]), ...formatAnswer(t.q, t.tariff, t.confirm ?? null, { showFooter: false, candidate: hs }));
+  // A block's [n] continue after the sources, so "[1]" is never both a decree and an Explanatory Note (R10).
+  let refBase = Math.max(0, ...cites.map((c) => c.n ?? 0));
+  for (const t of blocks) {
+    // A verdict history ends in "trả lời đúng/sai"; after a composed hs reply no code is on the table to confirm (§6.3).
+    const block = formatAnswer(t.q, t.tariff, hs ? null : (t.confirm ?? null), { showFooter: false, candidate: hs, refBase });
+    // Every [k] a block prints is one of its refs: the highest is where the next block starts.
+    refBase = Math.max(refBase, ...[...toText(block).matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])));
+    // Mixed: the heading shares the block's first paragraph, so render never sends the rates without it.
+    lines.push(L([]), ...(hs ? [] : [L([MIXED_TARIFF])]), ...block);
+  }
   if (hs && cands.length && !blocks.length) lines.push(L([TARIFF_HINT], 'note'));
 
   lines.push(
@@ -444,7 +467,9 @@ export function formatAnswerMd(res, { tariffLines = [] } = {}) {
     ),
   );
   if (res.cut > 0) lines.push(L(['Một phần câu trả lời bị lược vì không dẫn được nguồn.'], 'note'));
-  return lines;
+  // Two tariff blocks carry the same scope warning; render would merge it into one orange line saying it twice.
+  const seen = new Set();
+  return lines.filter((l) => !l.marks?.includes('warn') || (!seen.has(toText([l])) && seen.add(toText([l]))));
 }
 
 /** A provision fetched by citation (no retrieval, no model in the path). */

@@ -137,9 +137,15 @@ export const asksCodeFit = (text) =>
 /**
  * A quoted bot reply that looked a code up. Any reply naming a code is not one: "Mã 3005.10.10 bạn tham khảo thuộc nhóm
  * 30.05…" (a code check) quoted with "sai rồi" would record the user's own code as wrong.
+ * A composed /answer reply is never one (plan 08 §6.3): the code-written user-code sentence ("bạn nêu"), the candidates
+ * heading and the mixed-mode tariff heading mark it, so a quoted "sai rồi" cannot record the user's code or a candidate.
  * ponytail: every tariff reply prints "MFN" and every verdict reply "Cảm ơn"; tag replies in memory if that stops holding.
+ * ponytail: a composed hs reply long enough that a candidate's rates start a message after the candidates heading still
+ * matches; the §6.3 handleCorrection guard (no old code from a quote while state.tariff.candidates exists) backs it up.
  */
-export const tariffReply = (quoteText) => hasHs(quoteText) && /MFN|Cảm ơn|chưa đúng \(theo|sửa thành/.test(quoteText);
+const COMPOSED = /Ứng viên để chuyên viên chốt:|bạn nêu|Thuế của mã trong câu hỏi:/;
+export const tariffReply = (quoteText) =>
+  hasHs(quoteText) && /MFN|Cảm ơn|chưa đúng \(theo|sửa thành/.test(quoteText) && !COMPOSED.test(String(quoteText).normalize('NFC'));
 
 /**
  * A question, not a verdict: "8481.80.99 có sai không ạ", "mã này đúng chưa?". The disagreement cue matched "sai" and
