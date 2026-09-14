@@ -54,6 +54,8 @@ export interface RetrievedEvidence {
   window: 'current' | 'upcoming';
   score: number;
   bestDist: number | null;
+  /** evidenceRetrieve only: the text of the closest window (meta.part) this section was found by; null = the section itself. */
+  hitText: string | null;
 }
 
 export interface EvidenceRetrieveOpts {
@@ -76,13 +78,17 @@ const columns = (d: SQL) => sql`e.id, e.kind, e.instrument, e.authority, e.title
   CASE WHEN e.effective_from > ${d} THEN 'upcoming' ELSE 'current' END AS "window"`;
 
 /**
- * A window row (meta.part) comes back as the whole section it was cut from (meta.parent = the parent's source_ref).
- * Classification cases never come from here: they enter by heading only (caseSections).
+ * A window row (meta.part) comes back as the whole section it was cut from (meta.parent = the parent's source_ref),
+ * carrying the closest window's own text as hit_text. Classification cases never come from here: they enter by heading
+ * only (caseSections), so each branch drops them, and windows of them, before its LIMIT spends a slot on one.
  */
 export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts): Promise<RetrievedEvidence[]> {
   const { queryText, queryVec, asOf, topK = 10, candPerBranch = 50 } = opts;
   const d = sql`p.d`;
-  const scope = opts.documentNumbers?.length ? sql`AND e.document_number IN ${inIds(opts.documentNumbers)}` : sql``;
+  const filter = sql`AND e.meta->>'case_id' IS NULL AND NOT EXISTS (
+      SELECT 1 FROM evidence_section c WHERE c.kind = e.kind AND c.instrument = e.instrument
+        AND c.source_ref = e.meta->>'parent' AND c.meta->>'case_id' IS NOT NULL)
+    ${opts.documentNumbers?.length ? sql`AND e.document_number IN ${inIds(opts.documentNumbers)}` : sql``}`;
 
   const rows = (await db.execute(sql`
     WITH params AS (
@@ -91,14 +97,14 @@ export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts)
     kw AS (
       SELECT e.id, row_number() OVER (ORDER BY ts_rank_cd(e.tsv, p.q, 1) DESC) AS rk, NULL::float8 AS dist
       FROM evidence_section e, params p
-      WHERE e.tsv @@ p.q AND ${valid(d)} ${scope}
+      WHERE e.tsv @@ p.q AND ${valid(d)} ${filter}
       ORDER BY ts_rank_cd(e.tsv, p.q, 1) DESC
       LIMIT ${candPerBranch}
     ),
     vec AS (
       SELECT e.id, row_number() OVER (ORDER BY e.embedding <=> p.qv) AS rk, (e.embedding <=> p.qv) AS dist
       FROM evidence_section e, params p
-      WHERE e.embedding IS NOT NULL AND ${valid(d)} ${scope}
+      WHERE e.embedding IS NOT NULL AND ${valid(d)} ${filter}
       ORDER BY e.embedding <=> p.qv
       LIMIT ${candPerBranch}
     ),
@@ -110,14 +116,15 @@ export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts)
       LIMIT ${topK}
     ),
     sections AS (
-      SELECT coalesce(par.id, w.id) AS id, max(f.score) AS score, min(f.best_dist) AS best_dist
+      SELECT coalesce(par.id, w.id) AS id, max(f.score) AS score, min(f.best_dist) AS best_dist,
+        (array_agg(CASE WHEN par.id IS NOT NULL THEN w.body END ORDER BY f.best_dist NULLS LAST, f.score DESC))[1] AS hit_text
       FROM fused f
       JOIN evidence_section w ON w.id = f.id
       LEFT JOIN evidence_section par ON par.kind = w.kind AND par.instrument = w.instrument
         AND par.source_ref = w.meta->>'parent' AND par.meta->>'part' IS NULL
       GROUP BY 1
     )
-    SELECT ${columns(d)}, s.score::float8 AS score, s.best_dist::float8 AS best_dist
+    SELECT ${columns(d)}, s.score::float8 AS score, s.best_dist::float8 AS best_dist, s.hit_text
     FROM sections s JOIN evidence_section e ON e.id = s.id, params p
     WHERE e.meta->>'case_id' IS NULL
     ORDER BY s.score DESC
@@ -194,19 +201,22 @@ export async function headingSections(db: Database, headings: string[], asOf: st
 /**
  * Classification cases (ruling rows carrying meta.case_id) filed under the headings asked, and only while the case's
  * code still stands in AHTN 2022: a case whose code was split or dropped concluded under an old catalogue (plan 08 §0,
- * G11). ponytail: two per heading on average, ordered by heading and id; the seed holds at most three per heading
- * (2026-09-14) — rank them when a heading gathers more.
+ * G11). Capped per heading, so a heading with many cases cannot crowd out the next one. ponytail: the first by id; the
+ * seed holds at most three per heading (2026-09-14) — rank them when a heading gathers more.
  */
-export async function caseSections(db: Database, headings: string[], asOf: string, limit = 2 * headings.length): Promise<RetrievedEvidence[]> {
+export async function caseSections(db: Database, headings: string[], asOf: string, perHeading = 2): Promise<RetrievedEvidence[]> {
   if (!headings.length) return [];
   const d = sql`${asOf}::date`;
   const rows = (await db.execute(sql`
-    SELECT ${columns(d)}, 1::float8 AS score, NULL::float8 AS best_dist
-    FROM evidence_section e
-    WHERE e.kind = 'ruling' AND e.meta->>'case_id' IS NOT NULL AND e.hs_heading IN ${inIds(headings)}
-      AND starts_with(e.meta->'ahtn_2022'->>'trang_thai', 'hien_hanh') AND e.meta->>'part' IS NULL AND ${valid(d)}
-    ORDER BY e.hs_heading, e.id
-    LIMIT ${limit}
+    SELECT * FROM (
+      SELECT ${columns(d)}, 1::float8 AS score, NULL::float8 AS best_dist,
+        row_number() OVER (PARTITION BY e.hs_heading ORDER BY e.id) AS rn
+      FROM evidence_section e
+      WHERE e.kind = 'ruling' AND e.meta->>'case_id' IS NOT NULL AND e.hs_heading IN ${inIds(headings)}
+        AND starts_with(e.meta->'ahtn_2022'->>'trang_thai', 'hien_hanh') AND e.meta->>'part' IS NULL AND ${valid(d)}
+    ) x
+    WHERE x.rn <= ${perHeading}
+    ORDER BY x.hs_heading, x.id
   `)) as unknown as Array<Record<string, unknown>>;
   return rows.map(toEvidence);
 }
@@ -234,6 +244,7 @@ function toEvidence(r: Record<string, unknown>): RetrievedEvidence {
     window: r.window === 'upcoming' ? 'upcoming' : 'current',
     score: Number(r.score),
     bestDist: r.best_dist == null ? null : Number(r.best_dist),
+    hitText: (r.hit_text as string | null) ?? null,
   };
 }
 

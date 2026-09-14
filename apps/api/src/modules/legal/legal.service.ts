@@ -86,12 +86,20 @@ export interface GatherOpts {
   doc?: DocScope;
   /** An Điều number inside `doc`; otherwise read from the question when it names a document. */
   article?: string | null;
-  /** Codes whose listing sections are pinned; default: the codes the question spells. */
+  /**
+   * Codes whose listing sections are pinned; default: the codes the question spells (GET /legal). POST /answer must
+   * always pass it, [] when the user's code is a premise: a default read from the question would pin the user's code (D1).
+   */
   hsCodes?: string[];
-  /** Dotted headings whose notes and classification cases are pinned; default: namedHeadings(query). */
+  /** Dotted headings whose notes (and cases, with `cases`) are pinned; default: namedHeadings(query). POST /answer must always pass it, as `hsCodes`. */
   headings?: string[];
   /** Most statute clauses kept; 0 searches none. Default: 5, or 2 beside a named heading's Explanatory Note. */
   clauses?: number;
+  /**
+   * Also pin the classification cases of `headings`. Off by default: GET /legal (the live bot's code check) must not
+   * grow its prompt when cases are seeded — pinned sources are never cut. POST /answer passes true.
+   */
+  cases?: boolean;
 }
 
 /**
@@ -270,7 +278,7 @@ export class LegalService {
       namedStatus(this.db, [...(doc?.documentNumbers ?? []), ...evidenceNumbers], asOf),
       hsCodeSections(this.db, hsCodes, asOf),
       headingSections(this.db, headings, asOf),
-      caseSections(this.db, headings, asOf),
+      opts.cases ? caseSections(this.db, headings, asOf) : Promise.resolve([] as RetrievedEvidence[]),
     ]);
 
     // The relevance gate exists to stop the dense branch handing back its nearest
@@ -460,6 +468,9 @@ export function focusOn(body: string, codes: string[]): string {
 
 export function evidenceSource(e: RetrievedEvidence, asOf: string, codes: string[] = []): Source {
   const body = focusOn(e.body, codes);
+  // Found by a window: the prompt reads that window, which a cut from the top of the whole section may never reach.
+  // Lines naming an asked code, moved to the top, win over it.
+  const text = (body === e.body && e.hitText ? e.hitText : body).slice(0, EVIDENCE_PROMPT_CHARS);
   const part = (x: StatusEnd) => (x.scope ? ` (phần: ${x.scope})` : '');
   const past = e.ends.filter((x) => x.from <= asOf);
   const coming = e.ends.filter((x) => x.from > asOf);
@@ -482,7 +493,7 @@ export function evidenceSource(e: RetrievedEvidence, asOf: string, codes: string
     key: `e:${e.id}`,
     label: e.title,
     note: [expired, note].filter(Boolean).join(' · ') || null,
-    text: body.slice(0, EVIDENCE_PROMPT_CHARS),
+    text,
     body,
     hs: { heading: e.hsHeading, chapter: e.hsChapter, codes: e.hsCodes },
     meta: {

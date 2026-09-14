@@ -5,10 +5,10 @@ import { caseSections, evidenceInstruments, evidenceRetrieve, headingSections, h
 import { LegalController } from './legal.controller';
 import { generate, type PromptSource } from './legal.generation';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
-import { LegalService, namedHeadings } from './legal.service';
+import { evidenceSource, LegalService, namedHeadings } from './legal.service';
 
 jest.mock('./legal.generation', () => ({ generate: jest.fn() }));
-jest.mock('./legal.retrieval', () => ({ hybridRetrieve: jest.fn() }));
+jest.mock('./legal.retrieval', () => ({ ...jest.requireActual('./legal.retrieval'), hybridRetrieve: jest.fn() }));
 jest.mock('./legal.evidence', () => ({
   evidenceInstruments: jest.fn(async () => []),
   evidenceRetrieve: jest.fn(async () => []),
@@ -54,10 +54,29 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
     body: '69/2018/NĐ-CP hết hiệu lực từ 05/09/2026, bị thay thế bởi 292/2026/NĐ-CP — căn cứ khoản 1 Điều 65 NĐ 292/2026/NĐ-CP',
     documentNumber: '69/2018/NĐ-CP', effectiveFrom: '2026-09-05', effectiveTo: null, effectiveness: 'con_hieu_luc',
     verification: 'auto_unverified', status: null, ends: [], window: 'current', score: 1, bestDist: 0.9,
-    hsHeading: null, hsChapter: null, hsCodes: [], meta: {}, ...over,
+    hsHeading: null, hsChapter: null, hsCodes: [], meta: {}, hitText: null, ...over,
   });
   const svc = () => new LegalService({ execute: async () => [] } as never, { embed: async () => [0] } as never);
   const lastSources = () => (generate as jest.Mock).mock.calls.at(-1)![2] as PromptSource[];
+
+  it('ask() (GET /legal, the live bot) never pins classification cases for the headings it reads', async () => {
+    (caseSections as jest.Mock).mockClear();
+    await svc().ask('Các nhóm ứng viên cần phân biệt: 38.24, 30.05, 85.09', '2026-09-14');
+    expect((headingSections as jest.Mock).mock.calls.at(-1)![1]).toEqual(['38.24', '30.05', '85.09']);
+    expect(caseSections).not.toHaveBeenCalled();
+  });
+
+  it('builds the prompt text from the window that matched, keeping the whole parent as body and citation', () => {
+    const parent = ['EN nhóm 85.09', ...Array.from({ length: 200 }, (_, i) => `dòng ${i} ${'x'.repeat(40)}`), 'máy xay sinh tố gia dụng', '1 | máy | 8509.40.00'].join('\n');
+    expect(parent.indexOf('máy xay')).toBeGreaterThan(6000); // past the cut
+    const e = ev({ kind: 'en', body: parent, hitText: 'EN nhóm 85.09 — cửa sổ 2/2\nmáy xay sinh tố gia dụng' });
+    const s = evidenceSource(e, '2026-09-14');
+    expect(s.text).toBe(e.hitText);
+    expect(s.body).toBe(parent);
+    expect(s.citation.verbatimText).toBe(parent);
+    // A code the question asks about still moves its lines to the top of the whole section.
+    expect(evidenceSource(e, '2026-09-14', ['8509.40.00']).text.split('\n')[2]).toBe('1 | máy | 8509.40.00');
+  });
 
   it('answers a named document the corpus lacks from its status row instead of "we do not hold it"', async () => {
     (evidenceInstruments as jest.Mock).mockResolvedValueOnce(['69/2018/NĐ-CP']);
@@ -323,7 +342,7 @@ describe('LegalService.scope and gather — the halves POST /answer calls (plan 
     (headingSections as jest.Mock).mockImplementationOnce(jest.requireActual('./legal.evidence').headingSections);
     (hybridRetrieve as jest.Mock).mockResolvedValueOnce([]);
     const headings = ['38.24', '33.07', '30.04', '30.05'];
-    await new LegalService(db as never, embedding).gather('Mã HS 8471.30.20 dùng được không', { asOf: '2026-09-14', headings });
+    await new LegalService(db as never, embedding).gather('Mã HS 8471.30.20 dùng được không', { asOf: '2026-09-14', headings, cases: true });
     expect((headingSections as jest.Mock).mock.calls.at(-1)![1]).toEqual(headings);
     expect((caseSections as jest.Mock).mock.calls.at(-1)![1]).toEqual(headings);
     const notes = queries.find((q) => q.sql.includes("e.kind = 'en'"))!;
@@ -350,14 +369,16 @@ describe('LegalService.scope and gather — the halves POST /answer calls (plan 
       body: 'STT | Tên | Mã\n2 | Mũ bảo hiểm | 6506.10.10', documentNumber: '36/2026/TT-BKHCN', effectiveFrom: '2026-07-01',
       effectiveTo: null, effectiveness: 'con_hieu_luc', verification: 'auto_unverified', status: null, ends: [], window: 'current',
       score: 1, bestDist: null, hsHeading: null, hsChapter: null, hsCodes: ['6506', '6506.10', '6506.10.10'], meta: { anchor: 'Phụ lục II' },
+      hitText: null,
     } as RetrievedEvidence;
-    const ruling = { ...annex, id: 812, kind: 'ruling', title: 'CV 1483', body: 'thân', hsHeading: '85.09', hsChapter: 85, hsCodes: [], meta: { case_id: 'c#1', ahtn_2022: { trang_thai: 'hien_hanh' } } };
+    const ruling = { ...annex, id: 812, kind: 'ruling', title: 'CV 1483', body: 'thân', hsHeading: '85.09', hsChapter: 85, hsCodes: [], meta: { case_id: 'c#1', ahtn_2022: { trang_thai: 'hien_hanh' }, hs2022: '8509.40' } };
     (hybridRetrieve as jest.Mock).mockResolvedValueOnce([article]);
     (hsCodeSections as jest.Mock).mockResolvedValueOnce([annex]);
     (caseSections as jest.Mock).mockResolvedValueOnce([ruling]);
     const { sources } = await new LegalService({ execute: async () => [] } as never, embedding).gather('Mũ bảo hiểm 6506.10.10', {
       asOf: '2026-09-14',
       headings: ['85.09'],
+      cases: true,
     });
     expect(sources.map((s) => [s.key, s.hs])).toEqual([
       ['p:73', { heading: null, chapter: null, codes: [] }],
@@ -373,7 +394,45 @@ describe('LegalService.scope and gather — the halves POST /answer calls (plan 
       anchor: 'Phụ lục II', hs_codes: ['6506', '6506.10', '6506.10.10'], document_number: '36/2026/TT-BKHCN', effective_from: '2026-07-01',
       effective_to: null, effectiveness: 'con_hieu_luc', verification: 'auto_unverified',
     });
-    expect(sources[2]!.meta).toMatchObject({ case_id: 'c#1', ahtn_2022: { trang_thai: 'hien_hanh' } }); // passed through untouched
+    // Passed through untouched: hs2022 travels in meta, not as a field of its own.
+    expect(sources[2]!.meta).toMatchObject({ case_id: 'c#1', ahtn_2022: { trang_thai: 'hien_hanh' }, hs2022: '8509.40' });
+  });
+});
+
+describe('legal.evidence SQL — cases out of ranking, a cap per heading, the matched window (review of Việc 8)', () => {
+  const actual = jest.requireActual<typeof import('./legal.evidence')>('./legal.evidence');
+  const dialect = new PgDialect();
+  const capture = (rows: unknown[] = []) => {
+    const queries: Array<{ sql: string; params: unknown[] }> = [];
+    const db = { execute: async (q: SQL) => (queries.push(dialect.sqlToQuery(q)), rows) } as never;
+    return { db, queries };
+  };
+
+  it('evidenceRetrieve drops cases and their windows inside both branches, before their limits spend slots', async () => {
+    const { db, queries } = capture();
+    await actual.evidenceRetrieve(db, { queryText: 'máy xay sinh tố', queryVec: [0], asOf: '2026-09-14' });
+    for (const branch of ['kw', 'vec']) {
+      const cte = queries[0]!.sql.match(new RegExp(`\\b${branch} AS \\(([\\s\\S]*?)LIMIT`))![1]!;
+      expect(cte).toContain("e.meta->>'case_id' IS NULL");
+      expect(cte).toContain("c.source_ref = e.meta->>'parent'");
+    }
+  });
+
+  it('evidenceRetrieve carries the text of the closest window a section was found by', async () => {
+    const { db, queries } = capture([{ id: 5, kind: 'en', body: 'cha', hit_text: 'cửa sổ 3', score: 1, best_dist: 0.3, meta: {} }]);
+    const [e] = await actual.evidenceRetrieve(db, { queryText: 'máy xay', queryVec: [0], asOf: '2026-09-14' });
+    expect(queries[0]!.sql).toMatch(/array_agg\(CASE WHEN par\.id IS NOT NULL THEN w\.body END ORDER BY f\.best_dist NULLS LAST/);
+    expect(e!.hitText).toBe('cửa sổ 3');
+  });
+
+  it('caseSections caps each heading, so an early heading cannot crowd out a later one', async () => {
+    const { db, queries } = capture();
+    await actual.caseSections(db, ['38.24', '30.05', '85.09'], '2026-09-14');
+    const q = queries[0]!;
+    expect(q.sql).toMatch(/row_number\(\) OVER \(PARTITION BY e\.hs_heading ORDER BY e\.id\) AS rn/);
+    expect(q.sql).toMatch(/x\.rn <= \$\d+/);
+    expect(q.params.at(-1)).toBe(2);
+    expect(q.sql).not.toContain('LIMIT');
   });
 });
 

@@ -798,11 +798,12 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 
 - [ ] **File:**
   - `legal.service.ts`:
-    - tách `scope(query, doc)` và `gather(query, {asOf, doc, article, hsCodes, headings, clauses})`;
-    - `gather` trả `{asOf, sources}`; mỗi source có thêm `key`, `body`, `hs: {heading, chapter, codes}`, `hs2022`;
+    - tách `scope(query, doc)` và `gather(query, {asOf, doc, article, hsCodes, headings, clauses, cases})`;
+    - `/answer` luôn truyền `hsCodes` và `headings` tường minh (`[]` khi mã là premise) và `cases: true`; `GET /legal` không ghim ca phân loại;
+    - `gather` trả `{asOf, sources}`; mỗi source có thêm `key`, `body`, `hs: {heading, chapter, codes}`, `meta`; `hs2022` đi trong `meta` (`source.meta.hs2022`), không phải trường riêng;
     - `ask()` = `scope` + `gather` + `generate` + `numberMarkers`;
     - export `evidenceSource`, `articleSource`, `focusOn`, `AUTHORITY_NOTE`.
-  - `legal.evidence.ts`: `columns` thêm `hs_heading`, `hs_chapter`, `hs_codes`, `meta->'hs2022'`; `headingSections` mặc định `limit = headings.length + 2 × chapters.length`.
+  - `legal.evidence.ts`: `columns` thêm `hs_heading`, `hs_chapter`, `hs_codes` và cả `meta` (trong đó có `hs2022`); `headingSections` mặc định `limit = headings.length + 2 × chapters.length`.
   - `legal.service.spec.ts`.
 - [ ] **Test:**
   - 14 test service cũ xanh;
