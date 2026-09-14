@@ -57,6 +57,7 @@ export async function answerByHs(q, { showFooter = true } = {}) {
     text: formatAnswer(q, data, confirm, { showFooter }),
     topic: 'tariff',
     tariff: stampTariff({ hs: q.hs, dotted: q.dotted, origin: q.origin, date: q.date, snapshot: data }),
+    confirm, // for a caller that prints this lookup under prose (formatAnswerMd tariff mode)
   };
 }
 
@@ -499,16 +500,20 @@ export async function codeOffer(tariff, fix) {
   }
   const row = (await searchByPrefix(fix.hs)).find((c) => c.hs === fix.hs);
   const heading = row ? cleanGazetteTitle('', row.heading || tail(row), 50) : '';
+  const named = ['Mã ', [fix.dotted, 'b'], ...(heading ? [' (', [heading, 'i'], ')'] : [])];
+  const record = [...forDesc, `, nhắn "HS đúng là ${fix.dotted}". Cần thuế thì nhắn thêm xuất xứ.`];
   const cands = tariff?.candidates ?? [];
-  const where = cands.length ? ` ${cands.includes(dot4(grp4(fix.hs))) ? 'nằm trong' : 'khác'} các nhóm mình vừa nêu.` : '.';
-  return {
-    text: [
-      L([
-        'Mã ', [fix.dotted, 'b'], ...(heading ? [' (', [heading, 'i'], ')'] : []), where,
-        ' Muốn mình ghi nhận mã này', ...forDesc, `, nhắn "HS đúng là ${fix.dotted}". Cần thuế thì nhắn thêm xuất xứ.`,
-      ]),
-    ],
-  };
+  // The API's test behind that reply's "nằm trong các nhóm dưới đây": a candidate under the code's heading, however deep.
+  const inside = cands.some((c) => String(c).replace(/\D/g, '').startsWith(grp4(fix.hs)));
+  const said = cands.length
+    ? [...named, ` ${inside ? 'nằm trong' : 'khác'} các nhóm mình vừa nêu. Muốn mình ghi nhận mã này`, ...record]
+    : tariff?.hs === fix.hs
+      ? [...named, ' là mã vừa tra: đúng với lô hàng thì nhắn "đúng", chưa đúng thì nhắn "sai" hoặc "HS đúng là <mã>".']
+      : tariff?.hs
+        // "HS đúng là" on this thread also records the code just looked up as wrong: say so before it is sent.
+        ? [...named, ' khác mã ', [tariff.dotted, 'b'], ' vừa tra. Muốn ghi nhận ', [tariff.dotted, 'b'], ' chưa đúng và ', [fix.dotted, 'b'], ' là mã đúng', ...record]
+        : [...named, ': muốn mình ghi nhận mã này', ...record];
+  return { text: [L(said)] };
 }
 
 // --- Image --------------------------------------------------------------------

@@ -384,6 +384,35 @@ test('formatAnswerMd nguồn: nhãn thẩm quyền một lần rồi "như [1]",
   assert.ok(!rows.some((l) => l.includes('(trích đoạn đầu)')));
 });
 
+test('formatAnswerMd tariff (Q1): văn xuôi và khối thuế dựng một lần: [k] không trùng, cảnh báo của khối nằm dưới văn xuôi, còn lời mời đúng/sai, vẫn là câu tra thuế', () => {
+  const res = {
+    ...HS_PHOTO, mode: 'tariff', userCodes: [], candidates: [], warnings: ['upcoming'],
+    answerMd: 'Mức ưu đãi theo ACFTA chỉ áp khi hàng có C/O form E hợp lệ [1].',
+    citations: [cite(1, { kind: null, label: 'Điều 5 Nghị định 26/2023/NĐ-CP', documentNumber: '26/2023/NĐ-CP', authority: 'binding', note: null, verification: 'verified', quotes: ['Hàng hóa có C/O hợp lệ được áp dụng thuế suất ưu đãi đặc biệt.'] })],
+  };
+  const lines = formatAnswerMd(res, { tariffLines: [lookup('8481.80.99')], showFooter: true });
+  const rows = rowsOf(lines);
+  const labels = rows.flatMap((l) => (l.startsWith('Tra theo ngày') ? [...l.matchAll(/\[(\d+)\] /g)].map((m) => m[1]) : (l.match(/^\[(\d+)\] /) ?? []).slice(1)));
+  assert.deepEqual(labels, [...new Set(labels)], labels.join(','));
+  assert.ok(labels.length >= 3, labels.join(','));
+  const parts = render(lines);
+  const [orange] = parts.flatMap((p) => texts(p, ST.orange));
+  assert.ok(orange.includes('Biểu thuế trong kho') && orange.includes('chưa có hiệu lực'), orange);
+  const msg = parts.map((p) => p.msg).join('\n');
+  const at = (s) => msg.indexOf(s);
+  assert.ok(at('Mức ưu đãi theo ACFTA') < at('Đối với hàng hóa có mã HS 8481.80.99') && at('Đối với hàng hóa') < at(orange) && at(orange) < at('Nguồn:'), msg);
+  assert.ok(rows.some((l) => l.includes('trả lời "đúng"')), 'tra thuế thật: lời mời đúng/sai ở lượt tra đầu');
+  assert.equal(tariffReply(parts[0].msg), true);
+});
+
+test('formatAnswerMd: văn xuôi bị lược hết mà còn nguồn thì mở bằng một câu do code viết, không nói "Một phần"; không nguồn thì để trống', () => {
+  const res = { ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [], answerMd: '', cut: 2 };
+  const rows = rowsOf(formatAnswerMd(res));
+  assert.match(rows[0], /^Mình chưa viết được câu trả lời/);
+  assert.ok(!rows.includes(CUT));
+  assert.equal(toText(formatAnswerMd({ ...res, citations: [] })).trim(), '', 'bot nói thật thay cho một dòng "bị lược" đứng một mình');
+});
+
 test('formatAnswerMd: cut > 0 thêm đúng một dòng "bị lược"', () => {
   const count = (res) => rowsOf(formatAnswerMd(res)).filter((l) => l === CUT).length;
   assert.equal(count(HS_PHOTO), 0);

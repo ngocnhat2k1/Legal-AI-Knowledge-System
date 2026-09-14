@@ -132,7 +132,10 @@ async function rateWithProse(q, body, showFooter) {
       PROSE_BUDGET_MS + 5_000,
     ),
   ]);
-  return res?.answerMd?.trim() && byHs.tariff ? { ...byHs, text: [...formatAnswerMd({ ...res, mode: 'tariff' }), L([]), ...byHs.text] } : byHs;
+  if (!res?.answerMd?.trim() || !byHs.tariff) return byHs;
+  // One formatAnswerMd call: the block's [n] continue after the prose sources, and its scope warning stays with the rates (R10).
+  const lookup = { q, tariff: byHs.tariff.snapshot, confirm: byHs.confirm };
+  return { ...byHs, text: formatAnswerMd({ ...res, mode: 'tariff' }, { tariffLines: [lookup], showFooter }) };
 }
 
 /**

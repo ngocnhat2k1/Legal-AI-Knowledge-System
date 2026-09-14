@@ -398,20 +398,26 @@ const WARNING = {
   old_catalog: 'Mã nêu trong công văn cũ theo danh mục cũ — đối chiếu Danh mục hiện hành trước khi khai.',
 };
 
+/** Every sentence cut and sources left (§4.1 "chỉ trả nguồn, kèm một câu thật"): the one sentence, written here. */
+const NO_PROSE = 'Mình chưa viết được câu trả lời dẫn đủ nguồn; dưới đây là các nguồn liên quan nhất để bạn đối chiếu.';
+
 /**
  * A composed answer (plan 08 §5). Only the prose is model text, through md(); every other line is written here from
  * response fields: the user's code against the candidates, the candidates, the tariff block, red and orange lines, sources.
  *
  * @param {object} res  POST /answer response; `depth` is the walkthrough's ('brief' | 'full')
- * @param {{tariffLines?: Array<{q: object, tariff: object, confirm?: object|null}>}} opts  /tariff lookups the bot made:
- *   the code asked about in mixed mode, the walkthrough's tariff_ref codes in hs mode
+ * @param {{tariffLines?: Array<{q: object, tariff: object, confirm?: object|null}>, showFooter?: boolean}} opts  /tariff
+ *   lookups the bot made: the code asked about in mixed mode, the walkthrough's tariff_ref codes in hs mode, the rate asked
+ *   for in tariff mode (owner decision Q1), whose block alone keeps the first-lookup invitation (`showFooter`, D3b)
  */
-export function formatAnswerMd(res, { tariffLines = [] } = {}) {
+export function formatAnswerMd(res, { tariffLines = [], showFooter = false } = {}) {
   const cites = res.citations ?? [];
   // A candidate with no [n] has nothing standing behind it (R2), and would print "· " with nothing after.
   const cands = (res.candidates ?? []).filter((c) => c.evidence?.length).slice(0, 3);
   const hs = res.mode === 'hs';
-  const prose = md(res.answerMd);
+  const rate = res.mode === 'tariff';
+  const written = Boolean(String(res.answerMd ?? '').trim());
+  const prose = written ? md(res.answerMd) : cites.length ? [L([NO_PROSE])] : [];
   const lines = [...prose, L([])];
 
   // Never orange: the user's code outside the candidates is a comparison, not a finding (R4). Only the two sentences
@@ -439,18 +445,20 @@ export function formatAnswerMd(res, { tariffLines = [] } = {}) {
     if (cands.length >= 2 && !/xác định trước/i.test(toText(prose))) lines.push(L([ADVANCE_RULING], 'note'));
   }
 
-  // D3(a): a candidate's rates only under a full walkthrough, for at most two codes, never green (R2).
-  const blocks = hs ? (res.depth === 'full' ? tariffLines.slice(0, 2) : []) : res.mode === 'mixed' ? tariffLines : [];
+  // D3(a): a candidate's rates only under a full walkthrough, for at most two codes, never green (R2). A rate question
+  // (owner decision Q1) prints its own lookup under the prose.
+  const blocks = hs ? (res.depth === 'full' ? tariffLines.slice(0, 2) : []) : res.mode === 'mixed' || rate ? tariffLines : [];
   // A block's [n] continue after the sources, so "[1]" is never both a decree and an Explanatory Note (R10).
   let refBase = Math.max(0, ...cites.map((c) => c.n ?? 0));
   for (const t of blocks) {
     // After a composed reply no code is on the table to confirm (§6.3): mixed keeps the history of the code asked about
-    // (R18) without its "trả lời đúng/sai"; a candidate's history is not printed at all.
-    const block = formatAnswer(t.q, t.tariff, hs ? null : (t.confirm ?? null), { showFooter: false, candidate: hs, refBase, verdictPrompt: false });
+    // (R18) without its "trả lời đúng/sai"; a candidate's history is not printed at all. A rate question IS the lookup.
+    const opts = { showFooter: rate && showFooter, candidate: hs, refBase, verdictPrompt: rate };
+    const block = formatAnswer(t.q, t.tariff, hs ? null : (t.confirm ?? null), opts);
     // Every [k] a block prints is one of its refs: the highest is where the next block starts.
     refBase = Math.max(refBase, ...[...toText(block).matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])));
     // Mixed: the heading shares the block's first paragraph, so render never sends the rates without it.
-    lines.push(L([]), ...(hs ? [] : [L([MIXED_TARIFF])]), ...block);
+    lines.push(L([]), ...(res.mode === 'mixed' ? [L([MIXED_TARIFF])] : []), ...block);
   }
   if (hs && cands.length && !blocks.length) lines.push(L([TARIFF_HINT], 'note'));
 
@@ -471,7 +479,8 @@ export function formatAnswerMd(res, { tariffLines = [] } = {}) {
       })),
     ),
   );
-  if (res.cut > 0) lines.push(L(['Một phần câu trả lời bị lược vì không dẫn được nguồn.'], 'note'));
+  // All of it cut: NO_PROSE above already says so, and "một phần" would be false.
+  if (res.cut > 0 && written) lines.push(L(['Một phần câu trả lời bị lược vì không dẫn được nguồn.'], 'note'));
   // Two tariff blocks carry the same scope warning; render would merge it into one orange line saying it twice.
   const seen = new Set();
   return lines.filter((l) => !l.marks?.includes('warn') || (!seen.has(toText([l])) && seen.add(toText([l]))));

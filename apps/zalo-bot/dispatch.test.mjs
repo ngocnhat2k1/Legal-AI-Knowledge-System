@@ -1279,3 +1279,20 @@ test('refine không còn câu soạn trước (state.answer đã xoá): chủ đ
   assert.equal(run.answers[1]?.forceIntent, 'legal');
   assert.deepEqual(run.notices, ['Mình tra văn bản rồi trả lời nhé.']);
 });
+
+test('codeOffer: mã dưới một ứng viên sâu hơn (3005.10) là "nằm trong"; trên luồng tra thuế nói rõ mã vừa tra sẽ ghi chưa đúng; cùng mã thì chỉ cách xác nhận', async () => {
+  const c = conversation();
+  const deep = { ...composedHs, candidates: [{ ...composedHs.candidates[0], hs: '3005.10', level: 6 }, composedHs.candidates[1]] };
+  await c.say(PHOTO_Q, fakeApi({ planned: plannedOf(plan08()), composed: deep }));
+  const inside = await c.say('30051010 mới đúng', fakeApi({ planned: plannedOf(plan08({ intent: 'correction', question: '[mã 1] mới đúng', ...noGoods })) }));
+  assert.match(inside.text, /^Mã 3005\.10\.10 .*nằm trong các nhóm mình vừa nêu\./);
+
+  const t = conversation();
+  await t.say('8481.80.99 TQ', fakeApi());
+  const other = await t.say('63079090 mới đúng', fakeApi({ planned: plannedOf(plan08({ intent: 'correction', question: '[mã 1] mới đúng', ...noGoods })) }));
+  assert.equal(other.confirms.length, 0);
+  assert.match(other.text, /^Mã 6307\.90\.90 \(Sản phẩm dệt đã hoàn thiện khác\) khác mã 8481\.80\.99 vừa tra\. Muốn ghi nhận 8481\.80\.99 chưa đúng và 6307\.90\.90 là mã đúng, nhắn "HS đúng là 6307\.90\.90"\./);
+  const same = await t.say('8481.80.99 sai rồi', fakeApi({ planned: plannedOf(plan08({ intent: 'correction', question: '[mã 1] sai rồi', ...noGoods })) }));
+  assert.equal(same.confirms.length, 0);
+  assert.match(same.text, /^Mã 8481\.80\.99 .*là mã vừa tra/);
+});
