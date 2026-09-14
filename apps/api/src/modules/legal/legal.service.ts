@@ -6,7 +6,7 @@ import { EmbeddingService } from './embedding.service';
 import { extractAsOf } from './legal.asof';
 import { evidenceInstruments, evidenceRetrieve, namedStatus, type RetrievedEvidence } from './legal.evidence';
 import { generate, type PromptSource } from './legal.generation';
-import { keepRelevant, MAX_DIST, numberMarkers } from './legal.grounding';
+import { keepRelevant, numberMarkers } from './legal.grounding';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
 import {
   inIds,
@@ -25,6 +25,15 @@ const TOP_K = 6;
 const MAX_CITATIONS = 5;
 /** Evidence sections join the articles after them, never in place of one. */
 const EVIDENCE_K = 3;
+/**
+ * Evidence relevance gate, measured 2026-09-14 on the seeded evidence layer (10 questions): the right sections sat at
+ * cosine 0.27–0.41, the nearest section to an off-topic question at ≥ 0.57. Inside the domain distance alone cannot
+ * tell them apart — an AEO note reached 0.34 for "thời hạn nộp thuế", whose nearest clause was 0.25, while the
+ * 336/2026 status row was 0.29 against 0.25 — so a section must also stay within a margin of the best article.
+ * ponytail: two in-domain data points; tune both against the notebook eval once POST /answer returns evidence.
+ */
+const EVIDENCE_MAX_DIST = 0.5;
+const EVIDENCE_MARGIN = 0.05;
 /** Evidence enters the prompt cut here (≈ the embedded window); the citation keeps the whole body. */
 const EVIDENCE_PROMPT_CHARS = 6000;
 
@@ -214,7 +223,8 @@ export class LegalService {
     // otherwise "cho tôi Điều 18" could abstain on the very article it asked for. The same
     // holds for a document the user named that only the evidence layer holds.
     const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, MAX_CITATIONS);
-    const ranked = (onlyEvidence ? evidence : evidence.filter((e) => e.bestDist != null && e.bestDist <= MAX_DIST)).filter(
+    const limit = Math.min(EVIDENCE_MAX_DIST, Math.min(...all.map((a) => a.bestDist ?? Infinity)) + EVIDENCE_MARGIN);
+    const ranked = (onlyEvidence ? evidence : evidence.filter((e) => e.bestDist != null && e.bestDist <= limit)).filter(
       (e) => !named.some((n) => n.id === e.id),
     );
     // A named document's status row is never cut: it may be the whole answer ("replaced from 05/09/2026").

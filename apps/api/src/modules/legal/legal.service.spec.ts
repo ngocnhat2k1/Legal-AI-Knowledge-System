@@ -91,12 +91,30 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
     expect(res.citations.map((c) => c.kind ?? 'provision')).toEqual(['provision', 'status']);
   });
 
+  it('drops a section that trails the best article by more than the margin, even under the absolute gate', async () => {
+    const near = {
+      articleProvisionId: 42, clauseProvisionId: 42, documentId: 1, documentNumber: '96/VBHN-VPQH', documentTitle: 't',
+      articleCitation: 'Điều 9', clauseCitation: 'Khoản 1 Điều 9', path: 'Điều 9', articleBody: 'thân', clauseBody: 'thân',
+      effectiveness: 'con_hieu_luc', effectiveFrom: null, effectiveTo: null, gazetteUrl: null, verification: 'verified',
+      score: 1, bestDist: 0.25, kwHit: true,
+    } as RetrievedArticle;
+    // Measured on "thời hạn nộp thuế": clause 0.25, an unrelated AEO note 0.34; the 336/2026 status row sat at 0.29.
+    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([near]);
+    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([
+      ev({ id: 4, kind: 'note', title: 'AEO', documentNumber: null, bestDist: 0.34 }),
+      ev({ id: 5, title: 'Tình trạng hiệu lực — 336/2026/NĐ-CP', bestDist: 0.29 }),
+    ]);
+    (generate as jest.Mock).mockResolvedValueOnce(null);
+    const res = await svc().ask('Thời hạn nộp thuế đối với hàng hóa nhập khẩu là bao lâu', '2026-09-14');
+    expect(res.citations.map((c) => c.provisionLabel)).toEqual(['Khoản 1 Điều 9', 'Tình trạng hiệu lực — 336/2026/NĐ-CP']);
+  });
+
   it('puts evidence after the articles, drops sections beyond the distance gate, and labels a note', async () => {
     const article = {
       articleProvisionId: 11, clauseProvisionId: 11, documentId: 1, documentNumber: '08/2015/NĐ-CP', documentTitle: 't',
       articleCitation: 'Điều 11', clauseCitation: 'Khoản 1 Điều 11', path: 'Điều 11', articleBody: 'thân', clauseBody: 'thân',
       effectiveness: 'con_hieu_luc', effectiveFrom: null, effectiveTo: null, gazetteUrl: null, verification: 'verified',
-      score: 1, bestDist: 0.2, kwHit: true,
+      score: 1, bestDist: 0.28, kwHit: true,
     } as RetrievedArticle;
     (hybridRetrieve as jest.Mock).mockResolvedValueOnce([article]);
     (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([
