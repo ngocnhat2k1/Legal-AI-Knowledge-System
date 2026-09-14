@@ -359,6 +359,10 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     expect(prompts(PLAN_SYSTEM)[0]!.prompt).not.toMatch(/3005|3824/);
     expect(prompts(SYSTEM)[0]!.prompt.split('\nNGUỒN:\n')[0]).not.toMatch(/3005|3824|30\.05|38\.24/);
     for (const [query] of legal.gather.mock.calls) expect(query).not.toMatch(/3005|3824/);
+    // The bare 3005 is the 3005.10.10 line already: one line for the code, none repeating its heading.
+    const said = res.userCodes.map((u) => u.code);
+    expect(said).toContain('3005.10.10');
+    expect(said).not.toContain('30.05');
   });
 
   it('repair: an item naming the premise code is never sent, and an item carries only quotes found in its source (R4, G2)', async () => {
@@ -407,6 +411,10 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     expect(res).toMatchObject({ cut: 0, repaired: true, calls: 3 });
     expect(res.answerMd).toMatch(/^Hàng có C\/O mẫu E hợp lệ được ưu đãi đặc biệt/);
 
+    // A repair writing "[1, 2]" back into a first sentence still in violation: matched after expanding, so sources only.
+    const stubborn = setup({ plan: LEGAL_PLAN, drafts: [LIST_DRAFT], repairs: [{ sentences: ['Theo Điều 5, hàng có C/O mẫu E hợp lệ được ưu đãi đặc biệt [1, 2].'] }], sources: [GUIDE, ORIGIN] });
+    expect(await stubborn.svc.answer({ q: LEGAL_Q })).toMatchObject({ answerMd: '', repaired: true, calls: 3 });
+
     const late = setup({ drafts: [LIST_DRAFT], sources: [GUIDE, ORIGIN] });
     expect(await late.svc.answer({ q: LEGAL_Q, plan: LEGAL_PLAN, deadlineAt: Date.now() + 25_000 })).toMatchObject({ answerMd: '', cut: 1, repaired: false });
   });
@@ -452,6 +460,9 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const draft = { ...MFN_DRAFT, answerMd: 'Hàng có C/O mẫu E hợp lệ được áp dụng thuế suất ưu đãi đặc biệt [1] [2].', citations: [{ n: 1, quotes }, { n: 2, quotes }] };
     const res = await setup({ plan: LEGAL_PLAN, drafts: [draft], sources: [undetermined, old] }).svc.answer({ q: LEGAL_Q });
     expect(res.warnings).toEqual(['undetermined', 'old_catalog']);
+    // Compose skipped: the sources listed alone carry the same warnings.
+    const alone = await setup({ sources: [undetermined, old] }).svc.answer({ q: LEGAL_Q, plan: LEGAL_PLAN, deadlineAt: Date.now() });
+    expect(alone).toMatchObject({ answerMd: '', warnings: ['undetermined', 'old_catalog'] });
   });
 
   it('a chapter the user named has no heading to compare, so it is no userCodes entry', async () => {

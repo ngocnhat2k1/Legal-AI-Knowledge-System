@@ -199,9 +199,10 @@ export class AnswerService {
         codeRole: role,
         mode,
         // A chapter has no heading to compare (§2.4). The user's heading meets each candidate's heading, as the bot's line
-        // speaks of groups (§5 item 3): a deeper candidate under that heading counts.
+        // speaks of groups (§5 item 3): a deeper candidate under that heading counts. A bare heading the user also wrote as
+        // a deeper code ("thuộc 3005 hay 3824, mã 3005.10.10") is that code's line already.
         userCodes: users
-          .filter((u) => u.heading)
+          .filter((u) => u.heading && !(u.level === 4 && users.some((o) => o.level > 4 && o.heading === u.heading)))
           .map((u) => ({
             ...u,
             exists: known.has(digits(u.code)),
@@ -317,7 +318,14 @@ export class AnswerService {
     if (!sources.length && (mode !== 'tariff' || !kept('tariffLines').length)) return finish(common);
     // Compose skipped or failed: the sources alone, so the bot still prints them and their end-of-force line from data
     // (§10 risk 1, G7). No prose cites them, so they claim no quote (R10).
-    const sourcesOnly = { ...common, citations: sources.slice(0, 3).map((s, i) => citationOf(i + 1, s, [])) };
+    const warningsOf = (listed: typeof sources): string[] => [
+      ...(listed.some((s) => s.citation.verification === 'auto_unverified') ? ['unverified'] : []),
+      ...(listed.some((s) => s.note?.includes(AUTHORITY_NOTE.undetermined!)) ? ['undetermined'] : []),
+      ...(listed.some((s) => s.note?.includes('CHƯA CÓ HIỆU LỰC')) ? ['upcoming'] : []),
+      ...(listed.some(oldCatalog) ? ['old_catalog'] : []),
+    ];
+    const listed = sources.slice(0, 3);
+    const sourcesOnly = { ...common, citations: listed.map((s, i) => citationOf(i + 1, s, [])), warnings: warningsOf(listed) };
     const timeoutMs = Math.min(100_000, deadline - Date.now() - 5_000);
     if (timeoutMs < 15_000) return finish(sourcesOnly);
 
@@ -399,7 +407,8 @@ export class AnswerService {
         repaired = true;
         // A sentence the repair gave up on ('') is cut, like one still in violation (§4.1).
         gone = items.flatMap((it, i) => (rewritten[i] ? [] : [it.sentence]));
-        const answerMd = items.reduce((md, it, i) => md.replace(it.sentence, () => rewritten[i]!), draft.answerMd);
+        // Expanded again: a repair that writes "[1, 2]" back must still meet verify's sentence for the first-sentence rule.
+        const answerMd = expandMarkers(items.reduce((md, it, i) => md.replace(it.sentence, () => rewritten[i]!), draft.answerMd), sources.length);
         final = { ...draft, answerMd };
         checked = await timed('verify', async () => verify({ ...draft, answerMd }, guardSources, ctx));
       }
@@ -429,12 +438,7 @@ export class AnswerService {
         // G4 asks for the deciding facts once two candidates stand: none from compose, so the plan's stand in (filtered, latched).
         missingFacts: final.missingFacts.length || candidates.length < 2 ? final.missingFacts : kept('goods').length ? goods.missing.slice(0, 3) : [],
         coverage: answerMd ? final.coverage : 'none',
-        warnings: [
-          ...(cited.some((s) => s.citation.verification === 'auto_unverified') ? ['unverified'] : []),
-          ...(cited.some((s) => s.note?.includes(AUTHORITY_NOTE.undetermined!)) ? ['undetermined'] : []),
-          ...(cited.some((s) => s.note?.includes('CHƯA CÓ HIỆU LỰC')) ? ['upcoming'] : []),
-          ...(cited.some(oldCatalog) ? ['old_catalog'] : []),
-        ],
+        warnings: warningsOf(cited),
         cut,
         repaired,
       },
