@@ -2,7 +2,7 @@
 
 Thư mục này chứa **bộ golden set**: 30–50 câu hỏi tra cứu thuế suất thực tế, mỗi câu kèm đáp án đã biết là đúng, được ghi lại **trước khi** viết bất kỳ dòng parser nào.
 
-Xem [TASK-001 trong danh sách công việc](../../.agent/planning/01-task-list.md) để biết bối cảnh đầy đủ.
+Bối cảnh: [tài sản dữ liệu nội bộ](../../.agent/concepts/company-data-assets.md).
 
 ## Trạng thái (2026-07-18)
 
@@ -84,7 +84,6 @@ Bằng chứng vì sao điều này quan trọng: parser nháp của research đ
 
 ## Kiến thức liên quan
 
-- [Danh sách công việc — TASK-001](../../.agent/planning/01-task-list.md)
 - [Tài sản dữ liệu nội bộ của công ty](../../.agent/concepts/company-data-assets.md) — 5 nguồn dữ liệu, vai trò, và cross-check
 - [Hệ thống biểu thuế](../../.agent/concepts/tariff-system.md) — biểu thuế, bẫy phụ lục, khoảng cách thời gian
 - [Quy tắc tác nhân](../../.agent/AGENTS.md)

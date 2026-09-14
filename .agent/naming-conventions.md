@@ -1,18 +1,12 @@
-# Quy ước đặt tên (Naming Conventions)
+# Quy ước đặt tên
 
-File này lưu trữ các quy ước đặt tên riêng của dự án.
-
-## Ngôn ngữ
-
-- **Code, chú thích trong code, định danh, tên file, tên API, thông điệp commit: tiếng Anh.**
-- Tài liệu dự án (`.agent/`, README): tiếng Việt (nguồn chân lý: [AGENTS.md](AGENTS.md)). ⚠️ Còn một mâu thuẫn chưa chốt: `project-context.md` và `00-bootstrap.md` ghi "tài liệu tiếng Anh" trong khi AGENTS.md ghi tiếng Việt — chờ chủ dự án quyết rồi thống nhất.
+Ngôn ngữ của code và tài liệu: xem [AGENTS.md](AGENTS.md).
 
 ## Code (NestJS / TypeScript)
 
-- **File:** `kebab-case` theo hậu tố NestJS — `health.controller.ts`, `health.service.ts`, `health.module.ts`, `database.module.ts`, `database.tokens.ts`.
+- **File:** `kebab-case` theo hậu tố NestJS — `tariff.controller.ts`, `legal.service.ts`, `legal.module.ts`, `embedding.service.ts`.
 - **Class / decorator target:** `PascalCase` — `HealthController`, `DatabaseModule`.
-- **Biến / hàm / property:** `camelCase`. **Hằng / DI token:** `SCREAMING_SNAKE_CASE` (`DATABASE_CONNECTION`, `POSTGRES_CLIENT`).
-- **API công khai của module:** export qua `index.ts`; module khác import từ `index.ts`, không import file triển khai riêng tư.
+- **Biến / hàm / property:** `camelCase`. **Hằng / DI token:** `SCREAMING_SNAKE_CASE` (`DATABASE_CONNECTION`).
 
 ## Cơ sở dữ liệu (PostgreSQL / Drizzle)
 
@@ -21,5 +15,5 @@ File này lưu trữ các quy ước đặt tên riêng của dự án.
 
 ## Repo / hạ tầng
 
-- **Tên package:** `customs-assistant`. **Image Docker:** `customs-assistant:local`. **Service compose:** `db`, `migrate`, `api`.
-- **Biến môi trường:** `SCREAMING_SNAKE_CASE` — `DATABASE_URL`, `PORT`.
+- **Tên package:** `customs-assistant`. **Image Docker:** `customs-assistant:local`. **Service compose:** `db`, `migrate`, `seed`, `seed-legal`, `embedder`, `api`, `ingest`, `zalo-bot`.
+- **Biến môi trường:** `SCREAMING_SNAKE_CASE` — `DATABASE_URL`, `PORT`, `EMBEDDER_URL`, `CLAUDE_CODE_OAUTH_TOKEN`.

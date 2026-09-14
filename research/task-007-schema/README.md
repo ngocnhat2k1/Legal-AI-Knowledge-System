@@ -1,5 +1,7 @@
 # TASK-007 — Schema biểu thuế: nhận biết thời gian + phụ lục ngay từ migration đầu
 
+> Spike đã xong; script của nó đã gỡ khỏi repo. Bản gốc: `git show 11275bc:research/task-007-schema/<tên file>`.
+
 **Trạng thái: XONG (2026-07-18). Chứng minh live 17/17 trên Postgres thật.**
 
 ## Câu hỏi
@@ -72,4 +74,4 @@ DATABASE_URL="postgres://app:app@localhost:5433/customs_assistant" node_modules/
 - [db/schema/index.ts](../../db/schema/index.ts) — định nghĩa schema
 - [db/migrations/0001_grey_exodus.sql](../../db/migrations/0001_grey_exodus.sql), [0002_tariff_integrity.sql](../../db/migrations/0002_tariff_integrity.sql)
 - [ADR Hiệu lực bitemporal](../../.agent/architecture-decisions/2026-07-17-bitemporal-validity-from-day-one.md)
-- [Danh sách công việc — TASK-007/008](../../.agent/planning/01-task-list.md)
+- [TASK-008](../task-008-congbao-loader/README.md)

@@ -24,90 +24,17 @@ hạ tầng trở lại, `yarn db:seed:legal` nạp cả kho kèm mọi văn b�
 
 ---
 
-## TASK-016: Chuyển bộ sinh notebook vào repo + render tất định
+## TASK-016 … TASK-020 — xong 2026-09-10
 
-**Trạng thái:** done 2026-09-10 — bộ sinh ở `research/inbox-loader/`; render tất định (32/32 file giống hệt giữa hai lần chạy)
+| Việc | Kết quả |
+|---|---|
+| TASK-016 bộ sinh notebook vào repo | `research/inbox-loader/`; render tất định (32/32 file giống hệt giữa hai lần chạy) |
+| TASK-017 phân lớp + dò Công báo | `congbao_lookup.py`; kiểm kê theo checklist trong runbook, không có `triage.py` |
+| TASK-018 parse hai nhánh | nhánh bảng đọc `w:tbl` / dòng `\x07` vào `annex-tables.ndjson`; cổng chặn: Điều liên tục + rác mã trường |
+| TASK-019 `render_notebook.py` | 32 nguồn Docs-safe, mỗi tiêu đề mang số hiệu |
+| TASK-020 manifest + rclone | 32/32 đồng bộ, giữ `fileId`, đẩy lần hai `0 đẩy` |
 
-`build_legal.py`, `build_hs.py`, `build_bundles_cu.py` đang sống ở
-`~/Desktop/Legal-AI-NotebookLM-Export/_scripts/` — **ngoài git**, trên thư mục Desktop được
-iCloud đồng bộ. Hạ tầng chịu tải không được sống ngoài kiểm soát phiên bản.
-
-Chuyển vào `research/inbox-loader/`. Đồng thời **bỏ `date.today()` khỏi thân file**: hiện nó
-nhúng ngày chạy vào nội dung, nên chạy lại cùng `.ndjson` vào ngày khác cũng đổi hash và làm
-manifest báo "đã thay đổi" sai.
-
-**Nghiệm thu:** chạy render hai lần, đổi ngày hệ thống giữa hai lần → hash thân file không đổi.
-
----
-
-## TASK-017: `triage.py` — phân lớp và dò Công báo
-
-**Trạng thái:** done 2026-09-10 — `congbao_lookup.py` (theo số hiệu / ngày đăng / tiêu đề). **Không** có một `triage.py` duy nhất: kiểm kê làm theo checklist trong runbook, vì mỗi đợt tài liệu một khác
-
-Phân lớp A/B/C/D theo [R15](../business-rules.md) và [R16](../business-rules.md): đọc số hiệu,
-dò lớp text của PDF, phát hiện file trùng theo md5, và **dò Công báo bằng tiêu đề + cơ quan +
-năm** cho mọi ca có ô số hiệu trống.
-
-Trích quan hệ `thay_the` / `sua_doi` / `bai_bo` từ "Điều khoản thi hành", ghi thành cạnh trong
-manifest — **dữ liệu về chuyển đổi, không bao giờ thực thi thành phép biến đổi văn bản**.
-
-**Nghiệm thu:** phân lớp đúng 20/20 tài liệu đợt đầu, kiểm tay. Mỗi ca lớp C kèm bản ghi tra
-cứu Công báo. Cờ đỏ năm lệch chặn được `09-bvhttdl.pdf`.
-
----
-
-## TASK-018: Parse hai nhánh + cổng `\x07`
-
-**Trạng thái:** done 2026-09-10 — nhánh bảng đọc thẳng `w:tbl` (docx) và dòng `\x07` (doc) vào `annex-tables.ndjson`; cổng chặn là Điều liên tục + rác mã trường. Cổng "đếm dòng `\x07` bị bỏ" như thiết kế ban đầu **không** làm — nhánh bảng bắt mọi bảng nên không còn cần
-
-`parse_provisions.py` vứt mọi dòng chứa dấu ô Word `\x07` — đúng cho văn xuôi, nhưng bỏ **toàn
-bộ bảng**. Bốn văn bản lớp A của đợt đầu là danh mục dạng bảng (TT 52/2018-BCT, QĐ 18/2019-TTg,
-QĐ 1725/QĐ-BCT, TT 11/2024-BTTTT), cộng phụ lục NĐ 292/2026.
-
-Thêm nhánh parser bảng (mẫu đã có: `research/task-008-congbao-loader/parse_nd26.py`,
-`research/task-003-evfta-parser/parse_tariff_doc.py`), hợp nhất, mỗi hàng bảng mang danh tính
-phụ lục theo [R9](../business-rules.md).
-
-**Cổng chặn:** `parse_provisions.py` phải đếm và ghi log số dòng `\x07` bị bỏ thay vì `continue`
-im lặng. Khác 0 mà chưa có nhánh bảng chạy ⇒ dừng đường ống.
-
-**Nghiệm thu:** đếm dòng hàng hoá trong danh mục máy ra, so tay với bản `.doc`, cho từng văn bản
-dạng danh mục.
-
----
-
-## TASK-019: `render_notebook.py` — Docs-safe + gộp nguồn
-
-**Trạng thái:** done 2026-09-10 — 32 nguồn, Docs-safe, tiêu đề mang số hiệu
-
-Ba việc trong một bộ sinh:
-
-1. **Docs-safe**: bỏ 152 khối `<details>` (thay bằng heading con), bỏ code fence, chuyển
-   blockquote thành dòng có nhãn in đậm, bỏ bold trong ô bảng.
-2. **Gộp 30 → 15 nguồn** theo bảng trong thiết kế. Nhóm biểu thuế **giữ nguyên 8 file**.
-3. **Mỗi tiêu đề điều mang số hiệu văn bản** (`## NĐ 08/2015/NĐ-CP — Điều 5. …`) — điều kiện bắt
-   buộc của việc gộp, vì đoạn truy hồi giữa tài liệu không mang theo H1 đầu file.
-
-Thêm dòng cảnh báo cố định đầu mỗi file theo [R17](../business-rules.md). Cảnh báo khi một file
-vượt 800.000 ký tự.
-
-**Nghiệm thu:** export ngược một Doc đã convert về `.md`, mọi mốc phân cách Việt/Anh còn nguyên.
-
----
-
-## TASK-020: Manifest + rclone
-
-**Trạng thái:** done 2026-09-10 — 32/32 đồng bộ; fileId 16 nguồn cũ giữ nguyên 16/16; đẩy lần hai `0 đẩy`; quy tắc chỉ-thêm-không-sửa có test
-
-Manifest với `hash_exported` / `hash_pushed` tách bạch; `hash_pushed` **chỉ ghi sau khi rclone
-trả mã thoát 0 cho đúng file đó**, kèm `drive_file_id` và `drive_modtime` từ `rclone lsjson`.
-
-Đẩy **từng file một lệnh** với cả hai cờ `--drive-import-formats md --drive-export-formats md`.
-Không bao giờ `rclone sync`. Không bao giờ `--checksum`.
-
-**Nghiệm thu:** (a) chạy hai lần liên tiếp → lần hai báo `0 file mới, 0 ghi đè, 0 đẩy`; (b) sửa
-một file, đẩy lại, `drive_file_id` **không đổi**; (c) ngắt mạng giữa chừng → lần chạy sau tự đẩy
-lại đúng những file chưa lên.
+Tiêu chí nghiệm thu từng việc: git `11275bc`.
 
 ---
 
@@ -174,7 +101,6 @@ quét lại mỗi lần.
 | Giữ bộ câu hỏi test notebook trong repo, chạy lại sau mỗi đợt nạp | Câu test bắt được lỗi đánh số lại mà đường ống không bắt |
 | **Parser nhận nhầm dòng viện dẫn thành tiêu đề điều** — dòng bắt đầu bằng "Điều N …" giữa thân điều bị coi là tiêu đề, còn tiêu đề thật thành chữ thường: 25/VBHN-BTC (TT 38/2015) Điều 18, 33, 51, 71; 33/2023/TT-BTC Điều 9, 20. Và một **khoản ma** "khoản 20 Điều 10" 46/VBHN-BTC (dòng gập "20.000 tờ khai/năm."). Khoản bị gán sai điều → trích dẫn sai | Tìm bởi đợt kiểm độc lập 2026-09-10. Dữ liệu `verified` từ các giai đoạn trước — **chờ chủ dự án quyết** sửa parser và parse lại |
 | **EN2022: đuôi danh sách của nhóm trước tràn sang bản ghi nhóm sau** — phần loại trừ cuối của 84.17 nằm dưới tiêu đề 84.18 | Chưa đo trên toàn bộ 1.306 bản ghi; có thể có hệ thống ở chỗ tiêu đề nhóm rơi giữa trang hai cột |
-| `yarn install` — xong 2026-09-13 (đã xoá `node_modules` hỏng và cài lại sạch) | kiểm kiểu `legal.ts`: không có lỗi enum `verification`/`verified_by` (đã khớp sẵn); chỉ còn 1 lỗi TS1343 `import.meta`/`module` dùng chung với `db/seed/index.ts` và `research/task-012-acceptance/validate.ts` — lỗi cấu hình `tsconfig.json` toàn dự án, không phải lỗi riêng của `legal.ts`, không sửa vì ngoài phạm vi Task 1 |
 
 ## Kiến thức liên quan
 

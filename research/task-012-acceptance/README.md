@@ -1,5 +1,7 @@
 # TASK-012 — Nghiệm thu Giai đoạn 1: đối chiếu với thực tế
 
+> Spike đã xong; script của nó đã gỡ khỏi repo. Bản gốc: `git show 11275bc:research/task-012-acceptance/<tên file>`.
+
 **Trạng thái: XONG (2026-07-18) — 249/249 dòng tờ khai thật khớp 100% (MFN + 4 FTA) + 20/20 random.**
 
 Chứng minh Giai đoạn 1 đối chiếu với **thế giới** (tờ khai đã nộp), không phải với chính nó.

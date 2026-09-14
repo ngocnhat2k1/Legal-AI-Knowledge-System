@@ -75,7 +75,7 @@ và không thêm service có trạng thái nào (postgres-only ADR).
 - `topic` là **cột thật** (queryable) vì nó là thứ quyết định nhánh.
 - `state` là `jsonb` vì hình dạng của nó là việc của bot, không phải của DB: `{tariff:{…}, legal:{…}}`
   — những gì lượt sau được phép trỏ tới.
-- API: `GET /conversation`, `POST /conversation/turn`, `DELETE /conversation`.
+- API: `GET /conversation`, `POST /conversation/turn`.
   Quy ước vá: **thiếu trường = giữ nguyên, `null` = xoá** — "tôi đã trả lời, nhưng lượt sau không
   còn gì để trỏ tới" là một kết quả thật và phải nói ra được.
 

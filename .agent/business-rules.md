@@ -6,8 +6,7 @@ related:
   - project-context.md
   - index.md
   - naming-conventions.md
-  - architecture-decisions/README.md
-  - planning/01-task-list.md
+  - planning/02-progress.md
 ---
 
 # Quy tắc nghiệp vụ
@@ -574,7 +573,7 @@ Hai agent nghiên cứu đi tới các kết luận khác nhau về bản chất
 - [Bối cảnh dự án](project-context.md) — Customs Assistant là gì, phục vụ ai, và các ranh giới v1 của nó.
 - [Chỉ mục](index.md) — bản đồ bộ nhớ bền vững của dự án.
 - [Quy ước đặt tên](naming-conventions.md) — quy tắc thuật ngữ và định danh, bao gồm cách đặt tên HS / biểu thuế / phụ lục.
-- [Chỉ mục quyết định kiến trúc](architecture-decisions/README.md) — các ADR. Mô hình thời gian ([R8](#r8--đừng-bao-giờ-mô-hình-hóa-phiên-bản-mới-nhất)), đường nạp Công báo nhận-biết-phụ-lục ([R9](#r9--ranh-giới-phụ-lục-là-chịu-lực), [R11](#r11--không-scrape-thuvienphapluatvn-hay-luatvietnamvn)), và ranh giới tra-cứu-tất-định ([R1](#r1--mức-thuế-quan-không-bao-giờ-được-sinh-ra-bởi-một-llm)) mỗi cái xứng đáng có ADR riêng.
-- [Danh sách công việc](planning/01-task-list.md) — phạm vi và trình tự hiện tại.
+- [Các ADR](index.md#quyết-định) — các ADR. Mô hình thời gian ([R8](#r8--đừng-bao-giờ-mô-hình-hóa-phiên-bản-mới-nhất)), đường nạp Công báo nhận-biết-phụ-lục ([R9](#r9--ranh-giới-phụ-lục-là-chịu-lực), [R11](#r11--không-scrape-thuvienphapluatvn-hay-luatvietnamvn)), và ranh giới tra-cứu-tất-định ([R1](#r1--mức-thuế-quan-không-bao-giờ-được-sinh-ra-bởi-một-llm)) mỗi cái xứng đáng có ADR riêng.
+- [Nhật ký tiến độ](planning/02-progress.md) — phạm vi và trình tự hiện tại.
 - [Tổ chức mã nguồn](docs/code-organization.md) — nơi module tra-cứu-thuế-quan, module gợi-ý-ứng-viên, và pipeline nạp dữ liệu nằm ở đó.
 - [Quy tắc tác nhân](AGENTS.md) — quy tắc quy trình làm việc, tài liệu, và định tuyến tri thức.

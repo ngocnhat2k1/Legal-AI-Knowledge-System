@@ -5,9 +5,7 @@ updated: 2026-07-18
 related:
   - index.md
   - business-rules.md
-  - project-rules.md
   - docs/code-organization.md
-  - architecture-decisions/README.md
 ---
 
 # Bối cảnh dự án
@@ -65,7 +63,7 @@ Các sự thật thiết kế bất khả thương lượng:
 - **Không LLM trong đường đi.** Đây là một lần đọc bảng theo khóa.
 - **`(HS, country) → rate` thậm chí không phải là một hàm.** MFN so với FTA là có điều kiện, không tự động: Điều 4 RCEP yêu cầu quy tắc xuất xứ *cộng một C/O hợp lệ*. "Thuế là 0%" là sai; "0% *nếu* bạn có C/O hợp lệ, nếu không thì 15% MFN" mới đúng. Điều 6.2 RCEP mang một quy tắc mức-thuế-cao-nhất xuyên các phụ lục cho một số hàng hóa đa xuất xứ — đã xác minh nguyên văn trong văn bản: *"Mức thuế suất cao nhất tại các Phụ lục Biểu thuế áp dụng cho cùng hàng hóa có xuất xứ từ các nước thành viên..."* (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 12, văn bản công báo NĐ 129/2022).
 - **Các ô không phải mức thuế.** `*` nghĩa là hàng hóa bị **loại trừ** khỏi mức thuế FTA, không phải bằng không. Hàng TRQ (nhóm 04.07, 17.01, 24.01, 25.01, đã xác minh trong văn bản NĐ 129/2022) phụ thuộc vào trạng thái hạn ngạch, với mức ngoài hạn ngạch nằm ở một phụ lục khác. Phụ lục III (xe đã qua sử dụng) mang **thuế tuyệt đối/hỗn hợp bằng USD**, không phải phần trăm — một regex `%` tìm thấy không dòng nào ở đó (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 12).
-- **MFN 2026 đúng là một hợp nhất, không phải một văn bản.** NĐ 26/2023 là nền và không bị thay thế; mức thuế hiện hành đúng là nền đó cộng một chuỗi sửa đổi, và không có văn bản hợp nhất chính thức nào được công bố dưới dạng dữ liệu máy đọc được (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 10). ⚠️ **Bản thân chuỗi đó là một câu hỏi mở** — research 10 và research 12 cho các danh sách khác nhau, mỗi cái đều không đầy đủ. Xác lập nó từ Công báo trước khi nạp; xem [Hệ thống biểu thuế](concepts/tariff-system.md) và Câu hỏi mở 6 trong [Kế hoạch khởi động](planning/00-bootstrap.md).
+- **MFN 2026 đúng là một hợp nhất, không phải một văn bản.** NĐ 26/2023 là nền và không bị thay thế; mức thuế hiện hành đúng là nền đó cộng một chuỗi sửa đổi, và không có văn bản hợp nhất chính thức nào được công bố dưới dạng dữ liệu máy đọc được (đã xác minh 2026-07-17, nguồn: báo cáo nghiên cứu 10). ⚠️ **Bản thân chuỗi đó là một câu hỏi mở** — research 10 và research 12 cho các danh sách khác nhau, mỗi cái đều không đầy đủ. Xác lập nó từ Công báo trước khi nạp; xem [Hệ thống biểu thuế](concepts/tariff-system.md) và Câu hỏi mở 6 trong Kế hoạch khởi động.
 - **Hợp đồng đầu ra:** trích dẫn nghị định và ngày; từ chối khi snapshot có thể đã cũ. Một công cụ hỗ trợ nghiên cứu cho thấy nguồn của nó, không bao giờ là một cỗ máy trả lời phát biểu một mức thuế.
 
 ### Quy trình 2 — Gợi ý HS ứng viên (top-3 + bằng chứng nguyên văn)
@@ -144,13 +142,10 @@ Mỗi loại trừ bên dưới là một quyết định có lý do, không ph�
 
 - [Chỉ mục bộ nhớ Agent](index.md)
 - [Quy tắc Agent](AGENTS.md)
-- [Quy tắc dự án](project-rules.md)
 - [Quy tắc nghiệp vụ](business-rules.md)
 - [Tổ chức mã nguồn](docs/code-organization.md)
-- [Quyết định kiến trúc](architecture-decisions/README.md)
-- [Lịch sử rà soát](review-history/README.md)
-- [Kế hoạch khởi động](planning/00-bootstrap.md)
-- [Danh sách công việc](planning/01-task-list.md)
+- [Quyết định kiến trúc](index.md#quyết-định)
+- [Nhật ký tiến độ](planning/02-progress.md)
 - Các ghi chú khái niệm lĩnh vực nằm trong `concepts/`; các ghi chú quy trình nằm trong `workflows/`. Liên kết chúng từ [chỉ mục](index.md) khi chúng được thêm vào.
 
 ## Bối cảnh kỹ thuật
@@ -190,8 +185,7 @@ Mỗi loại trừ bên dưới là một quyết định có lý do, không ph�
 ## Ràng buộc
 
 **Kế thừa từ APB** (xem [Quy tắc Agent](AGENTS.md)):
-- **Toàn bộ tài liệu dự án, code, comment, định danh, thông điệp commit, tên file và tên API bằng tiếng Anh.** Chủ sở hữu là người Việt; quy tắc repo là tài liệu tiếng Anh.
-- **Giao tiếp với chủ dự án bằng tiếng Việt.**
+- Ngôn ngữ: xem [Quy tắc Agent](AGENTS.md).
 - **Chỉ commit khi được yêu cầu.** Không bao giờ bắt đầu triển khai trước khi kế hoạch và thiết kế được rà soát.
 - Markdown thuần với liên kết tương đối; không cú pháp chỉ dành cho Obsidian; các ghi chú tự chứa đủ để đọc bên ngoài chế độ xem đồ thị.
 
@@ -206,7 +200,7 @@ Mỗi loại trừ bên dưới là một quyết định có lý do, không ph�
 
 **Chặn — giải quyết trước khi thiết kế schema:**
 
-1. ✅ **`provisionTree` / `referenceProvisions` của vbpl — ĐÃ GIẢI QUYẾT (2026-07-18, TASK-004, một phần).** Lấy mẫu **21 văn bản đã công bố**: trường `provisionTree` = `null` trên 21/21; `referenceProvisions` = `null` trên mọi tham chiếu (chỉ ở **cấp văn bản**). **NHƯNG** cây điều khoản Chương→Điều→Khoản→Điểm CÓ qua một Server Action **khác** (`94635012466e…`, research 04 không thấy). Kết luận cho Giai đoạn 5: cấu trúc cấp điều khoản để chunk RAG **có sẵn, máy đọc được**; **cạnh trích dẫn cấp điều khoản KHÔNG có — phải tự dựng.** Xem [research/task-004-vbpl-provisiontree](../../research/task-004-vbpl-provisiontree/README.md).
+1. ✅ **`provisionTree` / `referenceProvisions` của vbpl — ĐÃ GIẢI QUYẾT (2026-07-18, TASK-004, một phần).** Lấy mẫu **21 văn bản đã công bố**: trường `provisionTree` = `null` trên 21/21; `referenceProvisions` = `null` trên mọi tham chiếu (chỉ ở **cấp văn bản**). **NHƯNG** cây điều khoản Chương→Điều→Khoản→Điểm CÓ qua một Server Action **khác** (`94635012466e…`, research 04 không thấy). Kết luận cho Giai đoạn 5: cấu trúc cấp điều khoản để chunk RAG **có sẵn, máy đọc được**; **cạnh trích dẫn cấp điều khoản KHÔNG có — phải tự dựng.** Xem [research/task-004-vbpl-provisiontree](../research/task-004-vbpl-provisiontree/README.md).
 2. **Các route trên `vbpl-bientap-gateway.moj.gov.vn/api` là gì? — VẪN CHƯA ÁNH XẠ (thử lại 2026-07-18, TASK-004).** Base URL vẫn hardcode trong chunk `3600-*.js`; gateway còn sống (`/actuator/health` UP, `/api` → 404 Spring). Nhưng **route không liệt kê được từ client** — không literal `/api/...` trong ~4MB JS; đường dẫn ghép động, gọi phía server. Ước tính "~30 phút xóa bước headless" của research 04 **không khả thi từ phía client**; muốn map phải bắt lưu lượng server-side (nguồn: TASK-004 2026-07-18, research 04).
 3. **Ánh xạ int `referenceType` → nhãn là gì? — VẪN CHƯA CÓ (mở rộng 2026-07-18).** Nay quan sát được **8 giá trị (1, 3, 4, 7, 8, 9, 10, 12)** qua 21 văn bản (research 04 trước đó thấy 3, 4, 9, 12). **27 nhãn quan hệ đã biết; phép nối vẫn chưa có** (nguồn: TASK-004 2026-07-18; research 04, 07).
 

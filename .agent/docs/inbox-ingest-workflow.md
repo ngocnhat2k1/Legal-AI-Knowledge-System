@@ -169,7 +169,7 @@ parser văn xuôi lên chúng thì ra đủ căn cứ và điều khoản, **m�
 văn bản lớp A ──────┤
                     └─ danh mục/phụ lục     → parser tách ô \x07
                                               (research/task-008-congbao-loader/parse_nd26.py,
-                                               research/task-003-evfta-parser/parse_tariff_doc.py)
+                                               task-003 parse_tariff_doc.py (git 11275bc))
                               │
                               └─► hợp nhất, mỗi hàng bảng mang danh tính phụ lục (Phụ lục I/II/…)
 ```
@@ -549,42 +549,7 @@ Ba mục cuối quan trọng nhất. Nhãn nằm trong file mà mô hình không
 ban hành" — với `09-bvhttdl.pdf` thì mục đó sẽ **nghiệm thu chính cái sai**. Nay tiêu chí gắn
 thêm điều kiện phải có bản ghi tra cứu Công báo.*
 
-## Đợt đầu — đã chạy thật 2026-09-10
-
-### Kết quả
-
-| Hạng mục | Kết quả |
-|---|---|
-| VBQPPL từ Công báo vào kho | **8** — 292/2026/NĐ-CP · 336/2026/NĐ-CP · 37/2026/NĐ-CP · 36/2026/TT-BKHCN · 72/2022/NĐ-CP · 11/2024/TT-BTTTT · 52/2018/TT-BCT · 18/2019/QĐ-TTg. 2.165 điều khoản, 999 chunk, 134 bảng phụ lục, tất cả `auto_unverified`, cả 8 qua cổng cấu trúc và mẫu ngẫu nhiên 8/8 |
-| Quan hệ thay thế / bãi bỏ | **19**, chép nguyên văn từ "Điều khoản thi hành" |
-| Chú giải chi tiết EN2022 (tiếng Việt) | 96 chương · 1.306 bản ghi · 4,77 triệu ký tự · tách 98,5% số nhóm |
-| SEN 2022 (tiếng Việt) | 96 chương · 237.172 ký tự |
-| Công văn phân loại | 29 văn bản · 44 mã HS · đọc kép · 103 chỗ OCR được ảnh gốc sửa |
-| Tài liệu chỉ vào notebook | 10 — A-local 1 · A-ocr 1 · B 2 · C 3 · D 3 |
-| Notebook | **32 nguồn** (16 cũ + 16 mới) · 10,9 triệu ký tự · nguồn lớn nhất 77,5% ngưỡng Docs |
-
-### Phân lớp cuối cùng của hộp thư đến
-
-| File trong hộp thư | Thực chất | Đích |
-|---|---|---|
-| `292_2026_ND-CP…doc` | NĐ 292/2026/NĐ-CP, Công báo 470149 | nguồn 13 |
-| *(không có trong hộp thư)* | NĐ 336/2026/NĐ-CP, 470341 — **chưa có hiệu lực tới 15/10/2026** | nguồn 14 |
-| `37 2026 NĐ-CP…pdf` + `Nghị định quy định nhãn dán.pdf` | NĐ 37/2026/NĐ-CP (file thứ hai là **Phụ lục I** của chính nó), 468865 | nguồn 15 |
-| `THONG TU 36 KHCN.pdf` | **bản chưa ký** của TT 36/2026/TT-BKHCN đã ban hành, 469968 | nguồn 15 (bản Công báo) |
-| NĐ 72/2022 · TT 11/2024-BTTTT (2 file trùng) · QĐ 18/2019-TTg · TT 52/2018-BCT | bản scan của VBQPPL đã đăng | nguồn 16 (bản Công báo) |
-| `Số 1725QĐ-BCT…pdf` | quyết định cá biệt, không đăng Công báo → OCR đọc kép | nguồn 16 |
-| `Nghị-quyết-12-2026-NQ-HĐND.pdf` | văn bản của HĐND TP.HCM | nguồn 16 |
-| CV 18648 `.doc` · CV 20991 `.jpg` | công văn hướng dẫn | nguồn 40 |
-| `PHAN TICH PHAN LOAI/*` (29 file) | công văn, thông báo phân loại | nguồn 40 |
-| `KO QE.pdf` | **bản chưa ký của CV 18648** (giống 0,99) | không nạp — đã có bản ký |
-| dự thảo TT BNV · dự thảo CV lưỡng dụng · `09-bvhttdl.pdf` | không tìm thấy bản đã ký | nguồn 90 |
-| tóm tắt NĐ 292 · `Danh_muc_RR…xlsx` · danh sách qua KVGS | nội bộ, tác nghiệp | nguồn 91 |
-| `CHU GIAI/chu giai HS 2024/*` · `Chu-giai-SEN (1).pdf` | EN2022 · SEN 2022 | nguồn 50–57 · 58 |
-| `PHU LUC III_SEN.pdf` | SEN của TT 156/2011 — đã bị thay | không nạp (R8) |
-| `Phu_luc_Nghi_dinh_292…xlsx` · `*.rar` · `~WRL*.tmp` · bản trùng | trùng hoặc rác | không nạp |
-| `khach-hang-20260910-1019.csv` | dữ liệu khách hàng | **không mở, không nạp** |
-
-### Địa hình thật — chỉ lộ ra khi chạy
+## Bẫy đã gặp khi chạy thật (đợt đầu 2026-09-10)
 
 1. **pypdf làm vỡ âm tiết tiếng Việt** (`"truy ền ho ặc"`) trên 85/100 file Chú giải — trông vẫn có
    chữ, nhưng tìm "hoặc" không khớp. pymupdf: 0,004 chỗ/1000 ký tự. pdfplumber không vỡ âm tiết
@@ -635,8 +600,6 @@ thêm điều kiện phải có bản ghi tra cứu Công báo.*
 
 ## Chưa xác minh / không được dựa vào
 
-- **Kiểm kiểu TypeScript cho `db/seed/legal.ts` chưa hoàn tất** — `node_modules` hỏng. Không lỗi nào
-  trỏ vào 4 dòng đã thêm, nhưng đó không phải bằng chứng đã kiểm.
 - **Bài test golden (recall@k) chưa đo lại** với kho 15 văn bản — cần DB. Kho lớn hơn có thể làm
   recall trên câu hỏi cũ dịch chuyển.
 - **Tình trạng hiệu lực của 52/2018, 18/2019, 72/2022, 11/2024** chỉ dựa trên ngày hiệu lực đã tới —

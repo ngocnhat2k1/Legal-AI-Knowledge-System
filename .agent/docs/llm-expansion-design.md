@@ -11,7 +11,6 @@ related:
   - ../business-rules.md
   - ../concepts/hs-classification.md
   - ../concepts/legal-rag-retrieval.md
-  - ../planning/03-llm-expansion-tasks.md
 ---
 
 # Thiết kế: dùng nhiều LLM hơn mà không nới một rào chắn nào
@@ -162,7 +161,7 @@ buộc 1 (chuyển sang API trả phí) — không phải cắt bước bằng c
 - **Không** thêm mức `auto_gated` (Phần 1.4). Giữ hai mức `verified` / `auto_unverified`.
 - **Mốc M4**: top-3 ở nhóm 4 số **≥ 85%** trên golden set, và **100%** khẳng định phân loại có bằng
   chứng trích được. Mốc 85% đặt dưới 91,5% của DAW vì golden set của dự án là *thực tiễn quá khứ của
-  công ty*, không phải ground truth pháp lý — xem [TASK-001](../planning/01-task-list.md).
+  công ty*, không phải ground truth pháp lý — xem [golden set](../../fixtures/golden-set/README.md).
 - **WCO EN** không nằm trên đường tới hạn của bất kỳ mốc nào; cắm vào khi có license.
 
 ## Rủi ro đã biết
@@ -199,4 +198,4 @@ buộc 1 (chuyển sang API trả phí) — không phải cắt bước bằng c
 - [Đánh giá](evaluation.md) — golden set và các cổng ship mà Phần 0 biến thành `yarn eval`
 - [Truy xuất RAG pháp lý](../concepts/legal-rag-retrieval.md) — thiết kế truy hồi mà Phần 2 sửa
 - [Phân loại mã HS](../concepts/hs-classification.md) — thứ tự GRI và thứ bậc thẩm quyền mà Phần 3/4 thi hành
-- [Danh sách công việc mở rộng LLM](../planning/03-llm-expansion-tasks.md)
+- Kế hoạch M0 (`03-llm-expansion-tasks.md`, xong 2026-08-14): git 11275bc

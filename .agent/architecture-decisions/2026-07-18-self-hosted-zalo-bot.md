@@ -6,7 +6,6 @@ supersedes:
   - 2026-07-17-web-app-not-zalo.md
 related:
   - 2026-07-17-web-app-not-zalo.md
-  - ../planning/00-bootstrap.md
 ---
 
 # Bot Zalo tự lưu trữ, đóng gói trong app (bổ sung web app)

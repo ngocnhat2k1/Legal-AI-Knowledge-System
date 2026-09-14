@@ -62,6 +62,6 @@ chủ đề cho ~15.500 văn bản, đối chiếu) phải đẩy sang tầng d�
 
 ## Links
 
-- Planning: [03-llm-expansion-tasks.md](../planning/03-llm-expansion-tasks.md)
+- Planning: `03-llm-expansion-tasks.md` (M0 xong 2026-08-14; trong git 11275bc)
 - Design: [llm-expansion-design.md](../docs/llm-expansion-design.md)
 - Review: —

@@ -406,4 +406,4 @@ Một danh mục kiểm tra rút ra từ những điều trên, không phải m�
 - [Quy tắc nghiệp vụ](../business-rules.md) — chính sách bền vững và các quy tắc tuân thủ; kỷ luật `as_of` + trạng thái ở §5 thuộc về đây khi các quy tắc được ghi lại.
 - [Chỉ mục bộ nhớ tác nhân](../index.md) — bản đồ điều hướng cho bộ nhớ bền vững, bao gồm các ghi chú `concepts/` cùng cấp.
 - [Quy tắc tác nhân](../AGENTS.md) — quy ước kho mã mà ghi chú này tuân theo (tài liệu tiếng Anh, Markdown thuần, liên kết tương đối).
-- [Chỉ mục quyết định kiến trúc](../architecture-decisions/README.md) — ghi nhận lựa chọn VBHN-làm-tầng-văn-bản và bộ-lọc-thời-gian-cứng (§3, §6) dưới dạng ADR khi chúng được đưa ra.
+- [Chỉ mục quyết định kiến trúc](../index.md#quyết-định) — ghi nhận lựa chọn VBHN-làm-tầng-văn-bản và bộ-lọc-thời-gian-cứng (§3, §6) dưới dạng ADR khi chúng được đưa ra.

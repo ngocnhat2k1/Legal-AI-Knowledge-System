@@ -91,4 +91,4 @@ DATABASE_URL="postgres://app:app@localhost:5433/customs_assistant" corepack yarn
 
 - [Parser bảng .doc (TASK-003)](../task-003-evfta-parser/README.md) — textutil + dấu ô `\x07`
 - [Schema (TASK-007)](../task-007-schema/README.md) — annex-in-PK, EXCLUDE khoảng, append-only
-- [Danh sách công việc — TASK-008/009](../../.agent/planning/01-task-list.md)
+- [TASK-009](../task-009-amendment-chain/README.md)

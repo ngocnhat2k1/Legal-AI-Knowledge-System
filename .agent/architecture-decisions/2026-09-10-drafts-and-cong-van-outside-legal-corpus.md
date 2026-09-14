@@ -145,7 +145,7 @@ quyết: vá snapshot 0007–0009 rồi mới sửa `db/schema/index.ts` và đ�
   `legal_verification` thiếu mức chưa-ban-hành, snapshot 0007–0009 vẫn thiếu.
 
 **Việc còn tồn, chưa có người và chưa có hạn** — phải chuyển vào
-[`01-task-list.md`](../planning/01-task-list.md), không được để sống trong ADR:
+[`04-inbox-ingest-tasks.md`](../planning/04-inbox-ingest-tasks.md), không được để sống trong ADR:
 
 1. ~~Dò Công báo cho cả 5 ca nghi vấn của đợt đầu.~~ **Xong 2026-09-10**: 2 đã ban hành (TT 36/2026/TT-BKHCN, CV 18648/CHQ-GSQL) — nạp bản đã ký; 3 không tìm thấy (dự thảo TT BNV, dự thảo CV lưỡng dụng, `09-bvhttdl.pdf`) — ở lớp C.
 2. Đặt lịch rà định kỳ cho `90-CHUA-XAC-DINH`.

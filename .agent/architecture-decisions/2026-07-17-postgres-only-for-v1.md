@@ -127,7 +127,7 @@ Chỉ áp dụng cho v1 — hai tính năng được nêu tên trong [Bối cả
 
 - [Bối cảnh Dự án](../project-context.md)
 - [Quy tắc Nghiệp vụ](../business-rules.md)
-- [Chỉ mục Quyết định Kiến trúc](README.md)
+- [Chỉ mục Quyết định Kiến trúc](../index.md#quyết-định)
 - [Hệ thống Biểu thuế](../concepts/tariff-system.md)
 - [Nguồn Dữ liệu](../concepts/data-sources.md)
 - [Phân loại HS](../concepts/hs-classification.md)

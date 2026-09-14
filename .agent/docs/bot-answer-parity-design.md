@@ -66,7 +66,7 @@ Ghi thành ADR: [Bảng bằng chứng chung và câu trả lời dài có kiể
 | 3 | **Đường trả lời** | `POST /answer` + bot dùng nó; test cổng kiểm xanh |
 | 4 | **Nghiệm thu** | Chấm mù ≥ 70% thắng/ngang; nhóm an toàn 100% |
 
-Phân loại HS theo GRI/Chú giải (M3–M4 của [kế hoạch mở rộng LLM](../planning/03-llm-expansion-tasks.md))
+Phân loại HS theo GRI/Chú giải (M3–M4 của [thiết kế mở rộng LLM](llm-expansion-design.md))
 **không** nằm trong chương trình này. **[v2]** Nhưng câu hỏi "hàng này mã gì" **có** được trả lời từ
 công văn / Chú giải chi tiết theo chế độ ứng viên (§3.8) — vì notebook trả lời được, và bỏ đi là mất
 ngang bằng ở 3/14 câu test.
@@ -1135,16 +1135,14 @@ quan khác".
 1. **Một phép gập số hiệu, hai phía.** `foldDocNumber(s)` (API, `legal.scope.ts`) và `sameDocNumber(a, b)`
    (bot, `parse.mjs`, so hai giá trị gập cùng cách): NFC, bỏ khoảng trắng, viết hoa, `Đ → D`, bỏ số 0 đầu
    của nhóm số đầu. `8/2015/ND-CP` ≡ `08/2015/NĐ-CP`: kho đã coi số 0 đầu là cách gõ thường
-   (`docNumberStatedIn`, `corpusHas`, `resolveDocuments`). Đoạn cơ quan ban hành so chặt:
+   (`docNumberStatedIn`, `resolveDocuments`). Đoạn cơ quan ban hành so chặt:
    `69/2018/TT-BTC` ≠ `69/2018/NĐ-CP`; `69/2018` ≠ `69/2018/NĐ-CP`.
 2. **Bot gửi số đầy đủ.** `parseDocRef` trả thêm `full` như API: `issuer ? label : null`. Đoạn cơ quan
    ban hành có thể kết bằng chữ số (`107/2016/QH13`, `NQ-UBTVQH14`): cả hai phía đọc nó bằng
    `\/\s*[a-zà-ỹ][a-zà-ỹ\d-]*`, vì cắt ở chữ số đầu sẽ làm luật kho đang giữ (qua VBHN) thành "không có". Ba chỗ gọi gửi
    `ref.full ?? ref.core`. Số hiệu router trả chỉ giữ đoạn cơ quan ban hành khi người dùng đã viết đoạn đó
    (`statedDocNumber`, gọi ở `index.mjs`); không thì gửi số/năm: hỏi "Thông tư 39/2018" mà router đoán
-   39/2018/TT-BNNPTNT sẽ biến văn bản kho đang giữ thành "không có". Khi có `ref.full`, `corpusHas` so bằng `sameDocNumber` với `number` /
-   `consolidates` thay vì so tiền tố `core`: kho có 69/2018/NĐ-CP mà người dùng hỏi 69/2018/TT-BTC thì
-   **không** coi là có.
+   39/2018/TT-BNNPTNT sẽ biến văn bản kho đang giữ thành "không có".
 3. **API.**
    - `lookupGazette`: nhánh khớp đúng so gập **trong SQL** — `regexp_replace(translate(upper(number), 'Đ',
      'D'), '^0+', '') = ${foldDocNumber(ref.full)}` — thay `upper(number) = ${ref.full}`. So trong SQL chứ
@@ -1238,8 +1236,7 @@ test hàm thuần: không import `index.mjs` (chạy `main()` và đăng nhập 
     '69/2018/NĐ-CP') === true`; `sameDocNumber('8/2015/ND-CP', '08/2015/NĐ-CP') === true`;
     `sameDocNumber('69/2018/TT-BTC', '69/2018/NĐ-CP') === false`; `missingKind('69/2018/NĐ-CP',
     [69/2018/NĐ-CP, 69/2018/TT-BTC], 'similar')` → `exact` với đúng khớp NĐ; `formatMissingDoc` không
-    liệt kê `69/2018/NĐ-CP` như văn bản của cơ quan khác; `corpusHas([{ number: '69/2018/NĐ-CP' }],
-    parseDocRef('69/2018/TT-BTC')) === false`.
+    liệt kê `69/2018/NĐ-CP` như văn bản của cơ quan khác.
 22. `formatGeneral`: `reply` chứa `15%`, `mười phần trăm`, `theo Nghị định 26/2023/NĐ-CP`, `mã 8481.80`,
     `mã HS 84818099` → mỗi ca ra `CAPABILITIES`; `'- a\n- b'` → hai dòng `ul`.
 

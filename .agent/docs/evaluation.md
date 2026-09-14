@@ -400,4 +400,4 @@ Cả hai agent đồng ý ở hai điểm: `www.customs.gov.vn/robots.txt` trả
 - [ADR: Dùng VBHN đã công bố, không phải hợp nhất tính toán](../architecture-decisions/2026-07-17-use-published-vbhn-not-computed-consolidation.md)
 - [Quy tắc nghiệp vụ](../business-rules.md) — trách nhiệm pháp lý của người khai, chính sách từ chối
 - [Quy trình khai báo hải quan](../workflows/customs-declaration.md) — nơi các câu hỏi golden set đến từ
-- [Chỉ mục tài liệu Agent](README.md)
+- [Chỉ mục](../index.md)

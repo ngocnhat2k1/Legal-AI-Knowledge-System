@@ -73,7 +73,7 @@ Tính song thời gian nói riêng là không thể hoãn. ND 72/2026/NĐ-CP đ�
 
 Áp dụng cho:
 
-- `.agent/planning/01-task-list.md` — sắp thứ tự v1
+- `.agent/planning/02-progress.md` — sắp thứ tự v1
 - `.agent/concepts/tariff-system.md`, `.agent/concepts/hs-classification.md` — xây trước
 - `.agent/concepts/legal-rag-retrieval.md` — được giữ làm kiến thức bền vững, **không** phải mục tiêu xây dựng của v1
 - `.agent/docs/code-organization.md` — ranh giới module phải giữ cho lõi biểu thuế không có phụ thuộc truy xuất
@@ -121,4 +121,4 @@ Không áp dụng cho: nền tảng dùng chung (kho song thời gian, nạp Cô
 - [Nguồn Dữ liệu](../concepts/data-sources.md)
 - [Văn bản Pháp luật Việt Nam](../concepts/vietnamese-legal-documents.md)
 - [Quy trình Khai báo Hải quan](../workflows/customs-declaration.md)
-- [README Quyết định Kiến trúc](README.md)
+- [Chỉ mục Quyết định Kiến trúc](../index.md#quyết-định)

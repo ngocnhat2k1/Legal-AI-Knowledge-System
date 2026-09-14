@@ -1,5 +1,7 @@
 # TASK-003 — Chứng minh parser nhận-biết-bảng trên dòng EVFTA
 
+> Spike đã xong; script của nó đã gỡ khỏi repo. Bản gốc: `git show 11275bc:research/task-003-evfta-parser/<tên file>`.
+
 **Trạng thái: XONG (2026-07-18). Lỗ hổng đã bịt. Giai đoạn 1 có thể gồm EVFTA + RCEP, không chỉ MFN.**
 
 ## Câu hỏi
@@ -33,7 +35,7 @@ Parser thống nhất tách theo **cả hai** (`[\x07\n]`).
 | EVFTA ND 116/2022 (phần công báo 397+398) | `2101.11.11` | `['29','25,4','21,8','18,1','14,5','10,9']` — **6 ô** ✓ | **773/773 dòng HS = 6 cột** |
 | RCEP ND 129/2022 (phần công báo 115+116) | `0101.21.00` | `['0','0','0','0','0','0']` — **6 ô** ✓ (không hồi quy) | 1309/1324 = 6 cột; 15 dòng 0 cột; **9 dòng có `*`** (loại trừ) |
 
-Cùng một parser ([parse_tariff_doc.py](parse_tariff_doc.py)) chạy cho cả hai — thỏa tiêu chí
+Cùng một parser (`parse_tariff_doc.py`) chạy cho cả hai — thỏa tiêu chí
 "không hồi quy trên trường hợp RCEP vốn đã hoạt động".
 
 ## Cảnh báo cho bộ nạp production (TASK-008)
@@ -60,4 +62,4 @@ Cần: macOS `textutil` (có sẵn). Không cần LibreOffice, không cần `pyt
 
 - [Nguồn dữ liệu](../../.agent/concepts/data-sources.md) — mục cảnh báo parser (nay đã giải quyết).
 - [Hệ thống biểu thuế](../../.agent/concepts/tariff-system.md) — cấu trúc phụ lục, `*` loại trừ.
-- [Danh sách công việc — TASK-003](../../.agent/planning/01-task-list.md), TASK-008 (bộ nạp).
+- [TASK-008 — bộ nạp](../task-008-congbao-loader/README.md).

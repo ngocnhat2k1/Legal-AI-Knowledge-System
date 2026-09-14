@@ -7,7 +7,7 @@ related:
   - tariff-system.md
   - hs-classification.md
   - ../../fixtures/golden-set/README.md
-  - ../planning/01-task-list.md
+  - ../planning/02-progress.md
 ---
 
 # Tài sản dữ liệu nội bộ của công ty
@@ -16,7 +16,7 @@ Ghi chú này liệt kê các dữ liệu **do chủ dự án cung cấp** — t
 
 **Quy tắc chi phối — sao chép nguyên từ triết lý dự án:**
 
-1. **Chỉ tờ khai đã thông quan mới là oracle độc lập.** Đó là giao dịch thật, được hải quan kiểm chứng, không nằm ở hạ nguồn giả định của parser. → nguồn chính cho golden set ([TASK-001](../planning/01-task-list.md), xem [fixtures/golden-set](../../fixtures/golden-set/README.md)).
+1. **Chỉ tờ khai đã thông quan mới là oracle độc lập.** Đó là giao dịch thật, được hải quan kiểm chứng, không nằm ở hạ nguồn giả định của parser. → nguồn chính cho golden set (TASK-001, xem [fixtures/golden-set](../../fixtures/golden-set/README.md)).
 2. **Biểu thuế thương mại và file SOP là nguồn THỨ CẤP** — chúng là bản chép/tra từ nghị định. Dùng làm **cross-check** và **kiến thức phân loại**, **không bao giờ** làm oracle vàng cũng **không** làm nguồn nạp có thẩm quyền. Nguồn chân lý pháp lý vẫn là văn bản nghị định (xem [Nguồn dữ liệu](data-sources.md)).
 3. Không được rửa một điều chưa chắc thành một khẳng định chắc. Các file này có bẫy snapshot và lỗi biên soạn riêng — ghi rõ, đừng làm mượt.
 
@@ -53,8 +53,8 @@ Vị trí gốc (phiên nạp 2026-07-18): thư mục tải từ Google Drive `~
 Mỗi HS × mọi biểu thuế: NK thông thường, NK ưu đãi (MFN), VAT, và **18 FTA** — ACFTA, ATIGA, AJCEP, VJEPA, AKFTA, AANZFTA, AIFTA, VKFTA, VCFTA, VN-EAEU, CPTPP, AHKFTA, EVFTA, UKVFTA, VN-LÀO, VN-CAM, VIFTA, RCEP (nhiều cột theo từng nước) — cộng TTĐB, BVMT, thuế XK (kèm XK CPTPP/EV/UKV). **Mỗi cột thuế đi kèm `Văn bản` (nghị định) + `Ngày hiệu lực`.**
 
 **Vai trò:**
-- **Cross-check tự động** cho [TASK-008](../planning/01-task-list.md)/TASK-012 (thay đối chiếu tay). Đã xác nhận: dòng `8481.80.99` cho NK ưu đãi=10 (ND 26/2023) + ACFTA=0 (ND 118/2022) → **khớp chính xác** dữ liệu tờ khai thật ở mục 1. Hai nguồn độc lập đồng thuận.
-- **Bản đồ schema/phạm vi** cho [TASK-007](../planning/01-task-list.md): xác nhận các cấu trúc research cảnh báo — RCEP có cột **theo từng nước** (Điều 6.2), ký hiệu `0 (-KH, PH)` = **loại trừ** Campuchia/Philippines (không phải 0), tách cột **NK và XK riêng** (xử lý bẫy phụ lục về cấu trúc).
+- **Cross-check tự động** cho TASK-008/TASK-012 (thay đối chiếu tay). Đã xác nhận: dòng `8481.80.99` cho NK ưu đãi=10 (ND 26/2023) + ACFTA=0 (ND 118/2022) → **khớp chính xác** dữ liệu tờ khai thật ở mục 1. Hai nguồn độc lập đồng thuận.
+- **Bản đồ schema/phạm vi** cho TASK-007: xác nhận các cấu trúc research cảnh báo — RCEP có cột **theo từng nước** (Điều 6.2), ký hiệu `0 (-KH, PH)` = **loại trừ** Campuchia/Philippines (không phải 0), tách cột **NK và XK riêng** (xử lý bẫy phụ lục về cấu trúc).
 
 **Caveat (bắt buộc giữ):**
 - **Snapshot một thời điểm (2026-04-05)** — mỗi biểu chỉ có MỘT mức hiện hành, **không có chuỗi thời gian** → không mô hình hóa được "nghị định hết hiệu lực rồi hồi quy" (bẫy ND 72/2026). Truy vấn ngày sau 2026-04-30 cho mã hồi quy sẽ sai.
@@ -112,4 +112,4 @@ Không nguồn nào một mình đủ; cùng nhau là nền vững cho Giai đo�
 - [Hệ thống biểu thuế](tariff-system.md) — bẫy phụ lục, khoảng trống thời gian, vì sao snapshot không đủ.
 - [Phân loại mã HS](hs-classification.md) — vì sao HS là ứng viên kèm bằng chứng; các ca khó SOP nuôi phần này.
 - [fixtures/golden-set](../../fixtures/golden-set/README.md) — luật chơi golden set và schema.
-- [Danh sách công việc](../planning/01-task-list.md) — TASK-001, 007, 008, 010, 012.
+- [Nhật ký tiến độ](../planning/02-progress.md) — trạng thái TASK-001, 007, 008, 010, 012.

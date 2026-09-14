@@ -86,8 +86,7 @@ là câu hỏi nghiên cứu của nó; mỗi báo cáo chỉ đề cập đến
 hai danh sách không đầy đủ tạo ra một danh sách vẫn không đầy đủ, và tạo cho nó một vẻ đầy đủ giả tạo.
 
 **Đừng nạp dữ liệu dựa trên bảng này.** Hãy thiết lập chuỗi thực từ Công báo — nơi công bố mọi nghị
-định theo thứ tự công báo — trước khi nạp dữ liệu Giai đoạn 1. Xem `Câu hỏi mở 6` trong
-[Kế hoạch khởi tạo](../planning/00-bootstrap.md) và TASK-009 trong [Danh sách công việc](../planning/01-task-list.md),
+định theo thứ tự công báo — trước khi nạp dữ liệu Giai đoạn 1. Xem [TASK-009](../../research/task-009-amendment-chain/README.md),
 vốn nêu cùng một ràng buộc: *đừng gộp chúng và cho rằng phép hợp là đúng*.
 
 ### ✅ ĐÃ XÁC LẬP (TASK-009, 2026-07-18) — chuỗi thực, đối chiếu nguồn chính thức

@@ -155,4 +155,4 @@ Yêu cầu chữ ký số và sự vắng mặt của API cùng nhau có nghĩa 
 - [Bối cảnh dự án](../project-context.md) — Customs Assistant là gì, phục vụ ai, và các ranh giới v1 của nó.
 - [Quy tắc nghiệp vụ](../business-rules.md) — các quy tắc bền vững về chính sách, kiểm tra hợp lệ và tuân thủ được rút ra từ quy trình này.
 - [Chỉ mục tác nhân](../index.md) — bản đồ của bộ nhớ dự án bền vững.
-- [Chỉ mục quyết định kiến trúc](../architecture-decisions/README.md) — ghi lại tại đây bất kỳ quyết định tích hợp (hoặc cố ý không tích hợp) với VNACCS, VNSW, hoặc eCoSys, xét đến vòng đời khoảng 18 tháng của VNACCS.
+- [Chỉ mục quyết định kiến trúc](../index.md#quyết-định) — ghi lại tại đây bất kỳ quyết định tích hợp (hoặc cố ý không tích hợp) với VNACCS, VNSW, hoặc eCoSys, xét đến vòng đời khoảng 18 tháng của VNACCS.

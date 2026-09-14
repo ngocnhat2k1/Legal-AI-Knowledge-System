@@ -13,8 +13,8 @@ related:
 
 # Vận hành Customs Assistant trên server dev của MONA
 
-Runbook cho bản đang chạy: kiểm tra, deploy bản mới, bot Zalo, sao lưu, gỡ bỏ. Cách dựng lần đầu và lý do từng
-bước nằm ở [kế hoạch 06](../planning/06-deploy-mona-dev-server.md); lý do chọn server này nằm ở
+Runbook cho bản đang chạy: kiểm tra, deploy bản mới, bot Zalo, sao lưu, gỡ bỏ. Cách dựng lần đầu nằm ở [README](../../README.md#triển-khai-máy-chủ), việc còn dở ở
+[kế hoạch 06](../planning/06-deploy-mona-dev-server.md); lý do chọn server này nằm ở
 [ADR 2026-09-13](../architecture-decisions/2026-09-13-host-on-mona-dev-server.md).
 
 Trong tài liệu này, `<MONA_DEV_HOST>` là đích ssh của server. Giá trị thật và đặc điểm của host dùng chung nằm ở
@@ -453,7 +453,7 @@ Số đo lệch nhiều so với bảng này là dấu hiệu cần điều tra:
 
 ## 11. Kiến thức liên quan
 
-- [Kế hoạch 06: triển khai lên server MONA dev](../planning/06-deploy-mona-dev-server.md): các bước dựng lần đầu, Task 8–10 còn dở, cấu hình và kết quả thực tế
+- [Kế hoạch 06: triển khai lên server MONA dev](../planning/06-deploy-mona-dev-server.md): Task 8–10 còn dở
 - [ADR 2026-09-13: host trên server dev dùng chung của MONA](../architecture-decisions/2026-09-13-host-on-mona-dev-server.md)
 - [README, mục Triển khai máy chủ](../../README.md#triển-khai-máy-chủ): sao lưu và phục hồi
 - [Bộ nhớ hội thoại bot Zalo](zalo-bot-conversation-memory.md): bảng `conversation`, nơi lấy `thread_id`

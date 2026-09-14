@@ -1,5 +1,7 @@
 # TASK-004 — `provisionTree` / `referenceProvisions` của vbpl.vn: đo trên 21 văn bản
 
+> Spike đã xong; script của nó đã gỡ khỏi repo. Bản gốc: `git show 11275bc:research/task-004-vbpl-provisiontree/<tên file>`.
+
 **Trạng thái: XONG (2026-07-18). Câu trả lời là MỘT PHẦN — và sắc thái này định hình schema Giai đoạn 5.**
 
 - **Trường `provisionTree` (trong payload quan hệ): `null` trên cả 21/21 văn bản đã công bố.** Đúng như research 04 thấy.
@@ -60,7 +62,7 @@ Có (ít nhất) **ba** Next.js Server Action khác nhau trên trang chi tiết 
 
 **Self-check của `sample_vbpl.py`:** `provisionTree` = `{'null': 21}`; `any referenceProvisions populated? False`; `documents with a populated outline tree: 21/22` (chỉ control 12898 = 0). `stale_hash_suspected: false`.
 
-Dữ liệu thô đầy đủ (kể cả `referenceType` từng văn bản) trong [samples.json](samples.json).
+Dữ liệu thô đầy đủ (kể cả `referenceType` từng văn bản) trong `samples.json`.
 
 ## Bonus — gateway MoJ (theo yêu cầu chủ dự án)
 
@@ -93,5 +95,4 @@ python3 sample_vbpl.py 187045 <uuid> ...   # lấy mẫu id tùy chọn
 
 - [Văn bản pháp luật Việt Nam](../../.agent/concepts/vietnamese-legal-documents.md) — nơi ghi phát hiện chính (§6).
 - [Nguồn dữ liệu](../../.agent/concepts/data-sources.md) — mục vbpl.vn, câu hỏi mở đã giải, và mục gateway.
-- [Danh sách công việc](../../.agent/planning/01-task-list.md) — TASK-004.
 - research task trước: [TASK-003 EVFTA parser](../task-003-evfta-parser/README.md).

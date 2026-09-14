@@ -7,7 +7,7 @@ related:
   - 2026-07-17-bitemporal-validity-from-day-one.md
   - 2026-07-17-no-llm-on-tariff-numbers.md
   - ../docs/code-organization.md
-  - ../planning/01-task-list.md
+  - ../planning/02-progress.md
 ---
 
 # Công cụ Repo: Drizzle + Yarn + Docker (Khung sườn TASK-006)
@@ -70,4 +70,4 @@ Ràng buộc định hình quyết định là **ngân sách rà soát, không p
 - [Hiệu lực bitemporal ngay từ đầu](2026-07-17-bitemporal-validity-from-day-one.md) — ràng buộc lược đồ TASK-007 mà công cụ này phải phục vụ
 - [Không dùng LLM cho con số biểu thuế](2026-07-17-no-llm-on-tariff-numbers.md) — pgvector không chạm bảng thuế
 - [Tổ chức mã nguồn](../docs/code-organization.md) — ánh xạ thư mục thực tế
-- [Danh sách công việc](../planning/01-task-list.md) — TASK-006 và tiêu chí chấp nhận
+- [Nhật ký tiến độ](../planning/02-progress.md) — trạng thái TASK-006
