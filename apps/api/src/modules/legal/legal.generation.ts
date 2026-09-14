@@ -31,7 +31,7 @@ function runClaude(prompt: string): Promise<string> {
     const child = spawn('claude', ['-p'], {
       env: { ...process.env, HOME: tmpdir() },
       // Evidence sections made the prompt several times longer; spec §3.7 gives the writing call 100 s.
-      timeout: 90_000,
+      timeout: 100_000,
     });
     let out = '';
     let err = '';

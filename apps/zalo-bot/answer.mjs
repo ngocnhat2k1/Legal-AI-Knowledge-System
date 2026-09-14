@@ -215,13 +215,14 @@ export async function answerCodeCheck(q, clues, text) {
   const wide = perHeading(cands).slice(0, 6);
   const mineAt = wide.findIndex((c) => grp4(c.hs) === own);
   const heads = [...wide.slice(0, 3), ...(mineAt >= 3 ? [wide[mineAt]] : [])];
-  // Only the headings shown: /legal reads three evidence sections, and five named headings left 30.05's note out.
-  const groups = heads.map((c) => grp4(c.hs));
+  // The headings shown, plus the user's own heading as one more to tell apart — unlabelled, after the router ranked
+  // blind: R4's "comparison target", so the reasoning can say why 30.05 fits or not even when a run left it out.
+  const groups = [...new Set([...heads.map((c) => grp4(c.hs)), own])];
   const ask = String(clues?.searchQuery || '').replace(CODE_MARK, '').trim() || `Căn cứ phân loại mã HS cho: ${plain.trim()}`;
   const query = groups.length ? `${ask} Các nhóm ứng viên cần phân biệt: ${groups.map(dot4).join(', ')}.` : ask;
   const [mine, legal] = await Promise.all([
     lookupFull(q.dotted, q.origin ?? origin, q.date),
-    groups.length ? legalAnswer(query, { asOf: date }) : null,
+    heads.length ? legalAnswer(query, { asOf: date }) : null,
   ]);
 
   const lines = [];
@@ -230,7 +231,8 @@ export async function answerCodeCheck(q, clues, text) {
   } else if (mineAt >= 0) {
     lines.push(L(['Mã ', [q.dotted, 'b'], ' bạn tham khảo thuộc nhóm ', [dot4(own), 'b'], ', trùng một nhóm ứng viên mình tra từ mô tả hàng — mới khớp ở cấp nhóm 4 số; hàng vào nhóm nào, phân nhóm nào còn tùy đặc điểm của nó, xem phần căn cứ bên dưới trước khi chốt.']));
   } else {
-    lines.push(L(['Mã ', [q.dotted, 'b'], ' (nhóm ', [dot4(own), 'b'], ') ', ['không nằm trong các nhóm ứng viên mình tra từ mô tả hàng', 'orange'], ' — nên xem lại trước khi khai.']));
+    // Not orange: the candidates are a model's ranking and move run to run, so their absence is no finding.
+    lines.push(L(['Mã ', [q.dotted, 'b'], ' thuộc nhóm ', [dot4(own), 'b'], ', chưa nằm trong các nhóm mình tra từ mô tả hàng; phần căn cứ bên dưới so cả nhóm này với các nhóm ứng viên.']));
   }
   lines.push(
     mine?.goods?.path
@@ -246,9 +248,11 @@ export async function answerCodeCheck(q, clues, text) {
     );
   }
   lines.push(L([]));
-  // Notes retrieved without prose (the model timed out or is down) still go out verbatim for the reader to compare.
-  if (legal?.citations?.length) {
-    lines.push(L([['Căn cứ phân loại', 'b']]), ...formatLegal(legal));
+  // Without prose (the model timed out or is down) only the HS notes go out verbatim: the statute clauses retrieved
+  // beside them (labelling rules, "phân loại theo hồ sơ") are noise to someone comparing headings.
+  const notes = legal?.answer ? legal.citations ?? [] : (legal?.citations ?? []).filter((c) => ['en', 'hs_note', 'sen'].includes(c.kind));
+  if (notes.length) {
+    lines.push(L([['Căn cứ phân loại', 'b']]), ...formatLegal({ ...legal, citations: notes }));
   } else if (heads.length) {
     lines.push(L(['Mình chưa tìm được chú giải đủ căn cứ để giải thích — bạn đối chiếu Chú giải chương và Chú giải chi tiết của các nhóm trên trước khi chốt.'], 'note'));
   }

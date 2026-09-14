@@ -616,11 +616,11 @@ test('đối chiếu mã người dùng nêu: mã không vào câu hỏi gửi L
   );
   assert.ok(!off.text.includes('phù hợp với van'), 'lời dẫn router viết trước khi có căn cứ không được in');
   assert.equal(off.r.tariff, null, 'mã người dùng không vào trí nhớ để thành tiền đề lượt sau');
-  assert.ok(off.legalQ?.includes('84.81'), off.legalQ);
-  assert.doesNotMatch(off.legalQ, /7307|73\.07|\[mã/, 'mã người dùng không được thành tiền đề');
-  assert.match(off.text, /Mã 7307\.99\.90 \(nhóm 73\.07\) không nằm trong các nhóm ứng viên/);
+  assert.match(off.legalQ, /phân biệt: 84\.81, 73\.07\.$/, 'nhóm người dùng chỉ là một nhóm nữa để so, sau các ứng viên');
+  assert.doesNotMatch(off.legalQ, /7307\.99\.90|73079990|\[mã|bạn|người dùng/, 'mã người dùng không được thành tiền đề');
+  assert.match(off.text, /Mã 7307\.99\.90 thuộc nhóm 73\.07, chưa nằm trong các nhóm mình tra từ mô tả hàng/);
   assert.match(off.text, /Căn cứ phân loại\n[\s\S]*84\.81 \[1\][\s\S]*Chú giải chi tiết HS 2022/);
-  assert.ok(hasOrange(off.r.text));
+  assert.ok(!hasOrange(off.r.text), 'ứng viên do mô hình xếp, dao động giữa các lần: vắng mặt không phải cảnh báo');
   assert.equal(off.r.topic, 'legal', 'một "sai" sau đó bàn về lập luận, không ghi mã người dùng là sai vào sổ');
 
   const same = await codeCheck({ hs: '84818099', dotted: '8481.80.99', origin: null, date: '2026-09-14' }, { hsHints: ['8481', '7307'] });

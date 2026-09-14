@@ -249,7 +249,9 @@ export class LegalService {
     // far more strongly than cosine distance can, so an explicit article bypasses it —
     // otherwise "cho tôi Điều 18" could abstain on the very article it asked for. The same
     // holds for a document the user named that only the evidence layer holds.
-    const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, MAX_CITATIONS);
+    // A named heading brings its notes, and a question about a heading is rarely about statute clauses: two at most, or
+    // the prompt outgrows the writing call (a code check with five clauses and six notes timed out, 14/09/2026).
+    const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, byHeading.length ? 2 : MAX_CITATIONS);
     const limit = Math.min(EVIDENCE_MAX_DIST, Math.min(...all.map((a) => a.bestDist ?? Infinity)) + EVIDENCE_MARGIN);
     // What the question names outright — a document's status row, a section listing its HS code — may be the whole
     // answer ("replaced from 05/09/2026", "high-risk list of TT 36/2026"), so it is never cut.

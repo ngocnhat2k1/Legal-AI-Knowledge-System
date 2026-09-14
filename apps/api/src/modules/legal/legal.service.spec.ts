@@ -149,13 +149,24 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
   });
 
   it('keeps the notes of a heading the question names only as digits (3005.10.10 → nhóm 30.05)', async () => {
-    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([]);
-    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([ev({ id: 40, kind: 'hs_note', title: 'Chú giải Phần VI', bestDist: 0.4 })]);
+    const clause = (n: number) => ({
+      articleProvisionId: n, clauseProvisionId: n, documentId: 1, documentNumber: '08/2015/NĐ-CP', documentTitle: 't',
+      articleCitation: `Điều ${n}`, clauseCitation: `Khoản 1 Điều ${n}`, path: '', articleBody: 'thân', clauseBody: 'thân',
+      effectiveness: 'con_hieu_luc', effectiveFrom: null, effectiveTo: null, gazetteUrl: null, verification: 'verified',
+      score: 1, bestDist: 0.25, kwHit: true,
+    }) as RetrievedArticle;
+    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([clause(16), clause(26), clause(43)]);
+    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([ev({ id: 40, kind: 'hs_note', title: 'Chú giải Phần VI', bestDist: 0.28 })]);
     (headingSections as jest.Mock).mockResolvedValueOnce([ev({ id: 41, kind: 'en', title: 'Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05 — Bông, gạc' })]);
     (generate as jest.Mock).mockResolvedValueOnce(null);
     const res = await svc().ask('Mã HS 3005.10.10 gồm những hàng gì, khác phân nhóm 3005.90 chỗ nào', '2026-09-14');
     expect((headingSections as jest.Mock).mock.calls.at(-1)![1]).toEqual(['30.05']);
-    expect(res.citations.map((c) => c.provisionLabel)).toEqual(['Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05 — Bông, gạc', 'Chú giải Phần VI']);
+    expect(res.citations.map((c) => c.provisionLabel)).toEqual([
+      'Khoản 1 Điều 16',
+      'Khoản 1 Điều 26', // two clauses at most beside a named heading's notes
+      'Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05 — Bông, gạc',
+      'Chú giải Phần VI',
+    ]);
   });
 
   it('reads headings only from an HS question, never from a date or an amount', () => {
