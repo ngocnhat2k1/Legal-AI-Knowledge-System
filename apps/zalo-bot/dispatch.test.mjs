@@ -580,6 +580,8 @@ test('router không thấy chữ số của mã nào (R4); mỗi mã một nhãn
     ['HS: 3005', 'HS: [mã 1]'],
     ['mã số 30.05.10.10', 'mã số [mã 1]'],
     ['nhóm hàng 3005 hay 3824', 'nhóm hàng [mã 1] hay [mã 2]'],
+    ['nhóm 3005 hoặc 3824, và 3926', 'nhóm [mã 1] hoặc [mã 2], và [mã 3]'],
+    ['đổi mã 3005 sang 3824.', 'đổi mã [mã 1] sang [mã 2].'],
     ['thuộc chương 30', 'thuộc chương [mã 1]'],
     ['nhóm 3005'.normalize('NFD'), 'nhóm [mã 1]'],
     ['ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu', 'ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu'],

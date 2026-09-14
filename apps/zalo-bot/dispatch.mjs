@@ -103,8 +103,11 @@ const HS_TOKEN = new RegExp(
     `|(?<![\\d.,/]|ngày\\s)\\d{2}\\.\\d{2}(?:\\.\\d{2}){0,2}(?![\\d/%]|[.,]\\d|\\s*(?:triệu|tỷ|đồng|usd|giờ|sáng|chiều|h(?![\\p{L}])))`,
   'giu',
 );
-/** A bare heading joined to one already masked: "nhóm [mã 1] hay 3824". */
-const JOINED_HEADING = /(\[mã \d+\]\s*(?:,|hay|hoặc|và)\s*)(\d{4})(?![\d/.,])/giu;
+/**
+ * A bare heading joined to one already masked: "nhóm [mã 1] hay 3824", and a list "nhóm [mã 1] hoặc 3824, và 3926" —
+ * a heading may end at punctuation, and connectors may follow each other (", và").
+ */
+const JOINED_HEADING = /(\[mã \d+\](?:\s*(?:,|hay|hoặc|hoac|và|va|sang))+\s*)(\d{4})(?![\d/]|[.,]\d)/giu;
 export const CODE_MARK = /\[mã \d+\]/g;
 
 /**
