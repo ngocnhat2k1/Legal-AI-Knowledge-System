@@ -15,6 +15,15 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       ['nhom hang 3005 hoac 3824', 'nhom hang [mã 1] hoac [mã 2]'],
       ['ma so 3005 duoc khong', 'ma so [mã 1] duoc khong'],
       ['chuong 30', 'chuong [mã 1]'],
+      // A word after the code is never a unit unless it names money, a time or a duration of a bare chapter.
+      ['e khai 3005.10 sang 3824.90 được không', 'e khai [mã 1] sang [mã 2] được không'],
+      ['đổi mã 3005 sang 3824 được không', 'đổi mã [mã 1] sang [mã 2] được không'],
+      ['tra giúp mã 3005 ngay nhé', 'tra giúp mã [mã 1] ngay nhé'],
+      ['khai 3005.10 tháng trước bị bác', 'khai [mã 1] tháng trước bị bác'],
+      ['mã 7411 đồng tinh luyện', 'mã [mã 1] đồng tinh luyện'],
+      ['e thấy 30.05 sang 38.24 hợp lý hơn', 'e thấy [mã 1] sang [mã 2] hợp lý hơn'],
+      ['thuộc chương 30.', 'thuộc chương [mã 1].'],
+      ['tramã 3005 được không', 'tramã [mã 1] được không'],
     ]) {
       expect(maskCodes(text!).text).toBe(masked);
     }
@@ -62,7 +71,13 @@ describe('codeRole — code decides what a code in the message is (§4.2)', () =
   it('a plan with goods facts can only tighten an explanation subject to premise', () => {
     const text = 'miếng dán ngải cứu 30051010 gồm những gì';
     expect(codeRole(text)).toBe('subject');
-    expect(codeRole(text, { goods: { facts: ['miếng dán ngải cứu'], missing: [] } })).toBe('premise');
+    expect(codeRole(text, { intent: 'hs', goods: { facts: ['miếng dán ngải cứu'], missing: [] } })).toBe('premise');
+  });
+
+  it('a rate code under a plan that is not tariff is a premise', () => {
+    const text = 'cho mình hỏi thuế 8481.80.99 bao nhiêu vậy';
+    expect(codeRole(text, { intent: 'tariff', goods: { facts: [], missing: [] } })).toBe('key');
+    expect(codeRole(text, { intent: 'hs', goods: { facts: [], missing: [] } })).toBe('premise');
   });
 });
 
@@ -73,6 +88,10 @@ describe('userCodes and assertNoUserCodes — the last latch before a spawn (R4)
       { code: '3005.10.10', level: 8, heading: '30.05' },
       { code: '30', level: 2, heading: null },
     ]);
+  });
+
+  it('lists a code followed by a word that is also a unit, so the latch checks it', () => {
+    expect(userCodes('e khai 3005.10 sang 3824.90 được không').map((c) => c.code)).toEqual(['3005.10', '3824.90']);
   });
 
   it('drops a part holding the code in any spelling, keeps a document number', () => {
@@ -116,6 +135,7 @@ describe('normalizePlan — the model output in a fixed shape, user data only wh
     );
     expect(plan?.goods).toEqual({ facts: ['kiểm tra điện trở bo mạch', 'đã qua sử dụng'], missing: ['máy chỉ đo điện trở hay kiểm tra cả mạch'] });
     expect(plan?.understanding).toBe('Bạn cần mã HS cho máy kiểm tra điện trở');
+    expect(normalizePlan({ intent: 'hs', question: 'q', understanding: 'Bạn hỏi mã 3005.10.10 có đúng không' }, [])?.understanding).toBe('Bạn hỏi mã có đúng không');
   });
 
   it('keeps a document number only when the user wrote it, its issuer only when written', () => {
@@ -123,7 +143,9 @@ describe('normalizePlan — the model output in a fixed shape, user data only wh
     const full = normalizePlan(raw, ['thông tư 36/2016/TT-BKHCN còn hiệu lực không']);
     expect(full?.scope).toEqual({ doc: '36/2016/TT-BKHCN', article: '18', clause: null });
     expect(full?.understanding).toBe(raw.understanding);
-    expect(normalizePlan(raw, ['thông tư 36/2016 còn hiệu lực không'])?.scope.doc).toBe('36/2016');
+    const bare = normalizePlan(raw, ['thông tư 36/2016 còn hiệu lực không']);
+    expect(bare?.scope.doc).toBe('36/2016');
+    expect(bare?.understanding).toBe('Bạn hỏi Thông tư 36/2016 còn hiệu lực không');
     const minted = normalizePlan(raw, ['đọc lại thông tư 36 của bộ Khoa học công nghệ']);
     expect(minted?.scope.doc).toBeNull();
     expect(minted?.understanding).toBe('Bạn hỏi Thông tư còn hiệu lực không');

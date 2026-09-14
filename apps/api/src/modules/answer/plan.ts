@@ -50,23 +50,24 @@ export const fold = (s: string): string =>
     .toLowerCase()
     .replace(/đ/g, 'd');
 
-/** A unit after the number makes it an amount, a time or a duration: "12.50 triệu", "08.30 sáng", "1234.56 USD", "ma 30 ngay". */
-const UNIT = String.raw`\s*(?:%|triệu|trieu|tỷ|ty|đồng|dong|usd|vnd|giờ|gio|sáng|sang|chiều|chieu|ngày|ngay|tháng|thang|h)(?![\p{L}])`;
-
 /**
  * Every spelling of a code or heading (dispatch.mjs HS_TOKEN at a37c663, plus no-diacritic keywords and units): an 8-digit
  * code; digits after a word naming one ("nhóm hàng 3005", "mã số 30.05.10.10", "HS: 3005", "chương 30"); a dotted "3005.10"
- * or "30.05" standing alone. Not a date ("ngày 30.05"), an amount, a time or a document number.
+ * or "30.05" standing alone. Not a date ("ngày 30.05"), an amount ("12.50 triệu", "1234.56 USD"), a time ("08.30 sáng"), a
+ * bare chapter's duration ("ma 30 ngay") or a document number. A word after a code is a unit only when it can mean nothing
+ * else: "sang", "ngay", "thang", "dong", "ty", "gio" and "chieu" are also plain words ("3005.10 sang 3824.90"), and masking
+ * a time is harmless where leaking a code is not (R4).
  */
 const HS_TOKEN = new RegExp(
   String.raw`\d{4}[.\s]?\d{2}[.\s]?\d{2}` +
-    String.raw`|(?<=(?<![\p{L}\d\[])(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|hs(?:\s*code)?|ch[uư][oơ]ng)\s*:?\s*)\d{2}(?:\.?\d{2}(?:\.\d{2}){0,2})?(?![\d/]|${UNIT})` +
-    String.raw`|(?<![\d.,/])\d{4}\.\d{2}(?![\d/%]|[.,]\d|${UNIT})` +
-    String.raw`|(?<![\d.,/]|ng[aà]y\s)\d{2}\.\d{2}(?:\.\d{2}){0,2}(?![\d/%]|[.,]\d|${UNIT})`,
+    String.raw`|(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|hs(?:\s*code)?|ch[uư][oơ]ng)\s*:?\s*)` +
+    String.raw`(?:\d{2}\.?\d{2}(?:\.\d{2}){0,2}(?![\d/])|\d{2}(?![\d/]|\s*(?:%|(?:ngày|ngay|tháng|thang)(?![\p{L}]))))` +
+    String.raw`|(?<![\d.,/])\d{4}\.\d{2}(?![\d/%]|[.,]\d|\s*(?:usd|vnd|triệu|trieu|tỷ)(?![\p{L}]))` +
+    String.raw`|(?<![\d.,/]|ng[aà]y\s)\d{2}\.\d{2}(?:\.\d{2}){0,2}(?![\d/%]|[.,]\d|\s*(?:triệu|trieu|tỷ|đồng|usd|vnd|giờ|sáng|chiều|h)(?![\p{L}]))`,
   'giu',
 );
-/** A bare heading joined to one already masked: "nhóm [mã 1] hay 3824". */
-const JOINED_HEADING = /(\[mã \d+\]\s*(?:,|hay|hoặc|hoac|và|va)\s*)(\d{4})(?![\d/.,])/giu;
+/** A bare heading joined to one already masked: "nhóm [mã 1] hay 3824", "mã [mã 1] sang 3824". */
+const JOINED_HEADING = /(\[mã \d+\]\s*(?:,|hay|hoặc|hoac|và|va|sang)\s*)(\d{4})(?![\d/.,])/giu;
 export const CODE_MARK = /\[mã \d+\]/gu;
 
 /**
@@ -118,16 +119,17 @@ const cueText = (masked: string): string => fold(masked.replace(CODE_MARK, '#'))
 
 /**
  * What a code in the message is (§4.2): premise unless a list, explanation or rate cue says otherwise, and always when the
- * message doubts the code. A plan may only tighten: an explanation question about goods the user described is a premise.
+ * message doubts the code. A plan may only tighten: an explanation question about goods the user described is a premise, and
+ * a rate code under a plan that is not tariff is a premise.
  */
-export function codeRole(text: string, plan?: Pick<Plan, 'goods'>): CodeRole {
+export function codeRole(text: string, plan?: Pick<Plan, 'goods' | 'intent'>): CodeRole {
   const { text: masked, codes } = maskCodes(text);
   if (!codes.length) return 'none';
   const t = cueText(masked);
   if (FIT.test(t)) return 'premise';
   const explains = EXPLAIN.test(t);
   if (explains || LIST.test(t)) return explains && plan?.goods.facts.length ? 'premise' : 'subject';
-  return TARIFF.test(t) ? 'key' : 'premise';
+  return TARIFF.test(t) && (!plan || plan.intent === 'tariff') ? 'key' : 'premise';
 }
 
 /**
@@ -152,8 +154,8 @@ const str = (x: unknown, max: number): string | null => (typeof x === 'string' &
 const arr = (x: unknown): string[] => (Array.isArray(x) ? x.map((s) => String(s ?? '').trim()).filter(Boolean) : []);
 const number = (x: unknown): string | null => String(x ?? '').replace(/\D/g, '').slice(0, 4) || null;
 
-/** A serial, model, lot or phone number with its value, or any group of four digits or more (G10, R14). */
-const PRIVATE = String.raw`(?<![\p{L}])(?:sn|s\/n|serial|model|lô(?:\s*số)?|sđt|số điện thoại)(?![\p{L}])\s*[:#.]?\s*[\p{L}\d\/-]*\d[\p{L}\d\/-]*|\d{4,}`;
+/** A serial, model, lot or phone number with its value, or any group of four digits or more with the pairs of a code after it (G10, R14). */
+const PRIVATE = String.raw`(?<![\p{L}])(?:sn|s\/n|serial|model|lô(?:\s*số)?|sđt|số điện thoại)(?![\p{L}])\s*[:#.]?\s*[\p{L}\d\/-]*\d[\p{L}\d\/-]*|\d{4,}(?:[.\s]\d{2}(?![\d/]))*`;
 const DOC_NUMBER = String.raw`\d{1,4}\/\d{4}[^\s,;)]*`;
 /** Function words a model adds when restating a fact; every other word of a fact must be the user's own. */
 const FILLER = new Set('la va cua cho cac mot nhung bang tu de voi o trong co lam hang'.split(' '));
@@ -181,7 +183,7 @@ export function normalizePlan(raw: unknown, userTexts: string[]): Plan | null {
   const scope = (o.scope ?? {}) as Record<string, unknown>;
   const doc = str(scope.doc, 48);
   const understanding = str(o.understanding, 400)
-    ?.replace(new RegExp(`${DOC_NUMBER}|${PRIVATE}`, 'giu'), (m) => (/^\d{1,4}\/\d{4}/.test(m) && statedIn(said, m) ? m : ''))
+    ?.replace(new RegExp(`${DOC_NUMBER}|${PRIVATE}`, 'giu'), (m) => (/^\d{1,4}\/\d{4}/.test(m) && statedIn(said, m) ? statedDocNumber(said, m) : ''))
     .replace(/\s+/g, ' ')
     .trim()
     .split(' ')
