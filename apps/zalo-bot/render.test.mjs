@@ -253,6 +253,19 @@ test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp 
     // A Zalo user quotes one message, not the whole reply.
     for (const msg of render(lines).map((p) => p.msg)) assert.equal(tariffReply(msg), false, `${name}: ${msg.slice(0, 120)}`);
   }
+  // Re-review 2026-09-14: from ~790 characters of prose a full reply put a candidate's rate block at the top of message 2,
+  // away from the candidates heading. Sweep prose lengths so wherever render splits, no message reads as a tariff reply.
+  const filler = 'Chú giải chi tiết nhóm này mô tả tiêu chí phân biệt theo công dụng và cách trình bày của hàng [1]. ';
+  for (let chars = 0; chars <= 4000; chars += 50) {
+    const answerMd = `${HS_PHOTO.answerMd}\n\n${filler.repeat(Math.ceil(chars / filler.length)).slice(0, chars)}`;
+    const variants = {
+      full: formatAnswerMd({ ...HS_PHOTO, answerMd, depth: 'full' }, { tariffLines }),
+      mixed: formatAnswerMd({ ...HS_PHOTO, answerMd, mode: 'mixed', userCodes: [], candidates: [] }, { tariffLines: tariffLines.slice(0, 1) }),
+    };
+    for (const [name, lines] of Object.entries(variants)) {
+      for (const msg of render(lines).map((p) => p.msg)) assert.equal(tariffReply(msg), false, `${name} +${chars}: ${msg.slice(0, 120)}`);
+    }
+  }
 });
 
 test('formatAnswerMd: ứng viên thiếu [n] bị bỏ, không làm hỏng cả câu trả lời (R2)', () => {
