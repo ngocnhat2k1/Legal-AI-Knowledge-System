@@ -481,7 +481,12 @@ test('cổng văn xuôi LLM: số lệch một chữ số không được coi l�
 
 const cand = (hs, heading, mfn) => ({ hs, hsDotted: `${hs.slice(0, 4)}.${hs.slice(4, 6)}.${hs.slice(6)}`, heading, path: `Chương ${hs.slice(0, 2)} › ${heading}`, mfn });
 // /tariff/search prices MFN at CURRENT_DATE, as the real endpoint does.
-const CANDS = { 8481: [cand('84818099', 'Van loại khác', '10'), cand('84818091', 'Van bằng đồng', '5')], 7307: [cand('73079990', 'Phụ kiện ghép nối', '15')] };
+const CANDS = {
+  8481: [cand('84818099', 'Van loại khác', '10'), cand('84818091', 'Van bằng đồng', '5')],
+  7307: [cand('73079990', 'Phụ kiện ghép nối', '15')],
+  3926: [cand('39269099', 'Sản phẩm plastic khác', '15')],
+  4016: [cand('40169999', 'Sản phẩm cao su khác', '10')],
+};
 async function byClues(clues, confirm = null, text = 'van') {
   const real = globalThis.fetch;
   globalThis.fetch = async (url) => {
@@ -623,6 +628,11 @@ test('đối chiếu mã người dùng nêu: mã không vào câu hỏi gửi L
   assert.match(same.text, /thuộc nhóm 84\.81, trùng một nhóm ứng viên/);
   assert.match(same.text, /84\.81 · .*\(nhóm của mã bạn tham khảo\)/);
   assert.ok(!hasOrange(same.r.text));
+
+  const fourth = await codeCheck({ hs: '84818099', dotted: '8481.80.99', origin: null, date: '2026-09-14' }, { hsHints: ['7307', '3926', '4016', '8481'] });
+  assert.match(fourth.text, /thuộc nhóm 84\.81, trùng một nhóm ứng viên/, 'thứ hạng router dao động: nhóm thứ tư vẫn là ứng viên');
+  assert.match(fourth.text, /84\.81 · .*\(nhóm của mã bạn tham khảo\)/);
+  assert.ok(!hasOrange(fourth.r.text));
 
   const bare = await codeCheck({ hs: '84818099', dotted: '8481.80.99', origin: null, date: '2026-09-14' }, { keywords: [], hsHints: [] });
   assert.match(bare.text, /chưa tìm được nhóm ứng viên nào từ mô tả/);

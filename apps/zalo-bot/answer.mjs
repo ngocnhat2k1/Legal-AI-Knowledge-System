@@ -210,7 +210,11 @@ export async function answerCodeCheck(q, clues, text) {
   const described = Boolean(clues?.hsHints?.length || clues?.keywords?.length);
   const { origin, date, cands } = described ? await gatherCandidates(clues, plain) : { origin: null, date: clues?.date || today(), cands: [] };
   const own = grp4(q.hs);
-  const heads = perHeading(cands).slice(0, 3);
+  // The router's rank order is not stable run to run (30.05 first, then fourth, for the same message): compare with six
+  // headings, show three plus the user's own when it is among them.
+  const wide = perHeading(cands).slice(0, 6);
+  const mineAt = wide.findIndex((c) => grp4(c.hs) === own);
+  const heads = [...wide.slice(0, 3), ...(mineAt >= 3 ? [wide[mineAt]] : [])];
   // Only the headings shown: /legal reads three evidence sections, and five named headings left 30.05's note out.
   const groups = heads.map((c) => grp4(c.hs));
   const ask = String(clues?.searchQuery || '').replace(CODE_MARK, '').trim() || `Căn cứ phân loại mã HS cho: ${plain.trim()}`;
@@ -223,7 +227,7 @@ export async function answerCodeCheck(q, clues, text) {
   const lines = [];
   if (!heads.length) {
     lines.push(L(['Mình chưa tìm được nhóm ứng viên nào từ mô tả để đối chiếu với mã ', [q.dotted, 'b'], '. Bạn cho thêm thành phần, chất liệu, công dụng của hàng nhé.']));
-  } else if (heads.some((c) => grp4(c.hs) === own)) {
+  } else if (mineAt >= 0) {
     lines.push(L(['Mã ', [q.dotted, 'b'], ' bạn tham khảo thuộc nhóm ', [dot4(own), 'b'], ', trùng một nhóm ứng viên mình tra từ mô tả hàng — mới khớp ở cấp nhóm 4 số; hàng vào nhóm nào, phân nhóm nào còn tùy đặc điểm của nó, xem phần căn cứ bên dưới trước khi chốt.']));
   } else {
     lines.push(L(['Mã ', [q.dotted, 'b'], ' (nhóm ', [dot4(own), 'b'], ') ', ['không nằm trong các nhóm ứng viên mình tra từ mô tả hàng', 'orange'], ' — nên xem lại trước khi khai.']));
@@ -242,7 +246,8 @@ export async function answerCodeCheck(q, clues, text) {
     );
   }
   lines.push(L([]));
-  if (legal?.answer && legal.citations?.length) {
+  // Notes retrieved without prose (the model timed out or is down) still go out verbatim for the reader to compare.
+  if (legal?.citations?.length) {
     lines.push(L([['Căn cứ phân loại', 'b']]), ...formatLegal(legal));
   } else if (heads.length) {
     lines.push(L(['Mình chưa tìm được chú giải đủ căn cứ để giải thích — bạn đối chiếu Chú giải chương và Chú giải chi tiết của các nhóm trên trước khi chốt.'], 'note'));

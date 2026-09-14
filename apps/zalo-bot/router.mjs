@@ -143,7 +143,7 @@ export async function route(text, ctx = {}) {
     '',
     'CÁC TRƯỜNG:',
     '{"intent":"tariff|check_code|legal|confirm|correction|refine|general",',
-    `"search_query":"<BẮT BUỘC khi intent=legal, refine hoặc check_code: viết lại thành MỘT câu hỏi ĐỘC LẬP, đầy đủ chủ ngữ, ghép ngữ cảnh các lượt trước — người đọc câu này không thấy hội thoại. Mã nào thì giữ nguyên nhãn [mã n] của nó. Riêng check_code: hỏi căn cứ phân loại mặt hàng theo MÔ TẢ, chất liệu, công dụng, KHÔNG nhắc mã>",`,
+    `"search_query":"<BẮT BUỘC khi intent=legal, refine hoặc check_code: viết lại thành MỘT câu hỏi ĐỘC LẬP, đầy đủ chủ ngữ, ghép ngữ cảnh các lượt trước — người đọc câu này không thấy hội thoại. Mã nào thì giữ nguyên nhãn [mã n] của nó. Riêng check_code: hỏi căn cứ phân loại mặt hàng theo đúng những gì người dùng MÔ TẢ, KHÔNG nhắc mã, KHÔNG thêm công dụng hay đặc tính họ không nói (thiếu thì ghi "chưa rõ công dụng")>",`,
     '"doc_number":"<số hiệu văn bản người dùng nhắm tới, vd 38/2015/TT-BTC — null nếu không nêu>",',
     '"article":"<số Điều nếu nêu, else null>","clause":"<số Khoản nếu nêu, else null>",',
     '"keywords":["<nếu tariff hoặc check_code: 2-4 từ khoá TIẾNG VIỆT theo CHỨC NĂNG để tra Danh mục HS>"],',
