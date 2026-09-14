@@ -27,6 +27,12 @@ export interface LegalCitation {
    * fetched text must never quietly acquire the standing of text a human checked.
    */
   verification: string;
+  /** Set only on evidence sections (evidence_section.kind: 'status', 'en', 'ruling', 'note', …). Absent = a provision. */
+  kind?: string;
+  /** evidence_section.instrument: '31/2022/TT-BTC', 'CV 1810/TCHQ-TXNK', '.agent/business-rules.md'. */
+  instrument?: string;
+  /** The source's standing, worded for the reader: not a legal basis, not yet in force, status undetermined. */
+  note?: string | null;
 }
 
 /** One document in the corpus — the manifest the bot shows when asked for something we lack. */

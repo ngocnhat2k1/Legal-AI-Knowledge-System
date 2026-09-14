@@ -332,23 +332,24 @@ export function formatLegal(r) {
   // One red line per (document, effectiveness) — markers share a line only when both match.
   const groups = new Map();
   cites.forEach((c, i) => {
-    if (!EFFECT[c.effectiveness]) return;
+    if (c.kind || !EFFECT[c.effectiveness]) return; // an evidence section carries its standing on its source line
     const key = `${c.documentNumber}|${c.effectiveness}`;
     if (!groups.has(key)) groups.set(key, { c, ns: [] });
     groups.get(key).ns.push(i + 1);
   });
   for (const { c, ns } of groups.values()) lines.push(effectLine(c, ns));
 
-  lines.push(...unverifiedLines(cites));
+  // Evidence sections are not documents the bot fetched: their standing is on the source line, not in this warning.
+  lines.push(...unverifiedLines(cites.filter((c) => !c.kind)));
 
   const items = cites.map((c, i) => {
     const ex = excerpt(c.verbatimText);
     const late = c.effectiveTo || (c.effectiveFrom && r.asOf && c.effectiveFrom > r.asOf);
     const window =
-      late && c.effectiveFrom
+      !c.kind && late && c.effectiveFrom
         ? ` · hiệu lực ${c.effectiveTo ? `${dmy(c.effectiveFrom)}–${dmy(c.effectiveTo)}` : `từ ${dmy(c.effectiveFrom)}`}`
         : '';
-    return { n: i + 1, label: `${c.provisionLabel}${window}`, quote: ex.text, cut: ex.cut, url: c.gazetteUrl };
+    return { n: i + 1, label: `${c.provisionLabel}${window}${c.note ? ` (${c.note})` : ''}`, quote: ex.text, cut: ex.cut, url: c.gazetteUrl };
   });
   lines.push(...sourceLines(items));
   return lines;

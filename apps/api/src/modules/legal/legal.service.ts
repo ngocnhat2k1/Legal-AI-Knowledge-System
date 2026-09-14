@@ -4,8 +4,9 @@ import { sql } from 'drizzle-orm';
 import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/database';
 import { EmbeddingService } from './embedding.service';
 import { extractAsOf } from './legal.asof';
-import { generate } from './legal.generation';
-import { keepRelevant, numberMarkers } from './legal.grounding';
+import { evidenceInstruments, evidenceRetrieve, type RetrievedEvidence } from './legal.evidence';
+import { generate, type PromptSource } from './legal.generation';
+import { keepRelevant, MAX_DIST, numberMarkers } from './legal.grounding';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
 import {
   inIds,
@@ -22,6 +23,10 @@ import type { LegalAnswer, LegalCitation, LegalDocumentView, LegalProvisionView 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TOP_K = 6;
 const MAX_CITATIONS = 5;
+/** Evidence sections join the articles after them, never in place of one. */
+const EVIDENCE_K = 3;
+/** Evidence enters the prompt cut here (≈ the embedded window); the citation keeps the whole body. */
+const EVIDENCE_PROMPT_CHARS = 6000;
 
 /**
  * Legal RAG lookup: embed the question → hybrid retrieve (keyword + dense, valid-
@@ -111,9 +116,13 @@ export class LegalService {
         ? inQuery
         : null;
     let documentIds: number[] = [];
+    let evidenceNumbers: string[] = [];
     if (ref) {
       const docs = await resolveDocuments(this.db, ref);
-      if (!docs.length) {
+      // No full text, but the evidence layer may hold its status ("replaced by 292/2026/NĐ-CP from 05/09/2026") —
+      // which IS the answer to "is it still in force?", and better than "we don't hold it".
+      if (!docs.length) evidenceNumbers = await evidenceInstruments(this.db, ref);
+      if (!docs.length && !evidenceNumbers.length) {
         // Not in the corpus — but the gazette catalogue may still know what it IS.
         // "We don't hold it" and "no such document" are different answers.
         const gazette = await lookupGazette(this.db, ref);
@@ -185,20 +194,28 @@ export class LegalService {
       throw new BadRequestException('embedding service unavailable');
     }
 
-    const all = await hybridRetrieve(this.db, {
-      queryText: query,
-      queryVec: vec,
-      asOf,
-      topK: TOP_K,
-      documentIds,
-      articleProvisionIds,
-    });
+    // A document held only as evidence has no clauses to search; a named Điều is a clause lookup, not evidence.
+    const onlyEvidence = !documentIds.length && evidenceNumbers.length > 0;
+    const [all, evidence] = await Promise.all([
+      onlyEvidence
+        ? Promise.resolve([] as RetrievedArticle[])
+        : hybridRetrieve(this.db, { queryText: query, queryVec: vec, asOf, topK: TOP_K, documentIds, articleProvisionIds }),
+      articleProvisionIds.length
+        ? Promise.resolve([] as RetrievedEvidence[])
+        : evidenceRetrieve(this.db, { queryText: query, queryVec: vec, asOf, documentNumbers: evidenceNumbers }),
+    ]);
 
     // The relevance gate exists to stop the dense branch handing back its nearest
     // neighbours for an off-topic question. Naming an Điều already establishes intent
     // far more strongly than cosine distance can, so an explicit article bypasses it —
-    // otherwise "cho tôi Điều 18" could abstain on the very article it asked for.
+    // otherwise "cho tôi Điều 18" could abstain on the very article it asked for. The same
+    // holds for a document the user named that only the evidence layer holds.
     const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, MAX_CITATIONS);
+    const keptEvidence = (onlyEvidence ? evidence : evidence.filter((e) => e.bestDist != null && e.bestDist <= MAX_DIST)).slice(
+      0,
+      EVIDENCE_K,
+    );
+    const sources = [...kept.map(articleSource), ...keptEvidence.map(evidenceSource)];
     const scope = {
       requestedDoc: ref?.core ?? null,
       missingDoc: null,
@@ -206,7 +223,7 @@ export class LegalService {
       gazetteMatches: [],
     };
 
-    if (kept.length === 0) {
+    if (sources.length === 0) {
       return {
         query,
         asOf,
@@ -220,7 +237,7 @@ export class LegalService {
       };
     }
 
-    const gen = await generate(query, asOf, kept);
+    const gen = await generate(query, asOf, sources);
 
     /**
      * The model READ these provisions and judged them insufficient. Returning them
@@ -256,12 +273,13 @@ export class LegalService {
         abstained: false,
         reason: gen?.reason ?? 'chưa tổng hợp được câu trả lời chắc chắn — dưới đây là điều khoản liên quan nhất để đối chiếu',
         answer: '',
-        citations: kept.map(toCitation),
+        citations: sources.map((s) => s.citation),
       };
     }
 
-    const sources = kept.map((a) => `${a.articleCitation}\n${a.articleBody}`);
-    const marked = numberMarkers(gen.answer, gen.citations, sources, query);
+    // Exactly what the model read for each [n], label and standing included.
+    const texts = sources.map((s) => `${s.label}\n${s.note ?? ''}\n${s.text}`);
+    const marked = numberMarkers(gen.answer, gen.citations, texts, query);
     if (!marked.answer || marked.order.length === 0) {
       // The model cited nothing we retrieved, or stated a rate or amount its source does not
       // contain → ungrounded. Drop the prose, keep the verbatim provisions as references.
@@ -272,7 +290,7 @@ export class LegalService {
         abstained: false,
         reason: 'câu trả lời chưa dẫn được điều khoản đã truy hồi — hiển thị điều khoản liên quan để đối chiếu',
         answer: '',
-        citations: kept.map(toCitation),
+        citations: sources.map((s) => s.citation),
       };
     }
 
@@ -284,9 +302,60 @@ export class LegalService {
       abstained: false,
       reason: null,
       answer: marked.answer,
-      citations: marked.order.map((n) => toCitation(kept[n - 1]!)),
+      citations: marked.order.map((n) => sources[n - 1]!.citation),
     };
   }
+}
+
+interface Source extends PromptSource {
+  citation: LegalCitation;
+}
+
+function articleSource(a: RetrievedArticle): Source {
+  return { label: a.articleCitation, note: null, text: a.articleBody, citation: toCitation(a) };
+}
+
+/** How each authority reads to the model and to the person (spec §4 principle 3). Binding needs no label. */
+const AUTHORITY_NOTE: Record<string, string | null> = {
+  binding: null,
+  authoritative: 'tài liệu hướng dẫn áp dụng của cơ quan hải quan, không phải văn bản quy phạm pháp luật',
+  administrative: 'công văn hành chính, kết luận áp cho đúng mặt hàng và hồ sơ được nêu',
+  reference: 'ghi chú nghiệp vụ hoặc tài liệu nội bộ, không phải căn cứ pháp lý',
+  undetermined: 'chưa xác định tình trạng, không dùng làm căn cứ',
+};
+
+const dmy = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+
+function evidenceSource(e: RetrievedEvidence): Source {
+  const note =
+    [
+      AUTHORITY_NOTE[e.authority] ?? null,
+      e.window === 'upcoming' && e.effectiveFrom ? `CHƯA CÓ HIỆU LỰC — có hiệu lực từ ${dmy(e.effectiveFrom)}` : null,
+      e.status ? `tình trạng: ${e.status}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ') || null;
+  return {
+    label: e.title,
+    note,
+    text: e.body.slice(0, EVIDENCE_PROMPT_CHARS),
+    citation: {
+      documentNumber: e.documentNumber ?? e.instrument,
+      documentTitle: e.title,
+      articleLabel: e.title,
+      provisionLabel: e.title,
+      verbatimText: e.body,
+      path: e.title,
+      effectiveness: e.effectiveness,
+      effectiveFrom: e.effectiveFrom,
+      effectiveTo: e.effectiveTo,
+      gazetteUrl: null,
+      verification: e.verification,
+      kind: e.kind,
+      instrument: e.instrument,
+      note,
+    },
+  };
 }
 
 function toCitation(a: RetrievedArticle): LegalCitation {

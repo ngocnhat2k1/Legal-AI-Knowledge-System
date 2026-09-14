@@ -586,6 +586,31 @@ test('pháp luật: in đủ năm nguồn, một dòng cam cho văn bản tự n
   assert.deepEqual(all('b'), ['miễn thuế']);
 });
 
+test('formatLegal: mục bằng chứng mang nhãn trên dòng nguồn, không bị báo "bot tự nạp", không sinh dòng hiệu lực đỏ', () => {
+  const ev = (over) => ({
+    documentNumber: '69/2018/NĐ-CP', documentTitle: 't', articleLabel: 'Tình trạng hiệu lực — 69/2018/NĐ-CP',
+    provisionLabel: 'Tình trạng hiệu lực — 69/2018/NĐ-CP', verbatimText: '69/2018/NĐ-CP hết hiệu lực từ 05/09/2026.', path: '',
+    effectiveness: 'con_hieu_luc', effectiveFrom: '2026-09-05', effectiveTo: null, gazetteUrl: null, verification: 'auto_unverified',
+    kind: 'status', instrument: '69/2018/NĐ-CP', note: null, ...over,
+  });
+  const r = {
+    asOf: '2026-09-14',
+    answer: 'Nghị định này đã hết hiệu lực [1]; ghi chú dự án giải thích thêm [2].',
+    citations: [
+      ev({}),
+      ev({ kind: 'note', documentNumber: '.agent/business-rules.md', provisionLabel: 'Quy tắc nghiệp vụ — R5', effectiveFrom: null,
+        note: 'ghi chú nghiệp vụ hoặc tài liệu nội bộ, không phải căn cứ pháp lý', effectiveness: 'het_hieu_luc' }),
+    ],
+  };
+  const lines = formatLegal(r);
+  const parts = render(lines);
+  const all = (st) => parts.flatMap((p) => styled(p, st));
+  assert.equal(all(ORANGE).length, 0, 'mục bằng chứng không phải văn bản bot tự nạp');
+  assert.equal(all(RED).length, 0, 'nhãn của mục bằng chứng nằm trên dòng nguồn');
+  const text = toText(lines);
+  assert.ok(text.includes('[2] Quy tắc nghiệp vụ — R5 (ghi chú nghiệp vụ hoặc tài liệu nội bộ, không phải căn cứ pháp lý)'), text);
+});
+
 // --- 69/2018 (spec §5b.8) ------------------------------------------------------------
 
 test('HỒI QUY 69/2018: số hiệu đầy đủ đi nguyên vẹn; văn bản đúng số không bị liệt kê như của cơ quan khác', () => {

@@ -1,12 +1,14 @@
 import type { SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 
-import { generate } from './legal.generation';
+import { evidenceInstruments, evidenceRetrieve, type RetrievedEvidence } from './legal.evidence';
+import { generate, type PromptSource } from './legal.generation';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
 import { LegalService } from './legal.service';
 
 jest.mock('./legal.generation', () => ({ generate: jest.fn() }));
 jest.mock('./legal.retrieval', () => ({ hybridRetrieve: jest.fn() }));
+jest.mock('./legal.evidence', () => ({ evidenceInstruments: jest.fn(async () => []), evidenceRetrieve: jest.fn(async () => []) }));
 
 const gazette = (number: string, docType: string) => ({ number, docType, title: `${number} — tiêu đề`, sourceUrl: 'https://congbao.chinhphu.vn/x', congbaoId: 1 });
 
@@ -35,6 +37,63 @@ describe('LegalService.ask — [n] maps to the n-th provision given to the model
     const res = await svc.ask('Hàng nào được miễn thuế nhập khẩu', '2026-09-13');
     expect(res.answer).toBe('Ý một [1]. Ý hai [2].');
     expect(res.citations.map((c) => c.articleLabel)).toEqual(['Điều 22', 'Điều 11']);
+  });
+});
+
+describe('LegalService.ask — evidence sections (plan 05 milestone 3, first slice)', () => {
+  const ev = (over: Partial<RetrievedEvidence>): RetrievedEvidence => ({
+    id: 1, kind: 'status', instrument: '69/2018/NĐ-CP', authority: 'binding', title: 'Tình trạng hiệu lực — 69/2018/NĐ-CP',
+    body: '69/2018/NĐ-CP hết hiệu lực từ 05/09/2026, bị thay thế bởi 292/2026/NĐ-CP — căn cứ khoản 1 Điều 65 NĐ 292/2026/NĐ-CP',
+    documentNumber: '69/2018/NĐ-CP', effectiveFrom: '2026-09-05', effectiveTo: null, effectiveness: 'con_hieu_luc',
+    verification: 'auto_unverified', status: null, window: 'current', score: 1, bestDist: 0.9, ...over,
+  });
+  const svc = () => new LegalService({ execute: async () => [] } as never, { embed: async () => [0] } as never);
+  const lastSources = () => (generate as jest.Mock).mock.calls.at(-1)![2] as PromptSource[];
+
+  it('answers a named document the corpus lacks from its status row instead of "we do not hold it"', async () => {
+    (evidenceInstruments as jest.Mock).mockResolvedValueOnce(['69/2018/NĐ-CP']);
+    // Far by cosine distance, yet kept: the user named this document, as an explicit Điều bypasses the gate.
+    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([ev({})]);
+    (hybridRetrieve as jest.Mock).mockClear();
+    (generate as jest.Mock).mockResolvedValueOnce({
+      answer: 'Không, 69/2018/NĐ-CP hết hiệu lực từ 05/09/2026, thay bằng 292/2026/NĐ-CP [1].',
+      citations: [1], abstain: false, reason: null,
+    });
+    const res = await svc().ask('Nghị định 69/2018/NĐ-CP còn áp dụng không', '2026-09-14');
+    expect(res.missingDoc).toBeNull();
+    expect(hybridRetrieve).not.toHaveBeenCalled(); // no clauses to search in a document held only as evidence
+    expect((evidenceRetrieve as jest.Mock).mock.calls.at(-1)![1].documentNumbers).toEqual(['69/2018/NĐ-CP']);
+    expect(res.answer).toContain('[1]');
+    expect(res.citations).toMatchObject([{ kind: 'status', instrument: '69/2018/NĐ-CP' }]);
+  });
+
+  it('puts evidence after the articles, drops sections beyond the distance gate, and labels a note', async () => {
+    const article = {
+      articleProvisionId: 11, clauseProvisionId: 11, documentId: 1, documentNumber: '08/2015/NĐ-CP', documentTitle: 't',
+      articleCitation: 'Điều 11', clauseCitation: 'Khoản 1 Điều 11', path: 'Điều 11', articleBody: 'thân', clauseBody: 'thân',
+      effectiveness: 'con_hieu_luc', effectiveFrom: null, effectiveTo: null, gazetteUrl: null, verification: 'verified',
+      score: 1, bestDist: 0.2, kwHit: true,
+    } as RetrievedArticle;
+    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([article]);
+    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([
+      ev({ id: 2, kind: 'note', instrument: '.agent/business-rules.md', authority: 'reference', title: 'Quy tắc nghiệp vụ — R5', body: 'ghi chú', documentNumber: null, bestDist: 0.3 }),
+      ev({ id: 3, kind: 'en', instrument: 'CV 1810/TCHQ-TXNK', authority: 'authoritative', title: 'EN xa', body: 'xa', documentNumber: null, bestDist: 0.8 }),
+    ]);
+    (generate as jest.Mock).mockResolvedValueOnce({ answer: 'Ý một [1]. Giải thích thêm [2].', citations: [1, 2], abstain: false, reason: null });
+    const res = await svc().ask('Hàng nào được miễn thuế nhập khẩu', '2026-09-14');
+    expect(lastSources().map((s) => s.label)).toEqual(['Điều 11', 'Quy tắc nghiệp vụ — R5']);
+    expect(lastSources()[1]!.note).toContain('không phải căn cứ pháp lý');
+    expect(res.citations.map((c) => c.kind ?? 'provision')).toEqual(['provision', 'note']);
+  });
+
+  it('labels a section that is not yet in force with the date it starts', async () => {
+    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([]);
+    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([
+      ev({ instrument: '85/2019/NĐ-CP', documentNumber: '85/2019/NĐ-CP', window: 'upcoming', effectiveFrom: '2026-10-15', bestDist: 0.3 }),
+    ]);
+    (generate as jest.Mock).mockResolvedValueOnce(null); // no model: the sources stand on their own
+    const res = await svc().ask('Một cửa quốc gia làm theo văn bản nào', '2026-09-14');
+    expect(res.citations[0]!.note).toContain('CHƯA CÓ HIỆU LỰC — có hiệu lực từ 15/10/2026');
   });
 });
 
