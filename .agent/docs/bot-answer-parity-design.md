@@ -356,8 +356,11 @@ không lọc theo HS.
 
 **[v2] Từ khoá.** `toTsQuery` giữ `\d{2}\.\d{2}` làm **một** token (parser `simple` chỉ mục `84.18`
 thành một lexeme; tách `84 | 18` chỉ bắt "Điều 18"); khi `scope.hs` ≥ 4 số thêm dạng chấm vào
-tsquery. Test: `toTsQuery('nhóm 84.18')` → `nhóm | 84.18`. Kiểm luôn giả định về số hiệu
-(`69/2018/NĐ-CP` có bị parser gộp thành một lexeme `file` không) bằng một test SQL thật.
+tsquery. Test: `toTsQuery('nhóm 84.18')` → `nhóm | 84.18`. **Số hiệu đã kiểm bằng SQL thật (Postgres 17,
+2026-09-14):** `to_tsvector('simple', 'Nghị định 69/2018/NĐ-CP và nhóm 84.18')` →
+`'69/2018/n' 'đ' 'đ-cp' 'cp' … '84.18'` — `84.18` là một lexeme, nhưng số hiệu **không**: parser cắt ở chữ `Đ`.
+Vì vậy `toTsQuery` không được đưa nguyên chuỗi `69/2018/NĐ-CP` vào; dùng phần đầu `69/2018` (khớp tiền tố
+`69/2018:*`) hoặc lọc số hiệu bằng cột `instrument`/`document_number`.
 
 Cổng liên quan: giữ `MAX_DIST` nhưng nới lên **0.70** — **chỉ chốt sau khi eval** chứng minh recall
 tăng mà tỉ lệ trả lời sai không tăng.

@@ -17,9 +17,9 @@ tiếp theo, và điều gì đã học được mà code không cho thấy.
 | | |
 |---|---|
 | **Đang chạy** | Server dev dùng chung của MONA (`<MONA_DEV_HOST>`; giá trị thật trong `.agent/local/mona-dev-server.md`), stack `/opt/docker-projects/customs-assistant`, cổng 127.0.0.1 3060/5435/8060: API + web UI + kho pháp lý 15 văn bản + worker ingest + bot Zalo (đã đăng nhập, `ALLOWED_THREADS` đã đặt), `/health` báo `llm: up`. Deploy mới nhất `7aff4ed` (2026-09-14, lần đầu qua CI/CD; mã gồm tầng bằng chứng `8fa69dc`). **Từ 2026-09-14 deploy bằng CI/CD:** push `main` → GitHub Actions test, build image lên ghcr.io, server chỉ kéo về ([runbook §5](../docs/mona-dev-server-operations.md#5-deploy-bản-mới)). **LLM đang hết hạn mức subscription** (`claude -p`: "org's monthly spend limit", reset 2026-09-15 09:00 UTC): legal RAG chỉ trả nguyên văn, router bot chạy đường dự phòng; `/health` vẫn báo `llm: up` vì chỉ kiểm token + binary. Vận hành: [runbook](../docs/mona-dev-server-operations.md). |
-| **Việc tiếp theo** | Mảng 2 của [kế hoạch 05](05-bot-parity-tasks.md): nạp 32 nguồn notebook vào `evidence_section`. |
+| **Việc tiếp theo** | (1) Deploy lát đầu Mảng 3 (`/legal` dùng tầng bằng chứng — commit sau `8fa69dc`) qua CI/CD, rồi kiểm trên Zalo khi LLM có lại hạn mức (sau 2026-09-15 09:00 UTC). (2) Mảng 3 đầy đủ của [kế hoạch 05](05-bot-parity-tasks.md): `POST /answer`. |
 | **Chờ chủ dự án** | (1) chat thử bot sau deploy `69d1ab4`, báo chỗ chưa ổn; (2) có nạp 4 nghị định biểu thuế còn thiếu (144/2024, 108/2025, 199/2025, 201/2026) không; (3) đối chiếu PDF Công báo EVFTA 8711.20.x (9,3% năm 2026 → 20,4% năm 2027); (4) quyết corpus sinh lại theo từng văn bản và sửa `gazette_issue` 128/2020/NĐ-CP — [kế hoạch 05](05-bot-parity-tasks.md) Task 5; (5) [kế hoạch 06](06-deploy-mona-dev-server.md): kiểm thử bot trong nhóm, domain + mật khẩu basic auth, `rclone.conf`; (6) thêm 16 nguồn mới vào notebook (TASK-021; sau mỗi lần đẩy `verify_drive.py` phải ra `0 lệch`); (7) các câu hỏi mở của phiên 2026-09-14 bên dưới. |
-| **Việc của agent** | `docker rm customs-assistant-gazette-full` (crawl đã thoát). |
+| **Việc của agent** | — (container seed-evidence và API nháp đã gỡ 2026-09-14). |
 | **Đã mất vĩnh viễn** | VPS Contabo bị xoá (xác nhận 2026-09-13): `lookup_confirmation` (phán quyết chuyên viên), session Zalo, `.env` cũ. Bộ nhớ áp mã HS học lại từ đầu. |
 
 ## Trạng thái công việc
@@ -44,7 +44,7 @@ legal RAG, bộ nhớ hội thoại, kho pháp luật tự mở rộng (TASK-001
 
 | Kế hoạch | Trạng thái | Ghi chú |
 |---|---|---|
-| [05 — Bot ngang notebook](05-bot-parity-tasks.md) | 🟡 đang tiến hành | Mảng 1 đã commit; còn Task 5 Bước 6–9 (chờ chủ dự án), Task 6 Bước 6, Task 9. Mảng 2–4 chưa làm |
+| [05 — Bot ngang notebook](05-bot-parity-tasks.md) | 🟡 đang tiến hành | Mảng 1 đã commit (còn Task 5 Bước 6–9 chờ chủ dự án, Task 9). Mảng 2 xong, deploy `8fa69dc` (1.989 mục). Mảng 3: lát `/legal` + bằng chứng đã code, chưa deploy; `POST /answer` chưa làm. Mảng 4 chưa làm |
 | [06 — Triển khai server MONA](06-deploy-mona-dev-server.md) | 🟡 còn Task 8, 9 Step 5, 10 | Chờ chủ dự án |
 | 07 — Trình bày kiểu notebook trên Zalo | ✅ deploy `69d1ab4` | Kế hoạch trong git `11275bc` |
 
@@ -63,6 +63,16 @@ khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — 
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
 
 ---
+
+### 2026-09-14 (chiều) — Mảng 2 xong trên server; lát đầu Mảng 3: `/legal` dùng tầng bằng chứng (chưa deploy)
+
+- **Tầng LLM:** chủ dự án chốt giữ `claude -p` thuê bao (khớp ADR 2026-09-13: tối đa 4 lần gọi/lượt, 120 s).
+- **Đo embed trên server (Task 6 Bước 6):** lô 32 mục dài 170,7 s (5,3 s/mục), RAM đỉnh embedder 2.580 MB, 3,46 ký tự/token → `EMBED_CHARS = 6800`. Đo có bộ canh RAM host (dừng khi < 700 MB) vì server dùng chung còn ~2,3 GB.
+- **Mảng 2 (`8fa69dc`, đã deploy):** migration 0011 `evidence_section`; `db/seed/evidence-build.ts` sinh 1.989 mục từ extract đã commit (+10 mục nghị định biểu thuế lúc seed); seed upsert tiếp tục được. Kiểm migration trên DB nháp (rỗng và ở 0010), chạy seed 100 s rồi ngắt, chạy lại đúng "256 sections unchanged". Seed production 73,5 phút, 1.989/1.989 có vector.
+- **Lát đầu Mảng 3 (`e17e0a1`, `2ee0c60`, `eaae4ec`, `19da3b0` — CHƯA deploy):** `GET /legal` truy hồi thêm bằng chứng, nhãn nguồn vào prompt và dòng nguồn của bot. Trên API nháp với dữ liệu thật: NĐ 43/2017 từ "chưa có văn bản" → trả mục tình trạng; NĐ 336/2026 từ từ chối → mục tình trạng nhãn "CHƯA CÓ HIỆU LỰC — từ 15/10/2026". Chi tiết và hai bài học (mục `status` văn bản được nêu luôn đi kèm; cổng khoảng cách riêng cho bằng chứng) ở [kế hoạch 05](05-bot-parity-tasks.md) Mảng 3.
+- **Bất ngờ:** (1) parser `simple` cắt `69/2018/NĐ-CP` thành `69/2018/n`, `đ`, `đ-cp`, `cp` — tìm số hiệu bằng từ khoá không khớp (spec §3.3). (2) giữa lúc seed chạy, thư mục stack thành git clone của phiên CI/CD (mục bên dưới); từ nay deploy qua push `main`, không `git archive | tar` vào thư mục stack.
+- **Kiểm:** Jest 122, bot 62, parser inbox 62, `tsc` sạch (trừ lỗi `import.meta` có sẵn).
+- **LLM vẫn hết hạn mức tới 2026-09-15 09:00 UTC:** mọi kiểm trên API nháp là chế độ chỉ trích dẫn; văn xuôi có dùng bằng chứng chưa thấy được.
 
 ### 2026-09-14 (chiều) — CI/CD trên GitHub: test mọi PR/push, image build trên GitHub, server chỉ kéo về; deploy đầu `7aff4ed`
 

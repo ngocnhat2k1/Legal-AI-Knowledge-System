@@ -293,6 +293,33 @@ docker-compose up -d --no-deps --force-recreate api
 Mất khoảng 18 phút cho 2.806 chunk. Muốn theo dõi RAM thì mở `docker stats customs-assistant-embedder-1` ở terminal khác.
 Nếu embedder bị OOM, làm theo Task 6 Step 4 của kế hoạch 06 (hạ `EMBED_BATCH`).
 
+### Nạp tầng bằng chứng (`seed-evidence`)
+
+`evidence_section` giữ chú giải HS, GRI, Chú giải chi tiết, SEN, công văn, bảng phụ lục, mục tình trạng hiệu lực,
+tài liệu chỉ có trong notebook và ghi chú nghiệp vụ, mỗi đơn vị trích dẫn một dòng (kế hoạch 05 Mảng 2). Khác
+`seed-legal`, seed này **không TRUNCATE**: nó upsert theo `(kind, instrument, source_ref)`, chỉ nhúng dòng mới hoặc dòng
+có `embed_text` đổi, ghi từng lô ngay khi nhúng xong, và cuối cùng xoá dòng builder không còn sinh. Dừng giữa chừng
+thì chạy lại, seed làm tiếp phần còn thiếu.
+
+- Lần đầu 1.989 mục mất **73,5 phút** (2026-09-14); embedder lên ~2,6 GB, RAM trống của host thấp nhất 1.417 MB (số đo ở
+  spec §2.6). Api không chờ seed này. Lần chạy lại khi dữ liệu không đổi chỉ cập nhật cột, không nhúng.
+- **Phải có `--no-deps`**, cùng lý do như `seed-legal`, và embedder phải đang healthy.
+- Override cần một dòng cho service này, không thì container chạy không giới hạn RAM và không xoay vòng log:
+  `seed-evidence: { mem_limit: 1g, logging: *logging }`.
+
+```bash
+docker inspect -f '{{.State.Health.Status}}' customs-assistant-embedder-1   # phải là healthy
+docker-compose run -d --no-deps --name customs-assistant-seed-evidence seed-evidence </dev/null
+docker logs -f --tail 5 customs-assistant-seed-evidence
+# xong khi log có "Evidence seed complete"; rồi dọn container:
+docker rm customs-assistant-seed-evidence
+docker-compose exec -T db psql -U app -d customs_assistant -c "select kind, count(*), count(embedding) embedded from evidence_section group by kind order by kind"
+```
+
+Sửa một ghi chú trong `.agent/` (6 file liệt kê ở `db/seed/data/legal/nghiep-vu.json`) thì chạy
+`yarn tsx db/seed/evidence.ts --export-notes`, commit `repo-notes.ndjson`, deploy, rồi chạy lại seed. Image không có `.agent/`
+(`.dockerignore`), và `evidence-build.spec.ts` báo lỗi khi file xuất lệch với ghi chú.
+
 ## 6. Bot Zalo
 
 > **Trạng thái 2026-09-13: đang làm (Task 9).** Đăng nhập QR xong (~11:33 UTC), `ALLOWED_THREADS` đã đặt

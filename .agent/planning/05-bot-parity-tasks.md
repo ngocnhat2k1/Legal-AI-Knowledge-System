@@ -110,10 +110,7 @@ git commit -m "Legal corpus: regenerate all 15 documents with the current parser
 
 ### Task 6 (còn lại): đo embed trên server
 
-- [ ] **Bước 6: đo trên server**
-
-Run trên VPS: `docker compose up -d embedder && EMBEDDER_URL=http://127.0.0.1:8000 python3 research/inbox-loader/measure_embed.py db/seed/data/legal/hs-explanatory-notes.ndjson`; song song `docker stats --no-stream | grep embedder`.
-Expected: hai dòng thời gian; ghi **giây/mục** và **MEM USAGE đỉnh** vào spec §2.6 (thay câu "khởi điểm 6.000 ký tự" bằng số đo và giá trị `EMBED_CHARS` chọn). Cổng đạt: không OOM, lô 32 mục dưới 5 phút. Nếu quá → hạ `EMBED_MAX_TOKENS` xuống 1024 và đo lại.
+- [x] **Bước 6: đo trên server** (2026-09-14, server MONA): bản ghi 48.998 ký tự 7,4 s; lô 32 mục ≥ 8.000 ký tự 170,7 s (5,3 s/mục); RAM đỉnh embedder 2.580 MB / 3.500 MB, không OOM; 3,46 ký tự/token → `EMBED_CHARS = 6800`, giữ `EMBED_MAX_TOKENS = 2048`. Cổng đạt. Số đo ghi ở spec §2.6.
 
 ---
 
@@ -194,15 +191,37 @@ export function statusSections(documents: DocRow[], relations: RelationRow[]): E
 
 **Việc (mỗi việc một chu kỳ test; thứ tự bắt buộc)**
 
-1. Migration 0011 + schema + `db:migrate` chạy sạch trên DB rỗng và DB đã có. (0010 đã dùng cho `0010_tariff_by_subline` — ADR 2026-09-13-fta-national-sublines.)
-2. `extractHsCodes`, `windowText`, `statusSections` — thuần, test trước.
-3. Builder từng kind theo bảng spec §2.2 (11 builder), mỗi builder một test đếm và một test nội dung mẫu.
-4. `db/seed/evidence.ts` + compose service `seed-evidence` (sau `seed-legal`), idempotent.
-5. `/tariff`: Chương 98 hai chiều + `schedule` + listing; test golden hai ca Chương 98.
-6. Chạy seed trên VPS trong ngưỡng đo Task 6; `/health.evidenceSections` ≈ 2.000.
-7. Cổng: `yarn eval` (endpoint `/legal` — chưa có `/answer`) không tụt; `evidence.spec` xanh; kiểm SQL thật cho `simple` parser với số hiệu (spec §3.3).
+> **Trạng thái 2026-09-14:** việc 1–4 xong (`8fa69dc`). Khác phác thảo: builder gom trong một file thuần `db/seed/evidence-build.ts` + `evidence-build.spec.ts` (19 test); `decision_log` hoãn sang Mảng 3 cùng code ghi nó; seed **upsert tiếp tục được**, không TRUNCATE; ghi chú `.agent/` đi vào image qua `repo-notes.ndjson` (image không có `.agent/`); mục `note` để `auto_unverified` thay vì `verified` như spec §2.1, vì R18 chỉ cho người đứng tên xác minh. Việc 5 và `/health.evidenceSections` chuyển sang Mảng 3 (chưa có code đọc). Kết quả 1.979 mục + mục nghị định: hs_note 134, gri 18, en 1.306, sen 97, ruling 29, annex_table 112, status 33, local_doc 6, guidance 2, draft 20, internal 149, note 73.
+
+1. ✅ Migration 0011 + schema + `db:migrate` chạy sạch trên DB rỗng và DB đã có. (0010 đã dùng cho `0010_tariff_by_subline` — ADR 2026-09-13-fta-national-sublines.)
+2. ✅ `extractHsCodes`, `windowText`, `statusSections` — thuần, test trước.
+3. ✅ Builder từng kind theo bảng spec §2.2, khoá bằng số đếm và các ca nội dung ở spec §7.
+4. ✅ `db/seed/evidence.ts` + compose service `seed-evidence` (sau `seed-legal`), idempotent.
+5. ↪ Mảng 3 — `/tariff`: Chương 98 hai chiều + `schedule` + listing; test golden hai ca Chương 98.
+6. ✅ Chạy seed trên server trong ngưỡng đo Task 6: 2026-09-14 07:39–08:53 UTC (73,5 phút), 1.989/1.989 mục có vector (status 43 = 33 văn bản + 10 nghị định biểu thuế), exit 0, không OOM, RAM trống thấp nhất của host 1.417 MB.
+7. Cổng: `yarn eval` (endpoint `/legal` — chưa có `/answer`) không tụt; `evidence-build.spec` xanh; kiểm SQL thật cho `simple` parser với số hiệu (spec §3.3).
 
 ## Mảng 3 · Đường trả lời — phác thảo (chi tiết hoá sau mảng 2)
+
+> **Lát đầu (2026-09-14, `e17e0a1`…`19da3b0`) — trước `POST /answer`, không thêm lần gọi LLM.** `GET /legal` truy hồi thêm
+> `evidence_section` (`apps/api/src/modules/legal/legal.evidence.ts`: RRF lai như `legal_chunk`, cửa sổ `current` +
+> 18 tháng `upcoming`, chưa lọc HS), tối đa 3 mục nối **sau** điều khoản, qua cùng cổng `MAX_DIST`; văn bản người dùng
+> nêu mà kho chỉ có trong tầng bằng chứng (69/2018/NĐ-CP) trả lời từ mục đó thay vì `missingDoc`. Mỗi nguồn vào prompt
+> kèm nhãn thẩm quyền / chưa có hiệu lực / tình trạng; prompt bỏ trần 200 từ; gọi viết 90 s. Citation mang `kind`,
+> `instrument`, `note` — bộ chấm notebook (`apps/eval/notebook.ts`) nhờ đó chấm được `expectEvidence`. Bot in `note`
+> trên dòng nguồn. Việc dưới đây vẫn nguyên: `retrieve.ts` chuyển phần truy hồi này sang, thêm lọc HS, kế hoạch, mở
+> rộng, kiểm, sửa.
+>
+> Hai điều học được khi kiểm trên dữ liệu thật (`2ee0c60`, `eaae4ec`, `19da3b0`):
+> - 69/2018/NĐ-CP đã được bot tự nạp nên đi đường "có trong kho" và trả lời bằng chính khoản của nó; mục `status`
+>   ("hết hiệu lực từ 05/09/2026") không lên hạng vì parser `simple` cắt số hiệu (spec §3.3). **Mục `status` của mọi văn
+>   bản câu hỏi nêu luôn đi kèm, không qua cổng** (`namedStatus`).
+> - Cổng `MAX_DIST` 0,58 của điều khoản quá lỏng cho bằng chứng. Đo 10 câu: mục đúng 0,27–0,41; câu lạc đề ≥ 0,57; trong
+>   lĩnh vực, ghi chú AEO 0,34 cho câu "thời hạn nộp thuế" có khoản gần nhất 0,25. Cổng bằng chứng: **≤ 0,50 và không
+>   xa hơn điều khoản tốt nhất quá 0,05**. Mảng 3 chỉnh lại hai số này bằng eval notebook.
+> - Mã HS 8 số trong câu hỏi cũng không khớp bằng từ khoá ("6506.10.10"), và RRF để các đoạn mở đầu chương lặp từ của
+>   câu hỏi vượt mục đúng ("Chú giải Phần XVI"). **Mục có mã HS câu hỏi nêu (`hs_codes`) luôn đi kèm, nguồn ràng buộc
+>   trước** (`hsCodeSections`); các mục còn lại qua cổng rồi **xếp theo khoảng cách cosine**, không theo RRF.
 
 **Cấu trúc file**
 
