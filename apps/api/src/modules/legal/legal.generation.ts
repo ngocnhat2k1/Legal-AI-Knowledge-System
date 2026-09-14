@@ -9,8 +9,7 @@
  * never from the model's own legal knowledge (the "training data overrides the
  * retrieved context" failure mode), and abstain when they don't support an answer.
  */
-import { spawn } from 'node:child_process';
-import { tmpdir } from 'node:os';
+import { runClaude } from '../answer/claude';
 
 /** One numbered source in the prompt: a statute article, or an evidence section with the label it must carry. */
 export interface PromptSource {
@@ -20,31 +19,8 @@ export interface PromptSource {
   text: string;
 }
 
-/**
- * Run `claude -p` with the prompt piped via STDIN, not as an argv. The grounded
- * prompt (several verbatim provisions) easily exceeds the OS per-argument limit
- * (MAX_ARG_STRLEN, 128 KB) — passing it as an argument fails with spawn E2BIG.
- * stdin has no such limit.
- */
-function runClaude(prompt: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn('claude', ['-p'], {
-      env: { ...process.env, HOME: tmpdir() },
-      // Evidence sections made the prompt several times longer; spec §3.7 gives the writing call 100 s.
-      timeout: 100_000,
-    });
-    let out = '';
-    let err = '';
-    child.stdout.on('data', (d) => (out += d));
-    child.stderr.on('data', (d) => (err += d));
-    child.on('error', reject);
-    child.on('close', (code) =>
-      code === 0 ? resolve(out) : reject(new Error(err || `claude exited ${code}`)),
-    );
-    child.stdin.on('error', () => {}); // ignore EPIPE if claude exits early
-    child.stdin.end(prompt);
-  });
-}
+/** Evidence sections made the prompt several times longer; spec §3.7 gives the writing call 100 s. */
+const WRITE_TIMEOUT_MS = 100_000;
 
 export interface GenerationResult {
   answer: string;
@@ -112,7 +88,7 @@ export async function generate(
   if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) return null;
   const prompt = buildPrompt(query, asOf, sources, facts);
   try {
-    const stdout = await runClaude(prompt);
+    const stdout = await runClaude(prompt, { timeoutMs: WRITE_TIMEOUT_MS });
     const m = stdout.match(/\{[\s\S]*\}/);
     if (!m) {
       console.warn(`[legal] generation returned no JSON (${stdout.length} chars)`);
