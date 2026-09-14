@@ -308,16 +308,44 @@ export function excerpt(raw, min = 140, max = 480) {
 }
 
 /**
- * "Nguồn:" block, small italic. items: { n, label, quote?, cut?, url? }. Links are de-duplicated
- * per document and capped at three. Reused by Mảng 3's formatAnswerMd.
+ * "Nguồn:" block, small italic. items: { n, label, note?, quote?, cut?, url? }. A standing note repeated on every source
+ * ("tài liệu hướng dẫn áp dụng…" three times) is printed once, then "như [n]". Links are de-duplicated per document and
+ * capped at three.
  */
 export function sourceLines(items) {
   if (!items.length) return [];
   const urls = [...new Set(items.map((x) => x.url).filter(Boolean))].slice(0, 3);
+  const firstWithNote = new Map();
+  const line = (x) => {
+    const same = firstWithNote.get(x.note);
+    if (x.note && !same) firstWithNote.set(x.note, x.n);
+    const note = !x.note ? '' : same ? ` (như [${same}])` : ` (${x.note})`;
+    return L([`[${x.n}] ${x.label}${note}${x.quote ? ` — “${x.quote}”${x.cut ? ' (trích đoạn đầu)' : ''}` : ''}`], 'note');
+  };
   return [
     L(['Nguồn:'], 'note'),
-    ...items.map((x) => L([`[${x.n}] ${x.label}${x.quote ? ` — “${x.quote}”${x.cut ? ' (trích đoạn đầu)' : ''}` : ''}`], 'note')),
+    ...items.map(line),
     ...(urls.length ? [L([`Toàn văn: ${urls.join(' · ')}`], 'note')] : []),
+  ];
+}
+
+/** An Explanatory Note's title repeats the heading text its quote opens with: keep the part naming the note, and the headings it may also cover. */
+const enLabel = (title) => String(title).replace(/ — .*?( \(có thể gồm cả nhóm [^)]*\))?$/, '$1');
+
+/** Red lines from data, whatever the prose says (R8). A citation is numbered by its `n`, else by position. */
+function redLines(cites) {
+  // One line per (document, effectiveness) — markers share a line only when both match.
+  const groups = new Map();
+  cites.forEach((c, i) => {
+    if (c.kind || !EFFECT[c.effectiveness]) return; // an evidence section carries its standing on its source line
+    const key = `${c.documentNumber}|${c.effectiveness}`;
+    if (!groups.has(key)) groups.set(key, { c, ns: [] });
+    groups.get(key).ns.push(c.n ?? i + 1);
+  });
+  return [
+    ...[...groups.values()].map(({ c, ns }) => effectLine(c, ns)),
+    // A status row's end of force, compared with the as-of date by the API.
+    ...cites.flatMap((c, i) => (c.kind && c.expired ? [L([`[${c.n ?? i + 1}] ${c.expired}.`], 'red')] : [])),
   ];
 }
 
@@ -327,27 +355,11 @@ export function formatLegal(r) {
   const lines = r.answer
     ? md(r.answer)
     : [L(['Mình chưa tổng hợp được câu trả lời chắc chắn; đây là các điều khoản liên quan nhất để bạn đối chiếu:'])];
-  lines.push(L([]));
-
-  // One red line per (document, effectiveness) — markers share a line only when both match.
-  const groups = new Map();
-  cites.forEach((c, i) => {
-    if (c.kind || !EFFECT[c.effectiveness]) return; // an evidence section carries its standing on its source line
-    const key = `${c.documentNumber}|${c.effectiveness}`;
-    if (!groups.has(key)) groups.set(key, { c, ns: [] });
-    groups.get(key).ns.push(i + 1);
-  });
-  for (const { c, ns } of groups.values()) lines.push(effectLine(c, ns));
-  // A status row's end of force, compared with the as-of date by the API: printed from data, whatever the prose says (R8).
-  cites.forEach((c, i) => {
-    if (c.kind && c.expired) lines.push(L([`[${i + 1}] ${c.expired}.`], 'red'));
-  });
+  lines.push(L([]), ...redLines(cites));
 
   // Evidence sections are not documents the bot fetched: their standing is on the source line, not in this warning.
   lines.push(...unverifiedLines(cites.filter((c) => !c.kind)));
 
-  // A standing label repeated on every source ("tài liệu hướng dẫn áp dụng…" three times) is printed once, then "như [n]".
-  const firstWithNote = new Map();
   const items = cites.map((c, i) => {
     const ex = excerpt(c.verbatimText);
     const late = c.effectiveTo || (c.effectiveFrom && r.asOf && c.effectiveFrom > r.asOf);
@@ -355,14 +367,83 @@ export function formatLegal(r) {
       !c.kind && late && c.effectiveFrom
         ? ` · hiệu lực ${c.effectiveTo ? `${dmy(c.effectiveFrom)}–${dmy(c.effectiveTo)}` : `từ ${dmy(c.effectiveFrom)}`}`
         : '';
-    // An Explanatory Note's title repeats the heading text its quote opens with: keep the part that names the note.
-    const label = c.kind === 'en' ? String(c.provisionLabel).split(' — ')[0] : c.provisionLabel;
-    const same = c.note ? firstWithNote.get(c.note) : undefined;
-    if (c.note && !same) firstWithNote.set(c.note, i + 1);
-    const note = !c.note ? '' : same ? ` (như [${same}])` : ` (${c.note})`;
-    return { n: i + 1, label: `${label}${window}${note}`, quote: ex.text, cut: ex.cut, url: c.gazetteUrl };
+    const label = c.kind === 'en' ? enLabel(c.provisionLabel) : c.provisionLabel;
+    return { n: i + 1, label: `${label}${window}`, note: c.note, quote: ex.text, cut: ex.cut, url: c.gazetteUrl };
   });
   lines.push(...sourceLines(items));
+  return lines;
+}
+
+// --- Composed answer (POST /answer) ----------------------------------------------
+
+const ADVANCE_RULING = 'Hàng khó chốt thì có thể đề nghị hải quan xác định trước mã số.';
+const TARIFF_HINT = 'Cần xem thuế của mã nào thì nhắn mã đó kèm xuất xứ.';
+/** The API's warning codes; `unverified` is worded from the citations themselves (unverifiedLines). */
+const WARNING = {
+  undetermined: 'Có nguồn chưa xác định được tình trạng hiệu lực — đối chiếu trước khi dùng làm căn cứ.',
+  upcoming: 'Có nguồn chưa có hiệu lực tại ngày tra — xem ngày ở dòng nguồn.',
+  old_catalog: 'Mã nêu trong công văn cũ theo danh mục cũ — đối chiếu Danh mục hiện hành trước khi khai.',
+};
+
+/**
+ * A composed answer (plan 08 §5). Only the prose is model text, through md(); every other line is written here from
+ * response fields: the user's code against the candidates, the candidates, the tariff block, red and orange lines, sources.
+ *
+ * @param {object} res  POST /answer response; `depth` is the walkthrough's ('brief' | 'full')
+ * @param {{tariffLines?: Array<{q: object, tariff: object, confirm?: object|null}>}} opts  /tariff lookups the bot made:
+ *   the code asked about in mixed mode, the walkthrough's tariff_ref codes in hs mode
+ */
+export function formatAnswerMd(res, { tariffLines = [] } = {}) {
+  const cites = res.citations ?? [];
+  const cands = (res.candidates ?? []).slice(0, 3);
+  const hs = res.mode === 'hs';
+  const prose = md(res.answerMd);
+  const lines = [...prose, L([])];
+
+  if (hs && cands.length) {
+    // Never orange: the user's code outside the candidates is a comparison, not a finding (R4).
+    for (const u of res.userCodes ?? []) {
+      const own = u.code === u.heading ? ['Nhóm ', [u.heading, 'b'], ' bạn nêu'] : ['Mã ', [u.code, 'b'], ' bạn nêu thuộc nhóm ', [u.heading, 'b']];
+      lines.push(
+        L(
+          !u.exists
+            ? ['Mã ', [u.code, 'b'], ' không có trong Danh mục hàng hóa đã nạp.']
+            : u.inCandidates
+              ? [...own, ' — nằm trong các nhóm dưới đây.']
+              : [...own, ' — không nằm trong các nhóm dưới đây; nếu hàng có đặc điểm khiến nó thuộc nhóm đó, bạn gửi thêm để mình đọc lại.'],
+        ),
+      );
+    }
+    lines.push(
+      L(['Ứng viên để chuyên viên chốt:']),
+      ...cands.map((c) => L([[c.hs, 'b'], ` · ${cleanGazetteTitle('', c.title, 50)} · ${c.evidence.map((n) => `[${n}]`).join(' ')}`], 'ul')),
+    );
+    if (cands.length >= 2 && !/xác định trước/i.test(toText(prose))) lines.push(L([ADVANCE_RULING], 'note'));
+  }
+
+  // D3(a): a candidate's rates only under a full walkthrough, for at most two codes, never green (R2).
+  const blocks = hs ? (res.depth === 'full' ? tariffLines.slice(0, 2) : []) : res.mode === 'mixed' ? tariffLines : [];
+  for (const t of blocks) lines.push(L([]), ...formatAnswer(t.q, t.tariff, t.confirm ?? null, { showFooter: false, candidate: hs }));
+  if (hs && cands.length && !blocks.length) lines.push(L([TARIFF_HINT], 'note'));
+
+  lines.push(
+    L([]),
+    ...redLines(cites),
+    // Evidence sections are not documents the bot fetched: their standing is on the source line (R18).
+    ...unverifiedLines(cites.filter((c) => !c.kind)),
+    ...(res.warnings ?? []).filter((w) => WARNING[w]).map((w) => L([WARNING[w]], 'warn')),
+    ...sourceLines(
+      cites.map((c) => ({
+        n: c.n,
+        label: c.kind === 'en' ? enLabel(c.label) : c.label,
+        note: c.note,
+        // The API keeps only quotes found verbatim in the body; 159 leaves room for the ellipsis.
+        quote: c.quotes?.length ? cleanGazetteTitle('', c.quotes[0], 159) : '',
+        url: c.url,
+      })),
+    ),
+  );
+  if (res.cut > 0) lines.push(L(['Một phần câu trả lời bị lược vì không dẫn được nguồn.'], 'note'));
   return lines;
 }
 

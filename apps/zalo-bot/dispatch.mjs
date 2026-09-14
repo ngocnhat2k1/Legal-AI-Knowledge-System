@@ -139,7 +139,7 @@ export const asksCodeFit = (text) =>
  * 30.05…" (a code check) quoted with "sai rồi" would record the user's own code as wrong.
  * ponytail: every tariff reply prints "MFN" and every verdict reply "Cảm ơn"; tag replies in memory if that stops holding.
  */
-const tariffReply = (quoteText) => hasHs(quoteText) && /MFN|Cảm ơn|chưa đúng \(theo|sửa thành/.test(quoteText);
+export const tariffReply = (quoteText) => hasHs(quoteText) && /MFN|Cảm ơn|chưa đúng \(theo|sửa thành/.test(quoteText);
 
 /**
  * A question, not a verdict: "8481.80.99 có sai không ạ", "mã này đúng chưa?". The disagreement cue matched "sai" and
