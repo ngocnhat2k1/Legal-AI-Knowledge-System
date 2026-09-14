@@ -338,6 +338,10 @@ export function formatLegal(r) {
     groups.get(key).ns.push(i + 1);
   });
   for (const { c, ns } of groups.values()) lines.push(effectLine(c, ns));
+  // A status row's end of force, compared with the as-of date by the API: printed from data, whatever the prose says (R8).
+  cites.forEach((c, i) => {
+    if (c.kind && c.expired) lines.push(L([`[${i + 1}] ${c.expired}.`], 'red'));
+  });
 
   // Evidence sections are not documents the bot fetched: their standing is on the source line, not in this warning.
   lines.push(...unverifiedLines(cites.filter((c) => !c.kind)));

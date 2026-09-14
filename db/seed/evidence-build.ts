@@ -302,6 +302,11 @@ export function statusSections(documents: DocRow[], relations: RelationRow[]): E
     if (target) incoming.set(target, [...(incoming.get(target) ?? []), r]);
   }
   const earliest = (rs: RelationRow[]) => rs.map((r) => r.from_date).sort()[0];
+  /** When and by what the instrument stops applying (in whole or in the stated part) — the API compares these with the as-of date. */
+  const ends = (rs: RelationRow[], instrument: string) =>
+    rs
+      .filter((r) => r.relation !== 'sua_doi')
+      .map((r) => ({ from: r.from_date, by: r.from, relation: r.relation, scope: r.to.trim() === instrument ? null : r.to.trim() }));
   const incomingLine = (r: RelationRow, instrument: string) => {
     const scope = r.to.trim() === instrument ? '' : ` — phần bị tác động: ${r.to.trim()} —`;
     const d = fmtDate(r.from_date);
@@ -332,6 +337,7 @@ export function statusSections(documents: DocRow[], relations: RelationRow[]): E
       title: `Tình trạng hiệu lực — ${d.number}${d.consolidates ? ` (hợp nhất ${d.consolidates})` : ''}`,
       body: lines.join('\n'),
       sourceRef: `documents.ndjson#${d.number}`,
+      meta: { ends: ends(inc, d.number) },
     });
   });
   const inCorpus = new Set(documents.map((d) => d.number));
@@ -346,7 +352,7 @@ export function statusSections(documents: DocRow[], relations: RelationRow[]): E
           ...rs.map((r) => `${instrument} ${incomingLine(r, instrument)}`),
         ].join('\n'),
         sourceRef: `relations.ndjson#${instrument}`,
-        meta: { scope: rs.map((r) => r.to) },
+        meta: { scope: rs.map((r) => r.to), ends: ends(rs, instrument) },
       }),
     );
   }

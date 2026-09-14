@@ -50,6 +50,20 @@ export const DISAGREE_CUE =
 
 export const isDisagreement = (text) => DISAGREE_CUE.test(String(text ?? '').toLowerCase());
 
+const TARIFF_CUE = /thuế|%|phần trăm|xuất xứ|c\/o|mfn|fta|ưu đãi|biểu/;
+const LEGAL_LIST_CUE =
+  /danh mục|rủi ro|kiểm tra chuyên ngành|quản lý chuyên ngành|giấy phép|hợp quy|hợp chuẩn|kiểm dịch|năng lượng|thông tư|nghị định|quyết định|công văn|văn bản/;
+
+/**
+ * An HS code inside a question about a legal list is a legal question: "mũ bảo hiểm 6506.10.10 thuộc danh mục rủi ro
+ * nào theo Thông tư 36/2026" asks which document lists the code, and the tariff lookup the code would otherwise
+ * trigger answered with MFN 20% (observed 2026-09-14). Any tariff cue keeps the tariff path.
+ */
+export function legalAboutCode(text) {
+  const t = String(text ?? '').toLowerCase().normalize('NFC');
+  return hasHs(t) && !TARIFF_CUE.test(t) && LEGAL_LIST_CUE.test(t);
+}
+
 /**
  * The pre-router fast path. Returns an action when a cheap, unambiguous reading
  * exists (no LLM round trip needed), else null to let the router decide with history.

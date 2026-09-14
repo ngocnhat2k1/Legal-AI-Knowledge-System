@@ -24,7 +24,7 @@ import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 import { answerByHs, answerImage, answerLegal, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
 import { ackIngestReports, ingestReports, legalDocuments, requestIngest, verifyDocument } from './api.mjs';
 import { loadContext, saveContext } from './conversation.mjs';
-import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
+import { fallbackIntent, fastPath, guardIntent, legalAboutCode, parseVerifyDocCommand } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
 import { formatGeneral, formatIngestQueued, formatIngestReport } from './format.mjs';
 import { docNumberStatedIn, mergeQuote, parseQuery, statedDocNumber, stripMentions, todayVN } from './parse.mjs';
@@ -148,7 +148,9 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   // 2. Ảnh: vision nhận diện mặt hàng rồi đi tiếp đường tra thuế tất định.
   if (image) return { ...(await answerImage(image.imageUrls, text)), intent: 'tariff' };
 
-  // 3. Mã HS nằm ngay trong câu hỏi mới → tra thẳng, không cần định tuyến.
+  // 3. Mã HS nằm ngay trong câu hỏi mới → tra thẳng, không cần định tuyến. Trừ khi câu hỏi hỏi văn bản nào
+  // liệt kê mã đó ("thuộc danh mục rủi ro nào theo Thông tư 36/2026"): đó là câu hỏi pháp luật.
+  if (legalAboutCode(text)) return { ...(await answerLegal(text, {})), intent: 'legal' };
   const direct = parseQuery(text);
   if (direct) return { ...(await answerByHs(direct, { showFooter: ctx.topic !== 'tariff' })), intent: 'tariff' };
 

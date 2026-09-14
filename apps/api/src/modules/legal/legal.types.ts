@@ -33,6 +33,11 @@ export interface LegalCitation {
   instrument?: string;
   /** The source's standing, worded for the reader: not a legal basis, not yet in force, status undetermined. */
   note?: string | null;
+  /**
+   * Status rows only: "43/2017/NĐ-CP ĐÃ HẾT HIỆU LỰC từ 23/01/2026 theo 37/2026/NĐ-CP", set when an end of force is on
+   * or before the as-of date. Compared here, from data — the bot prints it as its own line, whatever the prose says.
+   */
+  expired?: string | null;
 }
 
 /** One document in the corpus — the manifest the bot shows when asked for something we lack. */

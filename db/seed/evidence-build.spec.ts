@@ -56,6 +56,18 @@ describe('evidence builders on the committed extracts', () => {
     expect(b).toContain('05/09/2026');
   });
 
+  it('status: each end of force is data — date, instrument and part — so the API can compare it with the as-of date', () => {
+    expect(statusOf('43/2017/NĐ-CP').meta.ends).toEqual([
+      { from: '2026-01-23', by: '37/2026/NĐ-CP', relation: 'het_hieu_luc', scope: '43/2017/NĐ-CP (nhãn hàng hóa)' },
+    ]);
+    expect(statusOf('69/2018/NĐ-CP').meta.ends).toEqual([
+      { from: '2026-09-05', by: '292/2026/NĐ-CP', relation: 'thay_the', scope: null },
+    ]);
+    expect(statusOf('03/2015/TT-BTTTT').meta.ends).toEqual([]); // amended, still in force
+    expect(statusOf('13/2022/NĐ-CP').meta.ends).toHaveLength(2);
+    expect(statusOf('336/2026/NĐ-CP').meta.ends).toEqual([]); // in the corpus, nothing ends it
+  });
+
   it('status: a change that takes effect later starts then, so it lands in the upcoming window', () => {
     expect(statusOf('85/2019/NĐ-CP').effectiveFrom).toBe('2026-10-15');
   });

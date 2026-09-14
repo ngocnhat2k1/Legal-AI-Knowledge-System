@@ -4,7 +4,14 @@ import { sql } from 'drizzle-orm';
 import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/database';
 import { EmbeddingService } from './embedding.service';
 import { extractAsOf } from './legal.asof';
-import { evidenceInstruments, evidenceRetrieve, hsCodeSections, namedStatus, type RetrievedEvidence } from './legal.evidence';
+import {
+  evidenceInstruments,
+  evidenceRetrieve,
+  hsCodeSections,
+  namedStatus,
+  type RetrievedEvidence,
+  type StatusEnd,
+} from './legal.evidence';
 import { generate, type PromptSource } from './legal.generation';
 import { keepRelevant, numberMarkers } from './legal.grounding';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
@@ -234,7 +241,7 @@ export class LegalService {
       .filter((e) => !pinned.some((p) => p.id === e.id))
       .sort((a, b) => (a.bestDist ?? 1) - (b.bestDist ?? 1));
     const keptEvidence = [...pinned, ...ranked].slice(0, Math.max(EVIDENCE_K, pinned.length));
-    const sources = [...kept.map(articleSource), ...keptEvidence.map(evidenceSource)];
+    const sources = [...kept.map(articleSource), ...keptEvidence.map((e) => evidenceSource(e, asOf))];
     const scope = {
       requestedDoc: ref?.core ?? null,
       missingDoc: null,
@@ -345,18 +352,28 @@ const AUTHORITY_NOTE: Record<string, string | null> = {
 
 const dmy = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 
-function evidenceSource(e: RetrievedEvidence): Source {
+function evidenceSource(e: RetrievedEvidence, asOf: string): Source {
+  const part = (x: StatusEnd) => (x.scope ? ` (phần: ${x.scope})` : '');
+  const past = e.ends.filter((x) => x.from <= asOf);
+  const coming = e.ends.filter((x) => x.from > asOf);
+  // The as-of comparison is made here, from data, not left to the model: on 14/09/2026 it wrote that 43/2017/NĐ-CP
+  // "vẫn còn hiệu lực … sẽ hết hiệu lực từ 23/01/2026" from the very row that says it ended then.
+  const expired = past.length
+    ? `${e.instrument} ĐÃ HẾT HIỆU LỰC ${past.map((x) => `từ ${dmy(x.from)} theo ${x.by}${part(x)}`).join('; ')}`
+    : null;
   const note =
     [
       AUTHORITY_NOTE[e.authority] ?? null,
-      e.window === 'upcoming' && e.effectiveFrom ? `CHƯA CÓ HIỆU LỰC — có hiệu lực từ ${dmy(e.effectiveFrom)}` : null,
+      // A status row's upcoming window is a coming end of force (85/2019 from 15/10/2026), not a document not yet in force.
+      e.window === 'upcoming' && e.effectiveFrom && !e.ends.length ? `CHƯA CÓ HIỆU LỰC — có hiệu lực từ ${dmy(e.effectiveFrom)}` : null,
+      ...coming.map((x) => `sẽ hết hiệu lực từ ${dmy(x.from)} theo ${x.by}${part(x)}`),
       e.status ? `tình trạng: ${e.status}` : null,
     ]
       .filter(Boolean)
       .join(' · ') || null;
   return {
     label: e.title,
-    note,
+    note: [expired, note].filter(Boolean).join(' · ') || null,
     text: e.body.slice(0, EVIDENCE_PROMPT_CHARS),
     citation: {
       documentNumber: e.documentNumber ?? e.instrument,
@@ -373,6 +390,7 @@ function evidenceSource(e: RetrievedEvidence): Source {
       kind: e.kind,
       instrument: e.instrument,
       note,
+      expired,
     },
   };
 }

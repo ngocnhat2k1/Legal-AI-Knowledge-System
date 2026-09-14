@@ -50,7 +50,7 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
     id: 1, kind: 'status', instrument: '69/2018/NĐ-CP', authority: 'binding', title: 'Tình trạng hiệu lực — 69/2018/NĐ-CP',
     body: '69/2018/NĐ-CP hết hiệu lực từ 05/09/2026, bị thay thế bởi 292/2026/NĐ-CP — căn cứ khoản 1 Điều 65 NĐ 292/2026/NĐ-CP',
     documentNumber: '69/2018/NĐ-CP', effectiveFrom: '2026-09-05', effectiveTo: null, effectiveness: 'con_hieu_luc',
-    verification: 'auto_unverified', status: null, window: 'current', score: 1, bestDist: 0.9, ...over,
+    verification: 'auto_unverified', status: null, ends: [], window: 'current', score: 1, bestDist: 0.9, ...over,
   });
   const svc = () => new LegalService({ execute: async () => [] } as never, { embed: async () => [0] } as never);
   const lastSources = () => (generate as jest.Mock).mock.calls.at(-1)![2] as PromptSource[];
@@ -145,6 +145,29 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
       'Chú giải Phần XVI',
       'EN Chương 84 — mở đầu',
     ]);
+  });
+
+  it('compares a status row\'s end of force with the as-of date itself: expired for the model and the bot, coming otherwise', async () => {
+    (evidenceInstruments as jest.Mock).mockResolvedValueOnce(['43/2017/NĐ-CP', '85/2019/NĐ-CP']);
+    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([
+      ev({
+        id: 43, instrument: '43/2017/NĐ-CP', documentNumber: '43/2017/NĐ-CP', title: 'Tình trạng hiệu lực — 43/2017/NĐ-CP',
+        ends: [{ from: '2026-01-23', by: '37/2026/NĐ-CP', relation: 'het_hieu_luc', scope: '43/2017/NĐ-CP (nhãn hàng hóa)' }],
+      }),
+      ev({
+        id: 85, instrument: '85/2019/NĐ-CP', documentNumber: '85/2019/NĐ-CP', title: 'Tình trạng hiệu lực — 85/2019/NĐ-CP',
+        window: 'upcoming', effectiveFrom: '2026-10-15',
+        ends: [{ from: '2026-10-15', by: '336/2026/NĐ-CP', relation: 'thay_the', scope: null }],
+      }),
+    ]);
+    (generate as jest.Mock).mockResolvedValueOnce(null);
+    const res = await svc().ask('Nghị định 43/2017 còn áp dụng không', '2026-09-14');
+    const [nd43, nd85] = res.citations;
+    expect(nd43!.expired).toBe('43/2017/NĐ-CP ĐÃ HẾT HIỆU LỰC từ 23/01/2026 theo 37/2026/NĐ-CP (phần: 43/2017/NĐ-CP (nhãn hàng hóa))');
+    expect(lastSources()[0]!.note).toContain('ĐÃ HẾT HIỆU LỰC từ 23/01/2026');
+    expect(nd85!.expired).toBeNull();
+    expect(nd85!.note).toContain('sẽ hết hiệu lực từ 15/10/2026 theo 336/2026/NĐ-CP');
+    expect(nd85!.note).not.toContain('CHƯA CÓ HIỆU LỰC'); // 85/2019 is in force until then
   });
 
   it('labels a section that is not yet in force with the date it starts', async () => {

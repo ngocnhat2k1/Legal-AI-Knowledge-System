@@ -18,6 +18,15 @@ const RRF_K = 12;
  */
 const UPCOMING_MONTHS = 18;
 
+/** An end of force recorded on a status row (db/seed/evidence-build.ts statusSections). */
+export interface StatusEnd {
+  from: string;
+  by: string;
+  relation: string;
+  /** The part that ends, as the enacting provision words it; null = the whole instrument. */
+  scope: string | null;
+}
+
 export interface RetrievedEvidence {
   id: number;
   kind: string;
@@ -32,6 +41,8 @@ export interface RetrievedEvidence {
   verification: string;
   /** The notebook status sentence of a notebook-only document (meta.status). */
   status: string | null;
+  /** Status rows only: when the instrument stops applying. Empty for every other kind. */
+  ends: StatusEnd[];
   window: 'current' | 'upcoming';
   score: number;
   bestDist: number | null;
@@ -53,7 +64,7 @@ const valid = (d: SQL) => sql`(e.effective_from IS NULL OR e.effective_from <= (
 
 const columns = (d: SQL) => sql`e.id, e.kind, e.instrument, e.authority, e.title, e.body, e.document_number,
   e.effective_from::text AS effective_from, e.effective_to::text AS effective_to,
-  e.effectiveness, e.verification, e.meta->>'status' AS status,
+  e.effectiveness, e.verification, e.meta->>'status' AS status, e.meta->'ends' AS ends,
   CASE WHEN e.effective_from > ${d} THEN 'upcoming' ELSE 'current' END AS "window"`;
 
 export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts): Promise<RetrievedEvidence[]> {
@@ -142,6 +153,7 @@ function toEvidence(r: Record<string, unknown>): RetrievedEvidence {
     effectiveness: String(r.effectiveness),
     verification: String(r.verification),
     status: (r.status as string | null) ?? null,
+    ends: Array.isArray(r.ends) ? (r.ends as StatusEnd[]) : [],
     window: r.window === 'upcoming' ? 'upcoming' : 'current',
     score: Number(r.score),
     bestDist: r.best_dist == null ? null : Number(r.best_dist),

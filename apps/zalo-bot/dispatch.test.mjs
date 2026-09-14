@@ -10,7 +10,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { fallbackIntent, fastPath, guardIntent, parseVerifyDocCommand } from './dispatch.mjs';
+import { fallbackIntent, fastPath, guardIntent, legalAboutCode, parseVerifyDocCommand } from './dispatch.mjs';
 import { answerByHs, answerLegal, handleConfirm, tariffByClues } from './answer.mjs';
 import {
   CAPABILITIES,
@@ -29,6 +29,15 @@ import { cleanGazetteTitle, docNumberStatedIn, missingKind, parseDocRef, parseQu
 const LEGAL_ANSWER_QUOTE =
   '📚 Mình chưa tổng hợp được câu trả lời chắc chắn, nhưng đây là điều khoản liên quan nhất: 📖 Khoản 1 Điều 25 Nghị định 08/2015/NĐ-CP';
 const TARIFF_ANSWER_QUOTE = '📋 8481.80.99 · CN · 2026-08-13 MFN: 12% (26/2023/NĐ-CP)';
+
+test('mã HS trong câu hỏi về danh mục văn bản là câu hỏi pháp luật; có dấu hiệu thuế thì vẫn tra thuế', () => {
+  assert.equal(legalAboutCode('Mũ bảo hiểm mã 6506.10.10 thuộc danh mục rủi ro nào theo Thông tư 36/2026?'), true);
+  assert.equal(legalAboutCode('Bóng đèn 8539.31.10 có phải kiểm tra hiệu suất năng lượng không'), true);
+  assert.equal(legalAboutCode('Thuế nhập khẩu mã 8481.80.99 xuất xứ Trung Quốc là bao nhiêu phần trăm?'), false);
+  assert.equal(legalAboutCode('8481.80.99 TQ'), false);
+  assert.equal(legalAboutCode('Thuế 8481.80.99 theo Nghị định 26/2023'), false);
+  assert.equal(legalAboutCode('Thông tư 36/2026 quy định gì về mũ bảo hiểm'), false, 'không có mã HS thì router quyết');
+});
 
 test('THE REGRESSION: disagreeing with a LEGAL answer is not an HS correction', () => {
   // Exactly the message from the 2026-08-13 screenshot: a reply (so the old
@@ -609,6 +618,22 @@ test('formatLegal: mục bằng chứng mang nhãn trên dòng nguồn, không b
   assert.equal(all(RED).length, 0, 'nhãn của mục bằng chứng nằm trên dòng nguồn');
   const text = toText(lines);
   assert.ok(text.includes('[2] Quy tắc nghiệp vụ — R5 (ghi chú nghiệp vụ hoặc tài liệu nội bộ, không phải căn cứ pháp lý)'), text);
+});
+
+test('formatLegal: mục tình trạng đã hết hiệu lực in một dòng đỏ từ dữ liệu, dù văn xuôi nói gì', () => {
+  const r = {
+    asOf: '2026-09-14',
+    answer: 'Nghị định 43/2017/NĐ-CP vẫn còn hiệu lực [1].', // the model's slip seen on 14/09/2026
+    citations: [{
+      documentNumber: '43/2017/NĐ-CP', documentTitle: 't', articleLabel: 'Tình trạng hiệu lực — 43/2017/NĐ-CP',
+      provisionLabel: 'Tình trạng hiệu lực — 43/2017/NĐ-CP', verbatimText: '43/2017/NĐ-CP hết hiệu lực từ 23/01/2026.', path: '',
+      effectiveness: 'con_hieu_luc', effectiveFrom: '2026-01-23', effectiveTo: null, gazetteUrl: null, verification: 'auto_unverified',
+      kind: 'status', instrument: '43/2017/NĐ-CP', note: null,
+      expired: '43/2017/NĐ-CP ĐÃ HẾT HIỆU LỰC từ 23/01/2026 theo 37/2026/NĐ-CP',
+    }],
+  };
+  const reds = render(formatLegal(r)).flatMap((p) => styled(p, RED));
+  assert.deepEqual(reds, ['[1] 43/2017/NĐ-CP ĐÃ HẾT HIỆU LỰC từ 23/01/2026 theo 37/2026/NĐ-CP.']);
 });
 
 // --- 69/2018 (spec §5b.8) ------------------------------------------------------------

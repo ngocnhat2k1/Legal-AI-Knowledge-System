@@ -72,6 +72,8 @@ export function buildPrompt(query: string, asOf: string, sources: PromptSource[]
     '  nguồn "không phải căn cứ pháp lý" chỉ để giải thích, không bao giờ là căn cứ duy nhất cho một khẳng định pháp lý;',
     '  nguồn "CHƯA CÓ HIỆU LỰC" phải nói rõ là chưa có hiệu lực và từ ngày nào;',
     '  nguồn "chưa xác định tình trạng" phải nói rõ là chưa xác định, không dùng làm căn cứ.',
+    '- Nhãn "ĐÃ HẾT HIỆU LỰC từ <ngày>" đã được so với ngày hỏi: văn bản (hoặc phần được nêu) KHÔNG còn áp dụng.',
+    '  Không bao giờ viết văn bản đó "còn hiệu lực" hay "sắp hết hiệu lực"; nói ngày hết hiệu lực và văn bản thay thế.',
     '- Mục "Tình trạng hiệu lực" nói văn bản còn áp dụng hay đã bị thay thế, bãi bỏ: nếu văn bản được hỏi đã hết hiệu lực,',
     '  nói ngay ở câu đầu, kèm văn bản thay thế và ngày.',
     '- Kết luận phân loại trong công văn chỉ áp cho đúng mặt hàng, đúng hồ sơ công văn nêu.',
