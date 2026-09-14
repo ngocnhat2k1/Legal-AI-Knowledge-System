@@ -68,3 +68,6 @@ research/inbox-loader/work/
 
 # Host-specific facts that must not reach the public repo (server IP, other teams on a shared host).
 .agent/local/
+
+# Git worktrees that agent workflows create for isolated tasks.
+.claude/worktrees/
