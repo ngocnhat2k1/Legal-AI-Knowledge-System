@@ -346,6 +346,8 @@ export function formatLegal(r) {
   // Evidence sections are not documents the bot fetched: their standing is on the source line, not in this warning.
   lines.push(...unverifiedLines(cites.filter((c) => !c.kind)));
 
+  // A standing label repeated on every source ("tài liệu hướng dẫn áp dụng…" three times) is printed once, then "như [n]".
+  const firstWithNote = new Map();
   const items = cites.map((c, i) => {
     const ex = excerpt(c.verbatimText);
     const late = c.effectiveTo || (c.effectiveFrom && r.asOf && c.effectiveFrom > r.asOf);
@@ -355,7 +357,10 @@ export function formatLegal(r) {
         : '';
     // An Explanatory Note's title repeats the heading text its quote opens with: keep the part that names the note.
     const label = c.kind === 'en' ? String(c.provisionLabel).split(' — ')[0] : c.provisionLabel;
-    return { n: i + 1, label: `${label}${window}${c.note ? ` (${c.note})` : ''}`, quote: ex.text, cut: ex.cut, url: c.gazetteUrl };
+    const same = c.note ? firstWithNote.get(c.note) : undefined;
+    if (c.note && !same) firstWithNote.set(c.note, i + 1);
+    const note = !c.note ? '' : same ? ` (như [${same}])` : ` (${c.note})`;
+    return { n: i + 1, label: `${label}${window}${note}`, quote: ex.text, cut: ex.cut, url: c.gazetteUrl };
   });
   lines.push(...sourceLines(items));
   return lines;

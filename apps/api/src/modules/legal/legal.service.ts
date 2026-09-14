@@ -45,18 +45,25 @@ const EVIDENCE_MARGIN = 0.05;
 const HS_CODE = /(?<!\d)\d{4}\.\d{2}\.\d{2}(?!\d)/g;
 
 /**
- * Headings an HS question names, as `30.05`: written so, as `nhóm 3005`, or as the first four digits of a code
- * (`3005.90`, `3005.10.10`, `30051010`). Only in a question about HS codes, so a date or an amount is never a heading.
+ * Headings an HS question names, as `30.05`, from three shapes only: digits right after a word naming a code ("nhóm 3005",
+ * "phân nhóm 3005.90", "mã HS 30051010", "HS: 30.05"); a full dotted code ("3005.10.10") in a question about codes; the
+ * heading list a code check sends ("Các nhóm … cần phân biệt: 30.05, 33.07"). A free "12.50", "08.30" or "1500.00.00"
+ * read as a heading capped the statute clauses of an ordinary legal question (review 2026-09-14).
  */
 export function namedHeadings(query: string): string[] {
-  if (!/mã|nhóm|hs|chương|chú giải|phân loại/i.test(query)) return [];
-  const pairs = [
-    ...query.matchAll(/(?<![\d./])(\d{2})\.(\d{2})(?!\d|\.\d|\/|%)/g),
-    ...query.matchAll(/(?<![\d./])(\d{2})(\d{2})(?:\.\d{2}){1,2}(?!\d|\/)/g),
-    ...query.matchAll(/(?<![\d./])(\d{2})(\d{2})\d{4}(?![\d./])/g),
-    ...query.matchAll(/nhóm\s+(\d{2})(\d{2})(?!\d)/gi),
-  ];
-  return [...new Set(pairs.map((m) => `${m[1]}.${m[2]}`))].slice(0, 3);
+  const found: string[] = [];
+  const add = (a: string, b: string) => found.push(`${a}.${b}`);
+  for (const m of query.matchAll(/(?:nhóm|mã(?:\s*số)?(?:\s*hs)?|hs(?:\s*code)?)\s*:?\s*(\d{2})\.?(\d{2})(?:\.?\d{2}){0,2}(?![\d/%]|[.,]\d)/giu)) {
+    add(m[1]!, m[2]!);
+  }
+  if (/mã|nhóm|hs|chương|chú giải|phân loại/i.test(query)) {
+    for (const m of query.matchAll(/(?<![\d.])(\d{2})(\d{2})\.\d{2}\.\d{2}(?!\d|[.,]\d)/g)) add(m[1]!, m[2]!);
+  }
+  for (const m of query.matchAll(/nhóm[^:.\n]{0,60}:\s*((?:\d{2}\.\d{2}\s*,?\s*)+)/giu)) {
+    for (const h of m[1]!.match(/\d{2}\.\d{2}/g) ?? []) add(h.slice(0, 2), h.slice(3));
+  }
+  // Four: a code check lists three candidates plus the user's own heading.
+  return [...new Set(found)].slice(0, 4);
 }
 /** Evidence enters the prompt cut here (≈ the embedded window); the citation keeps the whole body. */
 const EVIDENCE_PROMPT_CHARS = 6000;
@@ -251,7 +258,8 @@ export class LegalService {
     // holds for a document the user named that only the evidence layer holds.
     // A named heading brings its notes, and a question about a heading is rarely about statute clauses: two at most, or
     // the prompt outgrows the writing call (a code check with five clauses and six notes timed out, 14/09/2026).
-    const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, byHeading.length ? 2 : MAX_CITATIONS);
+    // Only a heading whose Explanatory Note came back caps them: chapter notes alone must not cost a legal answer its clauses.
+    const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, byHeading.some((e) => e.kind === 'en') ? 2 : MAX_CITATIONS);
     const limit = Math.min(EVIDENCE_MAX_DIST, Math.min(...all.map((a) => a.bestDist ?? Infinity)) + EVIDENCE_MARGIN);
     // What the question names outright — a document's status row, a section listing its HS code — may be the whole
     // answer ("replaced from 05/09/2026", "high-risk list of TT 36/2026"), so it is never cut.

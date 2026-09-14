@@ -24,7 +24,7 @@ import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 import { answerByHs, answerCodeCheck, answerImage, answerLegal, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
 import { ackIngestReports, ingestReports, legalDocuments, requestIngest, verifyDocument } from './api.mjs';
 import { loadContext, saveContext } from './conversation.mjs';
-import { asksCodeFit, fallbackIntent, fastPath, guardIntent, isBareLookup, legalAboutCode, parseVerifyDocCommand, unmaskCodes } from './dispatch.mjs';
+import { asksCodeFit, fallbackIntent, fastPath, guardIntent, isBareLookup, legalAboutCode, parseVerifyDocCommand, readsAsQuestion, unmaskCodes } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
 import { formatGeneral, formatIngestQueued, formatIngestReport } from './format.mjs';
 import { docNumberStatedIn, mergeQuote, parseQuery, statedDocNumber, stripMentions, todayVN } from './parse.mjs';
@@ -170,6 +170,8 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     ? guardIntent(routed.intent, { topic: ctx.topic, tariffFresh: ctx.tariffFresh, quoteText })
     : fallbackIntent({ topic: ctx.topic, text });
 
+  // "Mã này sai không ạ?" là câu hỏi, không phải phán quyết: không bao giờ ghi sổ từ một câu hỏi (R13).
+  if ((intent === 'confirm' || intent === 'correction') && readsAsQuestion(text)) intent = direct || ctx.tariff?.hs ? 'check_code' : 'tariff';
   // Router không thấy mã nên không biết "em chốt 8481.80.59" khác mã vừa tra: một mã trong tin không bao giờ để nó
   // ghi sổ cho mã cũ (R13). Đính chính tường minh ("HS đúng là …") đã đi đường tắt ở bước 1.
   if (direct && (intent === 'confirm' || intent === 'correction')) return { ...(await byCode()), intent: 'tariff' };

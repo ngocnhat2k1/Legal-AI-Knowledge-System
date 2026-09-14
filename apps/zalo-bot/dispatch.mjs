@@ -87,8 +87,20 @@ export function isBareLookup(text) {
   return rest.split(/[^\p{L}\d/%]+/u).filter((w) => w && !LOOKUP_WORDS.has(w)).length === 0;
 }
 
-/** An 8-digit code in any spelling, or a heading/subheading named after "nhóm", "mã", "hs" ("nhóm 3005", "mã 30.05"). */
-const HS_TOKEN = new RegExp(`${HS_RE.source}|(?<=(?:nhóm|mã|hs)\\s*)(?:\\d{4}(?:\\.\\d{2})?|\\d{2}\\.\\d{2})(?![\\d/])`, 'giu');
+/**
+ * Every spelling of a code or heading the router must not see: an 8-digit code; digits after a word naming one ("nhóm
+ * hàng 3005", "mã số 30.05.10.10", "HS: 3005", "chương 30"); a dotted "3005.10" or "30.05" standing alone. Not a date
+ * ("ngày 30.05", "14.09.2026"), an amount ("12.50%", "12.50 triệu") or a time ("08.30 sáng").
+ */
+const HS_TOKEN = new RegExp(
+  `${HS_RE.source}` +
+    `|(?<=(?:nhóm(?:\\s*hàng)?|mã(?:\\s*số)?(?:\\s*hs)?|hs(?:\\s*code)?|chương)\\s*:?\\s*)\\d{2}(?:\\.?\\d{2}(?:\\.\\d{2}){0,2})?(?![\\d/])` +
+    `|(?<![\\d.,/])\\d{4}\\.\\d{2}(?![\\d/%]|[.,]\\d)` +
+    `|(?<![\\d.,/]|ngày\\s)\\d{2}\\.\\d{2}(?:\\.\\d{2}){0,2}(?![\\d/%]|[.,]\\d|\\s*(?:triệu|tỷ|đồng|usd|giờ|sáng|chiều|h(?![\\p{L}])))`,
+  'giu',
+);
+/** A bare heading joined to one already masked: "nhóm [mã 1] hay 3824". */
+const JOINED_HEADING = /(\[mã \d+\]\s*(?:,|hay|hoặc|và)\s*)(\d{4})(?![\d/.,])/giu;
 export const CODE_MARK = /\[mã \d+\]/g;
 
 /**
@@ -102,12 +114,17 @@ export function codebook() {
     const d = m.replace(/[.\s]/g, '');
     return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : m;
   };
-  const mask = (text) =>
-    String(text ?? '').replace(HS_TOKEN, (m) => {
-      const k = key(m);
-      const i = codes.includes(k) ? codes.indexOf(k) : codes.push(k) - 1;
-      return `[mã ${i + 1}]`;
-    });
+  const mark = (m) => {
+    const k = key(m);
+    const i = codes.includes(k) ? codes.indexOf(k) : codes.push(k) - 1;
+    return `[mã ${i + 1}]`;
+  };
+  // NFC first: Unikey's "Unicode tổ hợp" types "nhóm" decomposed, and the keyword lookbehind would miss it.
+  const mask = (text) => {
+    let s = String(text ?? '').normalize('NFC').replace(HS_TOKEN, mark);
+    for (let prev = ''; prev !== s; ) [prev, s] = [s, s.replace(JOINED_HEADING, (_, head, code) => head + mark(code))];
+    return s;
+  };
   return { codes, mask };
 }
 
@@ -122,7 +139,16 @@ export const asksCodeFit = (text) =>
  * 30.05…" (a code check) quoted with "sai rồi" would record the user's own code as wrong.
  * ponytail: every tariff reply prints "MFN" and every verdict reply "Cảm ơn"; tag replies in memory if that stops holding.
  */
-const tariffReply = (quoteText) => hasHs(quoteText) && /MFN|Cảm ơn/.test(quoteText);
+const tariffReply = (quoteText) => hasHs(quoteText) && /MFN|Cảm ơn|chưa đúng \(theo|sửa thành/.test(quoteText);
+
+/**
+ * A question, not a verdict: "8481.80.99 có sai không ạ", "mã này đúng chưa?". The disagreement cue matched "sai" and
+ * the correction path recorded 'correct' for the very code the user was doubting (R13).
+ */
+export const readsAsQuestion = (text) =>
+  /\?|(?<![\p{L}])(không|ko|chưa|hả|à|nhỉ)(\s+(ạ|vậy|nhỉ|nhé|a|em|anh|chị|bạn))?\s*[.!…]*$/u.test(
+    String(text ?? '').toLowerCase().normalize('NFC').trim(),
+  );
 
 /**
  * The pre-router fast path. Returns an action when a cheap, unambiguous reading
@@ -158,7 +184,7 @@ export function fastPath({ text, hasImage = false, quoteText = '', topic = null,
   // Correction carries a NEW HS code and writes to the verify-on-use trail, so it needs
   // a tariff answer to correct. `quoteText` counts only when it actually contains an HS
   // code — the old `is a reply at all` test is what let legal replies in here.
-  if (isDisagreement(text) && onTariff && (tariffFresh || tariffReply(quoteText))) {
+  if (isDisagreement(text) && !readsAsQuestion(text) && onTariff && (tariffFresh || tariffReply(quoteText))) {
     return { action: 'correction' };
   }
   return null;

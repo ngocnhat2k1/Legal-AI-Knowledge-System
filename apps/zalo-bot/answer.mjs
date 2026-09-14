@@ -24,7 +24,7 @@ import { stampTariff } from './conversation.mjs';
 import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
 import { CODE_MARK, codebook } from './dispatch.mjs';
-import { citationFrom, cleanGazetteTitle, detectOrigin, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
+import { citationFrom, cleanGazetteTitle, detectOrigin, HS_RE, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
 import { L } from './render.mjs';
 import { claudeVision } from './router.mjs';
 
@@ -219,7 +219,8 @@ export async function answerCodeCheck(q, clues, text) {
   // blind: R4's "comparison target", so the reasoning can say why 30.05 fits or not even when a run left it out.
   const groups = [...new Set([...heads.map((c) => grp4(c.hs)), own])];
   const ask = String(clues?.searchQuery || '').replace(CODE_MARK, '').trim() || `Căn cứ phân loại mã HS cho: ${plain.trim()}`;
-  const query = groups.length ? `${ask} Các nhóm ứng viên cần phân biệt: ${groups.map(dot4).join(', ')}.` : ask;
+  // Criteria, not a verdict: from "miếng dán bàn chân ngải cứu" alone one run concluded "phải xét vào 38.24" (R2, R5).
+  const query = `${ask} Các nhóm ứng viên cần phân biệt: ${groups.map(dot4).join(', ')}. Nêu tiêu chí phân biệt theo chú giải và dữ kiện nào của hàng quyết định nhóm; mô tả chưa đủ dữ kiện thì không chốt nhóm.`;
   const [mine, legal] = await Promise.all([
     lookupFull(q.dotted, q.origin ?? origin, q.date),
     heads.length ? legalAnswer(query, { asOf: date }) : null,
@@ -418,6 +419,16 @@ export async function handleCorrection(tariff, text, senderName, quote) {
   // (có thể chứa tên/SĐT/số lô của khách) vì note bị khớp mờ + echo chéo ngữ cảnh.
   const rulingNote = [prodDesc, citationFrom(text)].filter(Boolean).join(' | ').slice(0, 300) || null;
 
+  // The same code confirms only after a confirming word ("đúng là 8481.80.99"): "8481.80.99 có sai không" names it too,
+  // and is a doubt, not a ruling (R13). Unclear → ask, write nothing.
+  const lower = String(text || '').toLowerCase().normalize('NFC');
+  const cued = /(đúng là|dung la|mã đúng|ma dung|hs đúng|hs dung|chính xác là|chuẩn là)\s*(là|:)?\s*(mã\s*)?$/.test(lower.slice(0, Math.max(0, lower.search(HS_RE))));
+  if (fix && old?.hs && fix.hs === old.hs && !cued) {
+    return {
+      text: [L(['Bạn muốn xác nhận mã ', [old.dotted, 'b'], ' là đúng, hay đang hỏi mã này có hợp với hàng không? Nhắn "đúng" để xác nhận, hoặc mô tả hàng để mình đối chiếu nhé.'])],
+      topic: 'tariff',
+    };
+  }
   // "đúng là <mã cũ>" = XÁC NHẬN (người GÕ MÃ) → ghi correct KÈM mô tả để tra lại được.
   if (fix && old?.hs && fix.hs === old.hs) {
     await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || now, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null });

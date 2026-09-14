@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { asksCodeFit, codebook, fallbackIntent, fastPath, guardIntent, isBareLookup, legalAboutCode, parseVerifyDocCommand, unmaskCodes } from './dispatch.mjs';
-import { answerByHs, answerCodeCheck, answerLegal, handleConfirm, tariffByClues } from './answer.mjs';
+import { answerByHs, answerCodeCheck, answerLegal, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
 import {
   CAPABILITIES,
   formatAnswer,
@@ -574,8 +574,45 @@ test('router không thấy chữ số của mã nào (R4); mỗi mã một nhãn
   assert.equal(book.mask('mã HS vừa tra: 3005.10.10'), 'mã HS vừa tra: [mã 2]', 'cùng mã ở dòng trạng thái cùng nhãn');
   assert.equal(unmaskCodes('phân biệt [mã 2] và [mã 3]', book.codes), 'phân biệt 3005.10.10 và 3005.90.10');
   assert.equal(book.mask('Nghị định 26/2023/NĐ-CP ngày 31/05/2023, năm 2026'), 'Nghị định 26/2023/NĐ-CP ngày 31/05/2023, năm 2026');
+  for (const [text, masked] of [
+    ['khai 3005.10 được không', 'khai [mã 1] được không'],
+    ['e nghĩ là 30.05 được không', 'e nghĩ là [mã 1] được không'],
+    ['HS: 3005', 'HS: [mã 1]'],
+    ['mã số 30.05.10.10', 'mã số [mã 1]'],
+    ['nhóm hàng 3005 hay 3824', 'nhóm hàng [mã 1] hay [mã 2]'],
+    ['thuộc chương 30', 'thuộc chương [mã 1]'],
+    ['nhóm 3005'.normalize('NFD'), 'nhóm [mã 1]'],
+    ['ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu', 'ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu'],
+  ]) {
+    assert.equal(codebook().mask(text), masked, text);
+  }
   assert.equal(asksCodeFit('vì sao miếng dán ngải cứu vào mã 30051010'), true);
   assert.equal(asksCodeFit('mã 3005.10.10 gồm những hàng gì, khác 3005.90 chỗ nào'), false);
+});
+
+test('một câu HỎI mã có sai/đúng không không bao giờ ghi sổ (R13); "đúng là <mã cũ>" vẫn xác nhận', async () => {
+  const fresh = { topic: 'tariff', tariffFresh: true };
+  for (const text of ['8481.80.99 có sai không ạ', 'mã này sai không?', 'mã 8481.80.99 đúng chưa', 'sai à']) {
+    assert.equal(fastPath({ text, ...fresh }), null, text);
+  }
+  assert.equal(fastPath({ text: 'sai rồi, HS đúng là 8481.80.91', ...fresh })?.action, 'correction');
+
+  const tariff = { hs: '84818099', dotted: '8481.80.99', origin: null, date: '2026-09-14', desc: 'van bi bằng đồng' };
+  const posted = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    if (String(url).endsWith('/tariff/confirm')) posted.push(JSON.parse(init.body));
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+  try {
+    const doubt = await handleCorrection(tariff, 'sai không, mã 8481.80.99 này', 'A', null);
+    assert.equal(posted.length, 0, 'câu nhắc lại chính mã cũ mà không có từ xác nhận thì không ghi gì');
+    assert.match(toText(doubt.text), /Bạn muốn xác nhận mã 8481\.80\.99 là đúng, hay đang hỏi/);
+    await handleCorrection(tariff, 'đúng là 8481.80.99', 'A', null);
+    assert.deepEqual(posted.map((p) => [p.hs, p.verdict]), [['84818099', 'correct']]);
+  } finally {
+    globalThis.fetch = real;
+  }
 });
 
 test('câu đối chiếu mã được quote kèm "sai rồi" không ghi mã người dùng là sai (R13); câu tra thuế thì vẫn đính chính', () => {
@@ -616,7 +653,8 @@ test('đối chiếu mã người dùng nêu: mã không vào câu hỏi gửi L
   );
   assert.ok(!off.text.includes('phù hợp với van'), 'lời dẫn router viết trước khi có căn cứ không được in');
   assert.equal(off.r.tariff, null, 'mã người dùng không vào trí nhớ để thành tiền đề lượt sau');
-  assert.match(off.legalQ, /phân biệt: 84\.81, 73\.07\.$/, 'nhóm người dùng chỉ là một nhóm nữa để so, sau các ứng viên');
+  assert.match(off.legalQ, /phân biệt: 84\.81, 73\.07\. Nêu tiêu chí phân biệt/, 'nhóm người dùng chỉ là một nhóm nữa để so, sau các ứng viên');
+  assert.match(off.legalQ, /chưa đủ dữ kiện thì không chốt nhóm\.$/, 'hỏi tiêu chí, không đòi phán quyết');
   assert.doesNotMatch(off.legalQ, /7307\.99\.90|73079990|\[mã|bạn|người dùng/, 'mã người dùng không được thành tiền đề');
   assert.match(off.text, /Mã 7307\.99\.90 thuộc nhóm 73\.07, chưa nằm trong các nhóm mình tra từ mô tả hàng/);
   assert.match(off.text, /Căn cứ phân loại\n[\s\S]*84\.81 \[1\][\s\S]*Chú giải chi tiết HS 2022/);

@@ -174,6 +174,9 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
     expect(namedHeadings('nhóm 3005 và mã 30051010')).toEqual(['30.05']);
     expect(namedHeadings('Thời hạn nộp thuế từ 14.09.2026, phạt 12.50%')).toEqual([]);
     expect(namedHeadings('mã HS khai trước 15.07.2023 phạt 12.50%')).toEqual([]);
+    expect(namedHeadings('Mức phạt 12.50 triệu, nộp trước 08.30 sáng, số tiền 1500.00.00 đồng')).toEqual([]);
+    expect(namedHeadings('Căn cứ phân loại chương 30 theo mã HS: 3005.10.10')).toEqual(['30.05']);
+    expect(namedHeadings('Các nhóm ứng viên cần phân biệt: 38.24, 33.07, 30.04, 30.05. Nêu tiêu chí')).toEqual(['38.24', '33.07', '30.04', '30.05']);
   });
 
   it('compares a status row\'s end of force with the as-of date itself: expired for the model and the bot, coming otherwise', async () => {
