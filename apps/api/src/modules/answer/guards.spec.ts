@@ -241,6 +241,12 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
       'Mình chốt 38.24 [2].',
       'Mình chốt là 38.24 [2].',
       'Mình đề xuất 38.24 [2].',
+      // Re-review of a0d5864: "sau/trước khi … thì" and "khiếu … thì" are no condition; "Đã đủ căn cứ để chốt" settles.
+      'Sau khi đối chiếu thì chắc chắn thuộc nhóm 38.24 [2].',
+      'Sau khi xem Chú giải thì hàng phải xét vào 38.24 [2].',
+      'Trước khi có nhãn thì mình chốt 38.24 [2].',
+      'Hàng khiếu nại thì chắc chắn thuộc 38.24 [2].',
+      'Đã đủ căn cứ để chốt 38.24 [2].',
     ]) {
       const r = verify(draft(`${lead} ${s}`, [q1, q2]), [en3005, en3824], ctx());
       expect([r.answerMd, r.violations]).toEqual([lead, [expect.objectContaining({ rule: 'G4', sentence: s })]]);
@@ -256,6 +262,10 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
       'Khi hàng có lớp dính và thuộc nhóm 30.05 thì phải xét 3005.10 [1].',
       'Để biết có phải 38.24 không, cần xác định công dụng.',
       'Chưa thể chốt 38.24 khi thiếu nhãn, và hàng không phải là 30.04 [1].',
+      'Chưa đủ căn cứ để chốt 38.24.',
+      'Để chốt 30.05 hay 38.24, cần biết công dụng.',
+      'Sau khi có nhãn, nếu có dược chất thì phải xét 30.05 [1].',
+      'Khi có nhãn ghi công dụng điều trị thì phải xét 30.04 [1].',
     ];
     expect(settlementClaims(prose.join(' '))).toEqual([]);
   });
@@ -326,6 +336,10 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
       expect(verify(draft(prose, q), [en3005], c).answerMd).toBe(prose);
     }
     expect(verify(draft('Miếng dán thuộc mã 3005.10.10 [1]. Hàng này thuộc nhóm 30.05 [1].', q), [en3005], c).answerMd).toBe('');
+    // Naming the code earlier in the sentence does not make it the subject of a later placement.
+    for (const prose of ['Mã 3005.10.10 thuộc nhóm 30.05 nên miếng dán cũng thuộc nhóm 30.05 [1].', 'Với mã 3005.10.10, miếng dán của bạn thuộc mã 3005.10.10 [1].']) {
+      expect(verify(draft(prose, q), [en3005], c).answerMd).toBe('');
+    }
   });
 
   it('G7: "Có, Nghị định 69/2018/NĐ-CP hiện vẫn còn hiệu lực" is dropped when the data says it ended', () => {

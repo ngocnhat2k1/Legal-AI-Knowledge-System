@@ -25,14 +25,18 @@ export const ratesInProse = (text: string): string[] => splitSentences(text).fil
 
 const HEADING_OR_CODE = /(?<![\d.,/])(?:\d{2}\.\d{2}|\d{4}(?:\.\d{2}){0,2}|\d{8})(?![\d/%]|[.,]\d)/;
 // A settling verb, any of "phải/xét/khai/áp/vào/là/thuộc", an optional "mã/nhóm (số/HS)", then the heading: "phải khai
-// 38.24", "Mình chốt là 38.24". After "có/không/chưa (thể)" the verb asks or denies: "có phải 38.24 không" settles nothing.
+// 38.24", "Mình chốt là 38.24". After "có/không/chưa (thể)" the verb asks or denies: "có phải 38.24 không" settles nothing;
+// nor does "để" + verb opening the sentence or after an earlier "chưa/không" in its clause ("Để chốt 30.05 hay 38.24, cần …",
+// "Chưa đủ căn cứ để chốt 38.24"), while "Đã đủ căn cứ để chốt 38.24" settles.
 const SETTLING = new RegExp(
-  `(?<![\\p{L}])(?<!(?:có|không|chưa)(?:\\s+thể)?\\s+)(?:(?:phải|nên|chỉ\\s+có\\s+thể|chắc\\s+chắn|chốt|đề\\s+xuất|kết\\s+luận)(?:\\s+(?:phải|xét|khai|áp|vào|là|thuộc))*(?:\\s+(?:mã|nhóm)(?:\\s+(?:số|HS))?)?\\s+\\**${HEADING_OR_CODE.source}|thuộc\\s+hẳn(?![\\p{L}]))`,
+  `(?<![\\p{L}])(?<!(?:có|không|chưa)(?:\\s+thể)?\\s+)(?<!^\\s*\\**\\s*để\\s+)(?<!(?<![\\p{L}])(?:chưa|không)(?![\\p{L}])[^,;:]*\\sđể\\s+)(?:(?:phải|nên|chỉ\\s+có\\s+thể|chắc\\s+chắn|chốt|đề\\s+xuất|kết\\s+luận)(?:\\s+(?:phải|xét|khai|áp|vào|là|thuộc))*(?:\\s+(?:mã|nhóm)(?:\\s+(?:số|HS))?)?\\s+\\**${HEADING_OR_CODE.source}|thuộc\\s+hẳn(?![\\p{L}]))`,
   'iu',
 );
 // "khi" and "trường hợp" make a condition only with a "thì" ("khi hàng có lớp dính thì …") or as "khi đó": "Khi chưa rõ
-// công dụng, phải xét 38.24", "trong trường hợp này … chắc chắn thuộc" and "sau khi đối chiếu, chắc chắn thuộc" settle.
-const CONDITIONAL = /(?<![\p{L}])(?:nếu|tùy|tuỳ|trừ\s+khi|khi\s+đó|(?:khi|trường\s+hợp)(?!\s+này)(?:[^.;?!]|\.(?=\d))*?\sthì)(?![\p{L}])/iu;
+// công dụng, phải xét 38.24", "trong trường hợp này … chắc chắn thuộc" and "sau/trước khi đối chiếu (thì) chắc chắn thuộc"
+// settle; "khiếu/khiến" is no "khi".
+const CONDITIONAL =
+  /(?<![\p{L}])(?:nếu|tùy|tuỳ|trừ\s+khi|khi\s+đó|(?:(?<!(?:sau|trước)\s)khi|trường\s+hợp(?!\s+này))(?![\p{L}])(?:[^.;?!]|\.(?=\d))*?\sthì)(?![\p{L}])/iu;
 const CONFIDENCE = /(?<![\p{L}])độ\s+tin\s+cậy(?![\p{L}])/iu;
 
 /**
@@ -194,15 +198,17 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
     ['G1', 'rate or amount in prose', (s) => rates.includes(s)],
     ['G4', 'settles the goods under one heading', (s) => settling.includes(s)],
     ['G5', 'eight-digit code that is no candidate', (s) => [...s.matchAll(CODE8)].some(([c]) => !eights.has(digits(c)) && !(subject && own.includes(digits(c))))],
-    // "Mã 3005.10.10 thuộc nhóm 30.05" explains the code itself: the user's code before the verb is its subject.
+    // "Mã 3005.10.10 thuộc nhóm 30.05" explains the code itself: the user's code in the clause right before the verb is its
+    // subject. "Với mã 3005.10.10, miếng dán thuộc mã …" and "… nên miếng dán cũng thuộc nhóm 30.05" place the goods.
     [
       'G6',
       'places the goods under the code asked about',
       (s) =>
         subject &&
-        [...s.matchAll(PLACED_UNDER)].some(
-          (m) => own.some((u) => u.startsWith(digits(m[1]!)) || digits(m[1]!).startsWith(u)) && !own.some((u) => spelled(u).test(s.slice(0, m.index))),
-        ),
+        [...s.matchAll(PLACED_UNDER)].some((m) => {
+          const head = s.slice(0, m.index).split(/[,;:]|\s(?:nên|và|vì|còn|nhưng)\s/).pop()!;
+          return own.some((u) => u.startsWith(digits(m[1]!)) || digits(m[1]!).startsWith(u)) && !own.some((u) => spelled(u).test(head));
+        }),
     ],
     ['G7', 'calls an ended instrument in force', (s) => dropInForceClaims(s, expired, current) !== s],
   ];
