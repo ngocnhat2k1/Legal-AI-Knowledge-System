@@ -114,16 +114,18 @@ export async function namedStatus(db: Database, documentNumbers: string[], asOf:
   const rows = (await db.execute(sql`
     SELECT ${columns(sql`${asOf}::date`)}, 1::float8 AS score, NULL::float8 AS best_dist
     FROM evidence_section e
-    WHERE e.kind = 'status' AND e.document_number IN ${inIds(documentNumbers)}
+    WHERE e.kind = 'status' AND e.document_number IN ${inIds(documentNumbers)} AND e.meta->>'part' IS NULL
     ORDER BY e.id
   `)) as unknown as Array<Record<string, unknown>>;
   return rows.map(toEvidence);
 }
 
 /**
- * Sections whose text carries an 8-digit HS code the question names ("mũ bảo hiểm 6506.10.10 thuộc danh mục
+ * Sections whose text carries an HS code the question names ("mũ bảo hiểm 6506.10.10 thuộc danh mục
  * nào") — the list that contains the code IS the answer, and the simple parser cannot match "6506.10.10" by
- * keyword. Binding sources first.
+ * keyword. Binding sources first. A list entry covers its children ("2404.11" lists 2404.11.00), and a heading asked
+ * finds its listed lines; entries shorter than four digits never match. Window rows (meta.part) are left to retrieval:
+ * a pin returns the whole section.
  */
 export async function hsCodeSections(db: Database, codes: string[], asOf: string, limit = 3): Promise<RetrievedEvidence[]> {
   if (!codes.length) return [];
@@ -131,7 +133,12 @@ export async function hsCodeSections(db: Database, codes: string[], asOf: string
   const rows = (await db.execute(sql`
     SELECT ${columns(d)}, 1::float8 AS score, NULL::float8 AS best_dist
     FROM evidence_section e
-    WHERE e.hs_codes && ARRAY[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[] AND ${valid(d)}
+    WHERE e.meta->>'part' IS NULL AND ${valid(d)}
+      AND EXISTS (
+        SELECT 1 FROM unnest(e.hs_codes) c, unnest(ARRAY[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[]) q
+        WHERE length(replace(c, '.', '')) >= 4
+          AND (replace(q, '.', '') LIKE replace(c, '.', '') || '%' OR replace(c, '.', '') LIKE replace(q, '.', '') || '%')
+      )
     ORDER BY CASE e.authority WHEN 'binding' THEN 0 WHEN 'authoritative' THEN 1 WHEN 'administrative' THEN 2
                               WHEN 'reference' THEN 3 ELSE 4 END, e.id
     LIMIT ${limit}
@@ -151,8 +158,10 @@ export async function headingSections(db: Database, headings: string[], asOf: st
   const rows = (await db.execute(sql`
     SELECT ${columns(d)}, 1::float8 AS score, NULL::float8 AS best_dist
     FROM evidence_section e
-    WHERE ((e.kind = 'en' AND e.hs_heading IN ${inIds(headings)}) OR (e.kind = 'hs_note' AND e.hs_chapter IN ${inIds(chapters)}))
-      AND ${valid(d)}
+    WHERE ((e.kind = 'en' AND (e.hs_heading IN ${inIds(headings)}
+              OR jsonb_exists_any(coalesce(e.meta->'also_headings', '[]'::jsonb), ARRAY[${sql.join(headings.map((h) => sql`${h}`), sql`, `)}]::text[])))
+           OR (e.kind = 'hs_note' AND e.hs_chapter IN ${inIds(chapters)}))
+      AND e.meta->>'part' IS NULL AND ${valid(d)}
     ORDER BY CASE e.kind WHEN 'en' THEN 0 ELSE 1 END, e.hs_heading, e.hs_chapter, e.id
     LIMIT ${limit}
   `)) as unknown as Array<Record<string, unknown>>;
