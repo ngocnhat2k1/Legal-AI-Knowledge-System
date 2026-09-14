@@ -232,6 +232,12 @@ export function statusSections(documents: DocRow[], relations: RelationRow[]): E
 >   về danh mục văn bản đi đường tắt tra thuế → `legalAboutCode` (`dispatch.mjs`) đưa sang pháp luật khi có dấu hiệu văn
 >   bản/danh mục và không có dấu hiệu thuế. Còn mở: "Chú giải Phần XVI loại trừ gì" — LLM không trả văn xuôi (chưa rõ do
 >   timeout 90 s hay JSON hỏng; `generate` nuốt lỗi, cần log).
+> - Sau deploy `21e54da` (và chạy `seed-evidence`): dòng đỏ hiện đúng, Phần XVI đã có văn xuôi, nhưng LLM vẫn mở đầu
+>   "Còn hiệu lực tại thời điểm hiện tại (14/09/2026), nhưng sẽ hết hiệu lực từ 23/01/2026" rồi tự sửa. Lớp thứ hai: chuỗi
+>   `expired` vào prompt thành **"sự kiện đã xác định"** trên câu hỏi, và **`dropInForceClaims`** (`legal.grounding.ts`)
+>   bỏ câu nói văn bản đã hết hiệu lực "còn hiệu lực / vẫn áp dụng / sẽ hết hiệu lực", trừ câu chỉ nêu nguồn còn hiệu
+>   lực. Đây là kiểm chuỗi, không phải kiểm suy diễn — `guards.ts` của Mảng 3 thay thế. `generate` giờ ghi log lý do trả
+>   null (lỗi hoặc thiếu JSON), không ghi prompt: câu "thời hạn nộp thuế" có lần trả văn xuôi, có lần không.
 
 **Cấu trúc file**
 
