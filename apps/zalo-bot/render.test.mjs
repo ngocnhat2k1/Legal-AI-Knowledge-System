@@ -352,6 +352,10 @@ test('formatAnswerMd: văn bản bot tự nạp, cảnh báo của API và dòng
   assert.ok(orange[0].includes('Biểu thuế trong kho') && orange[0].includes('chưa có hiệu lực'), orange[0]);
   assert.ok(rowsOf(lines).some((l) => l.startsWith('Tra theo ngày 14/09/2026')), 'khối thuế mixed giữ ngày và nghị định (R7)');
   assert.ok(!toText(lines).includes('trả lời "đúng"'));
+  const confirm = { correct: 2, wrong: 0, unsure: 0, recent: [{ verdict: 'correct', staffName: 'Chuyên Viên A' }] };
+  const history = rowsOf(formatAnswerMd(res, { tariffLines: [{ ...lookup('3005.10.10'), confirm }] }));
+  assert.ok(history.includes('Đã xác nhận đúng 2 lần (gần nhất: Chuyên Viên A).'), 'mixed giữ lịch sử xác nhận của mã được hỏi (R18)');
+  assert.ok(!history.some((l) => l.includes('trả lời "đúng"')), 'câu soạn không mời "đúng"/"sai": không mã nào đang chờ xác nhận');
 });
 
 test('formatAnswerMd nguồn: nhãn thẩm quyền một lần rồi "như [1]", quote ≤ 160 ký tự, nhãn EN giữ "(có thể gồm cả nhóm …)"', () => {

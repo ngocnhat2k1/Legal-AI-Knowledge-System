@@ -23,7 +23,9 @@ import {
   withLead,
 } from './format.mjs';
 import { L, render, toText } from './render.mjs';
-import { cleanGazetteTitle, docNumberStatedIn, missingKind, parseDocRef, parseQuery, parseQuotedTariff, sameDocNumber, statedDocNumber } from './parse.mjs';
+import { cleanGazetteTitle, docNumberStatedIn, missingKind, parseDocRef, parseQuery, parseQuotedTariff, sameDocNumber, statedDocNumber, todayVN } from './parse.mjs';
+import { loadContext, nextState } from './conversation.mjs';
+import { respond } from './index.mjs';
 
 // The bot's own legal answer, as it appears in a quote. Note it carries NO HS code.
 const LEGAL_ANSWER_QUOTE =
@@ -853,4 +855,240 @@ test('an origin code typed in capitals after the HS code is read (TQ, CN); a cou
   assert.equal(parseQuery('Thuế 8481.80.99 CN bao nhiêu')?.origin, 'CN', 'mã CN viết hoa phải được đọc');
   assert.equal(parseQuery('8481.80.99 xuất xứ Trung Quốc')?.origin, 'CN', 'tên nước vẫn phải được đọc');
   assert.equal(parseQuery('8481.80.99')?.origin, null, 'không nêu xuất xứ thì để trống, không đoán');
+});
+
+// --- Plan 08 Việc 12: respond() over POST /answer, against a fake API -------------------------------------------------
+
+const PHOTO_Q = 'miếng dán ngải cứu mã 3005.10.10 có hợp không';
+/** A plan as the API returns it after normalizePlan (§2.4): made-up goods, the user's code masked. */
+const plan08 = (over = {}) => ({
+  intent: 'hs', understanding: 'Bạn muốn biết miếng dán ngải cứu có khai được vào mã bạn tham khảo không',
+  question: 'miếng dán ngải cứu [mã 1] có hợp không', queries: [], goods: { facts: ['miếng dán ngải cứu'], missing: ['có tẩm dược chất không'] },
+  refines: false, scope: { doc: null, article: null, clause: null }, keywords: ['miếng dán ngải cứu'], hsHints: [],
+  origin: null, date: null, reuseLastHs: false, verdict: null, reply: null, ...over,
+});
+/** A planOnly response. */
+const plannedOf = (plan, over = {}) => ({
+  plan, codeRole: 'premise', userCodes: [], ack: 'Bạn đang muốn biết miếng dán ngải cứu có khai được vào mã bạn tham khảo không.',
+  missingDoc: null, gazetteMatchKind: 'none', gazetteMatches: [], ...over,
+});
+const cited = (n, over) => ({
+  n, key: `e:${n}`, kind: 'en', label: '', instrument: 'CV 1810/TCHQ-TXNK', hsHeading: null, quotes: [], authority: 'authoritative', note: null,
+  verification: 'verified', window: 'current', expired: null, effectiveness: 'con_hieu_luc', documentNumber: 'CV 1810/TCHQ-TXNK', url: null, ...over,
+});
+const composedHs = {
+  plan: plan08(), codeRole: 'premise', mode: 'hs', userCodes: [{ code: '3005.10.10', level: 8, heading: '30.05', exists: true, inCandidates: true }],
+  answerMd: 'Chỉ từ mô tả này thì mình chưa chốt được nhóm: chỗ quyết định là miếng dán có tẩm dược chất hay không [1].',
+  citations: [cited(1, { label: 'Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05', hsHeading: '30.05', quotes: ['Nhóm này bao gồm bông, gạc, băng và các sản phẩm tương tự như cao dán'] })],
+  candidates: [{ hs: '30.05', level: 4, title: 'Bông, gạc, băng và các sản phẩm tương tự', evidence: [1] }, { hs: '38.24', level: 4, title: 'Các sản phẩm và chế phẩm hóa học', evidence: [1] }],
+  ruling: null, missingFacts: ['có tẩm dược chất không'], coverage: 'partial', warnings: [], cut: 0, repaired: false,
+  missingDoc: null, gazetteMatchKind: 'none', gazetteMatches: [], calls: 2,
+};
+const composedLegal = {
+  ...composedHs, plan: null, codeRole: 'none', mode: 'legal', userCodes: [], candidates: [], missingFacts: [], coverage: 'full',
+  answerMd: 'Hàng nhập khẩu để gia công được miễn thuế nhập khẩu [1].',
+  citations: [cited(1, { kind: null, label: 'Khoản 1 Điều 9 VB-A', instrument: 'VB-A', documentNumber: 'VB-A', authority: 'binding', quotes: ['Hàng hóa nhập khẩu để gia công được miễn thuế nhập khẩu.'] })],
+};
+
+/** The API: /answer from `planned` (planOnly) and `composed`; /tariff from the 8481.80.99 fixture; writes succeed. */
+const fakeApi = ({ planned = null, composed = null, provision = null } = {}) => (path, body, u) =>
+  path === '/answer' ? (body.planOnly ? planned : composed)
+  : path === '/tariff' ? tariff8481({ origin: u.searchParams.get('origin') })
+  : path === '/tariff/search' ? [cand(u.searchParams.get('prefix'), 'Sản phẩm dệt đã hoàn thiện khác', '12')]
+  : path === '/tariff/confirm' ? {}
+  : path === '/legal/provision' ? provision
+  : null;
+
+/** One conversation: each `say` runs respond() against `api`, then saves memory as index.mjs does. */
+function conversation() {
+  const memo = { topic: null, state: {}, turns: [] };
+  const say = async (text, api, quote = null) => {
+    const calls = [];
+    const notices = [];
+    const real = globalThis.fetch;
+    globalThis.fetch = async (url, init = {}) => {
+      const u = new URL(url);
+      const body = init.body ? JSON.parse(init.body) : undefined;
+      if (u.pathname !== '/conversation') calls.push({ path: u.pathname, body });
+      const out = u.pathname === '/conversation' ? memo : await api(u.pathname, body, u);
+      return { ok: out != null, status: out != null ? 200 : 404, json: async () => out };
+    };
+    try {
+      const ctx = await loadContext('t1', 'u1');
+      const r = await respond({ text, image: null, quote: quote && { msg: quote }, ctx, senderName: 'Chuyên Viên A', threadId: 't1', userId: 'u1', notify: async (m) => notices.push(m) });
+      memo.topic = r.topic ?? memo.topic;
+      memo.state = nextState(memo.state, r);
+      const bodies = (path) => calls.filter((x) => x.path === path).map((x) => x.body);
+      return { r, text: toText(r.text), calls, notices, answers: bodies('/answer'), confirms: bodies('/tariff/confirm') };
+    } finally {
+      globalThis.fetch = real;
+    }
+  };
+  return { memo, say };
+}
+
+/** A thread whose last reply is the composed hs answer: candidates 30.05 and 38.24 for "miếng dán ngải cứu". */
+async function afterHs() {
+  const c = conversation();
+  const first = await c.say(PHOTO_Q, fakeApi({ planned: plannedOf(plan08()), composed: composedHs }));
+  return { ...c, reply: first.text };
+}
+
+test('Việc 12 (1): tra thuế trần không qua bước kế hoạch; văn xuôi soạn song song trên kế hoạch không mã; /answer null vẫn in khối thuế', async () => {
+  for (const t of ['thuế nk 8481.80.99 tq', 'thue nk 84818099 tq']) {
+    const { answers, text, notices } = await conversation().say(t, fakeApi());
+    assert.equal(answers.length, 1, t);
+    assert.deepEqual(
+      [answers[0].planOnly, answers[0].forceIntent, answers[0].plan],
+      [undefined, 'tariff', { intent: 'tariff', origin: 'CN', date: todayVN() }],
+      'kế hoạch do bot dựng không có question, không mã (R4)',
+    );
+    assert.ok(text.startsWith('Hàng hóa có mã HS 8481.80.99') && text.includes('MFN'), text.slice(0, 80));
+    assert.equal(notices.length, 0, 'tra trần không ack');
+  }
+  const prose = 'Mức ưu đãi theo FTA chỉ áp khi hàng có C/O đúng form của hiệp định.';
+  const run = await conversation().say('8481.80.99 TQ', fakeApi({ composed: { mode: 'tariff', answerMd: prose, citations: [], cut: 0 } }));
+  const [sent] = render(run.r.text);
+  assert.ok(sent.msg.startsWith(`${prose}\n\nHàng hóa có mã HS 8481.80.99`), sent.msg.slice(0, 120));
+  assert.equal(run.r.tariff.hs, '84818099', 'kết quả tra vẫn được đóng dấu để "đúng"/"sai" dùng được');
+});
+
+test('Việc 12 (2): câu hỏi mã có hợp với hàng: planOnly rồi soạn trên đúng kế hoạch đó; ack đúng một lần, không chữ số; state không giữ mã người dùng', async () => {
+  const c = conversation();
+  const planned = plannedOf(plan08());
+  const { answers, notices, text, confirms } = await c.say(PHOTO_Q, fakeApi({ planned, composed: composedHs }));
+  assert.equal(answers.length, 2);
+  assert.equal(answers[0].planOnly, true);
+  assert.deepEqual(answers[1].plan, planned.plan, 'kế hoạch đi nguyên vẹn, không gọi kế hoạch lần hai');
+  assert.deepEqual([answers[1].planOnly, answers[1].forceIntent], [undefined, undefined]);
+  assert.ok(Date.parse(answers[1].deadlineAt) > Date.now());
+  assert.equal(notices.length, 1);
+  assert.doesNotMatch(notices[0], /\d/);
+  assert.ok(notices[0].endsWith(' — mình đọc chú giải các nhóm liên quan rồi trả lời, khoảng một phút nhé.'), notices[0]);
+  assert.ok(text.includes('Ứng viên để chuyên viên chốt:') && !text.includes('trả lời "đúng"'));
+  assert.equal(confirms.length, 0);
+  assert.equal(c.memo.topic, 'tariff');
+  const { tariff, answer } = c.memo.state;
+  assert.deepEqual([tariff.hs, tariff.candidates, tariff.desc], [null, ['30.05', '38.24'], 'miếng dán ngải cứu']);
+  assert.deepEqual([answer.mode, answer.question, answer.goods], ['hs', 'miếng dán ngải cứu có hợp không', { facts: ['miếng dán ngải cứu'] }]);
+  assert.doesNotMatch(JSON.stringify(c.memo.state), /3005\.?10\.?10|\[mã/, 'không mã người dùng nào trong state (R4)');
+});
+
+test('Việc 12 (3): guardIntent cho hs/status/mixed đi thẳng; sau ứng viên refine là hs; đường tắt chỉ nhận đính chính có cue', () => {
+  assert.equal(guardIntent('status', { topic: 'tariff', tariffFresh: true }), 'status');
+  assert.equal(guardIntent('hs', { topic: 'legal' }), 'hs');
+  assert.equal(guardIntent('mixed', { topic: null }), 'mixed');
+  assert.equal(guardIntent('refine', { topic: 'tariff', candidatesFresh: true }), 'hs');
+  assert.equal(guardIntent('correction', { topic: 'tariff', candidatesFresh: true }), 'correction', 'còn chỗ trỏ, nhưng chỉ ra lời mời');
+  const onCandidates = { topic: 'tariff', candidatesFresh: true };
+  assert.equal(fastPath({ text: 'HS đúng là 8422.90.90', ...onCandidates })?.action, 'correction');
+  assert.equal(fastPath({ text: 'sai rồi, không phải nhóm này', quoteText: TARIFF_ANSWER_QUOTE, ...onCandidates }), null, 'luồng ứng viên không đọc mã cũ từ quote');
+  assert.equal(fastPath({ text: 'không phải, 6307.90.90 cơ', ...onCandidates }), null, 'mã không có cue xác nhận thì không đi đường tắt');
+});
+
+test('Việc 12 (4): guard bác kế hoạch thì request soạn mang plan + forceIntent; planOnly đúng một lần', async () => {
+  const c = conversation();
+  c.memo.topic = 'legal';
+  const planned = plannedOf(plan08({ intent: 'correction', question: 'quy định miễn thuế hàng gia công', goods: { facts: [], missing: [] }, keywords: [] }), { codeRole: 'none', ack: null });
+  const run = await c.say('không phải văn bản đó, mình cần quy định miễn thuế hàng gia công', fakeApi({ planned, composed: composedLegal }));
+  assert.equal(run.answers.filter((a) => a.planOnly).length, 1);
+  assert.equal(run.answers.length, 2);
+  assert.deepEqual([run.answers[1].plan, run.answers[1].forceIntent], [planned.plan, 'legal']);
+  assert.deepEqual(run.notices, ['Mình tra văn bản rồi trả lời nhé.'], 'không có ack thì chỉ vế theo chế độ');
+  assert.equal(run.confirms.length, 0);
+  assert.equal(c.memo.topic, 'legal');
+  assert.deepEqual(c.memo.state.legal.citations, [{ label: 'Khoản 1 Điều 9 VB-A', kind: null, instrument: 'VB-A', documentNumber: 'VB-A' }]);
+  assert.equal(c.memo.state.legal.question, 'quy định miễn thuế hàng gia công');
+});
+
+test('Việc 12 (5): sau câu hs, "HS đúng là 8422.90.90" ghi đúng một dòng correct kèm mô tả, không dòng wrong — quote câu hs hay không đều như nhau', async () => {
+  const runs = [];
+  for (const quoteIt of [false, true]) {
+    const c = await afterHs();
+    runs.push(await c.say('HS đúng là 8422.90.90', fakeApi(), quoteIt ? c.reply : null));
+  }
+  for (const run of runs) {
+    assert.equal(run.answers.length, 0, 'đính chính tường minh đi đường tắt');
+    assert.equal(run.confirms.length, 1);
+    assert.deepEqual([run.confirms[0].verdict, run.confirms[0].hs], ['correct', '84229090']);
+    assert.ok(run.confirms[0].note.includes('miếng dán ngải cứu'), run.confirms[0].note);
+  }
+  assert.deepEqual(runs[1].confirms, runs[0].confirms);
+  assert.equal(runs[1].text, runs[0].text);
+  assert.ok(runs[0].text.startsWith('Đã ghi nhận mã 8422.90.90 cho miếng dán ngải cứu'), runs[0].text.slice(0, 80));
+});
+
+test('Việc 12 (6): sau câu hs, "đúng" không ghi gì; "sai rồi, không phải nhóm này" quote câu hs không ghi gì và soạn lại', async () => {
+  const a = await afterHs();
+  const agree = await a.say('đúng', fakeApi({ planned: plannedOf(plan08({ intent: 'confirm', verdict: 'correct', goods: { facts: [], missing: [] } }), { codeRole: 'none' }) }));
+  assert.equal(agree.confirms.length, 0);
+  assert.equal(agree.answers.length, 1);
+  const b = await afterHs();
+  const refine = await b.say('sai rồi, không phải nhóm này', fakeApi({ planned: plannedOf(plan08({ intent: 'refine', refines: true }), { codeRole: 'none' }), composed: composedHs }), b.reply);
+  assert.equal(refine.confirms.length, 0);
+  assert.equal(refine.answers.length, 2);
+  assert.deepEqual([refine.answers[1].plan.intent, refine.answers[1].forceIntent], ['refine', 'hs']);
+});
+
+test('Việc 12 (7): "63079090 mới đũng" sau câu hs (kế hoạch correction): lời mời, không ghi sổ, giữ bộ nhớ ứng viên', async () => {
+  const c = await afterHs();
+  const { confirms, answers, text } = await c.say('63079090 mới đũng', fakeApi({ planned: plannedOf(plan08({ intent: 'correction', question: '[mã 1] mới đúng', goods: { facts: [], missing: [] } })) }));
+  assert.equal(confirms.length, 0);
+  assert.equal(answers.length, 1);
+  assert.equal(
+    text,
+    'Mã 6307.90.90 (Sản phẩm dệt đã hoàn thiện khác) khác các nhóm mình vừa nêu. Muốn mình ghi nhận mã này cho miếng dán ngải cứu, nhắn "HS đúng là 6307.90.90". Cần thuế thì nhắn thêm xuất xứ.',
+  );
+  assert.deepEqual(c.memo.state.tariff.candidates, ['30.05', '38.24'], '"HS đúng là" ở lượt sau vẫn ghi được cho mô tả này');
+});
+
+test('Việc 12 (8): "8481.80.99 có sai không ạ" trên tra thuế còn mới không ghi gì; chưa có mô tả hàng thì hỏi mô tả, không soạn', async () => {
+  const c = conversation();
+  await c.say('8481.80.99 TQ', fakeApi());
+  assert.equal(c.memo.state.tariff.hs, '84818099');
+  const doubt = await c.say('8481.80.99 có sai không ạ', fakeApi({ planned: plannedOf(plan08({ intent: 'correction', question: '[mã 1] có sai không', goods: { facts: [], missing: [] } })) }));
+  assert.equal(doubt.confirms.length, 0);
+  assert.equal(doubt.answers.length, 1);
+  assert.equal(doubt.notices.length, 0);
+  assert.match(doubt.text, /mô tả giúp mình/);
+});
+
+test('Việc 12 (9): /answer không trả lời thì một câu thật, không tra mã thay', async () => {
+  const { text, calls, notices } = await conversation().say('cho mình hỏi thuế 8481.80.99 bao nhiêu vậy', fakeApi());
+  assert.equal(text, 'Mình chưa đọc được câu hỏi lúc này, bạn thử lại sau ít phút nhé.');
+  assert.ok(!calls.some((x) => x.path.startsWith('/tariff')), 'không gọi answerByHs');
+  assert.equal(notices.length, 0);
+});
+
+test('Việc 12: văn bản kho không có (ở bước kế hoạch hay bước soạn) → lời mời nạp giữ cho lượt sau; xin nguyên văn Điều → tra theo trích dẫn, không soạn', async () => {
+  const hit = { number: '36/2025/TT-BKHCN', title: 'Thông tư 36/2025/TT-BKHCN tiêu đề', sourceUrl: 'https://congbao.chinhphu.vn/van-ban/x' };
+  const noGoods = { goods: { facts: [], missing: [] }, keywords: [] };
+  const c = conversation();
+  const missing = await c.say(
+    'thông tư 36/2025/TT-BKHCN quy định gì',
+    fakeApi({ planned: plannedOf(plan08({ intent: 'legal', question: 'thông tư 36/2025/TT-BKHCN quy định gì', ...noGoods }), { codeRole: 'none', missingDoc: '36/2025/TT-BKHCN', gazetteMatchKind: 'exact', gazetteMatches: [hit] }) }),
+  );
+  assert.ok(missing.text.includes('Trả lời "nạp"'), missing.text);
+  assert.equal(c.memo.state.legal.pendingIngest.number, '36/2025/TT-BKHCN');
+  const row = { documentNumber: 'VB-X', documentTitle: 't', citationLabel: 'Điều 18 VB-X', path: '', heading: null, body: 'Thân điều.', effectiveness: 'con_hieu_luc', effectiveFrom: null, effectiveTo: null, gazetteUrl: null, verification: 'verified' };
+  const verbatim = await conversation().say(
+    'cho mình nguyên văn Điều 18 VB-X',
+    fakeApi({ planned: plannedOf(plan08({ intent: 'legal', question: 'nguyên văn Điều 18 VB-X', scope: { doc: 'VB-X', article: '18', clause: null }, ...noGoods }), { codeRole: 'none' }), provision: [row] }),
+  );
+  assert.ok(verbatim.text.startsWith('Nguyên văn Điều 18 VB-X:'), verbatim.text);
+  for (const run of [missing, verbatim]) {
+    assert.equal(run.answers.length, 1);
+    assert.equal(run.notices.length, 0);
+  }
+  const late = conversation();
+  const atCompose = await late.say(
+    'thông tư 36/2025/TT-BKHCN quy định gì',
+    fakeApi({
+      planned: plannedOf(plan08({ intent: 'legal', question: 'thông tư 36/2025/TT-BKHCN quy định gì', ...noGoods }), { codeRole: 'none', ack: null }),
+      composed: { ...composedLegal, answerMd: '', citations: [], missingDoc: '36/2025/TT-BKHCN', gazetteMatchKind: 'exact', gazetteMatches: [hit] },
+    }),
+  );
+  assert.equal(atCompose.answers.length, 2);
+  assert.ok(atCompose.text.includes('Trả lời "nạp"'), atCompose.text);
+  assert.equal(late.memo.state.legal.pendingIngest.number, '36/2025/TT-BKHCN');
 });

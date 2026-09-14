@@ -1,7 +1,7 @@
 ---
 type: doc
 status: active
-updated: 2026-08-13
+updated: 2026-09-14
 related:
   - zalo-bot-image-and-quote-context.md
   - ../architecture-decisions/2026-07-17-no-llm-on-tariff-numbers.md
@@ -109,6 +109,38 @@ với hàng không**, và bot đã trả MFN + FTA vì mọi tin có mã 8 số 
 - Câu hỏi giải nghĩa mã/nhóm, chú giải, GRI thuộc intent `legal`. `/legal` giữ luôn Chú giải chi tiết của
   nhóm được nêu và chú giải chương của nó (`headingSections`), vì "3005.10.10" không khớp tiêu đề
   "nhóm 30.05" theo cả từ khoá lẫn vector — mô hình đã từ chối trong khi chú giải nằm sẵn trong kho.
+
+## Luồng `POST /answer` và bộ nhớ ứng viên (kế hoạch 08, Việc 12)
+
+Từ Việc 12, bot không còn gọi `route()` cho tin chữ. Luồng đầy đủ ở
+[kế hoạch 08 §2.1](../planning/08-answer-path-tasks.md); phần liên quan tới bộ nhớ:
+
+- **Bot gửi ngữ cảnh, API che mã.** Bước kế hoạch nhận `context = {topic, state, turns}` thô; API che mọi mã trước
+  khi dựng prompt (R4). Kế hoạch bot tự dựng (tra thuế trần, tra thuế theo kế hoạch) chỉ có
+  `{intent: 'tariff', origin, date}` — không `question`, không mã.
+- **`state.tariff` sau câu soạn chế độ hs** = `{hs: null, candidates: ['30.05', …], desc, keywords, at}`. `hs: null`
+  nên `tariffFresh` là false: một chữ "đúng" không ghi gì, vì không có kết quả tra nào đang chờ xác nhận.
+  `desc` = `plan.goods.facts` (API đã lọc số, serial, model).
+- **`candidatesFresh`** (`loadContext`): `hs` null, `candidates` không rỗng, còn trong `TARIFF_TTL_MS`. Khi đó
+  `ctx.tariff = state.tariff`, để `handleCorrection` giữ được `desc` cho note của phán quyết.
+- **`state.legal` sau câu soạn legal/status/mixed** = `{question, asOf, citations ≤ 5 {label, kind, instrument,
+  documentNumber}, missingDoc: null, pendingIngest: null}`. Văn bản kho không có vẫn đi `missingDocAnswer` (lưu
+  `query` + `pendingIngest`).
+- **`state.answer` sau mọi câu soạn** = `{mode, question, goods: {facts}, at}` — lượt trước cho câu tinh chỉnh.
+  `question` là câu đã che của kế hoạch, bỏ cả nhãn `[mã n]`. **Không mã người dùng nào vào `state`.**
+- `index.mjs` và `dry-run.mjs` ghi state qua `nextState(state, result)`: thiếu khoá `tariff`/`legal`/`answer` =
+  giữ nguyên, `null` = xoá.
+
+**Sổ phán quyết trên luồng ứng viên (R13, §6.3).**
+
+| Tin | Kết quả |
+|---|---|
+| "HS đúng là 8422.90.90" (cue xác nhận ngay trước mã) | `fastPath` → `handleCorrection`: đúng một dòng `correct`, note = `desc` + số công văn; không dòng `wrong`, không đọc "mã cũ" từ quote |
+| "sai rồi, không phải nhóm này" | không cue trước mã → bước kế hoạch; `refine` sau ứng viên được `guardIntent` đổi thành `hs`, soạn lại, không ghi |
+| "63079090 mới đúng" (kế hoạch `correction`, không cue) | `codeOffer`: một câu mời nhắn "HS đúng là …", không ghi |
+| "8481.80.99 có sai không ạ" | câu hỏi → `hs`; chưa có mô tả hàng thì hỏi mô tả (hàng 14), không ghi |
+
+Kế hoạch `confirm`/`correction` không bao giờ tự ghi sổ: sổ chỉ được ghi từ cue tường minh ở `fastPath`.
 
 ## Lời dẫn tự nhiên — cưỡng chế bằng code, không bằng lời dặn
 

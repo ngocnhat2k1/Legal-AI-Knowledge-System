@@ -8,8 +8,7 @@
  *   API_URL=http://127.0.0.1:3000 node apps/zalo-bot/dry-run.mjs --stdin < threads.json   # [{thread, turns: ["…"]}]
  *   add --styles to print every style span
  *
- * Runs the production path (router → dispatch → answer → render), so the API must be reachable; without
- * CLAUDE_CODE_OAUTH_TOKEN the router is skipped.
+ * Runs the production path (dispatch → POST /answer → answer → render), so the API must be reachable.
  */
 import { pathToFileURL } from 'node:url';
 
@@ -100,7 +99,7 @@ async function main() {
   globalThis.fetch = recordingFetch(globalThis.fetch, memory);
   // Imported after fetch is wrapped, so no module captures the real one first.
   const { respond } = await import('./index.mjs');
-  const { loadContext, saveContext } = await import('./conversation.mjs');
+  const { loadContext, nextState, saveContext } = await import('./conversation.mjs');
 
   for (const { thread, turns } of threads) {
     for (const text of turns) {
@@ -117,9 +116,7 @@ async function main() {
       const botText = parts.map((p) => p.msg).join('\n\n');
 
       // As index.mjs does after answering: keep what the next turn may point at.
-      const state = { ...(ctx.state || {}) };
-      if ('tariff' in result) state.tariff = result.tariff;
-      if ('legal' in result) state.legal = result.legal;
+      const state = nextState(ctx.state, result);
       await saveContext({ threadId: thread, userId: 'dry-run', staffName: 'dry-run', userText: text, botText, intent: result.intent, topic: result.topic ?? ctx.topic ?? null, state });
 
       const chars = parts.reduce((n, p) => n + p.msg.length, 0);

@@ -9,7 +9,7 @@
  *   parse.mjs        tách mã HS / xuất xứ / số hiệu văn bản (thuần, test được)
  *   dispatch.mjs     tin nhắn này thuộc nhánh nào — CÓ XÉT CHỦ ĐỀ ĐANG BÀN
  *   conversation.mjs bộ nhớ hội thoại (lưu ở Postgres qua API)
- *   router.mjs       một bước Claude đọc CẢ hội thoại để phân loại + viết lại câu hỏi
+ *   router.mjs       vision cho ảnh (đọc câu hỏi chữ đã chuyển sang POST /answer của API, kế hoạch 08)
  *   answer.mjs       tạo câu trả lời (số liệu luôn từ DB)
  *   format.mjs       dựng câu trả lời (Line[]) từ dữ liệu API; lời văn LLM chỉ qua cổng sanitizeLead
  *   render.mjs       Line[] → tin Zalo có styles, tách tin ~1.800 ký tự
@@ -21,15 +21,14 @@ import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 
-import { answerByHs, answerCodeCheck, answerImage, answerLegal, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
-import { ackIngestReports, ingestReports, legalDocuments, requestIngest, verifyDocument } from './api.mjs';
-import { loadContext, saveContext } from './conversation.mjs';
-import { asksCodeFit, fallbackIntent, fastPath, guardIntent, isBareLookup, legalAboutCode, parseVerifyDocCommand, readsAsQuestion, unmaskCodes } from './dispatch.mjs';
+import { answerByHs, answerImage, codeOffer, handleConfirm, handleCorrection, missingDocAnswer, tariffByClues } from './answer.mjs';
+import { ackIngestReports, answer, confirmations, ingestReports, legalProvision, lookupFull, requestIngest, verifyDocument } from './api.mjs';
+import { loadContext, nextState, saveContext, stampTariff } from './conversation.mjs';
+import { fastPath, fold, guardIntent, isBareLookup, parseVerifyDocCommand, readsAsQuestion } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
-import { CAPABILITIES, formatGeneral, formatIngestQueued, formatIngestReport } from './format.mjs';
-import { docNumberStatedIn, mergeQuote, parseQuery, statedDocNumber, stripMentions, todayVN } from './parse.mjs';
-import { L, render } from './render.mjs';
-import { route } from './router.mjs';
+import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatProvisions, sanitizeLead } from './format.mjs';
+import { parseQuery, stripMentions, todayVN } from './parse.mjs';
+import { L, render, toText } from './render.mjs';
 
 const API = process.env.API_URL || 'http://api:3000';
 const SESSION = process.env.ZALO_SESSION_PATH || '/session/zalo-session.json';
@@ -95,16 +94,48 @@ async function connect() {
   }
 }
 
+/** Plan 08 §2.3: a reply is due 120 s after the message arrived; the API holds its steps to `deadlineAt`. */
+const ANSWER_BUDGET_MS = 120_000;
+const NOT_READ = 'Mình chưa đọc được câu hỏi lúc này, bạn thử lại sau ít phút nhé.';
+const NOT_COMPOSED = 'Mình chưa soạn được câu trả lời lúc này, bạn thử lại sau ít phút nhé.';
+const NEEDS_GOODS = 'Để xem mã bạn nêu có hợp không, mình cần biết hàng là gì: bạn mô tả giúp mình chất liệu, công dụng và cách trình bày của hàng nhé.';
+
+/** A plan's question as memory may keep it: masked by the API, its [mã n] labels dropped too (R4). */
+const asked = (plan) => String(plan.question ?? '').replace(/\[mã \d+\]/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** What the next plan may point at after a legal answer (plan 08 §6.1). */
+const legalMemory = (plan, cites, asOf) => ({
+  question: asked(plan),
+  asOf: asOf ?? plan.date ?? null,
+  citations: cites.slice(0, 5).map(({ label, kind, instrument, documentNumber }) => ({ label, kind, instrument, documentNumber })),
+  missingDoc: null,
+  pendingIngest: null,
+});
+
 /**
- * Quyết định nhánh rồi tạo câu trả lời.
+ * A rate lookup with a few sentences of prose above its block (owner decision Q1). Both run at once; the block goes out
+ * alone, as before, when /answer has no prose or the lookup itself failed — prose about a rate that was not found misleads.
+ * The plan the bot builds carries no code and no user text (R4): the API takes the question from `q` and masks it itself.
+ */
+async function rateWithProse(q, body, showFooter) {
+  const [byHs, res] = await Promise.all([
+    answerByHs(q, { showFooter }),
+    answer({ ...body, plan: { intent: 'tariff', origin: q.origin, date: q.date }, forceIntent: 'tariff' }),
+  ]);
+  return res?.answerMd?.trim() && byHs.tariff ? { ...byHs, text: [...formatAnswerMd({ ...res, mode: 'tariff' }), L([]), ...byHs.text] } : byHs;
+}
+
+/**
+ * Quyết định nhánh rồi tạo câu trả lời (kế hoạch 08 §2.1).
  *
- * `text` = câu hỏi MỚI (regex HS chỉ soi cái này). Ngữ cảnh tin được reply chỉ đi vào
- * bộ định tuyến LLM, KHÔNG vào regex — câu trả lời cũ của bot luôn chứa mã HS, nên nếu
- * cho regex soi cả ngữ cảnh thì một câu hỏi pháp luật reply vào tin có "8481.10.11"
- * sẽ bị bắt nhầm thành tra thuế.
+ * `text` = câu hỏi MỚI (regex HS chỉ soi cái này). Tin được reply chỉ đi vào bước kế hoạch của API, KHÔNG vào regex — câu
+ * trả lời cũ của bot luôn chứa mã HS, nên nếu cho regex soi cả ngữ cảnh thì một câu hỏi pháp luật reply vào tin có
+ * "8481.10.11" sẽ bị bắt nhầm thành tra thuế.
  */
 export async function respond({ text, image, quote, ctx, senderName, threadId, userId, notify }) {
   const quoteText = String(quote?.msg || '');
+  const quoted = quoteText || null;
+  const deadlineAt = new Date(Date.now() + ANSWER_BUDGET_MS).toISOString();
 
   // 0. "xác nhận văn bản <số hiệu>" — người đọc đứng ra bảo đảm cho một văn bản bot tự
   // nạp. Ghi kèm TÊN người xác nhận, giống hệt sổ verify-on-use của mã HS.
@@ -128,6 +159,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     quoteText,
     topic: ctx.topic,
     tariffFresh: ctx.tariffFresh,
+    candidatesFresh: ctx.candidatesFresh,
     pendingIngest: Boolean(pending),
   });
   if (fast?.action === 'ingest') {
@@ -149,95 +181,81 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   // 2. Ảnh: vision nhận diện mặt hàng rồi đi tiếp đường tra thuế tất định.
   if (image) return { ...(await answerImage(image.imageUrls, text)), intent: 'tariff' };
 
-  // 3. Mã HS nằm ngay trong câu hỏi mới → tra thẳng, không cần định tuyến. Trừ khi câu hỏi hỏi văn bản nào
-  // liệt kê mã đó ("thuộc danh mục rủi ro nào theo Thông tư 36/2026"): đó là câu hỏi pháp luật.
-  // Hỏi mã có hợp không mà tên hàng có từ danh mục ("pin năng lượng mặt trời áp mã … được không"): vẫn là đối chiếu (R4).
-  if (legalAboutCode(text) && !asksCodeFit(text)) return { ...(await answerLegal(text, {})), intent: 'legal' };
+  // 3. Chỉ có mã + xuất xứ + từ tra thuế: tra thẳng, kèm vài câu giải thích soạn song song (Q1), không ack. Câu có nội
+  // dung khác ("e tham khảo mã 30051010 không biết được không ạ") hỏi mã có hợp với hàng không: để bước kế hoạch đọc (R4).
   const direct = parseQuery(text);
-  const byCode = () => answerByHs(direct, { showFooter: ctx.topic !== 'tariff' });
-  // Chỉ có mã + xuất xứ + từ tra thuế thì tra thẳng. Câu có nội dung khác ("e tham khảo mã 30051010 không biết được
-  // không ạ") hỏi mã có hợp với hàng không: để router đọc trước, mã bị che (R4).
-  if (direct && isBareLookup(text)) return { ...(await byCode()), intent: 'tariff' };
+  if (direct && isBareLookup(text)) {
+    return { ...(await rateWithProse(direct, { q: text, quote: quoted, deadlineAt }, ctx.topic !== 'tariff')), intent: 'tariff' };
+  }
 
-  // 4. Định tuyến có ngữ cảnh. Router không thấy chữ số của mã nào (R4).
-  const routed = await route(text, {
-    topic: ctx.topic,
-    state: ctx.state,
-    turns: ctx.turns,
-    documents: await legalDocuments(),
-  });
-  // Không có LLM để đọc câu: tra mã vẫn là cách hiểu tốt nhất.
-  if (direct && !routed) return { ...(await byCode()), intent: 'tariff' };
-  let intent = routed
-    ? guardIntent(routed.intent, { topic: ctx.topic, tariffFresh: ctx.tariffFresh, quoteText })
-    : fallbackIntent({ topic: ctx.topic, text });
+  // 4. Bước kế hoạch trên API: đọc cả hội thoại với mã đã che (R4). Không đọc được thì nói thật — không đoán bằng tra mã.
+  const base = { q: text, quote: quoted, context: { topic: ctx.topic, state: ctx.state, turns: ctx.turns }, deadlineAt };
+  const res = await answer({ ...base, planOnly: true });
+  const plan = res?.plan;
+  if (!plan) return { text: NOT_READ, intent: 'general' };
 
-  // "Mã này sai không ạ?" là câu hỏi, không phải phán quyết: không bao giờ ghi sổ từ một câu hỏi (R13).
-  if ((intent === 'confirm' || intent === 'correction') && readsAsQuestion(text)) intent = direct || ctx.tariff?.hs ? 'check_code' : 'tariff';
-  // Router không thấy mã nên không biết "em chốt 8481.80.59" khác mã vừa tra: một mã trong tin không bao giờ để nó
-  // ghi sổ cho mã cũ (R13). Đính chính tường minh ("HS đúng là …") đã đi đường tắt ở bước 1.
-  if (direct && (intent === 'confirm' || intent === 'correction')) return { ...(await byCode()), intent: 'tariff' };
-  // "Vì sao hàng của em vào mã X" là phân loại lấy mã người dùng làm tiền đề: đối chiếu, không để /legal bênh mã (R4).
-  if (direct && intent === 'legal' && asksCodeFit(text)) intent = 'check_code';
-  if (intent === 'check_code') {
-    const q = direct ?? (ctx.tariff?.hs ? { hs: ctx.tariff.hs, dotted: ctx.tariff.dotted, origin: ctx.tariff.origin ?? null, date: todayVN() } : null);
-    if (q) {
-      await notify?.('Mình đang đọc chú giải các nhóm liên quan để đối chiếu mã, chờ khoảng một phút nhé.');
-      return { ...(await answerCodeCheck(q, routed, text)), intent };
+  // 5. Nhánh tất định. Văn bản kho không có: nói thật, lời mời nạp giữ cho lượt sau.
+  if (res.missingDoc) return { ...missingDocAnswer(asked(plan), res.missingDoc, res, res.asOf ?? plan.date), intent: 'legal' };
+  // "Mã này sai không ạ?" nghi một mã, không phán quyết: đó là câu hỏi phân loại, không bao giờ ghi sổ (R13).
+  const intent =
+    (plan.intent === 'confirm' || plan.intent === 'correction') && readsAsQuestion(text)
+      ? 'hs'
+      : guardIntent(plan.intent, { topic: ctx.topic, tariffFresh: ctx.tariffFresh, candidatesFresh: ctx.candidatesFresh, quoteText });
+  if (intent === 'general') return { text: formatGeneral(plan.reply), topic: 'general', intent };
+  // Phán quyết không có cue tường minh ("63079090 mới đúng"): một lời mời, không ghi sổ. Cue tường minh đã đi bước 1 (§6.3).
+  if (intent === 'confirm' || intent === 'correction') return { ...(await codeOffer(ctx.tariff, direct)), intent };
+  if (intent === 'tariff') {
+    // Mã trong tin, hoặc "còn từ Nhật thì sao": cùng mã vừa tra, xuất xứ khác.
+    const q = direct
+      ? { ...direct, origin: direct.origin ?? plan.origin ?? null, date: plan.date || direct.date }
+      : plan.reuseLastHs && ctx.tariff?.hs
+        ? { hs: ctx.tariff.hs, dotted: ctx.tariff.dotted, origin: plan.origin ?? ctx.tariff.origin ?? null, date: plan.date || todayVN() }
+        : null;
+    // The code of a follow-up is only in the conversation state, so this call carries the context.
+    if (q) return { ...(await rateWithProse(q, base, Boolean(direct) && ctx.topic !== 'tariff')), intent };
+    return { ...(await tariffByClues(plan, text, { showFooter: ctx.topic !== 'tariff' })), intent };
+  }
+  // Hàng 19: xin nguyên văn một Điều là tra theo trích dẫn, không soạn.
+  const doc = plan.scope?.doc ?? ctx.legal?.citations?.find((c) => c.documentNumber)?.documentNumber;
+  if (plan.scope?.article && doc && /nguyen van|toan van/.test(fold(text))) {
+    const rows = await legalProvision(doc, plan.scope.article, plan.scope.clause);
+    if (rows?.length) {
+      const cites = rows.map((p) => ({ label: p.citationLabel, kind: null, instrument: p.documentNumber, documentNumber: p.documentNumber }));
+      return { text: formatProvisions(rows), topic: 'legal', legal: legalMemory(plan, cites), intent: 'legal' };
     }
   }
-  if (intent === 'confirm') {
-    return { ...(await handleConfirm(ctx.tariff, routed?.verdict || 'correct', senderName)), intent };
-  }
-  if (intent === 'correction') {
-    return { ...(await handleCorrection(ctx.tariff, text, senderName, quote)), intent };
-  }
-  if (intent === 'legal') {
-    // `search_query` là câu hỏi ĐỘC LẬP do router viết lại từ cả hội thoại. Câu tinh chỉnh
-    // ("không phải câu trả lời tôi muốn") tự nó là rác với retriever; chỉ khi ghép ngữ cảnh
-    // nó mới thành câu tra được. Không có router → dùng câu đã ghép quote.
-    const query = unmaskCodes(routed?.searchQuery, routed?.codes) || mergeQuote(text, quote);
-    // The router may RECOGNISE a document number, never MINT one. `doc=` is trusted
-    // absolutely downstream, so a number the human never wrote redirects the whole
-    // answer: asked "thông tư 36 của bộ Khoa học công nghệ" — no year at all — the
-    // router supplied "36/2016/TT-BKHCN", carried over from an earlier turn, and the
-    // bot went on to report that document missing and list unrelated circulars.
-    const statedDoc =
-      routed?.docNumber && docNumberStatedIn(`${text} ${quoteText}`, routed.docNumber)
-        ? statedDocNumber(`${text} ${quoteText}`, routed.docNumber) // an issuer the user did not write is dropped (39/2018)
-        : undefined;
-    return {
-      ...(await answerLegal(query, {
-        asOf: routed?.date,
-        doc: statedDoc,
-        article: routed?.article,
-        clause: routed?.clause,
-        lead: routed?.lead,
-      })),
-      intent,
-    };
-  }
-  if (intent === 'general') {
-    return {
-      text: formatGeneral(routed?.reply),
-      topic: 'general',
-      intent,
-    };
-  }
+  // Hàng 14: nghi một mã mà luồng chưa có mô tả hàng — hỏi mô tả, không đọc gì, không ghi gì.
+  if (intent === 'hs' && res.codeRole === 'premise' && !plan.goods?.facts?.length && !ctx.candidatesFresh) return { text: NEEDS_GOODS, intent };
 
-  // intent === 'tariff' (hoặc check_code mà câu không có mã). Câu hỏi thuế có kèm mã: tra đúng mã đó.
-  if (direct) return { ...(await byCode()), intent: 'tariff' };
-  // "Còn từ Nhật thì sao" — cùng mặt hàng, khác xuất xứ: giữ mã cũ.
-  if (routed?.reuseLastHs && ctx.tariff?.hs) {
-    const q = {
-      hs: ctx.tariff.hs,
-      dotted: ctx.tariff.dotted,
-      origin: routed.origin ?? ctx.tariff.origin ?? null,
-      date: routed.date || todayVN(),
-    };
-    return { ...(await answerByHs(q, { showFooter: false })), intent };
+  // 6. Sắp soạn: báo đã hiểu câu hỏi, đúng một lần.
+  const ack = sanitizeLead(res.ack, text).replace(/[.!?…\s]+$/u, '');
+  const clause = intent === 'hs' ? 'mình đọc chú giải các nhóm liên quan rồi trả lời, khoảng một phút nhé.' : 'mình tra văn bản rồi trả lời nhé.';
+  await notify?.(ack ? `${ack} — ${clause}` : clause[0].toUpperCase() + clause.slice(1));
+
+  // 7. Soạn trên đúng kế hoạch vừa đọc (không gọi kế hoạch lần hai); guard đổi intent thì nói rõ bằng forceIntent.
+  const composed = await answer({ ...base, plan, forceIntent: intent === plan.intent ? undefined : intent });
+  if (!composed) return { text: NOT_COMPOSED, intent };
+  // Compose scopes the documents again and may find the named one missing, with no prose: the same reply and ingest offer.
+  if (composed.missingDoc) return { ...missingDocAnswer(asked(plan), composed.missingDoc, composed, composed.asOf ?? plan.date), intent: 'legal' };
+
+  // 8. Trình bày. Mixed: khối thuế của mã 8 số trong tin, số liệu từ /tariff.
+  const mode = composed.mode ?? intent;
+  let tariffLines = [];
+  if (mode === 'mixed' && direct) {
+    const q = { dotted: direct.dotted, origin: direct.origin ?? plan.origin ?? null, date: plan.date || direct.date };
+    const tariff = await lookupFull(q.dotted, q.origin, q.date);
+    if (tariff) tariffLines = [{ q, tariff, confirm: await confirmations(direct.hs, q.origin) }];
   }
-  return { ...(await tariffByClues(routed, text, { showFooter: ctx.topic !== 'tariff' })), intent };
+  const lines = formatAnswerMd(composed, { tariffLines });
+  if (!toText(lines).trim()) return { text: NOT_COMPOSED, intent };
+
+  // Bộ nhớ (§6.1): không mã người dùng nào vào state; ứng viên hs không phải kết quả tra, nên "đúng" không ghi gì.
+  const facts = plan.goods?.facts ?? [];
+  const memory =
+    mode === 'hs'
+      ? { topic: 'tariff', tariff: stampTariff({ hs: null, candidates: (composed.candidates ?? []).map((c) => c.hs), desc: facts.join(', '), keywords: plan.keywords ?? [] }) }
+      : { topic: 'legal', legal: legalMemory(plan, composed.citations ?? [], composed.asOf) };
+  return { text: lines, ...memory, answer: { mode, question: asked(plan), goods: { facts }, at: new Date().toISOString() }, intent };
 }
 
 // --- Main -------------------------------------------------------------------
@@ -302,10 +320,8 @@ async function main() {
       await api.sendMessage({ ...wire(parts[0]), quote: msg.data }, msg.threadId, msg.type);
 
       // Ghi nhớ SAU khi đã trả lời — lỗi lưu trí nhớ không được làm mất câu trả lời.
-      // `tariff`/`legal` vắng mặt = giữ nguyên phần trí nhớ đó; null = xoá (không còn gì để trỏ tới).
-      const state = { ...(ctx.state || {}) };
-      if ('tariff' in result) state.tariff = result.tariff;
-      if ('legal' in result) state.legal = result.legal;
+      // `tariff`/`legal`/`answer` vắng mặt = giữ nguyên phần trí nhớ đó; null = xoá (không còn gì để trỏ tới).
+      const state = nextState(ctx.state, result);
       await saveContext({
         threadId: msg.threadId,
         userId,
