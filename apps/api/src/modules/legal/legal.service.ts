@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/database';
 import { EmbeddingService } from './embedding.service';
-import { extractAsOf } from './legal.asof';
+import { extractAsOf, isIsoDate, todayVN } from './legal.asof';
 import {
   caseSections,
   evidenceInstruments,
@@ -30,7 +30,6 @@ import {
 } from './legal.scope';
 import type { LegalAnswer, LegalCitation, LegalDocumentView, LegalProvisionView } from './legal.types';
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TOP_K = 6;
 const MAX_CITATIONS = 5;
 /** Evidence sections join the articles after them, never in place of one. */
@@ -122,12 +121,8 @@ export class LegalService {
     private readonly embedding: EmbeddingService,
   ) {}
 
-  private today(): string {
-    return new Date().toISOString().slice(0, 10);
-  }
-
   private asOfFor(query: string, param?: string | null): string {
-    return param && ISO_DATE.test(param) ? param : (extractAsOf(query) ?? this.today());
+    return isIsoDate(param) ? param : (extractAsOf(query) ?? todayVN());
   }
 
   /** The corpus manifest. Small, stable, and the honest answer to "which docs do you have?". */

@@ -13,8 +13,23 @@ const YEAR = /\bn(?:ă|a)m\s+(\d{4})\b/i;
 
 const pad = (n: string | number): string => String(n).padStart(2, '0');
 
-/** Return YYYY-MM-DD if the query names a date/year, else null. */
+/** YYYY-MM-DD naming a real day: "2026-02-31" would reach Postgres and fail the query. */
+export function isIsoDate(s: unknown): s is string {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const t = Date.parse(`${s}T00:00:00Z`);
+  return !Number.isNaN(t) && new Date(t).toISOString().startsWith(s);
+}
+
+/** Today in Vietnam, as the bot's todayVN: the UTC date is yesterday until 07:00 ICT. */
+export const todayVN = (): string => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
+
+/** Return YYYY-MM-DD if the query names a real date/year, else null. */
 export function extractAsOf(query: string): string | null {
+  const date = namedDate(query);
+  return isIsoDate(date) ? date : null;
+}
+
+function namedDate(query: string): string | null {
   const iso = ISO.exec(query);
   if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
 

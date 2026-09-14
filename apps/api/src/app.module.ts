@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AnswerModule } from './modules/answer/answer.module';
 import { ConversationModule } from './modules/conversation/conversation.module';
 import { HealthModule } from './modules/health/health.module';
 import { IngestModule } from './modules/ingest/ingest.module';
@@ -8,6 +9,6 @@ import { TariffModule } from './modules/tariff/tariff.module';
 import { DatabaseModule } from './shared/adapters/database';
 
 @Module({
-  imports: [DatabaseModule, HealthModule, TariffModule, LegalModule, ConversationModule, IngestModule],
+  imports: [DatabaseModule, HealthModule, TariffModule, LegalModule, ConversationModule, IngestModule, AnswerModule],
 })
 export class AppModule {}

@@ -43,6 +43,12 @@ export const statedIn = (text: string, fact: string): boolean => {
   return groups.length > 0 && groups.every((g) => new RegExp(`(?<!\\d)0*${g.replace(/^0+/, '') || '0'}(?!\\d)`).test(text));
 };
 
+/** `[1, 2]` → `[1] [2]`; markers outside 1..k are removed. numberMarkers reads every answer through it. */
+export const expandMarkers = (answer: string, k: number): string =>
+  answer
+    .replace(/\[(\d+(?:\s*,\s*\d+)+)\]/g, (_, list: string) => list.split(',').map((n) => `[${n.trim()}]`).join(' '))
+    .replace(/\s*\[(\d+)\]/g, (m, n: string) => (Number(n) >= 1 && Number(n) <= k ? m : ''));
+
 const LIST_MARKER = /^\s*(?:[-*•]|\d+[.)])(?=\s)/;
 
 /**
@@ -121,9 +127,7 @@ export function numberMarkers(
 ): { answer: string; order: number[]; cut?: string[] } {
   const k = sources.length;
   const inRange = (n: number) => Number.isInteger(n) && n >= 1 && n <= k;
-  const text = answer
-    .replace(/\[(\d+(?:\s*,\s*\d+)+)\]/g, (_, list: string) => list.split(',').map((n) => `[${n.trim()}]`).join(' '))
-    .replace(/\s*\[(\d+)\]/g, (m, n: string) => (inRange(Number(n)) ? m : ''));
+  const text = expandMarkers(answer, k);
   const validCited = [...new Set(cited.filter(inRange))];
   const facts = opts ? [...FACTS, ...ANSWER_FACTS] : FACTS;
   const said = norm(userText);

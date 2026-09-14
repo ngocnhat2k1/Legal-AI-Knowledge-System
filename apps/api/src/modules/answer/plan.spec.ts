@@ -36,6 +36,14 @@ describe('planStep — claude call #1 (Việc 6)', () => {
     expect(out.userCodes.map((c) => c.code)).toEqual(['3005.10.10']);
   });
 
+  it('latches with premise spellings whatever the role: a heading written in a turn never reaches the model, even for a rate question', async () => {
+    const { run, calls } = runner({ text: '{"intent":"hs"}' });
+    const input = { text: '3005.10.10 là mã cho miếng dán ngải cứu với thuế 5%?', quote: null, topic: 'tariff', state: {}, documents: [] };
+    const out = await planStep({ ...input, turns: [{ role: 'user', body: 'hàng này vào 30 05 hay 38 24' }] }, run);
+    expect(calls[0]!.prompt).not.toMatch(/30 05/);
+    expect(out.leakDrops).toEqual(['turns']);
+  });
+
   it('falls back to defaultPlan on no result, is_error, no JSON or an unknown intent', async () => {
     for (const reply of [null, { text: '{"intent":"hs"}', isError: true }, { text: 'không có JSON' }, { text: '{"intent":"check_code"}' }]) {
       const out = await planStep({ ...screenshot, quote: null, turns: [], state: {} }, runner(reply).run);
@@ -84,6 +92,8 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       ['e thay 3005.10 vnd', 'e thay [mã 1] vnd'],
       ['nhóm 3005 hoặc 3824, và 3926', 'nhóm [mã 1] hoặc [mã 2], và [mã 3]'],
       ['nhóm 3005, 3824.', 'nhóm [mã 1], [mã 2].'],
+      // A bare heading of a code the text also names, wherever it stands.
+      ['miếng dán thuộc 3005 hay 3824, mã 3005.10.10 có đúng không', 'miếng dán thuộc [mã 2] hay [mã 3], mã [mã 1] có đúng không'],
     ]) {
       expect(maskCodes(text!).text).toBe(masked);
     }

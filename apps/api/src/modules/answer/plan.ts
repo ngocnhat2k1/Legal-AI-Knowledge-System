@@ -3,6 +3,7 @@
  * decide in code what a code in the message is, and hold the model's plan to a fixed shape carrying user data only where
  * the user wrote it. Masking and cues are ported from the bot's dispatch.mjs, the document-number checks from parse.mjs.
  */
+import { isIsoDate } from '../legal/legal.asof';
 import { statedIn } from '../legal/legal.grounding';
 import { foldDocNumber, parseDocRef } from '../legal/legal.scope';
 import type { ClaudeOpts, ClaudeResult } from './claude';
@@ -72,6 +73,8 @@ const HS_TOKEN = new RegExp(
  * hoặc 3824, và 3926" — a heading may end at punctuation, and connectors may follow each other (", và").
  */
 const JOINED_HEADING = /(\[mã \d+\](?:\s*(?:,|hay|hoặc|hoac|và|va|sang))+\s*)(\d{4})(?![\d/]|[.,]\d)/giu;
+/** Four digits standing alone: masked only when a code the text or the book holds opens with them ("thuộc 3005 hay 3824, mã 3005.10.10"). */
+const BARE_HEADING = /(?<![\d.,/])\d{4}(?![\d/]|[.,]\d)/gu;
 export const CODE_MARK = /\[mã \d+\]/gu;
 
 /**
@@ -89,7 +92,8 @@ export function maskCodes(text: string, book: string[] = []): { text: string; co
   };
   let s = String(text ?? '')
     .normalize('NFC')
-    .replace(HS_TOKEN, mark);
+    .replace(HS_TOKEN, mark)
+    .replace(BARE_HEADING, (m) => (codes.some((c) => c.replace(/\D/g, '').startsWith(m)) ? mark(m) : m));
   for (let prev = ''; prev !== s; ) [prev, s] = [s, s.replace(JOINED_HEADING, (_, head: string, code: string) => head + mark(code))];
   return { text: s, codes };
 }
@@ -209,7 +213,7 @@ export function normalizePlan(raw: unknown, userTexts: string[]): Plan | null {
       .map((s) => s.replace(/\D/g, ''))
       .filter((s) => s.length >= 4 && s.length <= 6),
     origin: typeof o.origin === 'string' && /^[A-Za-z]{2}$/.test(o.origin) ? o.origin.toUpperCase() : null,
-    date: typeof o.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.date) ? o.date : null,
+    date: isIsoDate(o.date) ? o.date : null,
     reuseLastHs: o.reuseLastHs === true,
     verdict: o.verdict === 'correct' || o.verdict === 'wrong' || o.verdict === 'unsure' ? o.verdict : null,
     reply: str(o.reply, 1500),
@@ -299,10 +303,13 @@ function stateOf(topic: string | null, state: PlanState): string {
   const bits = [`chủ đề đang bàn: ${topic ?? 'chưa có'}`];
   const t = state.tariff;
   if (t?.dotted) bits.push(`mã HS vừa tra: ${t.dotted}${t.origin ? ` · xuất xứ ${t.origin}` : ''}${t.desc ? ` (${t.desc})` : ''}`);
-  if (t?.candidates?.length) bits.push(`nhóm ứng viên vừa nêu cho ${t.desc || 'mặt hàng'}: ${t.candidates.join(', ')}`);
+  // State comes from the client: a field of the wrong shape is skipped, never a 500.
+  const candidates: unknown = t?.candidates;
+  if (Array.isArray(candidates) && candidates.length) bits.push(`nhóm ứng viên vừa nêu cho ${t?.desc || 'mặt hàng'}: ${candidates.join(', ')}`);
   const question = state.answer?.question ?? state.legal?.question ?? state.legal?.query;
   if (question) bits.push(`câu hỏi vừa trả lời: ${String(question).slice(0, 200)}`);
-  const cites = (state.legal?.citations ?? []).map((c) => c.provisionLabel).filter(Boolean);
+  const citations: unknown = state.legal?.citations;
+  const cites = (Array.isArray(citations) ? citations : []).map((c) => c?.provisionLabel).filter(Boolean);
   if (cites.length) bits.push(`nguồn vừa trích: ${cites.slice(0, 3).join(' · ')}`);
   if (state.legal?.missingDoc) bits.push(`văn bản người dùng hỏi mà kho KHÔNG có: ${state.legal.missingDoc}`);
   return bits.join('\n');
@@ -353,7 +360,8 @@ export function buildPlanInput(parts: PromptPart[], documents: PlanInput['docume
 export async function planStep(input: PlanInput, run: Runner): Promise<PlanStepResult> {
   const users = userCodes(input.text);
   const { parts, codes } = planParts(input);
-  const { parts: kept, leakDrops } = assertNoUserCodes(parts, users, codeRole(input.text));
+  // Premise spellings whatever the role: the plan may still tighten it to premise, and every code here is masked anyway.
+  const { parts: kept, leakDrops } = assertNoUserCodes(parts, users, 'premise');
   const done = (plan: Plan | null, calls: number): PlanStepResult => {
     const final = plan ?? defaultPlan(input.text, input.topic);
     return { plan: final, codes, codeRole: codeRole(input.text, final), userCodes: users, leakDrops, calls, fallback: !plan };

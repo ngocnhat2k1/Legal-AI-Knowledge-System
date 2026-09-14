@@ -7,7 +7,8 @@ công cụ: [ADR công cụ repo](../architecture-decisions/2026-07-18-repo-tool
 apps/
   api/src/
     main.ts, app.module.ts          # điểm vào; phục vụ web UI public/ bằng useStaticAssets
-    modules/<feature>/              # health, tariff, legal, conversation, ingest
+    exceptions.filter.ts            # lỗi không phải HTTP chỉ log tên lớp + mã, không log message (R14)
+    modules/<feature>/              # health, tariff, legal, conversation, ingest, answer (POST /answer: plan → gather → compose → guards)
     shared/adapters/database/       # DatabaseModule: kết nối Postgres duy nhất, token DATABASE_CONNECTION
   zalo-bot/                         # bot Zalo (Node ESM, không build): index → dispatch/router → answer → format → render
   eval/                             # `yarn eval`: đo pháp luật, HS, 14 câu notebook qua HTTP
