@@ -1,10 +1,11 @@
 /**
  * Evidence other than statute clauses (`evidence_section`: HS notes, Explanatory Notes, rulings, status rows,
  * annex tables, business notes — plan 05 milestone 2) for the GET /legal path. This is the first slice of
- * milestone 3: the same hybrid retrieval as legal_chunk (legal.retrieval.ts), two validity windows, no HS
- * scope yet. POST /answer (spec bot-answer-parity-design.md §3.3) takes it over.
+ * milestone 3: the same hybrid retrieval as legal_chunk (legal.retrieval.ts), two validity windows, and two
+ * deterministic lookups for what the `simple` parser cannot match by keyword (document numbers, HS codes).
+ * POST /answer (spec bot-answer-parity-design.md §3.3) takes it over.
  */
-import { sql } from 'drizzle-orm';
+import { type SQL, sql } from 'drizzle-orm';
 
 import { type Database } from '../../shared/adapters/database';
 import { toTsQuery } from './legal.retrieval';
@@ -46,11 +47,18 @@ export interface EvidenceRetrieveOpts {
   documentNumbers?: string[];
 }
 
+/** Validity as a hard filter, as for legal_chunk; effective_from NULL = no known start. `d` is the as-of date. */
+const valid = (d: SQL) => sql`(e.effective_from IS NULL OR e.effective_from <= (${d} + ${`${UPCOMING_MONTHS} months`}::interval))
+  AND (e.effective_to IS NULL OR ${d} <= e.effective_to) AND e.effectiveness <> 'het_hieu_luc'`;
+
+const columns = (d: SQL) => sql`e.id, e.kind, e.instrument, e.authority, e.title, e.body, e.document_number,
+  e.effective_from::text AS effective_from, e.effective_to::text AS effective_to,
+  e.effectiveness, e.verification, e.meta->>'status' AS status,
+  CASE WHEN e.effective_from > ${d} THEN 'upcoming' ELSE 'current' END AS "window"`;
+
 export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts): Promise<RetrievedEvidence[]> {
-  const { queryText, queryVec, asOf, topK = 3, candPerBranch = 50 } = opts;
-  // Validity is a hard filter inside each branch, as for legal_chunk; effective_from NULL = no known start.
-  const valid = sql`(e.effective_from IS NULL OR e.effective_from <= (p.d + ${`${UPCOMING_MONTHS} months`}::interval))
-    AND (e.effective_to IS NULL OR p.d <= e.effective_to) AND e.effectiveness <> 'het_hieu_luc'`;
+  const { queryText, queryVec, asOf, topK = 10, candPerBranch = 50 } = opts;
+  const d = sql`p.d`;
   const scope = opts.documentNumbers?.length ? sql`AND e.document_number IN ${inIds(opts.documentNumbers)}` : sql``;
 
   const rows = (await db.execute(sql`
@@ -60,14 +68,14 @@ export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts)
     kw AS (
       SELECT e.id, row_number() OVER (ORDER BY ts_rank_cd(e.tsv, p.q, 1) DESC) AS rk, NULL::float8 AS dist
       FROM evidence_section e, params p
-      WHERE e.tsv @@ p.q AND ${valid} ${scope}
+      WHERE e.tsv @@ p.q AND ${valid(d)} ${scope}
       ORDER BY ts_rank_cd(e.tsv, p.q, 1) DESC
       LIMIT ${candPerBranch}
     ),
     vec AS (
       SELECT e.id, row_number() OVER (ORDER BY e.embedding <=> p.qv) AS rk, (e.embedding <=> p.qv) AS dist
       FROM evidence_section e, params p
-      WHERE e.embedding IS NOT NULL AND ${valid} ${scope}
+      WHERE e.embedding IS NOT NULL AND ${valid(d)} ${scope}
       ORDER BY e.embedding <=> p.qv
       LIMIT ${candPerBranch}
     ),
@@ -78,11 +86,7 @@ export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts)
       ORDER BY score DESC
       LIMIT ${topK}
     )
-    SELECT e.id, e.kind, e.instrument, e.authority, e.title, e.body, e.document_number,
-           e.effective_from::text AS effective_from, e.effective_to::text AS effective_to,
-           e.effectiveness, e.verification, e.meta->>'status' AS status,
-           CASE WHEN e.effective_from > p.d THEN 'upcoming' ELSE 'current' END AS "window",
-           f.score::float8 AS score, f.best_dist::float8 AS best_dist
+    SELECT ${columns(d)}, f.score::float8 AS score, f.best_dist::float8 AS best_dist
     FROM fused f JOIN evidence_section e ON e.id = f.id, params p
     ORDER BY f.score DESC
   `)) as unknown as Array<Record<string, unknown>>;
@@ -97,14 +101,29 @@ export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts)
 export async function namedStatus(db: Database, documentNumbers: string[], asOf: string): Promise<RetrievedEvidence[]> {
   if (!documentNumbers.length) return [];
   const rows = (await db.execute(sql`
-    SELECT e.id, e.kind, e.instrument, e.authority, e.title, e.body, e.document_number,
-           e.effective_from::text AS effective_from, e.effective_to::text AS effective_to,
-           e.effectiveness, e.verification, e.meta->>'status' AS status,
-           CASE WHEN e.effective_from > ${asOf}::date THEN 'upcoming' ELSE 'current' END AS "window",
-           1::float8 AS score, NULL::float8 AS best_dist
+    SELECT ${columns(sql`${asOf}::date`)}, 1::float8 AS score, NULL::float8 AS best_dist
     FROM evidence_section e
     WHERE e.kind = 'status' AND e.document_number IN ${inIds(documentNumbers)}
     ORDER BY e.id
+  `)) as unknown as Array<Record<string, unknown>>;
+  return rows.map(toEvidence);
+}
+
+/**
+ * Sections whose text carries an 8-digit HS code the question names ("mũ bảo hiểm 6506.10.10 thuộc danh mục
+ * nào") — the list that contains the code IS the answer, and the simple parser cannot match "6506.10.10" by
+ * keyword. Binding sources first.
+ */
+export async function hsCodeSections(db: Database, codes: string[], asOf: string, limit = 3): Promise<RetrievedEvidence[]> {
+  if (!codes.length) return [];
+  const d = sql`${asOf}::date`;
+  const rows = (await db.execute(sql`
+    SELECT ${columns(d)}, 1::float8 AS score, NULL::float8 AS best_dist
+    FROM evidence_section e
+    WHERE e.hs_codes && ARRAY[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[] AND ${valid(d)}
+    ORDER BY CASE e.authority WHEN 'binding' THEN 0 WHEN 'authoritative' THEN 1 WHEN 'administrative' THEN 2
+                              WHEN 'reference' THEN 3 ELSE 4 END, e.id
+    LIMIT ${limit}
   `)) as unknown as Array<Record<string, unknown>>;
   return rows.map(toEvidence);
 }

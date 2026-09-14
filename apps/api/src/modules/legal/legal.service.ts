@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/database';
 import { EmbeddingService } from './embedding.service';
 import { extractAsOf } from './legal.asof';
-import { evidenceInstruments, evidenceRetrieve, namedStatus, type RetrievedEvidence } from './legal.evidence';
+import { evidenceInstruments, evidenceRetrieve, hsCodeSections, namedStatus, type RetrievedEvidence } from './legal.evidence';
 import { generate, type PromptSource } from './legal.generation';
 import { keepRelevant, numberMarkers } from './legal.grounding';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
@@ -34,6 +34,7 @@ const EVIDENCE_K = 3;
  */
 const EVIDENCE_MAX_DIST = 0.5;
 const EVIDENCE_MARGIN = 0.05;
+const HS_CODE = /(?<!\d)\d{4}\.\d{2}\.\d{2}(?!\d)/g;
 /** Evidence enters the prompt cut here (≈ the embedded window); the citation keeps the whole body. */
 const EVIDENCE_PROMPT_CHARS = 6000;
 
@@ -207,7 +208,7 @@ export class LegalService {
 
     // A document held only as evidence has no clauses to search; a named Điều is a clause lookup, not evidence.
     const onlyEvidence = !documentIds.length && evidenceNumbers.length > 0;
-    const [all, evidence, named] = await Promise.all([
+    const [all, evidence, named, byCode] = await Promise.all([
       onlyEvidence
         ? Promise.resolve([] as RetrievedArticle[])
         : hybridRetrieve(this.db, { queryText: query, queryVec: vec, asOf, topK: TOP_K, documentIds, articleProvisionIds }),
@@ -215,6 +216,7 @@ export class LegalService {
         ? Promise.resolve([] as RetrievedEvidence[])
         : evidenceRetrieve(this.db, { queryText: query, queryVec: vec, asOf, documentNumbers: evidenceNumbers }),
       namedStatus(this.db, namedNumbers, asOf),
+      hsCodeSections(this.db, [...new Set(query.match(HS_CODE) ?? [])], asOf),
     ]);
 
     // The relevance gate exists to stop the dense branch handing back its nearest
@@ -224,11 +226,14 @@ export class LegalService {
     // holds for a document the user named that only the evidence layer holds.
     const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, MAX_CITATIONS);
     const limit = Math.min(EVIDENCE_MAX_DIST, Math.min(...all.map((a) => a.bestDist ?? Infinity)) + EVIDENCE_MARGIN);
-    const ranked = (onlyEvidence ? evidence : evidence.filter((e) => e.bestDist != null && e.bestDist <= limit)).filter(
-      (e) => !named.some((n) => n.id === e.id),
-    );
-    // A named document's status row is never cut: it may be the whole answer ("replaced from 05/09/2026").
-    const keptEvidence = [...named, ...ranked].slice(0, Math.max(EVIDENCE_K, named.length));
+    // What the question names outright — a document's status row, a section listing its HS code — may be the whole
+    // answer ("replaced from 05/09/2026", "high-risk list of TT 36/2026"), so it is never cut.
+    const pinned = [...named, ...byCode].filter((e, i, a) => a.findIndex((x) => x.id === e.id) === i);
+    // Closest first: RRF lets a long section that merely repeats the query words outrank the right one.
+    const ranked = (onlyEvidence ? evidence : evidence.filter((e) => e.bestDist != null && e.bestDist <= limit))
+      .filter((e) => !pinned.some((p) => p.id === e.id))
+      .sort((a, b) => (a.bestDist ?? 1) - (b.bestDist ?? 1));
+    const keptEvidence = [...pinned, ...ranked].slice(0, Math.max(EVIDENCE_K, pinned.length));
     const sources = [...kept.map(articleSource), ...keptEvidence.map(evidenceSource)];
     const scope = {
       requestedDoc: ref?.core ?? null,

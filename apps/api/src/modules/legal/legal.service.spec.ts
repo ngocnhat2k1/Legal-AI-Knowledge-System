@@ -1,7 +1,7 @@
 import type { SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 
-import { evidenceInstruments, evidenceRetrieve, namedStatus, type RetrievedEvidence } from './legal.evidence';
+import { evidenceInstruments, evidenceRetrieve, hsCodeSections, namedStatus, type RetrievedEvidence } from './legal.evidence';
 import { generate, type PromptSource } from './legal.generation';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
 import { LegalService } from './legal.service';
@@ -12,6 +12,7 @@ jest.mock('./legal.evidence', () => ({
   evidenceInstruments: jest.fn(async () => []),
   evidenceRetrieve: jest.fn(async () => []),
   namedStatus: jest.fn(async () => []),
+  hsCodeSections: jest.fn(async () => []),
 }));
 
 const gazette = (number: string, docType: string) => ({ number, docType, title: `${number} — tiêu đề`, sourceUrl: 'https://congbao.chinhphu.vn/x', congbaoId: 1 });
@@ -126,6 +127,24 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
     expect(lastSources().map((s) => s.label)).toEqual(['Điều 11', 'Quy tắc nghiệp vụ — R5']);
     expect(lastSources()[1]!.note).toContain('không phải căn cứ pháp lý');
     expect(res.citations.map((c) => c.kind ?? 'provision')).toEqual(['provision', 'note']);
+  });
+
+  it('keeps a section listing the HS code the question names, and orders the rest by distance, not RRF', async () => {
+    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([]);
+    // RRF order as retrieval returns it: a chapter intro that repeats the query words first, the right note second.
+    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([
+      ev({ id: 20, kind: 'en', title: 'EN Chương 84 — mở đầu', bestDist: 0.43 }),
+      ev({ id: 21, kind: 'hs_note', title: 'Chú giải Phần XVI', bestDist: 0.41 }),
+    ]);
+    (hsCodeSections as jest.Mock).mockResolvedValueOnce([ev({ id: 30, kind: 'annex_table', title: '36/2026/TT-BKHCN — Bảng 4 — khối 3/9' })]);
+    (generate as jest.Mock).mockResolvedValueOnce(null);
+    const res = await svc().ask('Mũ bảo hiểm mã 6506.10.10 thuộc danh mục nào', '2026-09-14');
+    expect((hsCodeSections as jest.Mock).mock.calls.at(-1)![1]).toEqual(['6506.10.10']);
+    expect(res.citations.map((c) => c.provisionLabel)).toEqual([
+      '36/2026/TT-BKHCN — Bảng 4 — khối 3/9',
+      'Chú giải Phần XVI',
+      'EN Chương 84 — mở đầu',
+    ]);
   });
 
   it('labels a section that is not yet in force with the date it starts', async () => {
