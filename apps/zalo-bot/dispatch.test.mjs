@@ -132,6 +132,7 @@ test('"refine" belongs to whatever topic is open', () => {
 
 test('an unknown intent falls back to tariff, the historical default', () => {
   assert.equal(guardIntent('nonsense', { topic: null }), 'tariff');
+  assert.equal(guardIntent('check_code', { topic: null }), 'tariff', 'kế hoạch 08 không còn intent check_code');
 });
 
 test('without an LLM the bot stays on the current topic instead of keyword-searching', () => {
@@ -965,6 +966,7 @@ test('Việc 12 (1): tra thuế trần không qua bước kế hoạch; văn xu�
     );
     assert.ok(text.startsWith('Hàng hóa có mã HS 8481.80.99') && text.includes('MFN'), text.slice(0, 80));
     assert.equal(notices.length, 0, 'tra trần không ack');
+    assert.ok(Date.parse(answers[0].deadlineAt) <= Date.now() + 45_000, 'Q1: văn xuôi quá khoảng 40 s thì khối thuế đi một mình');
   }
   const prose = 'Mức ưu đãi theo FTA chỉ áp khi hàng có C/O đúng form của hiệp định.';
   const run = await conversation().say('8481.80.99 TQ', fakeApi({ composed: { mode: 'tariff', answerMd: prose, citations: [], cut: 0 } }));
@@ -1044,10 +1046,10 @@ test('Việc 12 (6): sau câu hs, "đúng" không ghi gì; "sai rồi, không ph
   assert.equal(agree.confirms.length, 0);
   assert.equal(agree.answers.length, 1);
   const b = await afterHs();
-  const refine = await b.say('sai rồi, không phải nhóm này', fakeApi({ planned: plannedOf(plan08({ intent: 'refine', refines: true }), { codeRole: 'none' }), composed: composedHs }), b.reply);
+  const refine = await b.say('sai rồi, không phải nhóm này', fakeApi({ planned: plannedOf(plan08({ intent: 'refine', refines: true }), { codeRole: 'none', mode: 'hs' }), composed: composedHs }), b.reply);
   assert.equal(refine.confirms.length, 0);
   assert.equal(refine.answers.length, 2);
-  assert.deepEqual([refine.answers[1].plan.intent, refine.answers[1].forceIntent], ['refine', 'hs']);
+  assert.deepEqual([refine.answers[1].plan.intent, refine.answers[1].forceIntent], ['refine', undefined], 'API tự đổi refine sang chế độ cũ và giữ câu hỏi trước');
 });
 
 test('Việc 12 (7): "63079090 mới đũng" sau câu hs (kế hoạch correction): lời mời, không ghi sổ, giữ bộ nhớ ứng viên', async () => {
@@ -1178,4 +1180,102 @@ test('lời mời nạp văn bản chỉ nhận "có" khi luồng còn ở văn 
   await c.say('miếng dán ngải cứu mã gì', fakeApi({ planned: plannedOf(plan08({ question: 'miếng dán ngải cứu mã gì' }), { codeRole: 'none' }), composed: composedHs }));
   const yes = await c.say('có', fakeApi());
   assert.ok(!yes.calls.some((x) => x.path === '/ingest/request'), yes.text);
+});
+
+// --- Plan 08 Việc 12 review: routing and memory -------------------------------------------------------------------------
+
+const noGoods = { goods: { facts: [], missing: [] }, keywords: [] };
+const pathsOf = (run) => run.calls.map((x) => x.path);
+
+test('refine chạy lại chế độ API đọc từ câu soạn trước, không forceIntent; sau câu hs không ứng viên không tra từ khoá (hàng 12, 22)', async () => {
+  const c = conversation();
+  await c.say('hs code hộp cách ly nhiễu RF', fakeApi({ planned: plannedOf(plan08({ question: 'hs code hộp cách ly nhiễu RF' }), { codeRole: 'none', mode: 'hs' }), composed: { ...composedHs, candidates: [], userCodes: [] } }));
+  const run = await c.say('chỉ là hộp vải có chức năng cách ly nhiễu RF', fakeApi({ planned: plannedOf(plan08({ intent: 'refine', refines: true }), { codeRole: 'none', mode: 'hs' }), composed: composedHs }));
+  assert.ok(!pathsOf(run).some((p) => p.startsWith('/tariff')), pathsOf(run).join(','));
+  assert.deepEqual([run.answers.length, run.answers[1].forceIntent], [2, undefined]);
+  assert.match(run.notices[0], /đọc chú giải các nhóm/);
+
+  const s = conversation();
+  const status = { ...composedLegal, mode: 'status' };
+  await s.say('Nghị định 69/2018/NĐ-CP còn áp dụng không', fakeApi({ planned: plannedOf(plan08({ intent: 'status', question: 'Nghị định 69/2018/NĐ-CP còn áp dụng không', ...noGoods }), { codeRole: 'none', mode: 'status', ack: null }), composed: status }));
+  const again = await s.say('không phải văn bản đó', fakeApi({ planned: plannedOf(plan08({ intent: 'refine', ...noGoods }), { codeRole: 'none', mode: 'status', ack: null }), composed: status }));
+  assert.deepEqual([again.answers[1].plan.intent, again.answers[1].forceIntent], ['refine', undefined]);
+});
+
+test('kế hoạch tariff: mã bị nghi không tra thuế; không mã thì hỏi mã hoặc soạn hs, không tra từ khoá trên tin (R4); "còn từ Nhật" chỉ tra khối; văn bản thiếu không chặn tra thuế', async () => {
+  const doubt = await conversation().say('thuế mã 84818099 dùng cho van nước được không', fakeApi({ planned: plannedOf(plan08({ intent: 'tariff', ...noGoods })) }));
+  assert.ok(!pathsOf(doubt).includes('/tariff'), pathsOf(doubt).join(','));
+  assert.match(doubt.text, /mô tả giúp mình/);
+  assert.equal(doubt.r.tariff, undefined, 'không đóng dấu mã người dùng đang nghi');
+
+  const heading = conversation();
+  const noCode = await heading.say('thuế nhóm 3005.10 bao nhiêu', fakeApi({ planned: plannedOf(plan08({ intent: 'tariff', question: 'thuế nhóm [mã 1] bao nhiêu', ...noGoods }), { codeRole: 'key' }) }));
+  assert.deepEqual(pathsOf(noCode), ['/answer']);
+  assert.match(noCode.text, /mã HS 8 số/);
+  assert.doesNotMatch(JSON.stringify(heading.memo.state), /3005/);
+
+  const goods = await conversation().say('thuế nhập khẩu van bi inox bao nhiêu', fakeApi({ planned: plannedOf(plan08({ intent: 'tariff', question: 'thuế nhập khẩu van bi inox', goods: { facts: ['van bi inox'], missing: [] }, keywords: ['van bi inox'] }), { codeRole: 'none' }), composed: composedHs }));
+  assert.ok(!pathsOf(goods).some((p) => p.startsWith('/tariff')), pathsOf(goods).join(','));
+  assert.deepEqual([goods.answers.length, goods.answers[1].forceIntent], [2, 'hs']);
+
+  const cands = await (await afterHs()).say('còn từ Nhật thì sao', fakeApi({ planned: plannedOf(plan08({ intent: 'tariff', reuseLastHs: true, origin: 'JP', ...noGoods }), { codeRole: 'none' }) }));
+  assert.deepEqual(pathsOf(cands), ['/answer']);
+  assert.match(cands.text, /mã HS 8 số/);
+
+  const t = conversation();
+  await t.say('8481.80.99 TQ', fakeApi());
+  const japan = await t.say('còn từ Nhật thì sao', fakeApi({ planned: plannedOf(plan08({ intent: 'tariff', reuseLastHs: true, origin: 'JP', ...noGoods }), { codeRole: 'none' }) }));
+  assert.equal(japan.answers.length, 1, 'API không đọc mã từ state: lượt /answer thứ hai không bao giờ có văn xuôi');
+  assert.ok(japan.text.startsWith('Hàng hóa có mã HS 8481.80.99'), japan.text.slice(0, 60));
+
+  const decree = await conversation().say('cho mình hỏi thuế 8481.80.99 theo Nghị định 26/2023/NĐ-CP bao nhiêu', fakeApi({ planned: plannedOf(plan08({ intent: 'tariff', ...noGoods }), { codeRole: 'key', missingDoc: '26/2023/NĐ-CP' }) }));
+  assert.ok(pathsOf(decree).includes('/tariff') && !decree.text.includes('chưa có toàn văn'), decree.text.slice(0, 80));
+});
+
+test('sau ứng viên, "sai rồi, không phải nhóm này" (kế hoạch correction) soạn lại hs; câu hỏi trên luồng pháp luật giữ legal; nghi mã theo chế độ API thì hỏi mô tả; "đúng" sau câu pháp luật không soạn lại; câu tất định xoá state.answer', async () => {
+  const c = await afterHs();
+  const redo = await c.say('sai rồi, không phải nhóm này', fakeApi({ planned: plannedOf(plan08({ intent: 'correction', verdict: 'wrong' }), { codeRole: 'none' }), composed: composedHs }));
+  assert.deepEqual([redo.confirms.length, redo.answers.length, redo.answers[1]?.forceIntent], [0, 2, 'hs']);
+
+  const l = conversation();
+  await l.say('thời hạn nộp thuế hàng nhập khẩu là bao lâu', fakeApi({ planned: plannedOf(plan08({ intent: 'legal', question: 'thời hạn nộp thuế hàng nhập khẩu', ...noGoods }), { codeRole: 'none', mode: 'legal', ack: null }), composed: composedLegal }));
+  const asks = await l.say('vậy là điều 9 đó mình hiểu sai à?', fakeApi({ planned: plannedOf(plan08({ intent: 'correction', ...noGoods }), { codeRole: 'none', ack: null }), composed: composedLegal }));
+  assert.equal(asks.answers[1]?.forceIntent, 'legal');
+  assert.match(asks.notices[0], /tra văn bản/);
+  const agree = await l.say('đúng', fakeApi());
+  assert.deepEqual([agree.answers.length, agree.notices.length], [0, 0]);
+
+  const premise = await conversation().say('mã 8481.80.99 dùng được không theo thông tư', fakeApi({ planned: plannedOf(plan08({ intent: 'legal', ...noGoods }), { mode: 'hs' }), composed: composedLegal }));
+  assert.deepEqual([premise.answers.length, premise.notices.length], [1, 0]);
+  assert.match(premise.text, /mô tả giúp mình/);
+
+  const m = await afterHs();
+  assert.equal(m.memo.state.answer.mode, 'hs');
+  await m.say('thông tư 36/2025/TT-BKHCN quy định gì', fakeApi({ planned: plannedOf(plan08({ intent: 'legal', question: 'thông tư 36/2025/TT-BKHCN quy định gì', ...noGoods }), { codeRole: 'none', missingDoc: '36/2025/TT-BKHCN' }) }));
+  assert.equal(m.memo.state.answer, null, 'lượt sau không trỏ về câu hs cũ');
+});
+
+test('ngõ cụt nói thật: tin quá 2.000 ký tự không gửi /answer; soạn không có nguồn không bảo "thử lại"; mixed dùng khối API đã tra; sau ứng viên lượt tra thật đầu tiên có lời mời', async () => {
+  const long = await conversation().say(`hàng gồm ${'thân nhựa, lõi thép, dây đồng; '.repeat(80)}mã gì`, fakeApi());
+  assert.equal(long.answers.length, 0);
+  assert.match(long.text, /2\.000 ký tự/);
+
+  const none = await conversation().say('thời hạn nộp thuế hàng tạm nhập là bao lâu', fakeApi({ planned: plannedOf(plan08({ intent: 'legal', ...noGoods }), { codeRole: 'none', mode: 'legal', ack: null }), composed: { ...composedLegal, answerMd: '', citations: [], coverage: 'none', calls: 0 } }));
+  assert.doesNotMatch(none.text, /thử lại/);
+  assert.match(none.text, /chưa tìm thấy căn cứ/);
+
+  const mixed = await conversation().say('thuế 8481.80.99 TQ, có phải kiểm tra chuyên ngành không', fakeApi({ planned: plannedOf(plan08({ intent: 'mixed', ...noGoods }), { codeRole: 'subject', mode: 'mixed', ack: null }), composed: { ...composedLegal, mode: 'mixed', tariff: { ...tariff8481({ origin: 'CN' }), date: todayVN() } } }));
+  assert.ok(!pathsOf(mixed).includes('/tariff') && mixed.text.includes('Thuế của mã trong câu hỏi:'), pathsOf(mixed).join(','));
+
+  const first = await (await afterHs()).say('3005.10.10', fakeApi());
+  assert.match(first.text, /trả lời "đúng"/);
+});
+
+test('refine không còn câu soạn trước (state.answer đã xoá): chủ đề quyết, không theo chế độ mặc định hs của API', async () => {
+  const hit = { number: '36/2025/TT-BKHCN', title: 'Thông tư 36/2025/TT-BKHCN tiêu đề', sourceUrl: 'https://congbao.chinhphu.vn/van-ban/x' };
+  const c = conversation();
+  await c.say('thông tư 36/2025/TT-BKHCN quy định gì', fakeApi({ planned: plannedOf(plan08({ intent: 'legal', question: 'thông tư 36/2025/TT-BKHCN quy định gì', ...noGoods }), { codeRole: 'none', missingDoc: '36/2025/TT-BKHCN', gazetteMatchKind: 'exact', gazetteMatches: [hit] }) }));
+  const run = await c.say('không phải, ý mình là quy định miễn thuế hàng gia công', fakeApi({ planned: plannedOf(plan08({ intent: 'refine', ...noGoods }), { codeRole: 'none', mode: 'hs', ack: null }), composed: composedLegal }));
+  assert.equal(run.answers[1]?.forceIntent, 'legal');
+  assert.deepEqual(run.notices, ['Mình tra văn bản rồi trả lời nhé.']);
 });

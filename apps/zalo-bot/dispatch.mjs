@@ -278,7 +278,7 @@ export function parseVerifyDocCommand(text) {
   return m ? m[1].replace(/[.,;:]+$/, '').toUpperCase() : null;
 }
 
-const INTENTS = new Set(['tariff', 'hs', 'legal', 'status', 'mixed', 'general', 'confirm', 'correction', 'refine', 'check_code']);
+const INTENTS = new Set(['tariff', 'hs', 'legal', 'status', 'mixed', 'general', 'confirm', 'correction', 'refine']);
 
 /**
  * Apply the same topic guards to the PLAN's intent. The model sees the transcript and

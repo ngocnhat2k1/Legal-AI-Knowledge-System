@@ -110,7 +110,7 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   // Chữ ký sản phẩm để (a) tra ruling đã xác nhận, (b) đính kèm khi có đính chính sau này.
   const productKw = (clues?.keywords?.length ? clues.keywords : keywords).filter((k) => k && k.length >= 2).slice(0, 6);
   // `note` is LLM text: it passes the prose gate before it is shown or stored; rejected → keywords.
-  const desc = (sanitizeLead(clues?.note, '') || productKw.join(', ') || text).replace(/\s+/g, ' ').trim().slice(0, 300);
+  const desc = (sanitizeLead(clues?.note, '') || productKw.join(', ')).replace(/\s+/g, ' ').trim().slice(0, 300);
 
   // Một ÁP MÃ đã được con người xác nhận cho hàng tương tự > phỏng đoán của LLM (verify-on-use).
   // Ngưỡng thích nghi: cụm nhiều token cần ≥2 token khớp (chống một từ chung promote nhầm);
@@ -535,8 +535,9 @@ export async function answerImage(imageUrls, caption) {
         tariff: null,
       };
     }
-    // The note is LLM text: gate it here, so no fallback (keywords, desc, no-candidates line) can echo it (R1).
-    return await tariffByClues(clues, [caption, sanitizeLead(clues.note, '')].filter(Boolean).join(' '));
+    // The note is LLM text: gate it here, so no fallback (keywords, desc, no-candidates line) can echo it (R1). The caption
+    // goes masked too: with no vision keywords the search words, desc and ruling note come from this text (R4).
+    return await tariffByClues(clues, [captionForVision(caption), sanitizeLead(clues.note, '')].filter(Boolean).join(' '));
   } finally {
     try { unlinkSync(file); } catch { /* ignore */ }
   }

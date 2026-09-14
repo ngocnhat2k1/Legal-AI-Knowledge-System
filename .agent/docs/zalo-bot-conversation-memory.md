@@ -120,14 +120,16 @@ Từ Việc 12, bot không còn gọi `route()` cho tin chữ. Luồng đầy đ
   `{intent: 'tariff', origin, date}` — không `question`, không mã.
 - **`state.tariff` sau câu soạn chế độ hs** = `{hs: null, candidates: ['30.05', …], desc, keywords, at}`. `hs: null`
   nên `tariffFresh` là false: một chữ "đúng" không ghi gì, vì không có kết quả tra nào đang chờ xác nhận.
-  `desc` = `plan.goods.facts` (API đã lọc số, serial, model).
+  `desc` = `plan.goods.facts` (API đã lọc số, serial, model). Không có ứng viên nào thì `state.tariff = null`.
 - **`candidatesFresh`** (`loadContext`): `hs` null, `candidates` không rỗng, còn trong `TARIFF_TTL_MS`. Khi đó
   `ctx.tariff = state.tariff`, để `handleCorrection` giữ được `desc` cho note của phán quyết.
 - **`state.legal` sau câu soạn legal/status/mixed** = `{question, asOf, citations ≤ 5 {label, kind, instrument,
   documentNumber}, missingDoc: null, pendingIngest: null}`. Văn bản kho không có vẫn đi `missingDocAnswer` (lưu
   `query` + `pendingIngest`).
 - **`state.answer` sau mọi câu soạn** = `{mode, question, goods: {facts}, at}` — lượt trước cho câu tinh chỉnh.
-  `question` là câu đã che của kế hoạch, bỏ cả nhãn `[mã n]`. **Không mã người dùng nào vào `state`.**
+  `question` là câu đã che của kế hoạch, bỏ cả nhãn `[mã n]`. **Không mã người dùng nào vào `state`.** Một câu trả lời
+  đặt `topic` mà không soạn (tra thuế, văn bản thiếu, đính chính…) xoá `state.answer`: refine chỉ trỏ về câu soạn ngay
+  trước. Refine gửi kế hoạch nguyên vẹn, không `forceIntent`: API tự đổi sang `state.answer.mode` và giữ câu hỏi trước.
 - `index.mjs` và `dry-run.mjs` ghi state qua `nextState(state, result)`: thiếu khoá `tariff`/`legal`/`answer` =
   giữ nguyên, `null` = xoá.
 
@@ -135,12 +137,22 @@ Từ Việc 12, bot không còn gọi `route()` cho tin chữ. Luồng đầy đ
 
 | Tin | Kết quả |
 |---|---|
-| "HS đúng là 8422.90.90" (cue xác nhận ngay trước mã) | `fastPath` → `handleCorrection`: đúng một dòng `correct`, note = `desc` + số công văn; không dòng `wrong`, không đọc "mã cũ" từ quote |
-| "sai rồi, không phải nhóm này" | không cue trước mã → bước kế hoạch; `refine` sau ứng viên được `guardIntent` đổi thành `hs`, soạn lại, không ghi |
+| "HS đúng là 8422.90.90" (cue xác nhận ngay trước mã) | `fastPath` → `handleCorrection`: tra mã trước, rồi đúng một dòng `correct`, note = `desc` + số công văn; không dòng `wrong`, không đọc "mã cũ" từ quote. Tra không được hoặc ghi lỗi: không ghi, không nói "Đã ghi nhận", giữ bộ nhớ để gửi lại |
+| "sai rồi, không phải nhóm này" | không cue trước mã → bước kế hoạch; `refine` hoặc `correction` không kèm mã sau ứng viên → soạn lại `hs`, không ghi |
 | "63079090 mới đúng" (kế hoạch `correction`, không cue) | `codeOffer`: một câu mời nhắn "HS đúng là …", không ghi |
 | "8481.80.99 có sai không ạ" | câu hỏi → `hs`; chưa có mô tả hàng thì hỏi mô tả (hàng 14), không ghi |
 
-Kế hoạch `confirm`/`correction` không bao giờ tự ghi sổ: sổ chỉ được ghi từ cue tường minh ở `fastPath`.
+Kế hoạch `confirm`/`correction` không bao giờ tự ghi sổ: sổ chỉ được ghi từ cue tường minh ở `fastPath`, và cue đó phải
+là phán quyết gõ có chủ đích về kết quả đang trên bàn:
+
+- Tin có mã chỉ ghi khi có cue xác nhận ngay trước mã; "tôi muốn hỏi thuế 8481.80.91", "không phải, 6307.90.90 cơ" đi bước
+  kế hoạch (hàng 10: lời mời). Tin không mã chỉ ghi `wrong` với từ phán sai (sai, không đúng, nhầm mã); "ý tôi là …",
+  "không phải …" đi bước kế hoạch.
+- Câu hỏi đọc cả dạng không dấu, viết tắt ("sai k", "ma nay sai khong", "… hay sao", "X hay Y ạ").
+- Quote một tin không phải kết quả tra thuế (câu soạn, lời mời) thì một chữ "đúng"/"sai" hay lời phản đối không mã không
+  ghi gì cho mã đang nhớ. `tariffReply` chỉ nhận dòng bot tự viết ở đầu dòng (câu dẫn khối thuế, câu ghi nhận), không
+  nhận "MFN"/"Cảm ơn" ở bất cứ đâu; tin thứ hai của câu tra thuế dài vẫn nhận nhờ dòng "Tra theo ngày …".
+- Lời mời nạp văn bản chỉ nhận "có"/"nạp" khi chủ đề còn là pháp luật.
 
 ## Lời dẫn tự nhiên — cưỡng chế bằng code, không bằng lời dặn
 
