@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 
 /**
  * Whether the model layer can actually run.
@@ -15,41 +15,14 @@ import { spawn } from 'node:child_process';
  */
 export type LlmStatus = 'up' | 'no_token' | 'no_cli';
 
-type RunCli = () => Promise<boolean>;
+let status: LlmStatus | undefined;
 
-interface ProbeDeps {
-  env?: Record<string, string | undefined>;
-  run?: RunCli;
-  now?: () => number;
-}
-
-/** Spawning a process on every /health hit would make a liveness probe expensive. */
-const CACHE_MS = 60_000;
-let cached: { at: number; status: LlmStatus } | null = null;
-
-/** `claude --version` exits 0 when the CLI is installed and on PATH. */
-const defaultRun: RunCli = () =>
-  new Promise((resolve) => {
-    const child = spawn('claude', ['--version'], { timeout: 5_000 });
-    child.on('error', () => resolve(false));
-    child.on('close', (code) => resolve(code === 0));
-  });
-
-export async function probeLlm(deps: ProbeDeps = {}): Promise<LlmStatus> {
-  const env = deps.env ?? process.env;
-  const now = deps.now ?? Date.now;
-  if (cached && now() - cached.at < CACHE_MS) return cached.status;
-
-  const status: LlmStatus = !env.CLAUDE_CODE_OAUTH_TOKEN
+/** The token and the binary do not change while the process runs, so this probes once. */
+export function probeLlm(): LlmStatus {
+  status ??= !process.env.CLAUDE_CODE_OAUTH_TOKEN
     ? 'no_token'
-    : (await (deps.run ?? defaultRun)())
+    : spawnSync('claude', ['--version'], { timeout: 5_000 }).status === 0
       ? 'up'
       : 'no_cli';
-  cached = { at: now(), status };
   return status;
-}
-
-/** Test seam: forget the cached probe. */
-export function resetLlmProbe(): void {
-  cached = null;
 }

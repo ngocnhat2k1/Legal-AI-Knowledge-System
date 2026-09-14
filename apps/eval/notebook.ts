@@ -1,10 +1,9 @@
 /**
  * The 14 notebook questions (fixtures/legal-golden/notebook-qa.json), scored through
- * HTTP the way a person's question travels. Two endpoints share one scorer: today's
- * GET /legal (prose ≤130 words + verbatim citations) and milestone 3's POST /answer. A
- * check the response cannot carry (evidence kinds, plan intent, warnings on /legal)
- * is SKIPPED, not failed — the baseline must not punish the old path for lacking
- * fields it never had; the later run against /answer scores them for real. A case
+ * HTTP the way a person's question travels, against GET /legal (prose + verbatim
+ * citations). A check the response cannot carry (evidence kinds, plan intent, warnings)
+ * is SKIPPED, not failed — the baseline must not punish /legal for lacking fields it
+ * never had; milestone 3's POST /answer will carry them. A case
  * where no check ran at all is UNSCORED: neither passed nor failed, and never counted
  * towards the safety group — a pass nobody checked is not a pass.
  */
@@ -154,28 +153,21 @@ export function summarize(results: CaseResult[]): NotebookMetrics {
   };
 }
 
-async function ask(apiUrl: string, endpoint: '/legal' | '/answer', q: string, asOf: string): Promise<AnswerLike | null> {
+async function ask(apiUrl: string, q: string, asOf: string): Promise<AnswerLike | null> {
   try {
-    const res =
-      endpoint === '/answer'
-        ? await fetch(`${apiUrl}/answer`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ q, asOf, channel: 'eval' }),
-          })
-        : await fetch(`${apiUrl}/legal?${new URLSearchParams({ q, asOf })}`);
+    const res = await fetch(`${apiUrl}/legal?${new URLSearchParams({ q, asOf })}`);
     return res.ok ? ((await res.json()) as AnswerLike) : null;
   } catch {
     return null;
   }
 }
 
-export async function evalNotebook(apiUrl: string, endpoint: '/legal' | '/answer' = '/legal'): Promise<NotebookMetrics> {
+export async function evalNotebook(apiUrl: string): Promise<NotebookMetrics> {
   const golden = JSON.parse(readFileSync(join(process.cwd(), 'fixtures', 'legal-golden', 'notebook-qa.json'), 'utf8')) as {
     asOf: string;
     cases: NotebookCase[];
   };
   const results: CaseResult[] = [];
-  for (const c of golden.cases) results.push(scoreCase(c, await ask(apiUrl, endpoint, c.q, golden.asOf)));
+  for (const c of golden.cases) results.push(scoreCase(c, await ask(apiUrl, c.q, golden.asOf)));
   return summarize(results);
 }

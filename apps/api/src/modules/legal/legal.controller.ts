@@ -15,8 +15,7 @@ import type { LegalAnswer, LegalDocumentView, LegalProvisionView } from './legal
  *            and answers "we do not hold that document" when the corpus lacks it.
  * `article`  optional Điều number, narrowing further within `doc`.
  *
- * Route order matters: the static `documents`/`provision` paths are declared before
- * nothing else claims them, and ServeStaticModule excludes `/legal/{*rest}`.
+ * Route order matters: the static `documents`/`provision` paths are declared before `@Get()`.
  */
 @Controller('legal')
 export class LegalController {

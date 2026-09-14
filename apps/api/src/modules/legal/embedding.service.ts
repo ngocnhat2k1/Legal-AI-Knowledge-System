@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 
 /**
  * Client for the BGE-M3 embedding sidecar (apps/embedder). The model lives in
@@ -12,11 +11,7 @@ import { ConfigService } from '@nestjs/config';
  */
 @Injectable()
 export class EmbeddingService {
-  private readonly url: string;
-
-  constructor(config: ConfigService) {
-    this.url = (config.get<string>('EMBEDDER_URL') ?? 'http://localhost:8000').replace(/\/$/, '');
-  }
+  private readonly url = (process.env.EMBEDDER_URL ?? 'http://localhost:8000').replace(/\/$/, '');
 
   /** Embed a single text, returning the dense vector. Throws if the sidecar is down. */
   async embed(text: string): Promise<number[]> {

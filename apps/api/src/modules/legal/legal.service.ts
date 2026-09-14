@@ -2,7 +2,7 @@ import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common'
 import { sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/database';
-import { EmbeddingService } from '../../shared/adapters/embedding';
+import { EmbeddingService } from './embedding.service';
 import { extractAsOf } from './legal.asof';
 import { generate } from './legal.generation';
 import { keepRelevant, numberMarkers } from './legal.grounding';

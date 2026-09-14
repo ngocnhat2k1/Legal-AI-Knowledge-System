@@ -209,19 +209,6 @@ export function missingKind(label, matches = [], kind = 'none') {
   return { kind, matches: list };
 }
 
-/** Does the corpus manifest hold this reference? `docs` is the /legal/documents payload. */
-export function corpusHas(docs, ref) {
-  if (!ref) return true;
-  // A full number names one document: holding 69/2018/NĐ-CP is not holding 69/2018/TT-BTC.
-  if (ref.full) return (docs || []).some((d) => sameDocNumber(d.number, ref.full) || sameDocNumber(d.consolidates, ref.full));
-  const heads = [ref.core, ref.core.replace(/^0+/, ''), /^\d\//.test(ref.core) ? `0${ref.core}` : ref.core];
-  return (docs || []).some((d) => {
-    const num = String(d.number || '').toUpperCase();
-    const base = String(d.consolidates || '').toUpperCase();
-    return heads.some((h) => num.startsWith(h) || (base && base.startsWith(h)));
-  });
-}
-
 /**
  * Did the USER actually write this document number, or did the router invent it?
  *

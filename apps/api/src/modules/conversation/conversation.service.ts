@@ -164,17 +164,6 @@ export class ConversationService {
     return { conversationId, turns: turns.length };
   }
 
-  /** Forget a conversation outright (its turns cascade). Used by "quên đi"/reset. */
-  async clear(channelRaw: string | undefined, threadIdRaw: string, userIdRaw: string): Promise<{ cleared: boolean }> {
-    const key = this.key(channelRaw, threadIdRaw, userIdRaw);
-    const rows = (await this.db.execute(sql`
-      DELETE FROM conversation
-      WHERE channel = ${key.channel} AND thread_id = ${key.threadId} AND user_id = ${key.userId}
-      RETURNING id
-    `)) as unknown as Array<{ id: number }>;
-    return { cleared: rows.length > 0 };
-  }
-
   /** Drop conversations nobody has touched inside the retention window. Throttled. */
   private async sweepIdle(): Promise<void> {
     if (Date.now() - this.lastSweepAt < SWEEP_INTERVAL_MS) return;

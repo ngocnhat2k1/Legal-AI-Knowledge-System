@@ -13,7 +13,6 @@ import {
   confirmations,
   confirmationsMatch,
   legalAnswer,
-  legalDocuments,
   legalProvision,
   lookupFull,
   postConfirm,
@@ -24,7 +23,7 @@ import {
 import { stampTariff } from './conversation.mjs';
 import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
-import { citationFrom, cleanGazetteTitle, corpusHas, detectOrigin, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
+import { citationFrom, cleanGazetteTitle, detectOrigin, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
 import { L } from './render.mjs';
 import { claudeVision } from './router.mjs';
 
@@ -203,19 +202,10 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
  * which reads as the bot failing rather than the question being out of scope.
  */
 export async function answerLegal(query, { asOf, doc, article, clause, lead } = {}) {
-  const docs = await legalDocuments();
   const ref = parseDocRef(doc || '') ?? (() => { const r = parseDocRef(query); return r?.confident ? r : null; })();
 
-  if (ref && !corpusHas(docs, ref)) {
-    // Ask the API anyway: it is the side that can consult the Công báo catalogue, and
-    // "we don't hold it" reads very differently with the document's real title attached.
-    // The full number when the user wrote one: the API can then match that ONE document (69/2018 bug).
-    const probe = await legalAnswer(query, { asOf, doc: ref.full ?? ref.core });
-    // No answer from the API is not "no such document": the catalogue was never consulted (and the manifest was empty).
-    if (!probe) return { text: 'Không gọi được dịch vụ tra cứu văn bản. Thử lại sau nhé.', topic: 'legal', legal: null };
-    return missingDocAnswer(query, ref.label, probe, asOf);
-  }
-
+  // The full number when the user wrote one: the API then matches that ONE document (69/2018 bug), and for
+  // a document it does not hold it answers `missingDoc` with what the Công báo catalogue knows.
   const r = await legalAnswer(query, { asOf, doc: ref ? (ref.full ?? ref.core) : undefined, article });
   if (r?.missingDoc) return missingDocAnswer(query, r.missingDoc, r, r.asOf ?? asOf);
 
@@ -237,6 +227,8 @@ export async function answerLegal(query, { asOf, doc, article, clause, lead } = 
         };
       }
     }
+    // No answer from the API is not "nothing found": neither the corpus nor the Công báo catalogue was consulted.
+    if (!r) return { text: 'Không gọi được dịch vụ tra cứu văn bản. Thử lại sau nhé.', topic: 'legal', legal: null };
     // The API reason is shown only when it passes the same gate as LLM prose (it can be model text).
     const reason = sanitizeLead(r?.reason, '');
     return {

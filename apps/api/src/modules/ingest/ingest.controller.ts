@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 
 import { IngestService, type IngestRequestView } from './ingest.service';
 
@@ -34,10 +34,5 @@ export class IngestController {
   @Post('verify')
   verify(@Body() body: { number: string; staffName: string }): Promise<{ verified: boolean; number: string }> {
     return this.ingest.verify(body?.number, body?.staffName);
-  }
-
-  @Get('status')
-  status(@Query('number') number: string): Promise<IngestRequestView[]> {
-    return this.ingest.reports().then((r) => r.filter((x) => x.number === (number ?? '').toUpperCase()));
   }
 }

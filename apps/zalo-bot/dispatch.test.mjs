@@ -23,7 +23,7 @@ import {
   withLead,
 } from './format.mjs';
 import { L, render, toText } from './render.mjs';
-import { cleanGazetteTitle, corpusHas, docNumberStatedIn, missingKind, parseDocRef, parseQuery, parseQuotedTariff, sameDocNumber, statedDocNumber } from './parse.mjs';
+import { cleanGazetteTitle, docNumberStatedIn, missingKind, parseDocRef, parseQuery, parseQuotedTariff, sameDocNumber, statedDocNumber } from './parse.mjs';
 
 // The bot's own legal answer, as it appears in a quote. Note it carries NO HS code.
 const LEGAL_ANSWER_QUOTE =
@@ -170,21 +170,6 @@ test('a bare number in a sentence is NOT a document reference', () => {
   // with "we do not hold that document".
   assert.equal(parseDocRef('lô hàng 09/2018 đã về chưa').confident, false);
   assert.equal(parseDocRef('không có số nào ở đây'), null);
-});
-
-test('asking for a base decree finds the VBHN that consolidates it', () => {
-  const manifest = [
-    { number: '46/VBHN-BTC', consolidates: '08/2015/NĐ-CP' },
-    { number: '31/2018/NĐ-CP', consolidates: null },
-  ];
-  assert.equal(corpusHas(manifest, parseDocRef('Nghị định 08/2015/NĐ-CP')), true);
-  assert.equal(corpusHas(manifest, parseDocRef('NĐ 31/2018')), true);
-  assert.equal(corpusHas(manifest, parseDocRef('Thông tư 38/2015/TT-BTC')), false);
-});
-
-test('a leading zero does not hide a document', () => {
-  const manifest = [{ number: '08/2015/NĐ-CP', consolidates: null }];
-  assert.equal(corpusHas(manifest, parseDocRef('nghị định 8/2015')), true);
 });
 
 // --- The router may recognise an identifier, never mint one ------------------
@@ -615,7 +600,6 @@ test('HỒI QUY 69/2018: số hiệu đầy đủ đi nguyên vẹn; văn bản 
   const text = toText(formatMissingDoc('69/2018/NĐ-CP', [nd, tt], 'similar'));
   assert.ok(!text.includes('cơ quan khác'), 'chính văn bản được hỏi bị trình bày như văn bản của cơ quan khác');
   assert.ok(text.includes('Trả lời "nạp"'), 'văn bản đúng số thì được đề nghị nạp');
-  assert.equal(corpusHas([{ number: '69/2018/NĐ-CP', consolidates: null }], parseDocRef('69/2018/TT-BTC')), false);
 });
 
 test('cùng số, khác cơ quan ban hành: vẫn là văn bản khác và không được đề nghị nạp', () => {
@@ -628,10 +612,9 @@ test('cùng số, khác cơ quan ban hành: vẫn là văn bản khác và khôn
 
 // --- Task 5 fix round ------------------------------------------------------------
 
-test('HỒI QUY QH13: đoạn cơ quan ban hành có chữ số vẫn thuộc số hiệu, nên kho vẫn giữ luật qua VBHN', () => {
+test('HỒI QUY QH13: đoạn cơ quan ban hành có chữ số vẫn thuộc số hiệu', () => {
   assert.equal(parseDocRef('Luật 107/2016/QH13').full, '107/2016/QH13');
   assert.equal(parseDocRef('Nghị quyết 1234/2021/NQ-UBTVQH14, còn hiệu lực không').full, '1234/2021/NQ-UBTVQH14');
-  assert.equal(corpusHas([{ number: '96/VBHN-VPQH', consolidates: '107/2016/QH13' }], parseDocRef('Luật 107/2016/QH13')), true);
 });
 
 test('nguyên văn theo trích dẫn: văn bản tự nạp có đúng một dòng cam (R18); hết hiệu lực toàn bộ không kèm "kiểm tra điều khoản"', () => {
