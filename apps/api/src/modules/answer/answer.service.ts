@@ -11,6 +11,7 @@ import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/databa
 import { extractAsOf, isIsoDate, todayVN } from '../legal/legal.asof';
 import { expandMarkers } from '../legal/legal.grounding';
 import { AUTHORITY_NOTE, type DocScope, type GatherOpts, LegalService, type Source } from '../legal/legal.service';
+import { foldDocNumber } from '../legal/legal.scope';
 import { ConfirmationService } from '../tariff/confirmation.service';
 import { TariffService } from '../tariff/tariff.service';
 import type { RateView, TariffResponse } from '../tariff/tariff.types';
@@ -44,6 +45,13 @@ const MAX_Q_CHARS = 2000;
 /** The p95 gate of a composed turn (owner decision Q3): `deadlineAt` is clamped to it. */
 const BUDGET_MS = 120_000;
 const MAX_SOURCES = 12;
+/**
+ * NĐ 169/2026/NĐ-CP (in force 2026-07-01, khoản 2 Điều 38) ends 128/2020/NĐ-CP in full and Điều 2 of 102/2021/NĐ-CP, yet
+ * the corpus still holds 128/2020 as in force and no 169/2026: their clauses and evidence would state penalties no longer
+ * law. Their status rows stay, carrying the end of force and no figure.
+ * ponytail: a hard drop, no historical exception; lift it once 169/2026's status rows and clauses are ingested.
+ */
+const ENDED_PENALTY_DOCS = ['128/2020/NĐ-CP', '102/2021/NĐ-CP'].map(foldDocNumber);
 const PROSE = ['hs', 'legal', 'status', 'mixed'];
 const LEGAL = ['legal', 'status', 'mixed'];
 
@@ -317,6 +325,7 @@ export class AnswerService {
     const seen = new Set<string>();
     const sources = gathered
       .flatMap((g) => g.sources)
+      .filter((s) => s.citation.kind === 'status' || !ENDED_PENALTY_DOCS.includes(foldDocNumber(s.citation.documentNumber)))
       .filter((s) => !seen.has(s.key) && Boolean(seen.add(s.key)))
       .slice(0, MAX_SOURCES);
     sourceCount = sources.length;

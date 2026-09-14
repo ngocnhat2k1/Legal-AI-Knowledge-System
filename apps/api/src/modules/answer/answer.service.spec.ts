@@ -323,6 +323,25 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     }
   });
 
+  it('drops every non-status source of 128/2020/NĐ-CP and 102/2021/NĐ-CP before compose, the cap and the sources-only reply', async () => {
+    const penalty = (id: number, documentNumber: string, kind = 'guidance') =>
+      source(id, { kind, documentNumber, label: `Nguồn ${id} — ${documentNumber}`, body: `Mức phạt theo ${documentNumber}.` });
+    const clause = { ...penalty(20, '128/2020/NĐ-CP'), key: 'p:20', citation: { ...penalty(20, '128/2020/NĐ-CP').citation, kind: undefined } };
+    const status = penalty(21, '128/2020/NĐ-CP', 'status');
+    const sources = [clause, ...Array.from({ length: 11 }, (_, i) => penalty(30 + i, i % 2 ? '102/2021/NĐ-CP' : '128/2020/ND-CP')), status, GUIDE];
+    const kept = [status.key, GUIDE.key];
+
+    const alone = await setup({ sources }).svc.answer({ q: LEGAL_Q, plan: LEGAL_PLAN, deadlineAt: Date.now() });
+    expect(alone.citations.map((c) => c.key)).toEqual(kept);
+
+    const composed = setup({ drafts: [MFN_DRAFT], sources });
+    await composed.svc.answer({ q: LEGAL_Q, plan: LEGAL_PLAN });
+    const said = composed.prompts(SYSTEM)[0]!.prompt;
+    expect(said).toContain(status.label);
+    expect(said).toContain(GUIDE.label);
+    expect(said).not.toMatch(/Nguồn (2[0]|3\d) /);
+  });
+
   it('R4 addendum: a premise hs turn looks up no rate for the user code, and no prompt line carries it', async () => {
     const t = tariffOf([{ ...rate('ACFTA', 'ASEAN–Trung Quốc', 'Theo dòng 10 số: 3005.10.10.10 Miếng dán: 0%'), form: 'E', requiresCo: true }]);
     const { svc, prompts, tariff } = setup({ plan: PHOTO_PLAN, drafts: [PHOTO_DRAFT], sources: [EN3005], tariff: t, lines: [{ prefix: '3005', heading: HEADING_TEXT }] });
