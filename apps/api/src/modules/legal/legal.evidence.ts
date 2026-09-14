@@ -86,8 +86,31 @@ export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts)
     FROM fused f JOIN evidence_section e ON e.id = f.id, params p
     ORDER BY f.score DESC
   `)) as unknown as Array<Record<string, unknown>>;
+  return rows.map(toEvidence);
+}
 
-  return rows.map((r) => ({
+/**
+ * The status rows of the documents a question names. They travel with the answer whatever the ranking says:
+ * a document the bot fetched on request can still read as in force (69/2018/NĐ-CP, replaced on 05/09/2026),
+ * and the simple parser splits "69/2018/NĐ-CP" so the keyword branch cannot find its row by number.
+ */
+export async function namedStatus(db: Database, documentNumbers: string[], asOf: string): Promise<RetrievedEvidence[]> {
+  if (!documentNumbers.length) return [];
+  const rows = (await db.execute(sql`
+    SELECT e.id, e.kind, e.instrument, e.authority, e.title, e.body, e.document_number,
+           e.effective_from::text AS effective_from, e.effective_to::text AS effective_to,
+           e.effectiveness, e.verification, e.meta->>'status' AS status,
+           CASE WHEN e.effective_from > ${asOf}::date THEN 'upcoming' ELSE 'current' END AS "window",
+           1::float8 AS score, NULL::float8 AS best_dist
+    FROM evidence_section e
+    WHERE e.kind = 'status' AND e.document_number IN ${inIds(documentNumbers)}
+    ORDER BY e.id
+  `)) as unknown as Array<Record<string, unknown>>;
+  return rows.map(toEvidence);
+}
+
+function toEvidence(r: Record<string, unknown>): RetrievedEvidence {
+  return {
     id: Number(r.id),
     kind: String(r.kind),
     instrument: String(r.instrument),
@@ -103,7 +126,7 @@ export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts)
     window: r.window === 'upcoming' ? 'upcoming' : 'current',
     score: Number(r.score),
     bestDist: r.best_dist == null ? null : Number(r.best_dist),
-  }));
+  };
 }
 
 /** Issuer-segment prefix of each kind the user may name, after foldDocNumber (Đ → D). */

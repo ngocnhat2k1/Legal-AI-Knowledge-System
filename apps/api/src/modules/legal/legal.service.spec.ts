@@ -1,14 +1,18 @@
 import type { SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 
-import { evidenceInstruments, evidenceRetrieve, type RetrievedEvidence } from './legal.evidence';
+import { evidenceInstruments, evidenceRetrieve, namedStatus, type RetrievedEvidence } from './legal.evidence';
 import { generate, type PromptSource } from './legal.generation';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
 import { LegalService } from './legal.service';
 
 jest.mock('./legal.generation', () => ({ generate: jest.fn() }));
 jest.mock('./legal.retrieval', () => ({ hybridRetrieve: jest.fn() }));
-jest.mock('./legal.evidence', () => ({ evidenceInstruments: jest.fn(async () => []), evidenceRetrieve: jest.fn(async () => []) }));
+jest.mock('./legal.evidence', () => ({
+  evidenceInstruments: jest.fn(async () => []),
+  evidenceRetrieve: jest.fn(async () => []),
+  namedStatus: jest.fn(async () => []),
+}));
 
 const gazette = (number: string, docType: string) => ({ number, docType, title: `${number} — tiêu đề`, sourceUrl: 'https://congbao.chinhphu.vn/x', congbaoId: 1 });
 
@@ -65,6 +69,26 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
     expect((evidenceRetrieve as jest.Mock).mock.calls.at(-1)![1].documentNumbers).toEqual(['69/2018/NĐ-CP']);
     expect(res.answer).toContain('[1]');
     expect(res.citations).toMatchObject([{ kind: 'status', instrument: '69/2018/NĐ-CP' }]);
+  });
+
+  it('keeps the status row of a named document the corpus holds, even when ranking would not surface it', async () => {
+    // 69/2018/NĐ-CP fetched on request by the bot: its clauses are in the corpus and still read as in force.
+    const fetched = { id: 7, number: '69/2018/NĐ-CP', title: 't', docType: 'nghi_dinh', consolidates: null };
+    const clause = {
+      articleProvisionId: 73, clauseProvisionId: 73, documentId: 7, documentNumber: '69/2018/NĐ-CP', documentTitle: 't',
+      articleCitation: 'Điều 73 Nghị định 69/2018/NĐ-CP', clauseCitation: 'Khoản 2 Điều 73', path: '', articleBody: 'thân',
+      clauseBody: 'thân', effectiveness: 'con_hieu_luc', effectiveFrom: null, effectiveTo: null, gazetteUrl: null,
+      verification: 'auto_unverified', score: 1, bestDist: 0.3, kwHit: true,
+    } as RetrievedArticle;
+    const results: unknown[][] = [[fetched]]; // resolveDocuments
+    const svc2 = new LegalService({ execute: async () => results.shift() ?? [] } as never, { embed: async () => [0] } as never);
+    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([clause]);
+    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([]);
+    (namedStatus as jest.Mock).mockResolvedValueOnce([ev({})]);
+    (generate as jest.Mock).mockResolvedValueOnce(null);
+    const res = await svc2.ask('Nghị định 69/2018/NĐ-CP còn áp dụng không', '2026-09-14');
+    expect((namedStatus as jest.Mock).mock.calls.at(-1)![1]).toEqual(['69/2018/NĐ-CP']);
+    expect(res.citations.map((c) => c.kind ?? 'provision')).toEqual(['provision', 'status']);
   });
 
   it('puts evidence after the articles, drops sections beyond the distance gate, and labels a note', async () => {

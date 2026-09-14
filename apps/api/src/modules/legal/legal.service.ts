@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/database';
 import { EmbeddingService } from './embedding.service';
 import { extractAsOf } from './legal.asof';
-import { evidenceInstruments, evidenceRetrieve, type RetrievedEvidence } from './legal.evidence';
+import { evidenceInstruments, evidenceRetrieve, namedStatus, type RetrievedEvidence } from './legal.evidence';
 import { generate, type PromptSource } from './legal.generation';
 import { keepRelevant, MAX_DIST, numberMarkers } from './legal.grounding';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
@@ -117,6 +117,7 @@ export class LegalService {
         : null;
     let documentIds: number[] = [];
     let evidenceNumbers: string[] = [];
+    let namedNumbers: string[] = [];
     if (ref) {
       const docs = await resolveDocuments(this.db, ref);
       // No full text, but the evidence layer may hold its status ("replaced by 292/2026/NĐ-CP from 05/09/2026") —
@@ -145,6 +146,7 @@ export class LegalService {
         };
       }
       documentIds = docs.map((d) => d.id);
+      namedNumbers = [...docs.map((d) => d.number), ...evidenceNumbers];
     }
 
     // No precise number, but the question may still NAME a document the way people say
@@ -196,13 +198,14 @@ export class LegalService {
 
     // A document held only as evidence has no clauses to search; a named Điều is a clause lookup, not evidence.
     const onlyEvidence = !documentIds.length && evidenceNumbers.length > 0;
-    const [all, evidence] = await Promise.all([
+    const [all, evidence, named] = await Promise.all([
       onlyEvidence
         ? Promise.resolve([] as RetrievedArticle[])
         : hybridRetrieve(this.db, { queryText: query, queryVec: vec, asOf, topK: TOP_K, documentIds, articleProvisionIds }),
       articleProvisionIds.length
         ? Promise.resolve([] as RetrievedEvidence[])
         : evidenceRetrieve(this.db, { queryText: query, queryVec: vec, asOf, documentNumbers: evidenceNumbers }),
+      namedStatus(this.db, namedNumbers, asOf),
     ]);
 
     // The relevance gate exists to stop the dense branch handing back its nearest
@@ -211,10 +214,11 @@ export class LegalService {
     // otherwise "cho tôi Điều 18" could abstain on the very article it asked for. The same
     // holds for a document the user named that only the evidence layer holds.
     const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, MAX_CITATIONS);
-    const keptEvidence = (onlyEvidence ? evidence : evidence.filter((e) => e.bestDist != null && e.bestDist <= MAX_DIST)).slice(
-      0,
-      EVIDENCE_K,
+    const ranked = (onlyEvidence ? evidence : evidence.filter((e) => e.bestDist != null && e.bestDist <= MAX_DIST)).filter(
+      (e) => !named.some((n) => n.id === e.id),
     );
+    // A named document's status row is never cut: it may be the whole answer ("replaced from 05/09/2026").
+    const keptEvidence = [...named, ...ranked].slice(0, Math.max(EVIDENCE_K, named.length));
     const sources = [...kept.map(articleSource), ...keptEvidence.map(evidenceSource)];
     const scope = {
       requestedDoc: ref?.core ?? null,
