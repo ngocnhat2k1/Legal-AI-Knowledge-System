@@ -1,0 +1,8 @@
+[
+  ["concepts/hs-classification.md", "Phân loại mã HS: 6 quy tắc GRI, thứ bậc thẩm quyền"],
+  ["concepts/tariff-system.md", "Hệ thống biểu thuế: MFN, FTA, bẫy phụ lục, vách đá 2027"],
+  ["concepts/vietnamese-legal-documents.md", "Văn bản pháp luật Việt Nam: thứ bậc, hiệu lực, VBHN"],
+  ["business-rules.md", "Quy tắc nghiệp vụ bắt buộc — rào chắn an toàn"],
+  ["workflows/customs-declaration.md", "Quy trình khai báo hải quan hằng ngày"],
+  ["concepts/data-sources.md", "Nguồn dữ liệu pháp lý: cái nào tin được"]
+]

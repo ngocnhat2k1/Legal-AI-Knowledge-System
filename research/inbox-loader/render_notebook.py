@@ -121,14 +121,8 @@ LEGAL_SOURCES = [
 #: Explanatory Notes packing, fixed. Planned 2026-09-10 at ≤ 760K characters per source.
 EN_RANGES = [(1, 27), (28, 33), (34, 50), (51, 71), (72, 83), (84, 84), (85, 91), (92, 97)]
 
-NGHIEP_VU = [
-    ("concepts/hs-classification.md", "Phân loại mã HS: 6 quy tắc GRI, thứ bậc thẩm quyền"),
-    ("concepts/tariff-system.md", "Hệ thống biểu thuế: MFN, FTA, bẫy phụ lục, vách đá 2027"),
-    ("concepts/vietnamese-legal-documents.md", "Văn bản pháp luật Việt Nam: thứ bậc, hiệu lực, VBHN"),
-    ("business-rules.md", "Quy tắc nghiệp vụ bắt buộc — rào chắn an toàn"),
-    ("workflows/customs-declaration.md", "Quy trình khai báo hải quan hằng ngày"),
-    ("concepts/data-sources.md", "Nguồn dữ liệu pháp lý: cái nào tin được"),
-]
+#: Business notes (source 30). The bot's evidence seed reads the same list, so notebook and bot never drift.
+NGHIEP_VU = [tuple(x) for x in json.loads((LEGAL / "nghiep-vu.json").read_text(encoding="utf-8"))]
 
 STARS = re.compile(r"^\s*\*(?:\s*\*)*\s*$", re.M)   # "* * *" separators of the EN layout
 

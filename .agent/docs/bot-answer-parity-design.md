@@ -256,9 +256,12 @@ Mọi thứ đã embed tới nay ≤ 1.600 ký tự. Mục mới: Chú giải ch
 1. `apps/embedder/server.py`: `model.max_seq_length = int(os.environ.get("EMBED_MAX_TOKENS", "2048"))`;
    biến vào `docker-compose.yml`. Đây là rào cứng độc lập với seed.
 2. Seed gửi lô ≤ 32 mục **hoặc** ≤ 64.000 ký tự mỗi request.
-3. **Việc đầu tiên của mảng 2 trên VPS:** embed bản ghi EN dài nhất và một lô 32 mục > 8.000 ký tự;
-   ghi giây/mục và RSS đỉnh của container vào mục này; chọn `EMBED_CHARS` / `EMBED_MAX_TOKENS` từ số
-   đo. Mốc so sánh đã có: ≈2 s/đoạn ở 1.600 ký tự, ≈55 phút cả kho cũ.
+3. **Số đo trên server MONA (2026-09-14, `EMBED_MAX_TOKENS=2048`, `EMBED_BATCH=8`, `cpus: 6`,
+   giới hạn 3.500 MB):** bản ghi EN dài nhất (48.998 ký tự) **7,4 s**; lô 32 mục ≥ 8.000 ký tự
+   (429.597 ký tự) **170,7 s → 5,3 s/mục**; RAM đỉnh của container **2.580 MB**, không OOM; RAM trống
+   thấp nhất của host 1.515 MB. Tokenizer BGE-M3 trên 300 bản ghi EN: **3,46 ký tự/token** → 2.048
+   token ≈ 7.076 ký tự. Chọn **`EMBED_CHARS = 6800`** (chừa chỗ cho `title`), giữ
+   `EMBED_MAX_TOKENS = 2048`. Mốc cũ: ≈2 s/đoạn ở 1.600 ký tự, ≈55 phút cả kho cũ.
 
 ### 2.7 Sửa parser và nạp lại [v2]
 

@@ -49,6 +49,22 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # Evidence layer (plan 05 milestone 2): HS notes, Explanatory Notes, rulings, annex tables,
+  # status rows… one row per citable unit, embedded via the sidecar. Resumable — a re-run embeds
+  # only new or changed sections — because the first run takes hours. Nothing waits on it.
+  seed-evidence:
+    image: customs-assistant:local
+    command: ["node_modules/.bin/tsx", "db/seed/evidence.ts"]
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/customs_assistant
+      EMBEDDER_URL: "${EMBEDDER_URL:-http://embedder:8000}"
+      FORCE_RESEED: "${FORCE_RESEED:-}"
+    depends_on:
+      seed-legal: # the decree status rows read the tariff tables the seeds before it load
+        condition: service_completed_successfully
+      embedder:
+        condition: service_healthy
+
   # Legal RAG corpus loader (documents + provisions + pre-embedded chunks). Runs
   # after the tariff seed; needs no model (vectors are baked into the committed
   # extract), so it stays portable like the tariff seed.

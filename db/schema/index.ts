@@ -57,6 +57,7 @@ import {
   pgEnum,
   pgTable,
   serial,
+  smallint,
   text,
   timestamp,
   unique,
@@ -492,6 +493,54 @@ export const legalChunk = pgTable(
     index('legal_chunk_valid_idx').on(t.effectiveFrom, t.effectiveTo),
     index('legal_chunk_article_idx').on(t.articleProvisionId),
     index('legal_chunk_document_idx').on(t.documentId),
+  ],
+);
+
+/**
+ * Evidence other than statute clauses — HS notes, GRI, Explanatory Notes, SEN, rulings, annex tables,
+ * status, notebook-only documents, repo notes — one row per citable unit, built by
+ * db/seed/evidence-build.ts (spec .agent/docs/bot-answer-parity-design.md §2). Prose, never a tariff
+ * number, so it may carry a vector like legal_chunk. `effective_from` null = no known start.
+ */
+export const evidenceSection = pgTable(
+  'evidence_section',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    kind: varchar('kind', { length: 16 }).notNull(),
+    instrument: text('instrument').notNull(), // '31/2022/TT-BTC', 'CV 1810/TCHQ-TXNK', '.agent/business-rules.md'
+    instrumentDate: date('instrument_date'),
+    authority: varchar('authority', { length: 16 }).notNull(), // binding > authoritative > administrative > reference > undetermined
+    hsChapter: smallint('hs_chapter'),
+    hsHeading: varchar('hs_heading', { length: 5 }), // '84.18'
+    hsCodes: text('hs_codes').array().notNull().default(sql`'{}'::text[]`), // every dddd.dd.dd in body
+    documentNumber: varchar('document_number', { length: 48 }),
+    title: text('title').notNull(), // the citable identity, as the notebook prints it
+    body: text('body').notNull(), // verbatim
+    embedText: text('embed_text').notNull(), // title + '\n' + body[:EMBED_CHARS]
+    embedding: vector('embedding', { dimensions: 1024 }),
+    tsv: tsvector('tsv').generatedAlwaysAs(sql`to_tsvector('simple', "title" || ' ' || "body")`),
+    effectiveFrom: date('effective_from'),
+    effectiveTo: date('effective_to'),
+    effectiveness: legalEffectiveness('effectiveness').notNull(),
+    verification: legalVerification('verification').notNull().default('auto_unverified'),
+    verifiedBy: varchar('verified_by', { length: 64 }),
+    sourceRef: text('source_ref').notNull(),
+    meta: jsonb('meta').notNull().default({}),
+  },
+  (t) => [
+    unique('evidence_section_key_uq').on(t.kind, t.instrument, t.sourceRef),
+    check(
+      'evidence_section_kind_ck',
+      sql`${t.kind} IN ('hs_note', 'gri', 'en', 'sen', 'ruling', 'guidance', 'annex_table', 'status', 'local_doc', 'draft', 'internal', 'note')`,
+    ),
+    check('evidence_section_authority_ck', sql`${t.authority} IN ('binding', 'authoritative', 'administrative', 'reference', 'undetermined')`),
+    index('evidence_section_hnsw').using('hnsw', sql`${t.embedding} vector_cosine_ops`),
+    index('evidence_section_tsv_gin').using('gin', sql`${t.tsv}`),
+    index('evidence_section_kind_idx').on(t.kind),
+    index('evidence_section_document_idx').on(t.documentNumber),
+    index('evidence_section_heading_idx').on(t.hsHeading),
+    index('evidence_section_codes_gin').using('gin', t.hsCodes),
+    index('evidence_section_valid_idx').on(t.effectiveFrom, t.effectiveTo),
   ],
 );
 
