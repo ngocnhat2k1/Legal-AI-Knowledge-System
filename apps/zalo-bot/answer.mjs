@@ -21,7 +21,7 @@ import {
   tariffResponse,
 } from './api.mjs';
 import { stampTariff } from './conversation.mjs';
-import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, sanitizeLead, withLead } from './format.mjs';
+import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, rulingLine, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
 import { CODE_MARK, codebook } from './dispatch.mjs';
 import { citationFrom, cleanGazetteTitle, detectOrigin, HS_RE, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
@@ -151,8 +151,7 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   const said = 'mình tra được các mã ứng viên dưới đây — đây là ứng viên để bạn chốt, chưa phải mã đã xác định.';
   const lines = [L(desc ? ['Với mô tả ', [desc, 'i'], `, ${said}`] : [said[0].toUpperCase() + said.slice(1)])];
   if (citedRuling) {
-    const cite = String(citedRuling.note || '').replace(/\s+/g, ' ').trim().slice(0, 90);
-    lines.push(L(['Mã ', [citedRuling.dotted, 'b'], ' đã được ', [citedRuling.staffName, 'b'], ` xác nhận cho hàng tương tự${cite ? ` (${cite})` : ''} — mình ưu tiên mã này, bạn vẫn đối chiếu căn cứ.`]));
+    lines.push(rulingLine(citedRuling));
     if (borderline) lines.push(L(['Mặt hàng có thể thuộc nhiều nhóm; mã trên là mã đã được người xác nhận, không phải bot tự suy.'], 'note'));
   }
 
