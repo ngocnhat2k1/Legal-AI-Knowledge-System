@@ -51,23 +51,25 @@ export const fold = (s: string): string =>
     .replace(/đ/g, 'd');
 
 /**
- * Every spelling of a code or heading (dispatch.mjs HS_TOKEN at a37c663, plus no-diacritic keywords and units): an 8-digit
- * code; digits after a word naming one ("nhóm hàng 3005", "mã số 30.05.10.10", "HS: 3005", "chương 30"); a dotted "3005.10"
- * or "30.05" standing alone. Not a date ("ngày 30.05"), an amount ("12.50 triệu", "1234.56 USD"), a time ("08.30 sáng"), a
- * bare chapter's duration ("ma 30 ngay") or a document number. A word after a code is a unit only when it can mean nothing
- * else: "sang", "ngay", "thang", "dong", "ty", "gio" and "chieu" are also plain words ("3005.10 sang 3824.90"), and masking
- * a time is harmless where leaking a code is not (R4).
+ * Every spelling of a code or heading: an 8-digit code; digits after a word naming one ("nhóm hàng 3005", "mã số
+ * 30.05.10.10", "HS: 3005", "chương 30"), with or without diacritics; a dotted "3005.10" or "30.05" standing alone. Only
+ * structure exempts a number: a document number or date (a "/" or a further ".dddd"), "ngày 30.05", a rate "12.50%", and
+ * a bare "dd.dd" before an accented money or time word ("12.50 triệu", "08.30 sáng"). Nothing after a keyword or a
+ * "dddd.dd" is ever read as a unit: two review rounds found "3005.10 sang 3824.90", "mã 3005 ngay", "mã 7411 đồng tinh
+ * luyện" and "3005.10 usd" leaking through unit words. Over-masking an amount costs nothing; a leaked code is R4.
  */
 const HS_TOKEN = new RegExp(
   String.raw`\d{4}[.\s]?\d{2}[.\s]?\d{2}` +
-    String.raw`|(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|hs(?:\s*code)?|ch[uư][oơ]ng)\s*:?\s*)` +
-    String.raw`(?:\d{2}\.?\d{2}(?:\.\d{2}){0,2}(?![\d/])|\d{2}(?![\d/]|\s*(?:%|(?:ngày|ngay|tháng|thang)(?![\p{L}]))))` +
-    String.raw`|(?<![\d.,/])\d{4}\.\d{2}(?![\d/%]|[.,]\d|\s*(?:usd|vnd|triệu|trieu|tỷ)(?![\p{L}]))` +
-    String.raw`|(?<![\d.,/]|ng[aà]y\s)\d{2}\.\d{2}(?:\.\d{2}){0,2}(?![\d/%]|[.,]\d|\s*(?:triệu|trieu|tỷ|đồng|usd|vnd|giờ|sáng|chiều|h)(?![\p{L}]))`,
+    String.raw`|(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|hs(?:\s*code)?|ch[uư][oơ]ng)\s*:?\s*)\d{2}(?:\.?\d{2}(?:\.\d{2}){0,2})?(?![\d/])` +
+    String.raw`|(?<![\d.,/])\d{4}\.\d{2}(?![\d/]|[.,]\d)` +
+    String.raw`|(?<![\d.,/]|ng[aà]y\s)\d{2}\.\d{2}(?:\.\d{2}){0,2}(?![\d/%]|[.,]\d|\s*(?:triệu|tỷ|giờ|sáng|chiều)(?![\p{L}]))`,
   'giu',
 );
-/** A bare heading joined to one already masked: "nhóm [mã 1] hay 3824", "mã [mã 1] sang 3824". */
-const JOINED_HEADING = /(\[mã \d+\]\s*(?:,|hay|hoặc|hoac|và|va|sang)\s*)(\d{4})(?![\d/.,])/giu;
+/**
+ * A bare heading joined to one already masked: "nhóm [mã 1] hay 3824", "mã [mã 1] sang 3824", and a list "nhóm [mã 1]
+ * hoặc 3824, và 3926" — a heading may end at punctuation, and connectors may follow each other (", và").
+ */
+const JOINED_HEADING = /(\[mã \d+\](?:\s*(?:,|hay|hoặc|hoac|và|va|sang))+\s*)(\d{4})(?![\d/]|[.,]\d)/giu;
 export const CODE_MARK = /\[mã \d+\]/gu;
 
 /**

@@ -24,6 +24,14 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       ['e thấy 30.05 sang 38.24 hợp lý hơn', 'e thấy [mã 1] sang [mã 2] hợp lý hơn'],
       ['thuộc chương 30.', 'thuộc chương [mã 1].'],
       ['tramã 3005 được không', 'tramã [mã 1] được không'],
+      // Leaks the second review round found: nothing after a keyword or a dddd.dd is a unit.
+      ['khai 3005.10 usd được không', 'khai [mã 1] usd được không'],
+      ['khai 3005.10 triệu', 'khai [mã 1] triệu'],
+      ['mã 30.05 đồng', 'mã [mã 1] đồng'],
+      ['nop thue ma 30 ngay', 'nop thue ma [mã 1] ngay'],
+      ['e thay 3005.10 vnd', 'e thay [mã 1] vnd'],
+      ['nhóm 3005 hoặc 3824, và 3926', 'nhóm [mã 1] hoặc [mã 2], và [mã 3]'],
+      ['nhóm 3005, 3824.', 'nhóm [mã 1], [mã 2].'],
     ]) {
       expect(maskCodes(text!).text).toBe(masked);
     }
@@ -36,16 +44,20 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
     expect(maskCodes('câu đã che: [mã 12] hay [mã 3]').text).toBe('câu đã che: [mã 12] hay [mã 3]');
   });
 
-  it('leaves dates, amounts, times and document numbers alone', () => {
+  it('leaves document numbers, dates, rates and accented money or time words alone', () => {
     for (const text of [
       'Nghị định 26/2023/NĐ-CP ngày 31/05/2023, năm 2026',
       'ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu',
-      '1234.56 USD',
       '15.000.000 đồng',
-      'nop thue ma 30 ngay chua xong, phat 12.50 trieu',
+      'hạn 14.09.2026',
     ]) {
       expect(maskCodes(text)).toEqual({ text, codes: [] });
     }
+  });
+
+  it('over-masks a number shaped like a code rather than risk a leak (R4)', () => {
+    expect(maskCodes('1234.56 USD').text).toBe('[mã 1] USD');
+    expect(maskCodes('phat 12.50 trieu').text).toBe('phat [mã 1] trieu');
   });
 });
 
