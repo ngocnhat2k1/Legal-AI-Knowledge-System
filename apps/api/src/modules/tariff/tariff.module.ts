@@ -11,5 +11,6 @@ import { TariffService } from './tariff.service';
 @Module({
   controllers: [TariffController],
   providers: [TariffService, ConfirmationService],
+  exports: [TariffService, ConfirmationService],
 })
 export class TariffModule {}

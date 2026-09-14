@@ -13,5 +13,6 @@ import { LegalService } from './legal.service';
 @Module({
   controllers: [LegalController],
   providers: [LegalService, EmbeddingService],
+  exports: [LegalService],
 })
 export class LegalModule {}
