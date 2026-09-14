@@ -431,9 +431,14 @@ export async function handleCorrection(tariff, text, senderName, quote) {
       topic: 'tariff',
     };
   }
+  // A reply never says a verdict was recorded unless the write succeeded (R13); a failed one keeps memory (no `tariff`
+  // key), so the same message can be sent again.
+  const failed = { text: 'Ghi nhận bị lỗi, bạn thử lại sau nhé.', topic: 'tariff' };
+  const wrong = () => postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || now, verdict: 'wrong', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null });
+
   // "đúng là <mã cũ>" = XÁC NHẬN (người GÕ MÃ) → ghi correct KÈM mô tả để tra lại được.
   if (fix && old?.hs && fix.hs === old.hs) {
-    await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || now, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null });
+    if (!(await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || now, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null }))) return failed;
     return {
       text: [L(['Đã xác nhận mã ', [old.dotted, 'b'], `${old.origin ? ` (xuất xứ ${old.origin})` : ''} là đúng. Cảm ơn ${senderName}.`])],
       topic: 'tariff',
@@ -441,31 +446,32 @@ export async function handleCorrection(tariff, text, senderName, quote) {
     };
   }
 
-  if (old?.hs) {
-    await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || now, verdict: 'wrong', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null });
-  }
-
   if (!fix) {
+    if (!old?.hs || !(await wrong())) return failed;
     return {
-      text: [L(['Đã ghi nhận: mã ', old?.dotted ? [old.dotted, 'b'] : 'trước', ` chưa đúng (theo ${senderName}). Bạn gửi mã HS đúng, hoặc mô tả hay ảnh mặt hàng để mình tra lại nhé.`])],
+      text: [L(['Đã ghi nhận: mã ', [old.dotted, 'b'], ` chưa đúng (theo ${senderName}). Bạn gửi mã HS đúng, hoặc mô tả hay ảnh mặt hàng để mình tra lại nhé.`])],
       topic: 'tariff',
       tariff: null,
     };
   }
 
-  // Tra mã đúng. Xuất xứ chỉ lấy khi lời sửa nêu rõ (không kéo theo xuất xứ cũ có thể sai).
+  // Tra mã đúng TRƯỚC khi ghi: mã không tra được thì không ghi dòng nào, kể cả dòng 'wrong' của mã cũ, và nói rõ là chưa ghi.
+  // Xuất xứ chỉ lấy khi lời sửa nêu rõ (không kéo theo xuất xứ cũ có thể sai).
   const origin = detectOrigin(text);
-  const head = candidates
-    ? L(['Đã ghi nhận mã ', [fix.dotted, 'b'], ...(prodDesc ? [' cho ', [prodDesc, 'i']] : []), ` (theo ${senderName}).`])
-    : L([`Đã ghi nhận đính chính từ ${senderName}: mã `, ...(old?.dotted ? [[old.dotted, 'b'], ' '] : []), 'chưa đúng, sửa thành ', [fix.dotted, 'b'], '.']);
-  const res = await tariffResponse(fix.hs, origin, fix.date);
-  if (!res.ok) {
-    const why = res.status === 404 ? 'không có trong dữ liệu đã nạp' : `lỗi ${res.status}`;
-    return { text: [head, L(['Nhưng mình chưa tra được thuế cho ', [fix.dotted, 'b'], ` (${why}). Bạn kiểm tra lại mã giúp mình nhé.`])], topic: 'tariff', tariff: null };
+  const res = await tariffResponse(fix.hs, origin, fix.date).catch(() => null);
+  if (!res?.ok) {
+    const why = res?.status === 404 ? 'không có trong dữ liệu đã nạp' : 'chưa gọi được dịch vụ tra cứu';
+    return { text: [L(['Mình chưa ghi nhận gì: chưa tra được mã ', [fix.dotted, 'b'], ` (${why}). Bạn kiểm tra lại mã rồi nhắn lại nhé.`])], topic: 'tariff' };
   }
   const data = await res.json();
   // Ghi mã ĐÚNG = 'correct' KÈM mô tả sản phẩm + số căn cứ (rulingNote, đã lọc PII) → tra lại được sau này.
-  await postConfirm({ hs: fix.hs, origin: origin || null, date: fix.date, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: data });
+  const recorded =
+    (!old?.hs || (await wrong())) &&
+    (await postConfirm({ hs: fix.hs, origin: origin || null, date: fix.date, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: data }));
+  if (!recorded) return failed;
+  const head = candidates
+    ? L(['Đã ghi nhận mã ', [fix.dotted, 'b'], ...(prodDesc ? [' cho ', [prodDesc, 'i']] : []), ` (theo ${senderName}).`])
+    : L([`Đã ghi nhận đính chính từ ${senderName}: mã `, ...(old?.dotted ? [[old.dotted, 'b'], ' '] : []), 'chưa đúng, sửa thành ', [fix.dotted, 'b'], '.']);
   const confirm = await confirmations(fix.hs, origin);
   return {
     text: [head, L([]), ...formatAnswer({ dotted: fix.dotted, origin, date: fix.date }, data, confirm)],

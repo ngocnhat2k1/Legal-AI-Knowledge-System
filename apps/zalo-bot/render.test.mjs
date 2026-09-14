@@ -11,7 +11,7 @@ import { test } from 'node:test';
 import { TextStyle } from 'zca-js';
 
 import { tariffReply } from './dispatch.mjs';
-import { formatAnswerMd } from './format.mjs';
+import { formatAnswer, formatAnswerMd } from './format.mjs';
 import { L, md, render, ST, toText } from './render.mjs';
 
 const texts = (p, st) => p.styles.filter((s) => s.st === st).map((s) => p.msg.slice(s.start, s.start + s.len));
@@ -266,6 +266,21 @@ test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp 
       for (const msg of render(lines).map((p) => p.msg)) assert.equal(tariffReply(msg), false, `${name} +${chars}: ${msg.slice(0, 120)}`);
     }
   }
+});
+
+test('bất biến R13: câu hs không ứng viên và câu pháp luật có "Cảm ơn"/"MFN" trong văn xuôi không khớp tariffReply; khối thuế thật vẫn khớp dù văn xuôi nói "bạn nêu"', () => {
+  const prose = 'Cảm ơn bạn đã mô tả thêm. Thuế MFN không đổi theo mô tả; mã bạn nêu cần đối chiếu chú giải [1].';
+  const noCands = { ...HS_PHOTO, answerMd: prose, candidates: [], userCodes: [{ ...HS_PHOTO.userCodes[0], exists: false, inCandidates: false }] };
+  const legal = {
+    ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [], answerMd: prose,
+    citations: [cite(1, { kind: null, label: 'Khoản 1 Điều 9 VB-A', documentNumber: 'VB-A', note: null, quotes: ['Mũ bảo hiểm mã 6506.10.10 thuộc danh mục hàng hóa kiểm tra chuyên ngành.'] })],
+  };
+  for (const [name, res] of Object.entries({ noCands, legal })) {
+    for (const msg of render(formatAnswerMd(res)).map((p) => p.msg)) assert.equal(tariffReply(msg), false, `${name}: ${msg.slice(0, 120)}`);
+  }
+  const { q, tariff } = lookup('8481.80.99');
+  const [rate] = render([...md('Mã bạn nêu là van; mức FTA chỉ áp khi có C/O đúng form.'), L([]), ...formatAnswer(q, tariff, null)]);
+  assert.equal(tariffReply(rate.msg), true, rate.msg.slice(0, 120));
 });
 
 test('formatAnswerMd: ứng viên thiếu [n] bị bỏ, không làm hỏng cả câu trả lời (R2)', () => {

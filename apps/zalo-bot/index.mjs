@@ -251,9 +251,10 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
 
   // Bộ nhớ (§6.1): không mã người dùng nào vào state; ứng viên hs không phải kết quả tra, nên "đúng" không ghi gì.
   const facts = plan.goods?.facts ?? [];
+  const candidates = (composed.candidates ?? []).map((c) => c.hs);
   const memory =
     mode === 'hs'
-      ? { topic: 'tariff', tariff: stampTariff({ hs: null, candidates: (composed.candidates ?? []).map((c) => c.hs), desc: facts.join(', '), keywords: plan.keywords ?? [] }) }
+      ? { topic: 'tariff', tariff: candidates.length ? stampTariff({ hs: null, candidates, desc: facts.join(', '), keywords: plan.keywords ?? [] }) : null }
       : { topic: 'legal', legal: legalMemory(plan, composed.citations ?? [], composed.asOf) };
   return { text: lines, ...memory, answer: { mode, question: asked(plan), goods: { facts }, at: new Date().toISOString() }, intent };
 }
