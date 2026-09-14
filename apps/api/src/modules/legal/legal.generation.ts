@@ -90,8 +90,8 @@ export async function generate(
   try {
     const res = await runClaude(prompt, { timeoutMs: WRITE_TIMEOUT_MS });
     if (!res || res.isError) {
-      // The runner already logged why a null came back; an is_error result is the CLI's own message.
-      console.warn(`[legal] generation failed after ${sources.length} sources: ${res ? res.text.slice(0, 200) : 'no result'}`);
+      // The runner already logged why a null came back. An is_error result can be model prose restating the question: size only.
+      console.warn(`[legal] generation failed after ${sources.length} sources: ${res ? `is_error (${res.text.length} chars)` : 'no result'}`);
       return null;
     }
     const stdout = res.text;

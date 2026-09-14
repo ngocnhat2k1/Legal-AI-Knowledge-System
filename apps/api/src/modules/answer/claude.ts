@@ -27,9 +27,16 @@ export interface ClaudeResult {
   durationMs: number;
 }
 
-/** `--tools ""` is how `claude --help` switches off every built-in tool: the model only writes text back. */
+/**
+ * `--tools ""` is how `claude --help` switches off every built-in tool, and `--strict-mcp-config` with no
+ * `--mcp-config` loads no MCP server either: the model only writes text back. `--no-session-persistence` keeps the
+ * transcript (question and evidence included) off disk — each call's fresh cwd would otherwise leave its own
+ * $HOME/.claude/projects/<cwd> dir behind.
+ */
 export const claudeArgs = (opts: Pick<ClaudeOpts, 'systemPrompt' | 'effort' | 'model'>): string[] => [
   '-p',
+  '--no-session-persistence',
+  '--strict-mcp-config',
   '--output-format',
   'json',
   '--tools',
