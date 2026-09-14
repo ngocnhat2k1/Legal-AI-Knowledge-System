@@ -77,7 +77,10 @@ export interface WalkthroughOutput {
   sections: WalkthroughSection[];
   /** One per candidate heading; `{heading, assessment}` is what the R4 invariance probe compares (right vs wrong user code). */
   candidates: Array<{ heading: string; assessment: HeadingAssessment; deciding_facts: string[]; cite_ids: number[] }>;
-  /** One to three headings, never a single bare code as settled (R2, R5); at most three missing facts. */
+  /**
+   * Zero to three headings: empty when the model abstains; never a single bare code as settled (R2, R5). At most three
+   * missing facts.
+   */
   conclusion: { headings: string[]; needs_advance_ruling: boolean; missing_facts: string[] };
   /** Candidate codes whose code-built tariff block the reply points at; never a number. */
   tariff_ref: string[];
