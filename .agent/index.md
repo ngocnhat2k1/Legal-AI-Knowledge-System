@@ -44,7 +44,8 @@ Kiến thức nghiệp vụ mà một tác nhân không thể suy ra từ mã ng
 ## Lập kế hoạch
 
 - [Nhật ký tiến độ](planning/02-progress.md) — **điểm tiếp tục**; trạng thái mọi kế hoạch
-- [Bot trả lời ngang notebook — Mảng 2…4](planning/05-bot-parity-tasks.md) — việc tiếp theo
+- [Kế hoạch 08 — bot đọc câu hỏi và lập luận qua `POST /answer`](planning/08-answer-path-tasks.md) — **việc đang làm**; thay phần đường bot của Mảng 3
+- [Bot trả lời ngang notebook — Mảng 2…4](planning/05-bot-parity-tasks.md) — Mảng 4 (chấm A/B) và việc còn dở
 - [Việc còn dở của đợt triển khai lên server MONA](planning/06-deploy-mona-dev-server.md) — domain + basic auth, kiểm thử bot, sao lưu
 - [Đường ống hộp thư đến — Giai đoạn 9](planning/04-inbox-ingest-tasks.md)
 - Kế hoạch đã xong (00 bootstrap, 01 task list, 03 M0, 07 trình bày trên Zalo) nằm trong git `11275bc`.

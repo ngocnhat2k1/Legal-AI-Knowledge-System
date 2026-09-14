@@ -203,6 +203,10 @@ export function statusSections(documents: DocRow[], relations: RelationRow[]): E
 
 ## Mảng 3 · Đường trả lời — phác thảo (chi tiết hoá sau mảng 2)
 
+> **2026-09-14 (tối): phần đường bot của Mảng 3 chuyển sang [kế hoạch 08](08-answer-path-tasks.md)** (chủ dự án: "có
+> tính người hơn, có suy nghĩ và phân tích câu hỏi"). Phác thảo dưới đây giữ làm lịch sử; chỗ nào khác kế hoạch 08 thì
+> kế hoạch 08 thắng. Quyết định: [ADR câu trả lời do mô hình soạn](../architecture-decisions/2026-09-14-answer-path-conversational-compose.md).
+
 > **Lát đầu (2026-09-14, `e17e0a1`…`19da3b0`) — trước `POST /answer`, không thêm lần gọi LLM.** `GET /legal` truy hồi thêm
 > `evidence_section` (`apps/api/src/modules/legal/legal.evidence.ts`: RRF lai như `legal_chunk`, cửa sổ `current` +
 > 18 tháng `upcoming`, chưa lọc HS), tối đa 3 mục nối **sau** điều khoản, qua cùng cổng `MAX_DIST`; văn bản người dùng

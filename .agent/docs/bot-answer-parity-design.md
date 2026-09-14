@@ -283,6 +283,13 @@ Mọi thứ đã embed tới nay ≤ 1.600 ký tự. Mục mới: Chú giải ch
 
 ## 3. Đường trả lời — một lượt
 
+> **[v4] (2026-09-14).** Phần này được hiện thực theo [kế hoạch 08](../planning/08-answer-path-tasks.md) với các lệch
+> ghi ở §2.5 của kế hoạch và ở [ADR câu trả lời do mô hình soạn](../architecture-decisions/2026-09-14-answer-path-conversational-compose.md):
+> mức thuế không vào văn xuôi (khối thuế gọn do code in, chặt hơn §2.2.1); câu hỏi thuế suất cũng có văn xuôi giải
+> thích; vai mã người dùng do code quyết, nhóm của mã người dùng được ghim không gắn nhãn (D1 = có, có probe bất biến);
+> ack nói lại câu hỏi thay "🔍 Đang tra…"; chế độ `hs` là module `answer/walkthrough.ts`. Chỗ nào mâu thuẫn, kế hoạch
+> 08 thắng.
+
 ### 3.1 Hợp đồng `POST /answer` [v2]
 
 Yêu cầu:
