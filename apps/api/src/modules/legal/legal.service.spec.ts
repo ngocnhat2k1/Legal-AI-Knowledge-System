@@ -457,6 +457,12 @@ describe('legal.evidence SQL — cases out of ranking, a cap per heading, the ma
     expect(q.sql).not.toContain('LIMIT');
   });
 
+  it('headingSections puts every chapter\'s own note ahead of any subheading note, so a cut takes subheading notes first', async () => {
+    const { db, queries } = capture();
+    await actual.headingSections(db, ['38.24', '30.05', '85.09', '84.81'], '2026-09-14');
+    expect(queries[0]!.sql).toMatch(/ORDER BY CASE e\.kind WHEN 'en' THEN 0 ELSE 1 END, e\.hs_heading, \(e\.title LIKE 'Chú giải phân nhóm%'\), e\.hs_chapter, e\.id\s+LIMIT/);
+  });
+
   it('senSections ranks each heading\'s SEN rows by the first code under it, then id, and returns a row filed under two headings once', async () => {
     const { db, queries } = capture([{ id: 5, kind: 'sen', meta: {} }, { id: 5, kind: 'sen', meta: {} }, { id: 6, kind: 'sen', meta: {} }]);
     const rows = await actual.senSections(db, ['39.01', '39.02'], '2026-09-14');

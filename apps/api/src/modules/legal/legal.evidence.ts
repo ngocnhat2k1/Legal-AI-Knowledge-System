@@ -179,7 +179,9 @@ export async function hsCodeSections(db: Database, codes: string[], asOf: string
  * gồm những hàng gì, khác 3005.90 chỗ nào" names heading 30.05 only as digits, which neither branch matches to the
  * note titled "nhóm 30.05": the model abstained with that note in the table (observed 2026-09-14). The default limit
  * leaves room for one note per heading and two notes per chapter: a flat 6 cut the chapter notes of a four-heading
- * code check (review 2026-09-14 #6).
+ * code check (review 2026-09-14 #6). Every chapter's own note (exclusions, definitions: GRI 1) comes before any
+ * subheading note (GRI 6), so gather's pin cap cuts subheading notes first, not a later chapter's notes. The row type
+ * is only in the title.
  */
 export async function headingSections(db: Database, headings: string[], asOf: string, limit?: number): Promise<RetrievedEvidence[]> {
   if (!headings.length) return [];
@@ -192,7 +194,7 @@ export async function headingSections(db: Database, headings: string[], asOf: st
               OR jsonb_exists_any(coalesce(e.meta->'also_headings', '[]'::jsonb), ARRAY[${sql.join(headings.map((h) => sql`${h}`), sql`, `)}]::text[])))
            OR (e.kind = 'hs_note' AND e.hs_chapter IN ${inIds(chapters)}))
       AND e.meta->>'part' IS NULL AND ${valid(d)}
-    ORDER BY CASE e.kind WHEN 'en' THEN 0 ELSE 1 END, e.hs_heading, e.hs_chapter, e.id
+    ORDER BY CASE e.kind WHEN 'en' THEN 0 ELSE 1 END, e.hs_heading, (e.title LIKE 'Chú giải phân nhóm%'), e.hs_chapter, e.id
     LIMIT ${limit ?? headings.length + 2 * chapters.length}
   `)) as unknown as Array<Record<string, unknown>>;
   return rows.map(toEvidence);

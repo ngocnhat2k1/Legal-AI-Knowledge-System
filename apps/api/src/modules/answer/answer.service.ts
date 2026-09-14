@@ -48,7 +48,9 @@ const MAX_SOURCES = 12;
 /**
  * NĐ 169/2026/NĐ-CP (in force 2026-07-01, khoản 2 Điều 38) ends 128/2020/NĐ-CP in full and Điều 2 of 102/2021/NĐ-CP, yet
  * the corpus still holds 128/2020 as in force and no 169/2026: their clauses and evidence would state penalties no longer
- * law. Their status rows stay, carrying the end of force and no figure.
+ * law. Their status rows stay because they carry no figure — but until relations name 169/2026 (or 128/2020's
+ * effective_to is set) the 128/2020 row still reads "còn hiệu lực", with no `expired` for G7 to check.
+ * Notes restating the old penalty table carry no document number and pass this filter; the re-exported notes fix them.
  * ponytail: a hard drop, no historical exception; lift it once 169/2026's status rows and clauses are ingested.
  */
 const ENDED_PENALTY_DOCS = ['128/2020/NĐ-CP', '102/2021/NĐ-CP'].map(foldDocNumber);
