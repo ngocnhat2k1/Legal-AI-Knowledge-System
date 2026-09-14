@@ -176,8 +176,9 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     for (const t of OLD_TURNS) expect(compose!.prompt).not.toContain(t.body);
 
     const [first, ...others] = legal.gather.mock.calls.map(([, o]) => o);
-    expect(first).toMatchObject({ hsCodes: [], headings: ['30.04', '30.05', '33.07', '38.24'], clauses: 0, cases: true });
+    expect(first).toMatchObject({ hsCodes: [], headings: ['30.04', '30.05', '33.07', '38.24'], clauses: 0, cases: true, sen: 2 });
     for (const o of others) expect(o).toMatchObject({ hsCodes: [], headings: [], cases: false });
+    for (const o of others) expect(o.sen).toBeUndefined();
 
     expect(res.answerMd).toBe(PHOTO_DRAFT.answerMd);
     expect(res.candidates).toEqual([{ hs: '30.05', level: 4, title: HEADING_TEXT, evidence: [1] }]);

@@ -299,7 +299,7 @@ export class AnswerService {
     const pins: GatherOpts =
       mode === 'hs'
         ? // Owner decision D1: a premise's own heading joins the blind hints unlabelled, in number order; its code never does.
-          { hsCodes: [], headings: [...new Set([...hints, ...(role === 'premise' ? ownHeadings : [])])].sort(), clauses: 0, cases: true }
+          { hsCodes: [], headings: [...new Set([...hints, ...(role === 'premise' ? ownHeadings : [])])].sort(), clauses: 0, cases: true, sen: 2 }
         : role === 'subject'
           ? { hsCodes: users.filter((u) => u.level === 8).map((u) => u.code), headings: ownHeadings, cases: false }
           : { hsCodes: [], headings: [], cases: false };
