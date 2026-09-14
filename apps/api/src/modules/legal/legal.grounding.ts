@@ -38,7 +38,7 @@ const figureIn = (hay: string, fact: string): boolean =>
   new RegExp(`(?<!\\d[.,]?)0*${esc(fact.replace(/^0+(?=\d)/, ''))}(?!\\d)`).test(hay);
 
 /** Every digit group of `fact` stands as its own token in `text`, leading zeros ignored (as the bot's docNumberStatedIn). */
-const statedIn = (text: string, fact: string): boolean => {
+export const statedIn = (text: string, fact: string): boolean => {
   const groups = fact.match(/\d+/g) ?? [];
   return groups.length > 0 && groups.every((g) => new RegExp(`(?<!\\d)0*${g.replace(/^0+/, '') || '0'}(?!\\d)`).test(text));
 };
