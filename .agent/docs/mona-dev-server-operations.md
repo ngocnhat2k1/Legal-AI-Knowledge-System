@@ -494,6 +494,9 @@ Script cũng không gỡ phần CD: xoá tay dòng khoá `customs-assistant-ci` 
 | RAM trống của host | ~4,9 GB trước deploy, ~3,8 GB sau deploy (có crawl) |
 | Truy hồi `/legal` không tổng hợp LLM | ~0,6 giây |
 | Crawl Công báo đầy đủ | ~51 phút (10:43 → 11:34 UTC), 24.581 văn bản |
+| CI/CD (2026-09-14): job test | ~1,5 phút; migrate + seed biểu thuế 23 giây, Jest 11 giây |
+| CI/CD: build image trên GitHub | app 62 giây, ingest 16 giây, embedder 5,5 phút (chỉ khi `apps/embedder` đổi) |
+| CI/CD: job deploy có kéo embedder 6 GB | 6,5 phút |
 
 Số đo lệch nhiều so với bảng này là dấu hiệu cần điều tra: seed chậm gấp đôi, RAM embedder lúc ổn định vượt 2 GiB, hoặc `available` của host dưới 1 GB.
 
