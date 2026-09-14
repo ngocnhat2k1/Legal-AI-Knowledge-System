@@ -16,7 +16,7 @@ tiếp theo, và điều gì đã học được mà code không cho thấy.
 
 | | |
 |---|---|
-| **Đang chạy** | Server dev dùng chung của MONA (`<MONA_DEV_HOST>`; giá trị thật trong `.agent/local/mona-dev-server.md`), stack `/opt/docker-projects/customs-assistant`, cổng 127.0.0.1 3060/5435/8060: API + web UI + kho pháp lý 15 văn bản + worker ingest + bot Zalo (đã đăng nhập, `ALLOWED_THREADS` đã đặt), `/health` báo `llm: up`. Deploy mới nhất `69d1ab4` (trả lời kiểu notebook + định dạng Zalo). Vận hành: [runbook](../docs/mona-dev-server-operations.md). |
+| **Đang chạy** | Server dev dùng chung của MONA (`<MONA_DEV_HOST>`; giá trị thật trong `.agent/local/mona-dev-server.md`), stack `/opt/docker-projects/customs-assistant`, cổng 127.0.0.1 3060/5435/8060: API + web UI + kho pháp lý 15 văn bản + worker ingest + bot Zalo (đã đăng nhập, `ALLOWED_THREADS` đã đặt), `/health` báo `llm: up`. Deploy mới nhất `40fc5b3` (2026-09-14, dọn over-engineering). **LLM đang hết hạn mức subscription** (`claude -p`: "org's monthly spend limit", reset 2026-09-15 09:00 UTC): legal RAG chỉ trả nguyên văn, router bot chạy đường dự phòng; `/health` vẫn báo `llm: up` vì chỉ kiểm token + binary. Vận hành: [runbook](../docs/mona-dev-server-operations.md). |
 | **Việc tiếp theo** | Mảng 2 của [kế hoạch 05](05-bot-parity-tasks.md): nạp 32 nguồn notebook vào `evidence_section`. |
 | **Chờ chủ dự án** | (1) chat thử bot sau deploy `69d1ab4`, báo chỗ chưa ổn; (2) có nạp 4 nghị định biểu thuế còn thiếu (144/2024, 108/2025, 199/2025, 201/2026) không; (3) đối chiếu PDF Công báo EVFTA 8711.20.x (9,3% năm 2026 → 20,4% năm 2027); (4) quyết corpus sinh lại theo từng văn bản và sửa `gazette_issue` 128/2020/NĐ-CP — [kế hoạch 05](05-bot-parity-tasks.md) Task 5; (5) [kế hoạch 06](06-deploy-mona-dev-server.md): kiểm thử bot trong nhóm, domain + mật khẩu basic auth, `rclone.conf`; (6) thêm 16 nguồn mới vào notebook (TASK-021; sau mỗi lần đẩy `verify_drive.py` phải ra `0 lệch`); (7) các câu hỏi mở của phiên 2026-09-14 bên dưới. |
 | **Việc của agent** | `docker rm customs-assistant-gazette-full` (crawl đã thoát). |
@@ -64,7 +64,10 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 
 ---
 
-### 2026-09-14 (sau deploy) — Dọn over-engineering: code gọn hơn, markdown từ ~20k còn ~12k dòng (chưa commit, chưa deploy)
+### 2026-09-14 (sau deploy) — Dọn over-engineering: code gọn hơn, markdown từ ~20k còn ~12k dòng; đã deploy `40fc5b3`
+
+- **Deploy:** `main` fast-forward và push (`49ff39b`, `40fc5b3`); image cũ giữ ở `customs-assistant:rollback-11275bc`. Lần build đầu lỗi vì `shared/adapters/embedding/embedding.service.ts` cũ còn trên server (git coi là đổi tên nên không vào danh sách xoá) và `| tail` nuốt mã lỗi, nên api + bot bị recreate bằng image cũ — không mất gì, chỉ khởi động lại. Gỡ file, build lại: api + bot chạy image `6bf7e74`. Kiểm trên server: `/health` ok, web UI `/` 200, 8481.80.99 CN đúng (ACFTA 0% được hưởng, 3 biểu khác ẩn), 16 văn bản pháp lý, `/ingest/status` và `DELETE /conversation` 404, bot khôi phục session; chạy khô 2 câu trong container bot đúng. Runbook §5 đã ghi hai bẫy này.
+- **Phát hiện khi kiểm:** subscription Claude hết hạn mức (reset 2026-09-15 09:00 UTC) — xem "Tiếp tục từ đây". Kho pháp lý có thêm 69/2018/NĐ-CP do bot tự nạp (`auto_unverified`).
 
 - **Code:** adapter DB 4 file gộp thành `shared/adapters/database/index.ts` (đóng kết nối qua `db.$client`); `EmbeddingService` chuyển vào `modules/legal/`; bỏ `@nestjs/config` (`process.loadEnvFile()` trong `main.ts`), `@nestjs/serve-static` (`useStaticAssets`), `qrcode-terminal`, `ts-node`, `tsconfig-paths`; `probeLlm` dò một lần; bỏ `GET /ingest/status`, `DELETE /conversation` (không ai gọi) và nhánh `EVAL_ANSWER_ENDPOINT` (chưa có `POST /answer`); bot bỏ `corpusHas` vì API đã trả `missingDoc`.
 - **Tài liệu:** xoá kế hoạch đã xong (00, 01, 03, 07), các README chỉ mục, `project-rules.md`, thư mục rỗng, script của spike task-003/004/007/012; kế hoạch 05 và 06 chỉ còn việc dở; nhật ký cũ về git. Viết lại AGENTS.md, index, README, code-organization, naming-conventions. Quy tắc ngôn ngữ chỉ còn ở AGENTS.md (project-context từng ghi "tài liệu tiếng Anh").

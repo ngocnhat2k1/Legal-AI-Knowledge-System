@@ -203,8 +203,14 @@ Nếu exit code khác 0, đọc log trước rồi mới chạy lại.
 git status --short && git log -1 --oneline
 git diff --stat "$(ssh <MONA_DEV_HOST> 'cat /opt/docker-projects/customs-assistant/DEPLOYED_COMMIT')" HEAD
 git archive HEAD | ssh <MONA_DEV_HOST> 'tar xf - -C /opt/docker-projects/customs-assistant'
+# Tar không xoá gì: gỡ file đã xoá VÀ phía cũ của file đổi tên, không thì `nest build` vẫn biên dịch chúng.
+OLD=$(git diff --name-status -M "$(ssh <MONA_DEV_HOST> 'cat /opt/docker-projects/customs-assistant/DEPLOYED_COMMIT')" HEAD | awk '$1=="D" || $1 ~ /^R/ {print $2}' | tr '\n' ' ')
+ssh <MONA_DEV_HOST> "cd /opt/docker-projects/customs-assistant && rm -f -- $OLD"
 git rev-parse HEAD | ssh <MONA_DEV_HOST> 'cat > /opt/docker-projects/customs-assistant/DEPLOYED_COMMIT'
 ```
+
+Bài học 2026-09-14: `--diff-filter=D` bỏ sót `embedding.service.ts` vì git coi nó là file đổi tên; bản cũ còn trên server
+import một package đã gỡ và làm build lỗi.
 
 Lần deploy đầu sau khi push: `DEPLOYED_COMMIT` còn ghi một commit cục bộ không có trên GitHub (mã runtime giống
 `41ac65a`). Nếu `git diff` báo `bad object` hoặc `bad revision` thì so với `41ac65a`. Lần deploy đó ghi lại
@@ -228,6 +234,9 @@ ssh <MONA_DEV_HOST> 'cd /opt/docker-projects/customs-assistant \
   && docker-compose run --rm --no-deps migrate </dev/null \
   && docker-compose up -d --no-deps --force-recreate api zalo-bot ingest'
 ```
+
+Đừng nối `| tail` sau `docker-compose build` trong chuỗi `&&`: mã thoát là của `tail`, build lỗi vẫn chạy tiếp và
+recreate bằng image cũ (2026-09-14). Cần cắt log thì đặt `set -o pipefail` trước.
 
 Nếu chỉ đổi code bot: `docker-compose build migrate && docker-compose up -d --no-deps zalo-bot`. Session Zalo nằm
 trong volume nên recreate không phải quét QR lại. Container crawl đang chạy vẫn giữ image cũ cho tới khi thoát.
