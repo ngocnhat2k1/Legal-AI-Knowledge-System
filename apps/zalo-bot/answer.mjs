@@ -466,10 +466,16 @@ export async function handleCorrection(tariff, text, senderName, quote) {
   }
   const data = await res.json();
   // Ghi mã ĐÚNG = 'correct' KÈM mô tả sản phẩm + số căn cứ (rulingNote, đã lọc PII) → tra lại được sau này.
-  const recorded =
-    (!old?.hs || (await wrong())) &&
-    (await postConfirm({ hs: fix.hs, origin: origin || null, date: fix.date, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: data }));
-  if (!recorded) return failed;
+  // 'correct' first: if it fails nothing is recorded and the same message can be sent again. A 'wrong' failing after it is said
+  // as it is, and memory goes, so a resend cannot record the new code twice (R13).
+  if (!(await postConfirm({ hs: fix.hs, origin: origin || null, date: fix.date, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: data }))) return failed;
+  if (old?.hs && !(await wrong())) {
+    return {
+      text: [L(['Đã ghi nhận mã ', [fix.dotted, 'b'], ` là đúng (theo ${senderName}), nhưng chưa ghi được mã `, [old.dotted, 'b'], ' là chưa đúng vì lỗi ghi sổ. Muốn ghi nốt, bạn tra lại mã ', [old.dotted, 'b'], ' rồi nhắn "sai" nhé.'])],
+      topic: 'tariff',
+      tariff: null,
+    };
+  }
   const head = candidates
     ? L(['Đã ghi nhận mã ', [fix.dotted, 'b'], ...(prodDesc ? [' cho ', [prodDesc, 'i']] : []), ` (theo ${senderName}).`])
     : L([`Đã ghi nhận đính chính từ ${senderName}: mã `, ...(old?.dotted ? [[old.dotted, 'b'], ' '] : []), 'chưa đúng, sửa thành ', [fix.dotted, 'b'], '.']);

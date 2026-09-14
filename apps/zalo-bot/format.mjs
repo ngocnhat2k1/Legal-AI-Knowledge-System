@@ -8,6 +8,7 @@
  * See the no-llm-on-tariff-numbers ADR.
  */
 
+import { unlikeTariffReply } from './dispatch.mjs';
 import { cleanGazetteTitle, missingKind, ORIGIN_LABEL } from './parse.mjs';
 import { L, md, toText } from './render.mjs';
 
@@ -417,7 +418,7 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false } = {
   const hs = res.mode === 'hs';
   const rate = res.mode === 'tariff';
   const written = Boolean(String(res.answerMd ?? '').trim());
-  const prose = written ? md(res.answerMd) : cites.length ? [L([NO_PROSE])] : [];
+  const prose = written ? md(unlikeTariffReply(res.answerMd)) : cites.length ? [L([NO_PROSE])] : [];
   const lines = [...prose, L([])];
 
   // Never orange: the user's code outside the candidates is a comparison, not a finding (R4). Only the two sentences
@@ -579,8 +580,8 @@ export const CAPABILITIES = [
   L([['Ví dụ: "thuế nhập khẩu 8481.80.99 xuất xứ Trung Quốc"', 'i']]),
 ];
 
-/** The router's free reply (intent general): gated like any LLM prose, then md() on the original text. */
-export function formatGeneral(reply) {
+/** The router's free reply (intent general): gated like any LLM prose, then md() on the original text; `fallback` when it fails. */
+export function formatGeneral(reply, fallback = CAPABILITIES) {
   // sanitizeLead collapses whitespace, so it is only the gate; md() reads the original line breaks.
-  return sanitizeLead(reply, '', 900) ? md(String(reply).slice(0, 900)) : CAPABILITIES;
+  return sanitizeLead(reply, '', 900) ? md(String(reply).slice(0, 900)) : fallback;
 }

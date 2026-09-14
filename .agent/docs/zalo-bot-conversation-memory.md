@@ -124,10 +124,12 @@ Từ Việc 12, bot không còn gọi `route()` cho tin chữ. Luồng đầy đ
 - **`candidatesFresh`** (`loadContext`): `hs` null, `candidates` không rỗng, còn trong `TARIFF_TTL_MS`. Khi đó
   `ctx.tariff = state.tariff`, để `handleCorrection` giữ được `desc` cho note của phán quyết.
 - **`state.legal` sau câu soạn legal/status/mixed** = `{question, asOf, citations ≤ 5 {label, kind, instrument,
-  documentNumber}, missingDoc: null, pendingIngest: null}`. Văn bản kho không có vẫn đi `missingDocAnswer` (lưu
+  documentNumber}, missingDoc: null, pendingIngest: null}`. Mỗi citation mang thêm `provisionLabel` = `label`, cầu tạm cho
+  tới khi bước kế hoạch của API đọc `label` (hàng 19). Văn bản kho không có vẫn đi `missingDocAnswer` (lưu
   `query` + `pendingIngest`).
 - **`state.answer` sau mọi câu soạn** = `{mode, question, goods: {facts}, at}` — lượt trước cho câu tinh chỉnh.
-  `question` là câu đã che của kế hoạch, bỏ cả nhãn `[mã n]`. **Không mã người dùng nào vào `state`.** Một câu trả lời
+  `question` là câu đã che của kế hoạch, bỏ cả nhãn `[mã n]` và mọi dãy 6, 8 hoặc 10 chữ số liền mà mặt nạ API bỏ sót
+  ("mã hs 848180"); `goods.facts` và `keywords` lọc y như vậy. **Không mã người dùng nào vào `state`.** Một câu trả lời
   đặt `topic` mà không soạn (tra thuế, văn bản thiếu, đính chính…) xoá `state.answer`: refine chỉ trỏ về câu soạn ngay
   trước. Refine gửi kế hoạch nguyên vẹn, không `forceIntent`: API tự đổi sang `state.answer.mode` và giữ câu hỏi trước.
 - `index.mjs` và `dry-run.mjs` ghi state qua `nextState(state, result)`: thiếu khoá `tariff`/`legal`/`answer` =
@@ -146,12 +148,22 @@ Kế hoạch `confirm`/`correction` không bao giờ tự ghi sổ: sổ chỉ �
 là phán quyết gõ có chủ đích về kết quả đang trên bàn:
 
 - Tin có mã chỉ ghi khi có cue xác nhận ngay trước mã; "tôi muốn hỏi thuế 8481.80.91", "không phải, 6307.90.90 cơ" đi bước
-  kế hoạch (hàng 10: lời mời). Tin không mã chỉ ghi `wrong` với từ phán sai (sai, không đúng, nhầm mã); "ý tôi là …",
-  "không phải …" đi bước kế hoạch.
+  kế hoạch (hàng 10: lời mời). Tin không mã chỉ ghi `wrong` khi cả tin hoặc vế đầu chỉ là lời phán sai ("sai rồi", "mã
+  này không đúng", "sai rồi, không phải loại này"); "em gõ sai", "hỏi sai câu rồi", "mình ghi nhầm" kể lỗi của người dùng,
+  "ý tôi là …", "không phải …" chỉ vào câu hỏi: đều đi bước kế hoạch.
 - Câu hỏi đọc cả dạng không dấu, viết tắt ("sai k", "ma nay sai khong", "… hay sao", "X hay Y ạ").
-- Quote một tin không phải kết quả tra thuế (câu soạn, lời mời) thì một chữ "đúng"/"sai" hay lời phản đối không mã không
-  ghi gì cho mã đang nhớ. `tariffReply` chỉ nhận dòng bot tự viết ở đầu dòng (câu dẫn khối thuế, câu ghi nhận), không
-  nhận "MFN"/"Cảm ơn" ở bất cứ đâu; tin thứ hai của câu tra thuế dài vẫn nhận nhờ dòng "Tra theo ngày …".
+- Tin được quote là kết quả trên bàn **theo mã, không theo chữ**: `fastPath` nhận `tableHs` = `state.tariff.hs` (còn mới
+  hay đã cũ). Quote chỉ là kết quả đó khi là `tariffReply` và `parseQuotedTariff(quote).hs === tableHs`, hoặc là tin sau
+  của câu tra thuế dài không mang mã (dòng "Tra theo ngày …", không dấu câu soạn) khi kết quả còn mới. Mọi quote khác (câu
+  soạn, lời mời, một lượt tra cũ hơn) thì "đúng"/"sai" hay lời phản đối không mã không ghi gì; "HS đúng là X" quote lời mời
+  vẫn ghi, quote một lượt tra khác thì không. Tra 404 hay sau ứng viên (`tableHs` null) thì quote không bao giờ tự đứng làm
+  kết quả.
+- `tariffReply` chỉ nhận dòng bot tự viết (câu dẫn khối thuế, câu ghi nhận), không nhận "MFN"/"Cảm ơn"/"bạn nêu". Văn xuôi
+  soạn có thể chép câu dẫn ("Hàng hóa có mã HS 6506.10.10 thuộc danh mục…" khi mã chủ đề được mở cho bước soạn), nên
+  `formatAnswerMd` đổi các câu mở đó ở mọi chỗ trong văn xuôi, giữ nghĩa ("Hàng có mã HS", "Có ghi nhận"): không tin nào
+  của câu soạn khớp `tariffReply`, ở chế độ nào và tách tin ở đâu cũng vậy.
+- Đính chính kèm mã mới ghi `correct` cho mã mới trước, rồi `wrong` cho mã cũ. `correct` lỗi thì không ghi gì, giữ bộ nhớ để
+  gửi lại; `wrong` lỗi sau đó thì nói rõ đã ghi được gì, bỏ bộ nhớ để gửi lại không ghi trùng.
 - Lời mời nạp văn bản chỉ nhận "có"/"nạp" khi chủ đề còn là pháp luật.
 
 ## Lời dẫn tự nhiên — cưỡng chế bằng code, không bằng lời dặn

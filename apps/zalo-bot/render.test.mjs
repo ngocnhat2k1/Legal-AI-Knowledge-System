@@ -268,16 +268,31 @@ test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp 
   }
 });
 
-test('bất biến R13: câu hs không ứng viên và câu pháp luật có "Cảm ơn"/"MFN" trong văn xuôi không khớp tariffReply; khối thuế thật vẫn khớp dù văn xuôi nói "bạn nêu"', () => {
-  const prose = 'Cảm ơn bạn đã mô tả thêm. Thuế MFN không đổi theo mô tả; mã bạn nêu cần đối chiếu chú giải [1].';
-  const noCands = { ...HS_PHOTO, answerMd: prose, candidates: [], userCodes: [{ ...HS_PHOTO.userCodes[0], exists: false, inCandidates: false }] };
+test('bất biến R13: câu pháp luật, tình trạng và hs không ứng viên có "Cảm ơn"/"MFN"/"bạn nêu" hay mở dòng bằng câu dẫn khối thuế không khớp tariffReply, tách tin ở đâu cũng vậy; khối thuế thật vẫn khớp', () => {
+  // Re-review 2026-09-15: a subject code is unmasked into the compose prompt, so prose can open a line with the tariff lead.
+  const lead = [
+    'Hàng hóa có mã HS 8481.80.99 thuộc danh mục phải kiểm tra chất lượng trước thông quan [1].',
+    'Đối với hàng hóa có mã HS 8481.80.99 có xuất xứ Trung Quốc, hồ sơ cần C/O mẫu E [1].',
+    'Đã xác nhận mã 8481.80.99 cho hàng tương tự.',
+    'Đã ghi nhận sai cho mã 8481.80.99 trước đây [1].',
+  ];
+  const prose = `Cảm ơn bạn đã mô tả thêm. Thuế MFN không đổi theo mô tả; mã bạn nêu cần đối chiếu chú giải [1].\n${lead.join('\n')}`;
+  const noCands = { ...HS_PHOTO, candidates: [], userCodes: [{ ...HS_PHOTO.userCodes[0], exists: false, inCandidates: false }] };
   const legal = {
-    ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [], answerMd: prose,
+    ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [],
     citations: [cite(1, { kind: null, label: 'Khoản 1 Điều 9 VB-A', documentNumber: 'VB-A', note: null, quotes: ['Mũ bảo hiểm mã 6506.10.10 thuộc danh mục hàng hóa kiểm tra chuyên ngành.'] })],
   };
-  for (const [name, res] of Object.entries({ noCands, legal })) {
-    for (const msg of render(formatAnswerMd(res)).map((p) => p.msg)) assert.equal(tariffReply(msg), false, `${name}: ${msg.slice(0, 120)}`);
-  }
+  const modes = { noCands, legal, status: { ...legal, mode: 'status' } };
+  const noTariffReply = (answerMd, label) => {
+    for (const [name, res] of Object.entries(modes)) {
+      for (const msg of render(formatAnswerMd({ ...res, answerMd })).map((p) => p.msg)) assert.equal(tariffReply(msg), false, `${name} ${label}: ${msg.slice(0, 120)}`);
+    }
+  };
+  const filler = 'Văn bản này quy định hồ sơ, thủ tục và thời hạn kiểm tra đối với hàng hóa nhập khẩu [1]. ';
+  const fill = (chars) => filler.repeat(Math.ceil(chars / filler.length)).slice(0, chars);
+  for (let chars = 0; chars <= 4000; chars += 50) noTariffReply(`${prose}\n\n${fill(chars)}\n${lead.join('\n')}`, `+${chars}`);
+  // One paragraph longer than a message is cut at a space, so a message may open mid-sentence: every cut near the budget.
+  for (let chars = 1400; chars <= 1850; chars++) noTariffReply(`${fill(chars)} ${lead.join(' ')}`, `một đoạn +${chars}`);
   const { q, tariff } = lookup('8481.80.99');
   const [rate] = render([...md('Mã bạn nêu là van; mức FTA chỉ áp khi có C/O đúng form.'), L([]), ...formatAnswer(q, tariff, null)]);
   assert.equal(tariffReply(rate.msg), true, rate.msg.slice(0, 120));

@@ -64,18 +64,16 @@ test('disagreeing with a TARIFF answer is still a correction', () => {
     quoteText: TARIFF_ANSWER_QUOTE,
     topic: 'tariff',
     tariffFresh: true,
+    tableHs: '84818099',
   });
   assert.deepEqual(decision, { action: 'correction' });
 });
 
-test('a correction works from the quoted message alone when memory has expired', () => {
-  const decision = fastPath({
-    text: 'mã đúng là 7326.90.99',
-    quoteText: TARIFF_ANSWER_QUOTE, // contains an HS code
-    topic: 'tariff',
-    tariffFresh: false,
-  });
-  assert.deepEqual(decision, { action: 'correction' });
+test('a correction works from the quoted message alone when memory has expired, only for the code memory still holds', () => {
+  const expired = { text: 'mã đúng là 7326.90.99', quoteText: TARIFF_ANSWER_QUOTE, topic: 'tariff', tariffFresh: false };
+  assert.deepEqual(fastPath({ ...expired, tableHs: '84818099' }), { action: 'correction' });
+  assert.equal(fastPath(expired), null, 'no lookup in memory (a 404, or candidates): the quote alone rules nothing');
+  assert.equal(fastPath({ ...expired, tableHs: '84818091' }), null, 'an older lookup than the one in memory');
 });
 
 test('a reply WITHOUT an HS code and without fresh memory is not correctable', () => {
@@ -663,7 +661,7 @@ test('câu đối chiếu mã được quote kèm "sai rồi" không ghi mã ng�
   const text = 'sai rồi, không phải nhóm này';
   assert.equal(fastPath({ text, quoteText, topic: 'tariff', tariffFresh: false }), null);
   assert.notEqual(guardIntent('correction', { topic: 'tariff', tariffFresh: false, quoteText }), 'correction');
-  assert.equal(fastPath({ text, quoteText: TARIFF_ANSWER_QUOTE, topic: 'tariff', tariffFresh: false })?.action, 'correction');
+  assert.equal(fastPath({ text, quoteText: TARIFF_ANSWER_QUOTE, topic: 'tariff', tariffFresh: false, tableHs: '84818099' })?.action, 'correction');
 });
 
 async function codeCheck(q, clues) {
@@ -911,12 +909,12 @@ const composedLegal = {
   citations: [cited(1, { kind: null, label: 'Khoản 1 Điều 9 VB-A', instrument: 'VB-A', documentNumber: 'VB-A', authority: 'binding', quotes: ['Hàng hóa nhập khẩu để gia công được miễn thuế nhập khẩu.'] })],
 };
 
-/** The API: /answer from `planned` (planOnly) and `composed`; /tariff from the 8481.80.99 fixture, 404 for `noRate`; writes succeed unless `confirmFails`. */
+/** The API: /answer from `planned` (planOnly) and `composed`; /tariff from the 8481.80.99 fixture, 404 for `noRate`; writes succeed unless `confirmFails` (true, or the one verdict that fails). */
 const fakeApi = ({ planned = null, composed = null, provision = null, noRate = [], confirmFails = false } = {}) => (path, body, u) =>
   path === '/answer' ? (body.planOnly ? planned : composed)
   : path === '/tariff' ? (noRate.includes(u.searchParams.get('hs')) ? null : tariff8481({ origin: u.searchParams.get('origin') }))
   : path === '/tariff/search' ? [cand(u.searchParams.get('prefix'), 'Sản phẩm dệt đã hoàn thiện khác', '12')]
-  : path === '/tariff/confirm' ? (confirmFails ? null : {})
+  : path === '/tariff/confirm' ? (confirmFails === true || confirmFails === body.verdict ? null : {})
   : path === '/legal/provision' ? provision
   : null;
 
@@ -1019,7 +1017,8 @@ test('Việc 12 (4): guard bác kế hoạch thì request soạn mang plan + for
   assert.deepEqual(run.notices, ['Mình tra văn bản rồi trả lời nhé.'], 'không có ack thì chỉ vế theo chế độ');
   assert.equal(run.confirms.length, 0);
   assert.equal(c.memo.topic, 'legal');
-  assert.deepEqual(c.memo.state.legal.citations, [{ label: 'Khoản 1 Điều 9 VB-A', kind: null, instrument: 'VB-A', documentNumber: 'VB-A' }]);
+  // provisionLabel: a bridge until the API's plan step reads `label` (§6.1, row 19).
+  assert.deepEqual(c.memo.state.legal.citations, [{ label: 'Khoản 1 Điều 9 VB-A', provisionLabel: 'Khoản 1 Điều 9 VB-A', kind: null, instrument: 'VB-A', documentNumber: 'VB-A' }]);
   assert.equal(c.memo.state.legal.question, 'quy định miễn thuế hàng gia công');
 });
 
@@ -1125,7 +1124,7 @@ test('R13: quote câu soạn kèm "sai rồi"/"đúng" sau một lượt tra thu
     const run = await c.say(text, fakeApi(), c.reply);
     assert.equal(run.confirms.length, 0, text);
   }
-  const fresh = { topic: 'tariff', tariffFresh: true };
+  const fresh = { topic: 'tariff', tariffFresh: true, tableHs: '84818099' };
   assert.deepEqual(fastPath({ text: 'đúng', quoteText: TARIFF_ANSWER_QUOTE, ...fresh }), { action: 'confirm', verdict: 'correct' });
   const tail = 'Tra theo ngày 13/09/2026 · [1] NĐ 26/2023/NĐ-CP — Biểu thuế nhập khẩu ưu đãi (MFN, Mục I)\nMã đúng với lô hàng thì trả lời "đúng".';
   assert.deepEqual(fastPath({ text: 'sai', quoteText: tail, ...fresh }), { action: 'confirm', verdict: 'wrong' }, 'tin thứ hai của một câu tra thuế dài vẫn là câu đó');
@@ -1295,4 +1294,96 @@ test('codeOffer: mã dưới một ứng viên sâu hơn (3005.10) là "nằm tr
   const same = await t.say('8481.80.99 sai rồi', fakeApi({ planned: plannedOf(plan08({ intent: 'correction', question: '[mã 1] sai rồi', ...noGoods })) }));
   assert.equal(same.confirms.length, 0);
   assert.match(same.text, /^Mã 8481\.80\.99 .*là mã vừa tra/);
+});
+
+// --- Plan 08 Việc 12 re-review 2026-09-15: a quote is the result on the table only by its code (R13) ---------------------
+
+const pairs = (run) => run.confirms.map((x) => [x.hs, x.verdict]);
+const staleTariff = (c) => (c.memo.state.tariff.at = new Date(Date.now() - 3 * 3600e3).toISOString());
+
+test('R13: câu pháp luật mở dòng bằng "Hàng hóa có mã HS …" quote kèm "sai rồi" không ghi gì — khác mã hay cùng mã vừa tra, tra còn mới, đã cũ hay 404', async () => {
+  const planned = plannedOf(plan08({ intent: 'legal', question: 'mũ bảo hiểm [mã 1] thuộc danh mục kiểm tra nào', ...noGoods }), { codeRole: 'subject', mode: 'legal', ack: null });
+  for (const [code, lookup] of [['6506.10.10', 'fresh'], ['6506.10.10', 'stale'], ['6506.10.10', '404'], ['8481.80.99', 'fresh'], ['8481.80.99', 'stale']]) {
+    const c = conversation();
+    const composed = { ...composedLegal, codeRole: 'subject', answerMd: `Hàng hóa có mã HS ${code} thuộc danh mục phải kiểm tra chất lượng trước thông quan [1].` };
+    const legal = await c.say(`mũ bảo hiểm ${code} thuộc danh mục kiểm tra nào`, fakeApi({ planned, composed }));
+    await c.say('8481.80.99 TQ', fakeApi({ noRate: lookup === '404' ? ['84818099'] : [] }));
+    if (lookup === 'stale') staleTariff(c);
+    for (const text of ['sai rồi', 'sai rồi, không phải danh mục đó']) {
+      const run = await c.say(text, fakeApi(), render(legal.r.text)[0].msg);
+      assert.equal(run.confirms.length, 0, `${code} ${lookup}: ${text}`);
+    }
+  }
+});
+
+test('R13: quote kết quả tra cũ hơn mã đang nhớ không ghi gì; quote đúng kết quả trên bàn vẫn ghi, kể cả khi bộ nhớ đã cũ', async () => {
+  for (const text of ['sai rồi', 'đúng', 'sai rồi, HS đúng là 8481.80.10']) {
+    const c = conversation();
+    const older = await c.say('8481.80.99 TQ', fakeApi());
+    await c.say('8481.80.91 TQ', fakeApi());
+    assert.equal((await c.say(text, fakeApi(), render(older.r.text)[0].msg)).confirms.length, 0, text);
+  }
+  const c = conversation();
+  await c.say('8481.80.99 TQ', fakeApi());
+  const latest = render((await c.say('8481.80.91 TQ', fakeApi())).r.text)[0].msg;
+  assert.deepEqual(pairs(await c.say('đúng', fakeApi(), latest)), [['84818091', 'correct']]);
+  staleTariff(c);
+  // A one-word verdict needs fresh memory; a ruling in words reads the old code from the quote when it is the code in memory.
+  assert.equal((await c.say('sai rồi', fakeApi(), latest)).confirms.length, 0);
+  assert.deepEqual(pairs(await c.say('mã này sai', fakeApi(), latest)), [['84818091', 'wrong']], 'bộ nhớ đã cũ: quote đúng mã đang nhớ vẫn đính chính được');
+});
+
+test('R13: phán sai không kèm mã chỉ nhận khi là cả tin hoặc vế đầu; người dùng kể lỗi của chính mình không ghi gì', () => {
+  const fresh = { topic: 'tariff', tariffFresh: true, tableHs: '84818099' };
+  for (const text of ['em gõ sai', 'em nhập sai mã rồi', 'hỏi sai câu rồi', 'mình ghi nhầm', 'em gõ sai, ý em là van bi']) {
+    assert.equal(fastPath({ text, ...fresh }), null, text);
+  }
+  for (const text of ['sai rồi ạ', 'mã này sai', 'mã này không đúng', 'không đúng ạ', 'nhầm mã rồi', 'sai rồi, không phải loại này']) {
+    assert.equal(fastPath({ text, ...fresh })?.action, 'correction', text);
+  }
+});
+
+test('R4: mã dính liền 6 hoặc 8 số API che sót không vào state (câu hỏi, dữ kiện hàng, từ khoá); năm và số hiệu văn bản giữ nguyên', async () => {
+  const c = conversation();
+  const leaky = plan08({
+    question: 'mã hs 848180 dùng cho van theo thông tư 36/2025/TT-BTC năm 2026 được không',
+    goods: { facts: ['van 848180', 'van 84818099 bằng đồng'], missing: [] },
+    keywords: ['van 848180'],
+  });
+  await c.say('mã hs 848180 dùng cho van được không', fakeApi({ planned: plannedOf(leaky, { codeRole: 'none', mode: 'hs' }), composed: { ...composedHs, userCodes: [] } }));
+  assert.doesNotMatch(JSON.stringify(c.memo.state), /848180/);
+  assert.equal(c.memo.state.answer.question, 'mã hs dùng cho van theo thông tư 36/2025/TT-BTC năm 2026 được không');
+  assert.deepEqual(c.memo.state.answer.goods.facts, ['van', 'van bằng đồng']);
+});
+
+test('ngõ cụt không đổ danh sách năng lực: "đúng" khi kết quả tra đã cũ, refine trên luồng chào chỉ nhận một câu ngắn; lời chào vẫn có danh sách', async () => {
+  const t = conversation();
+  await t.say('8481.80.99 TQ', fakeApi());
+  staleTariff(t);
+  const agree = await t.say('đúng', fakeApi({ planned: plannedOf(plan08({ intent: 'confirm', verdict: 'correct', ...noGoods }), { codeRole: 'none', ack: null }) }));
+  const g = conversation();
+  assert.equal((await g.say('hi', fakeApi())).text, toText(CAPABILITIES));
+  const refine = await g.say('không phải ý đó', fakeApi({ planned: plannedOf(plan08({ intent: 'refine', ...noGoods }), { codeRole: 'none', mode: 'hs', ack: null }), composed: composedHs }));
+  for (const run of [agree, refine]) {
+    assert.equal(run.confirms.length + run.answers.filter((a) => !a.planOnly).length, 0);
+    assert.ok(!run.text.includes('Mình giúp được ba việc') && !run.text.includes('\n'), run.text);
+  }
+});
+
+test('soạn hs không văn xuôi, không nguồn, không lượt gọi nào: câu nói thật và gợi ý vẫn in dưới dòng mã không có trong Danh mục', async () => {
+  const none = { ...composedHs, answerMd: '', citations: [], candidates: [], coverage: 'none', calls: 0, userCodes: [{ code: '3005.10.10', level: 8, heading: '30.05', exists: false, inCandidates: false }] };
+  const run = await conversation().say(PHOTO_Q, fakeApi({ planned: plannedOf(plan08()), composed: none }));
+  assert.match(run.text, /Mã 3005\.10\.10 không có trong Danh mục hàng hóa đã nạp\.[\s\S]*chưa tìm thấy căn cứ[\s\S]*mô tả thêm chất liệu/);
+  assert.doesNotMatch(run.text, /thử lại/);
+});
+
+test('R13: đính chính ghi correct cho mã mới trước; correct ghi được mà wrong lỗi thì nói đúng như vậy và bỏ bộ nhớ, gửi lại không ghi trùng', async () => {
+  const c = conversation();
+  await c.say('8481.80.99 TQ', fakeApi());
+  const half = await c.say('sai rồi, HS đúng là 8481.80.91', fakeApi({ confirmFails: 'wrong' }));
+  assert.deepEqual(pairs(half), [['84818091', 'correct'], ['84818099', 'wrong']]);
+  assert.match(half.text, /Đã ghi nhận mã 8481\.80\.91 là đúng/);
+  assert.match(half.text, /chưa ghi được mã 8481\.80\.99 là chưa đúng/);
+  assert.equal(c.memo.state.tariff, null);
+  assert.equal((await c.say('sai rồi, HS đúng là 8481.80.91', fakeApi())).confirms.length, 0);
 });

@@ -102,19 +102,26 @@ const NEEDS_GOODS = 'Để xem mã bạn nêu có hợp không, mình cần bi�
 const NEEDS_CODE = 'Bạn nhắn giúp mình mã HS 8 số của hàng (kèm xuất xứ) để mình tra thuế, hoặc mô tả hàng để mình tìm mã nhé.';
 const TOO_LONG = 'Tin dài quá để mình đọc một lượt: bạn tóm tắt giúp mình câu hỏi và mô tả chính của hàng, dưới 2.000 ký tự nhé.';
 const AGREED = 'Dạ, bạn cần gì thêm cứ nhắn mình nhé.';
+const UNCLEAR = 'Mình chưa hiểu ý bạn, bạn nói rõ thêm giúp mình nhé.';
 const NO_SOURCE = 'Mình chưa tìm thấy căn cứ đủ để trả lời câu này trong các văn bản và chú giải mình đang có, nên chưa trả lời để tránh sai.';
 const LEGAL_MODES = ['legal', 'status', 'mixed'];
 /** Owner decision Q1 takes about 40 s of prose above a rate; past this the block goes out alone and the API stops too. */
 const PROSE_BUDGET_MS = 45_000;
 
-/** A plan's question as memory may keep it: masked by the API, its [mã n] labels dropped too (R4). */
-const asked = (plan) => String(plan.question ?? '').replace(/\[mã \d+\]/g, ' ').replace(/\s+/g, ' ').trim();
+/**
+ * Plan text as memory may keep it (R4): masked by the API, its [mã n] labels dropped, and a joined 6-, 8- or 10-digit run the
+ * API mask missed ("mã hs 848180") dropped too. A year or a document number is shorter or carries a slash.
+ * ponytail: a 6-digit amount goes as well; the real fix is the API mask.
+ */
+const noCodes = (s) => String(s ?? '').replace(/\[mã \d+\]|(?<![\d/.-])\d{6}(?:\d{2}){0,2}(?![\d/])/g, ' ').replace(/\s+/g, ' ').trim();
+const asked = (plan) => noCodes(plan.question);
 
 /** What the next plan may point at after a legal answer (plan 08 §6.1). */
 const legalMemory = (plan, cites, asOf) => ({
   question: asked(plan),
   asOf: asOf ?? plan.date ?? null,
-  citations: cites.slice(0, 5).map(({ label, kind, instrument, documentNumber }) => ({ label, kind, instrument, documentNumber })),
+  // provisionLabel: a bridge until the API's plan step reads `label` (row 19); drop it then.
+  citations: cites.slice(0, 5).map(({ label, kind, instrument, documentNumber }) => ({ label, provisionLabel: label, kind, instrument, documentNumber })),
   missingDoc: null,
   pendingIngest: null,
 });
@@ -173,6 +180,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     topic: ctx.topic,
     tariffFresh: ctx.tariffFresh,
     candidatesFresh: ctx.candidatesFresh,
+    tableHs: ctx.state?.tariff?.hs ?? null,
     pendingIngest: Boolean(pending),
   });
   if (fast?.action === 'ingest') {
@@ -233,7 +241,8 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   if (res.missingDoc && (LEGAL_MODES.includes(modeOf(intent)) || plan.scope?.doc)) {
     return { ...missingDocAnswer(asked(plan), res.missingDoc, res, res.asOf ?? plan.date), intent: 'legal' };
   }
-  if (intent === 'general') return { text: formatGeneral(plan.reply), topic: 'general', intent };
+  // No usable reply ("đúng" after the lookup expired, a refine with nothing to refine): one short line, never the capabilities.
+  if (intent === 'general') return { text: formatGeneral(plan.reply, confirmVerdict(text) ? AGREED : UNCLEAR), topic: 'general', intent };
   // Phán quyết không có cue tường minh ("63079090 mới đúng"): một lời mời, không ghi sổ. Cue tường minh đã đi bước 1 (§6.3).
   if (intent === 'confirm' || intent === 'correction') return { ...(await codeOffer(ctx.tariff, direct)), intent };
   if (intent === 'tariff') {
@@ -285,20 +294,22 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     if (tariff) tariffLines = [{ q, tariff, confirm: await confirmations(direct.hs, q.origin) }];
   }
   const lines = formatAnswerMd(composed, { tariffLines });
-  if (!toText(lines).trim()) {
-    // No call ran: retrieval found no source, and "thử lại sau" would never help.
-    // ponytail: calls 0 is also the API failing closed (deadline, dropped prompt part); an API `reason` field tells them apart.
-    if (composed.calls !== 0) return { text: NOT_COMPOSED, intent };
+  // No call ran and nothing came back: retrieval found no source, and "thử lại sau" would never help. A line the code writes (a
+  // user code missing from the catalogue) still prints above the honest sentence.
+  // ponytail: calls 0 is also the API failing closed (deadline, dropped prompt part); an API `reason` field tells them apart.
+  if (!composed.answerMd?.trim() && !composed.citations?.length && composed.calls === 0) {
     const hint = mode === 'hs' ? 'Bạn mô tả thêm chất liệu, công dụng, cách trình bày của hàng để mình tìm lại nhé.' : 'Nếu bạn biết số hiệu văn bản, nhắn số hiệu để mình tìm trên Công báo và nạp về.';
-    return { text: `${NO_SOURCE} ${hint}`, intent };
+    return { text: [...lines, L([`${NO_SOURCE} ${hint}`])], intent };
   }
+  if (!toText(lines).trim()) return { text: NOT_COMPOSED, intent };
 
   // Bộ nhớ (§6.1): không mã người dùng nào vào state; ứng viên hs không phải kết quả tra, nên "đúng" không ghi gì.
-  const facts = plan.goods?.facts ?? [];
+  const facts = (plan.goods?.facts ?? []).map(noCodes).filter(Boolean);
   const candidates = (composed.candidates ?? []).map((c) => c.hs);
+  const keywords = (plan.keywords ?? []).map(noCodes).filter(Boolean);
   const memory =
     mode === 'hs'
-      ? { topic: 'tariff', tariff: candidates.length ? stampTariff({ hs: null, candidates, desc: facts.join(', '), keywords: plan.keywords ?? [] }) : null }
+      ? { topic: 'tariff', tariff: candidates.length ? stampTariff({ hs: null, candidates, desc: facts.join(', '), keywords }) : null }
       : { topic: 'legal', legal: legalMemory(plan, composed.citations ?? [], composed.asOf) };
   return { text: lines, ...memory, answer: { mode, question: asked(plan), goods: { facts }, at: new Date().toISOString() }, intent };
 }
