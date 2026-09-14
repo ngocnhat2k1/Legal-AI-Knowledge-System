@@ -1,19 +1,21 @@
 import type { SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 
-import { evidenceInstruments, evidenceRetrieve, headingSections, hsCodeSections, namedStatus, type RetrievedEvidence } from './legal.evidence';
+import { caseSections, evidenceInstruments, evidenceRetrieve, headingSections, hsCodeSections, namedStatus, type RetrievedEvidence } from './legal.evidence';
+import { LegalController } from './legal.controller';
 import { generate, type PromptSource } from './legal.generation';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
-import { LegalService, namedHeadings } from './legal.service';
+import { evidenceSource, LegalService, namedHeadings } from './legal.service';
 
 jest.mock('./legal.generation', () => ({ generate: jest.fn() }));
-jest.mock('./legal.retrieval', () => ({ hybridRetrieve: jest.fn() }));
+jest.mock('./legal.retrieval', () => ({ ...jest.requireActual('./legal.retrieval'), hybridRetrieve: jest.fn() }));
 jest.mock('./legal.evidence', () => ({
   evidenceInstruments: jest.fn(async () => []),
   evidenceRetrieve: jest.fn(async () => []),
   namedStatus: jest.fn(async () => []),
   hsCodeSections: jest.fn(async () => []),
   headingSections: jest.fn(async () => []),
+  caseSections: jest.fn(async () => []),
 }));
 
 const gazette = (number: string, docType: string) => ({ number, docType, title: `${number} — tiêu đề`, sourceUrl: 'https://congbao.chinhphu.vn/x', congbaoId: 1 });
@@ -51,10 +53,30 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
     id: 1, kind: 'status', instrument: '69/2018/NĐ-CP', authority: 'binding', title: 'Tình trạng hiệu lực — 69/2018/NĐ-CP',
     body: '69/2018/NĐ-CP hết hiệu lực từ 05/09/2026, bị thay thế bởi 292/2026/NĐ-CP — căn cứ khoản 1 Điều 65 NĐ 292/2026/NĐ-CP',
     documentNumber: '69/2018/NĐ-CP', effectiveFrom: '2026-09-05', effectiveTo: null, effectiveness: 'con_hieu_luc',
-    verification: 'auto_unverified', status: null, ends: [], window: 'current', score: 1, bestDist: 0.9, ...over,
+    verification: 'auto_unverified', status: null, ends: [], window: 'current', score: 1, bestDist: 0.9,
+    hsHeading: null, hsChapter: null, hsCodes: [], meta: {}, hitText: null, ...over,
   });
   const svc = () => new LegalService({ execute: async () => [] } as never, { embed: async () => [0] } as never);
   const lastSources = () => (generate as jest.Mock).mock.calls.at(-1)![2] as PromptSource[];
+
+  it('ask() (GET /legal, the live bot) never pins classification cases for the headings it reads', async () => {
+    (caseSections as jest.Mock).mockClear();
+    await svc().ask('Các nhóm ứng viên cần phân biệt: 38.24, 30.05, 85.09', '2026-09-14');
+    expect((headingSections as jest.Mock).mock.calls.at(-1)![1]).toEqual(['38.24', '30.05', '85.09']);
+    expect(caseSections).not.toHaveBeenCalled();
+  });
+
+  it('builds the prompt text from the window that matched, keeping the whole parent as body and citation', () => {
+    const parent = ['EN nhóm 85.09', ...Array.from({ length: 200 }, (_, i) => `dòng ${i} ${'x'.repeat(40)}`), 'máy xay sinh tố gia dụng', '1 | máy | 8509.40.00'].join('\n');
+    expect(parent.indexOf('máy xay')).toBeGreaterThan(6000); // past the cut
+    const e = ev({ kind: 'en', body: parent, hitText: 'EN nhóm 85.09 — cửa sổ 2/2\nmáy xay sinh tố gia dụng' });
+    const s = evidenceSource(e, '2026-09-14');
+    expect(s.text).toBe(e.hitText);
+    expect(s.body).toBe(parent);
+    expect(s.citation.verbatimText).toBe(parent);
+    // A code the question asks about still moves its lines to the top of the whole section.
+    expect(evidenceSource(e, '2026-09-14', ['8509.40.00']).text.split('\n')[2]).toBe('1 | máy | 8509.40.00');
+  });
 
   it('answers a named document the corpus lacks from its status row instead of "we do not hold it"', async () => {
     (evidenceInstruments as jest.Mock).mockResolvedValueOnce(['69/2018/NĐ-CP']);
@@ -243,6 +265,174 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
     (generate as jest.Mock).mockResolvedValueOnce(null); // no model: the sources stand on their own
     const res = await svc().ask('Một cửa quốc gia làm theo văn bản nào', '2026-09-14');
     expect(res.citations[0]!.note).toContain('CHƯA CÓ HIỆU LỰC — có hiệu lực từ 15/10/2026');
+  });
+});
+
+describe('GET /legal — the 69/2018 fixture answers the same across the scope/gather split (plan 08 Việc 8)', () => {
+  it('returns the citation labels, kinds and standing recorded before the split', async () => {
+    const fetched = { id: 7, number: '69/2018/NĐ-CP', title: 't', docType: 'nghi_dinh', consolidates: null };
+    const results: unknown[][] = [[fetched]]; // resolveDocuments
+    const svc = new LegalService({ execute: async () => results.shift() ?? [] } as never, { embed: async () => [0] } as never);
+    const clause = (n: number, bestDist: number) => ({
+      articleProvisionId: n, clauseProvisionId: n, documentId: 7, documentNumber: '69/2018/NĐ-CP', documentTitle: 't',
+      articleCitation: `Điều ${n} Nghị định 69/2018/NĐ-CP`, clauseCitation: `Khoản 1 Điều ${n} Nghị định 69/2018/NĐ-CP`, path: '',
+      articleBody: 'thân', clauseBody: 'thân', effectiveness: 'con_hieu_luc', effectiveFrom: null, effectiveTo: null,
+      gazetteUrl: null, verification: 'auto_unverified', score: 1, bestDist, kwHit: true,
+    }) as RetrievedArticle;
+    const ev = (over: Partial<RetrievedEvidence>) => ({
+      id: 1, kind: 'status', instrument: '69/2018/NĐ-CP', authority: 'binding', title: 'Tình trạng hiệu lực — 69/2018/NĐ-CP',
+      body: '69/2018/NĐ-CP hết hiệu lực từ 05/09/2026, bị thay thế bởi 292/2026/NĐ-CP', documentNumber: '69/2018/NĐ-CP',
+      effectiveFrom: null, effectiveTo: null, effectiveness: 'con_hieu_luc', verification: 'auto_unverified', status: null,
+      ends: [], window: 'current', score: 1, bestDist: null, hsHeading: null, hsChapter: null, hsCodes: [], meta: {}, ...over,
+    }) as RetrievedEvidence;
+    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([clause(73, 0.3), clause(74, 0.35), clause(80, 0.7)]);
+    (namedStatus as jest.Mock).mockResolvedValueOnce([
+      ev({ ends: [{ from: '2026-09-05', by: '292/2026/NĐ-CP', relation: 'thay_the', scope: null }] }),
+    ]);
+    (hsCodeSections as jest.Mock).mockResolvedValueOnce([
+      ev({ id: 4, kind: 'annex_table', title: '69/2018/NĐ-CP — Bảng 1', body: 'STT | Tên | Mã\n1 | máy | 8471.30.20', documentNumber: null }),
+    ]);
+    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([
+      ev({ id: 2, kind: 'guidance', authority: 'authoritative', title: 'Hướng dẫn thủ tục', documentNumber: null, bestDist: 0.33 }),
+      ev({ id: 3, kind: 'note', authority: 'reference', title: 'Ghi chú xa', documentNumber: null, bestDist: 0.5 }),
+    ]);
+    (generate as jest.Mock).mockResolvedValueOnce({
+      answer: 'Nghị định 69/2018/NĐ-CP đã hết hiệu lực từ 05/09/2026 [3]. Thủ tục vẫn nêu ở điều khoản [2].',
+      citations: [3, 2], abstain: false, reason: null,
+    });
+    const res = await new LegalController(svc).ask('Nghị định 69/2018/NĐ-CP còn áp dụng không, mã 8471.30.20', '2026-09-14');
+    const seen = ((generate as jest.Mock).mock.calls.at(-1)![2] as PromptSource[]).map((s) => [s.label, s.note]);
+    // Recorded from ask() at 8494c75, before it was split into scope() and gather().
+    const expired = '69/2018/NĐ-CP ĐÃ HẾT HIỆU LỰC từ 05/09/2026 theo 292/2026/NĐ-CP';
+    expect(seen).toEqual([
+      ['Điều 73 Nghị định 69/2018/NĐ-CP', null],
+      ['Điều 74 Nghị định 69/2018/NĐ-CP', null],
+      ['Tình trạng hiệu lực — 69/2018/NĐ-CP', expired],
+      ['69/2018/NĐ-CP — Bảng 1', null],
+      ['Hướng dẫn thủ tục', 'tài liệu hướng dẫn áp dụng của cơ quan hải quan, không phải văn bản quy phạm pháp luật'],
+    ]);
+    expect(res.answer).toBe('Nghị định 69/2018/NĐ-CP đã hết hiệu lực từ 05/09/2026 [1]. Thủ tục vẫn nêu ở điều khoản [2].');
+    expect(res.citations.map((c) => [c.provisionLabel, c.kind ?? 'provision', c.note ?? null, c.expired ?? null])).toEqual([
+      ['Tình trạng hiệu lực — 69/2018/NĐ-CP', 'status', null, expired],
+      ['Khoản 1 Điều 74 Nghị định 69/2018/NĐ-CP', 'provision', null, null],
+    ]);
+  });
+});
+
+describe('LegalService.scope and gather — the halves POST /answer calls (plan 08 Việc 8)', () => {
+  const dialect = new PgDialect();
+  const embedding = { embed: async () => [0] } as never;
+
+  it('scope reports a circular named only by serial and ministry as missing, with the catalogue candidates', async () => {
+    // 1st query: the Công báo serial + issuer lookup; 2nd: the corpus manifest, which holds neither candidate.
+    const results: unknown[][] = [[gazette('36/2019/TT-BKHCN', 'thong_tu'), gazette('36/2016/TT-BKHCN', 'thong_tu')], [{ number: '38/2015/TT-BTC' }]];
+    const s = await new LegalService({ execute: async () => results.shift() ?? [] } as never, embedding).scope('thông tư 36 của bộ KHCN');
+    expect(s).toMatchObject({ requestedDoc: null, missingDoc: 'Thông tư 36 của Bộ Khoa học và Công nghệ', gazetteMatchKind: 'ambiguous' });
+    expect(s.gazetteMatches.map((g) => g.number)).toEqual(['36/2019/TT-BKHCN', '36/2016/TT-BKHCN']);
+  });
+
+  it('gather pins the headings it is given, not the ones the question spells, with room for each note and two chapter notes', async () => {
+    const queries: Array<{ sql: string; params: unknown[] }> = [];
+    const db = {
+      execute: async (q: SQL) => {
+        queries.push(dialect.sqlToQuery(q));
+        return [];
+      },
+    };
+    (headingSections as jest.Mock).mockImplementationOnce(jest.requireActual('./legal.evidence').headingSections);
+    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([]);
+    const headings = ['38.24', '33.07', '30.04', '30.05'];
+    await new LegalService(db as never, embedding).gather('Mã HS 8471.30.20 dùng được không', { asOf: '2026-09-14', headings, cases: true });
+    expect((headingSections as jest.Mock).mock.calls.at(-1)![1]).toEqual(headings);
+    expect((caseSections as jest.Mock).mock.calls.at(-1)![1]).toEqual(headings);
+    const notes = queries.find((q) => q.sql.includes("e.kind = 'en'"))!;
+    expect(notes.params).toEqual(expect.arrayContaining(headings));
+    expect(notes.params.at(-1)).toBe(10); // 4 headings + 2 × 3 chapters
+  });
+
+  it('gather with clauses 0 searches no statute clauses', async () => {
+    (hybridRetrieve as jest.Mock).mockClear();
+    const res = await new LegalService({ execute: async () => [] } as never, embedding).gather('Căn cứ phân loại miếng dán', { asOf: '2026-09-14', clauses: 0 });
+    expect(hybridRetrieve).not.toHaveBeenCalled();
+    expect(res).toEqual({ asOf: '2026-09-14', sources: [] });
+  });
+
+  it('gather keys every source and carries its HS columns and the list metadata a policy check reads', async () => {
+    const article = {
+      articleProvisionId: 73, clauseProvisionId: 74, documentId: 7, documentNumber: '69/2018/NĐ-CP', documentTitle: 't',
+      articleCitation: 'Điều 73', clauseCitation: 'Khoản 2 Điều 73', path: '', articleBody: 'toàn điều', clauseBody: 'khoản',
+      effectiveness: 'con_hieu_luc', effectiveFrom: '2018-05-15', effectiveTo: null, gazetteUrl: null, verification: 'verified',
+      score: 1, bestDist: 0.3, kwHit: true,
+    } as RetrievedArticle;
+    const annex = {
+      id: 36, kind: 'annex_table', instrument: '36/2026/TT-BKHCN', authority: 'binding', title: '36/2026/TT-BKHCN — Bảng 4',
+      body: 'STT | Tên | Mã\n2 | Mũ bảo hiểm | 6506.10.10', documentNumber: '36/2026/TT-BKHCN', effectiveFrom: '2026-07-01',
+      effectiveTo: null, effectiveness: 'con_hieu_luc', verification: 'auto_unverified', status: null, ends: [], window: 'current',
+      score: 1, bestDist: null, hsHeading: null, hsChapter: null, hsCodes: ['6506', '6506.10', '6506.10.10'], meta: { anchor: 'Phụ lục II' },
+      hitText: null,
+    } as RetrievedEvidence;
+    const ruling = { ...annex, id: 812, kind: 'ruling', title: 'CV 1483', body: 'thân', hsHeading: '85.09', hsChapter: 85, hsCodes: [], meta: { case_id: 'c#1', ahtn_2022: { trang_thai: 'hien_hanh' }, hs2022: '8509.40' } };
+    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([article]);
+    (hsCodeSections as jest.Mock).mockResolvedValueOnce([annex]);
+    (caseSections as jest.Mock).mockResolvedValueOnce([ruling]);
+    const { sources } = await new LegalService({ execute: async () => [] } as never, embedding).gather('Mũ bảo hiểm 6506.10.10', {
+      asOf: '2026-09-14',
+      headings: ['85.09'],
+      cases: true,
+    });
+    expect(sources.map((s) => [s.key, s.hs])).toEqual([
+      ['p:73', { heading: null, chapter: null, codes: [] }],
+      ['e:36', { heading: null, chapter: null, codes: ['6506', '6506.10', '6506.10.10'] }],
+      ['e:812', { heading: '85.09', chapter: 85, codes: [] }],
+    ]);
+    expect(sources[0]!.body).toBe('toàn điều');
+    expect(sources[0]!.meta).toEqual({
+      hs_codes: [], document_number: '69/2018/NĐ-CP', anchor: 'Khoản 2 Điều 73', effective_from: '2018-05-15', effective_to: null,
+      effectiveness: 'con_hieu_luc', verification: 'verified',
+    });
+    expect(sources[1]!.meta).toEqual({
+      anchor: 'Phụ lục II', hs_codes: ['6506', '6506.10', '6506.10.10'], document_number: '36/2026/TT-BKHCN', effective_from: '2026-07-01',
+      effective_to: null, effectiveness: 'con_hieu_luc', verification: 'auto_unverified',
+    });
+    // Passed through untouched: hs2022 travels in meta, not as a field of its own.
+    expect(sources[2]!.meta).toMatchObject({ case_id: 'c#1', ahtn_2022: { trang_thai: 'hien_hanh' }, hs2022: '8509.40' });
+  });
+});
+
+describe('legal.evidence SQL — cases out of ranking, a cap per heading, the matched window (review of Việc 8)', () => {
+  const actual = jest.requireActual<typeof import('./legal.evidence')>('./legal.evidence');
+  const dialect = new PgDialect();
+  const capture = (rows: unknown[] = []) => {
+    const queries: Array<{ sql: string; params: unknown[] }> = [];
+    const db = { execute: async (q: SQL) => (queries.push(dialect.sqlToQuery(q)), rows) } as never;
+    return { db, queries };
+  };
+
+  it('evidenceRetrieve drops cases and their windows inside both branches, before their limits spend slots', async () => {
+    const { db, queries } = capture();
+    await actual.evidenceRetrieve(db, { queryText: 'máy xay sinh tố', queryVec: [0], asOf: '2026-09-14' });
+    for (const branch of ['kw', 'vec']) {
+      const cte = queries[0]!.sql.match(new RegExp(`\\b${branch} AS \\(([\\s\\S]*?)LIMIT`))![1]!;
+      expect(cte).toContain("e.meta->>'case_id' IS NULL");
+      expect(cte).toContain("c.source_ref = e.meta->>'parent'");
+    }
+  });
+
+  it('evidenceRetrieve carries the text of the closest window a section was found by', async () => {
+    const { db, queries } = capture([{ id: 5, kind: 'en', body: 'cha', hit_text: 'cửa sổ 3', score: 1, best_dist: 0.3, meta: {} }]);
+    const [e] = await actual.evidenceRetrieve(db, { queryText: 'máy xay', queryVec: [0], asOf: '2026-09-14' });
+    expect(queries[0]!.sql).toMatch(/array_agg\(CASE WHEN par\.id IS NOT NULL THEN w\.body END ORDER BY f\.best_dist NULLS LAST/);
+    expect(e!.hitText).toBe('cửa sổ 3');
+  });
+
+  it('caseSections caps each heading, so an early heading cannot crowd out a later one', async () => {
+    const { db, queries } = capture();
+    await actual.caseSections(db, ['38.24', '30.05', '85.09'], '2026-09-14');
+    const q = queries[0]!;
+    expect(q.sql).toMatch(/row_number\(\) OVER \(PARTITION BY e\.hs_heading ORDER BY e\.id\) AS rn/);
+    expect(q.sql).toMatch(/x\.rn <= \$\d+/);
+    expect(q.params.at(-1)).toBe(2);
+    expect(q.sql).not.toContain('LIMIT');
   });
 });
 
