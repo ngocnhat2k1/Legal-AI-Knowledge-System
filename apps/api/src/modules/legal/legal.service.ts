@@ -5,6 +5,7 @@ import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/databa
 import { EmbeddingService } from './embedding.service';
 import { extractAsOf } from './legal.asof';
 import {
+  caseSections,
   evidenceInstruments,
   evidenceRetrieve,
   headingSections,
@@ -22,6 +23,7 @@ import {
   lookupGazetteLoose,
   parseArticleNo,
   parseDocRef,
+  type ParsedDocRef,
   parseLooseDocRef,
   resolveArticles,
   resolveDocuments,
@@ -68,6 +70,30 @@ export function namedHeadings(query: string): string[] {
 /** Evidence enters the prompt cut here (≈ the embedded window); the citation keeps the whole body. */
 const EVIDENCE_PROMPT_CHARS = 6000;
 
+/** What scope() found for the document a question names: the fields of a missing-document reply, and what gather() scopes to. */
+export interface DocScope extends Pick<LegalAnswer, 'requestedDoc' | 'missingDoc' | 'gazetteMatchKind' | 'gazetteMatches' | 'reason'> {
+  ref: ParsedDocRef | null;
+  documentIds: number[];
+  documentNumbers: string[];
+  /** Named documents held only as evidence sections: a status row, no clauses. */
+  evidenceNumbers: string[];
+}
+
+export interface GatherOpts {
+  /** YYYY-MM-DD; otherwise a date the question states, else today. */
+  asOf?: string | null;
+  /** From scope(); absent = the whole corpus. */
+  doc?: DocScope;
+  /** An Điều number inside `doc`; otherwise read from the question when it names a document. */
+  article?: string | null;
+  /** Codes whose listing sections are pinned; default: the codes the question spells. */
+  hsCodes?: string[];
+  /** Dotted headings whose notes and classification cases are pinned; default: namedHeadings(query). */
+  headings?: string[];
+  /** Most statute clauses kept; 0 searches none. Default: 5, or 2 beside a named heading's Explanatory Note. */
+  clauses?: number;
+}
+
 /**
  * Legal RAG lookup: embed the question → hybrid retrieve (keyword + dense, valid-
  * time hard-filtered) → keep only grounded provisions → optionally synthesise a
@@ -90,6 +116,10 @@ export class LegalService {
 
   private today(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+
+  private asOfFor(query: string, param?: string | null): string {
+    return param && ISO_DATE.test(param) ? param : (extractAsOf(query) ?? this.today());
   }
 
   /** The corpus manifest. Small, stable, and the honest answer to "which docs do you have?". */
@@ -137,13 +167,11 @@ export class LegalService {
     `)) as unknown as LegalProvisionView[];
   }
 
-  async ask(qRaw: string, asOfParam?: string, docParam?: string, articleParam?: string): Promise<LegalAnswer> {
-    const query = (qRaw ?? '').trim();
-    if (query.length < 2) throw new BadRequestException('q must be a non-empty question');
-
-    const asOf =
-      asOfParam && ISO_DATE.test(asOfParam) ? asOfParam : (extractAsOf(query) ?? this.today());
-
+  /**
+   * The document the question (or `doc`) names, resolved against the corpus, the evidence layer and the Công báo
+   * catalogue. When none of the first two holds it, `missingDoc` is set and the caller says so instead of retrieving.
+   */
+  async scope(query: string, docParam?: string | null): Promise<DocScope> {
     // An explicit `doc=` wins and is trusted as-is; a number found inside the question
     // only counts when it is unmistakably a document reference (see ParsedDocRef.confident).
     const inQuery = parseDocRef(query);
@@ -155,76 +183,68 @@ export class LegalService {
       : inQuery?.confident
         ? inQuery
         : null;
-    let documentIds: number[] = [];
-    let evidenceNumbers: string[] = [];
-    let namedNumbers: string[] = [];
+    const found: DocScope = {
+      requestedDoc: ref?.core ?? null,
+      missingDoc: null,
+      gazetteMatchKind: 'none',
+      gazetteMatches: [],
+      reason: null,
+      ref,
+      documentIds: [],
+      documentNumbers: [],
+      evidenceNumbers: [],
+    };
     if (ref) {
       const docs = await resolveDocuments(this.db, ref);
       // No full text, but the evidence layer may hold its status ("replaced by 292/2026/NĐ-CP from 05/09/2026") —
       // which IS the answer to "is it still in force?", and better than "we don't hold it".
-      if (!docs.length) evidenceNumbers = await evidenceInstruments(this.db, ref);
-      if (!docs.length && !evidenceNumbers.length) {
-        // Not in the corpus — but the gazette catalogue may still know what it IS.
-        // "We don't hold it" and "no such document" are different answers.
-        const gazette = await lookupGazette(this.db, ref);
-        return {
-          query,
-          asOf,
-          requestedDoc: ref.core,
-          missingDoc: ref.raw,
-          gazetteMatchKind: gazette.exact ? 'exact' : gazette.matches.length ? 'similar' : 'none',
-          gazetteMatches: gazette.matches.map(({ number, docType, title, sourceUrl }) => ({
-            number,
-            docType,
-            title,
-            sourceUrl,
-          })),
-          abstained: true,
-          reason: `văn bản "${ref.raw}" chưa có trong cơ sở dữ liệu pháp luật đã kiểm chứng`,
-          answer: '',
-          citations: [],
-        };
+      const evidenceNumbers = docs.length ? [] : await evidenceInstruments(this.db, ref);
+      if (docs.length || evidenceNumbers.length) {
+        return { ...found, documentIds: docs.map((d) => d.id), documentNumbers: docs.map((d) => d.number), evidenceNumbers };
       }
-      documentIds = docs.map((d) => d.id);
-      namedNumbers = [...docs.map((d) => d.number), ...evidenceNumbers];
+      // Not in the corpus — but the gazette catalogue may still know what it IS.
+      // "We don't hold it" and "no such document" are different answers.
+      const gazette = await lookupGazette(this.db, ref);
+      return {
+        ...found,
+        missingDoc: ref.raw,
+        gazetteMatchKind: gazette.exact ? 'exact' : gazette.matches.length ? 'similar' : 'none',
+        gazetteMatches: gazette.matches.map(({ number, docType, title, sourceUrl }) => ({ number, docType, title, sourceUrl })),
+        reason: `văn bản "${ref.raw}" chưa có trong cơ sở dữ liệu pháp luật đã kiểm chứng`,
+      };
     }
 
     // No precise number, but the question may still NAME a document the way people say
     // it — "thông tư 36 của bộ Khoa học công nghệ". Answering that from whatever the
     // retriever happens to surface is how a Bộ Công Thương circular got returned for a
     // Bộ Khoa học question; ask the catalogue what they might mean instead.
-    if (!ref) {
-      const loose = parseLooseDocRef(query);
-      if (loose) {
-        const candidates = await lookupGazetteLoose(this.db, loose);
-        const held = new Set(
-          ((await this.documents()) as Array<{ number: string }>).map((d) => d.number.toUpperCase()),
-        );
-        if (!candidates.some((c) => held.has(c.number.toUpperCase()))) {
-          return {
-            query,
-            asOf,
-            requestedDoc: null,
-            missingDoc: loose.label,
-            gazetteMatchKind: candidates.length ? 'ambiguous' : 'none',
-            gazetteMatches: candidates.map(({ number, docType, title, sourceUrl }) => ({
-              number,
-              docType,
-              title,
-              sourceUrl,
-            })),
-            abstained: true,
-            reason: candidates.length
-              ? `chưa nạp toàn văn; trên Công báo có ${candidates.length} thông tư khớp số ${loose.serial} của cơ quan này`
-              : `không tìm thấy thông tư số ${loose.serial} của cơ quan này trên Công báo`,
-            answer: '',
-            citations: [],
-          };
-        }
-      }
-    }
+    const loose = parseLooseDocRef(query);
+    if (!loose) return found;
+    const candidates = await lookupGazetteLoose(this.db, loose);
+    const held = new Set(((await this.documents()) as Array<{ number: string }>).map((d) => d.number.toUpperCase()));
+    if (candidates.some((c) => held.has(c.number.toUpperCase()))) return found;
+    return {
+      ...found,
+      missingDoc: loose.label,
+      gazetteMatchKind: candidates.length ? 'ambiguous' : 'none',
+      gazetteMatches: candidates.map(({ number, docType, title, sourceUrl }) => ({ number, docType, title, sourceUrl })),
+      reason: candidates.length
+        ? `chưa nạp toàn văn; trên Công báo có ${candidates.length} thông tư khớp số ${loose.serial} của cơ quan này`
+        : `không tìm thấy thông tư số ${loose.serial} của cơ quan này trên Công báo`,
+    };
+  }
 
-    const articleNo = articleParam?.replace(/\D/g, '') || (ref ? parseArticleNo(query) : null);
+  /**
+   * Retrieval for one question, no model: statute clauses (relevance-gated) first, then evidence sections — what the
+   * question names outright (status rows of `doc`, sections listing `hsCodes`, notes and cases of `headings`) ahead
+   * of the rest by distance. GET /legal reads codes and headings from the question; POST /answer passes its own.
+   */
+  async gather(query: string, opts: GatherOpts = {}): Promise<{ asOf: string; sources: Source[] }> {
+    const asOf = this.asOfFor(query, opts.asOf);
+    const { doc } = opts;
+    const documentIds = doc?.documentIds ?? [];
+    const evidenceNumbers = doc?.evidenceNumbers ?? [];
+    const articleNo = opts.article?.replace(/\D/g, '') || (doc?.ref ? parseArticleNo(query) : null);
     const articleProvisionIds =
       articleNo && documentIds.length ? await resolveArticles(this.db, documentIds, articleNo) : [];
 
@@ -238,17 +258,19 @@ export class LegalService {
 
     // A document held only as evidence has no clauses to search; a named Điều is a clause lookup, not evidence.
     const onlyEvidence = !documentIds.length && evidenceNumbers.length > 0;
-    const hsInQuery = [...new Set(query.match(HS_CODE) ?? [])];
-    const [all, evidence, named, byCode, byHeading] = await Promise.all([
-      onlyEvidence
+    const hsCodes = opts.hsCodes ?? [...new Set(query.match(HS_CODE) ?? [])];
+    const headings = articleProvisionIds.length ? [] : (opts.headings ?? namedHeadings(query));
+    const [all, evidence, named, byCode, byHeading, cases] = await Promise.all([
+      onlyEvidence || opts.clauses === 0
         ? Promise.resolve([] as RetrievedArticle[])
         : hybridRetrieve(this.db, { queryText: query, queryVec: vec, asOf, topK: TOP_K, documentIds, articleProvisionIds }),
       articleProvisionIds.length
         ? Promise.resolve([] as RetrievedEvidence[])
         : evidenceRetrieve(this.db, { queryText: query, queryVec: vec, asOf, documentNumbers: evidenceNumbers }),
-      namedStatus(this.db, namedNumbers, asOf),
-      hsCodeSections(this.db, hsInQuery, asOf),
-      articleProvisionIds.length ? Promise.resolve([] as RetrievedEvidence[]) : headingSections(this.db, namedHeadings(query), asOf),
+      namedStatus(this.db, [...(doc?.documentNumbers ?? []), ...evidenceNumbers], asOf),
+      hsCodeSections(this.db, hsCodes, asOf),
+      headingSections(this.db, headings, asOf),
+      caseSections(this.db, headings, asOf),
     ]);
 
     // The relevance gate exists to stop the dense branch handing back its nearest
@@ -259,32 +281,43 @@ export class LegalService {
     // A named heading brings its notes, and a question about a heading is rarely about statute clauses: two at most, or
     // the prompt outgrows the writing call (a code check with five clauses and six notes timed out, 14/09/2026).
     // Only a heading whose Explanatory Note came back caps them: chapter notes alone must not cost a legal answer its clauses.
-    const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, byHeading.some((e) => e.kind === 'en') ? 2 : MAX_CITATIONS);
+    const clauses = opts.clauses ?? (byHeading.some((e) => e.kind === 'en') ? 2 : MAX_CITATIONS);
+    const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, clauses);
     const limit = Math.min(EVIDENCE_MAX_DIST, Math.min(...all.map((a) => a.bestDist ?? Infinity)) + EVIDENCE_MARGIN);
     // What the question names outright — a document's status row, a section listing its HS code — may be the whole
     // answer ("replaced from 05/09/2026", "high-risk list of TT 36/2026"), so it is never cut.
-    const pinned = [...named, ...byCode, ...byHeading].filter((e, i, a) => a.findIndex((x) => x.id === e.id) === i);
+    const pinned = [...named, ...byCode, ...byHeading, ...cases].filter((e, i, a) => a.findIndex((x) => x.id === e.id) === i);
     // Closest first: RRF lets a long section that merely repeats the query words outrank the right one.
     const ranked = (onlyEvidence ? evidence : evidence.filter((e) => e.bestDist != null && e.bestDist <= limit))
       .filter((e) => !pinned.some((p) => p.id === e.id))
       .sort((a, b) => (a.bestDist ?? 1) - (b.bestDist ?? 1));
     const keptEvidence = [...pinned, ...ranked].slice(0, Math.max(EVIDENCE_K, pinned.length));
-    const sources = [...kept.map(articleSource), ...keptEvidence.map((e) => evidenceSource(e, asOf, hsInQuery))];
-    const scope = {
-      requestedDoc: ref?.core ?? null,
-      missingDoc: null,
-      gazetteMatchKind: 'none' as const,
-      gazetteMatches: [],
-    };
+    return { asOf, sources: [...kept.map(articleSource), ...keptEvidence.map((e) => evidenceSource(e, asOf, hsCodes))] };
+  }
 
+  async ask(qRaw: string, asOfParam?: string, docParam?: string, articleParam?: string): Promise<LegalAnswer> {
+    const query = (qRaw ?? '').trim();
+    if (query.length < 2) throw new BadRequestException('q must be a non-empty question');
+
+    const asOf = this.asOfFor(query, asOfParam);
+    const doc = await this.scope(query, docParam);
+    const head = {
+      query,
+      asOf,
+      requestedDoc: doc.requestedDoc,
+      missingDoc: doc.missingDoc,
+      gazetteMatchKind: doc.gazetteMatchKind,
+      gazetteMatches: doc.gazetteMatches,
+    };
+    if (doc.missingDoc) return { ...head, abstained: true, reason: doc.reason, answer: '', citations: [] };
+
+    const { sources } = await this.gather(query, { asOf, doc, article: articleParam });
     if (sources.length === 0) {
       return {
-        query,
-        asOf,
-        ...scope,
+        ...head,
         abstained: true,
-        reason: ref
-          ? `không tìm thấy điều khoản liên quan trong ${ref.raw}`
+        reason: doc.ref
+          ? `không tìm thấy điều khoản liên quan trong ${doc.ref.raw}`
           : 'không tìm thấy điều khoản liên quan trong cơ sở dữ liệu pháp luật đã kiểm chứng',
         answer: '',
         citations: [],
@@ -313,9 +346,7 @@ export class LegalService {
      */
     if (gen?.abstain) {
       return {
-        query,
-        asOf,
-        ...scope,
+        ...head,
         abstained: true,
         reason: gen.reason ?? 'các điều khoản truy hồi được không đủ căn cứ để trả lời câu hỏi này',
         answer: '',
@@ -327,9 +358,7 @@ export class LegalService {
     // before generation existed. Distinct from an abstention: nothing has judged them.
     if (!gen || !gen.answer) {
       return {
-        query,
-        asOf,
-        ...scope,
+        ...head,
         abstained: false,
         reason: gen?.reason ?? 'chưa tổng hợp được câu trả lời chắc chắn — dưới đây là điều khoản liên quan nhất để đối chiếu',
         answer: '',
@@ -352,9 +381,7 @@ export class LegalService {
       // The model cited nothing we retrieved, or stated a rate or amount its source does not
       // contain → ungrounded. Drop the prose, keep the verbatim provisions as references.
       return {
-        query,
-        asOf,
-        ...scope,
+        ...head,
         abstained: false,
         reason: 'câu trả lời chưa dẫn được điều khoản đã truy hồi — hiển thị điều khoản liên quan để đối chiếu',
         answer: '',
@@ -364,9 +391,7 @@ export class LegalService {
 
     // Contract: [n] in `answer` points at citations[n-1].
     return {
-      query,
-      asOf,
-      ...scope,
+      ...head,
       abstained: false,
       reason: null,
       answer: marked.answer,
@@ -375,16 +400,43 @@ export class LegalService {
   }
 }
 
-interface Source extends PromptSource {
+export interface Source extends PromptSource {
+  /** 'p:<article provision id>' or 'e:<evidence section id>': what POST /answer merges and cites by. */
+  key: string;
+  /** The whole text `text` was cut from: the full article, or the section with the lines naming asked codes first. */
+  body: string;
+  hs: { heading: string | null; chapter: number | null; codes: string[] };
+  /**
+   * evidence_section.meta untouched (case_id, ahtn_2022, hs2022, anchor, …), plus what a list check reads (plan 08 §0):
+   * hs_codes, document_number, anchor (annex title or clause label), effective_from, effective_to, effectiveness, verification.
+   */
+  meta: Record<string, unknown>;
   citation: LegalCitation;
 }
 
-function articleSource(a: RetrievedArticle): Source {
-  return { label: a.articleCitation, note: null, text: a.articleBody, citation: toCitation(a) };
+export function articleSource(a: RetrievedArticle): Source {
+  return {
+    key: `p:${a.articleProvisionId}`,
+    label: a.articleCitation,
+    note: null,
+    text: a.articleBody,
+    body: a.articleBody,
+    hs: { heading: null, chapter: null, codes: [] },
+    meta: {
+      hs_codes: [],
+      document_number: a.documentNumber,
+      anchor: a.clauseCitation,
+      effective_from: a.effectiveFrom,
+      effective_to: a.effectiveTo,
+      effectiveness: a.effectiveness,
+      verification: a.verification,
+    },
+    citation: toCitation(a),
+  };
 }
 
 /** How each authority reads to the model and to the person (spec §4 principle 3). Binding needs no label. */
-const AUTHORITY_NOTE: Record<string, string | null> = {
+export const AUTHORITY_NOTE: Record<string, string | null> = {
   binding: null,
   authoritative: 'tài liệu hướng dẫn áp dụng của cơ quan hải quan, không phải văn bản quy phạm pháp luật',
   administrative: 'công văn hành chính, kết luận áp cho đúng mặt hàng và hồ sơ được nêu',
@@ -399,14 +451,14 @@ const dmy = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice
  * cut keeps them (spec §3.4). TT 36/2026 lists 6506.10.10 past character 6,000 of a 15,000-character annex block: cut
  * as it stood, the model never saw the helmet row and leaned on the internal summary sheet instead (2026-09-14).
  */
-function focusOn(body: string, codes: string[]): string {
+export function focusOn(body: string, codes: string[]): string {
   const lines = body.split('\n');
   const hit = (l: string) => codes.some((c) => l.includes(c));
   if (!codes.length || !lines.slice(2).some(hit)) return body;
   return [...lines.slice(0, 2), ...lines.slice(2).filter(hit), '…', ...lines.slice(2).filter((l) => !hit(l))].join('\n');
 }
 
-function evidenceSource(e: RetrievedEvidence, asOf: string, codes: string[] = []): Source {
+export function evidenceSource(e: RetrievedEvidence, asOf: string, codes: string[] = []): Source {
   const body = focusOn(e.body, codes);
   const part = (x: StatusEnd) => (x.scope ? ` (phần: ${x.scope})` : '');
   const past = e.ends.filter((x) => x.from <= asOf);
@@ -427,9 +479,22 @@ function evidenceSource(e: RetrievedEvidence, asOf: string, codes: string[] = []
       .filter(Boolean)
       .join(' · ') || null;
   return {
+    key: `e:${e.id}`,
     label: e.title,
     note: [expired, note].filter(Boolean).join(' · ') || null,
     text: body.slice(0, EVIDENCE_PROMPT_CHARS),
+    body,
+    hs: { heading: e.hsHeading, chapter: e.hsChapter, codes: e.hsCodes },
+    meta: {
+      ...e.meta,
+      hs_codes: e.hsCodes,
+      document_number: e.documentNumber,
+      anchor: e.meta.anchor ?? e.title,
+      effective_from: e.effectiveFrom,
+      effective_to: e.effectiveTo,
+      effectiveness: e.effectiveness,
+      verification: e.verification,
+    },
     citation: {
       documentNumber: e.documentNumber ?? e.instrument,
       documentTitle: e.title,

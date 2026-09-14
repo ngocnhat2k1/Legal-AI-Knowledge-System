@@ -35,6 +35,12 @@ export interface RetrievedEvidence {
   title: string;
   body: string;
   documentNumber: string | null;
+  /** The heading an Explanatory Note or a classification case is filed under ('30.05'). */
+  hsHeading: string | null;
+  /** The chapter of a chapter note. */
+  hsChapter: number | null;
+  /** HS codes the section lists, parent levels included. */
+  hsCodes: string[];
   effectiveFrom: string | null;
   effectiveTo: string | null;
   effectiveness: string;
@@ -43,6 +49,8 @@ export interface RetrievedEvidence {
   status: string | null;
   /** Status rows only: when the instrument stops applying. Empty for every other kind. */
   ends: StatusEnd[];
+  /** evidence_section.meta as stored: anchor, hs2022, also_headings, case_id, ahtn_2022, part, parent, … */
+  meta: Record<string, unknown>;
   window: 'current' | 'upcoming';
   score: number;
   bestDist: number | null;
@@ -63,10 +71,14 @@ const valid = (d: SQL) => sql`(e.effective_from IS NULL OR e.effective_from <= (
   AND (e.effective_to IS NULL OR ${d} <= e.effective_to) AND e.effectiveness <> 'het_hieu_luc'`;
 
 const columns = (d: SQL) => sql`e.id, e.kind, e.instrument, e.authority, e.title, e.body, e.document_number,
-  e.effective_from::text AS effective_from, e.effective_to::text AS effective_to,
-  e.effectiveness, e.verification, e.meta->>'status' AS status, e.meta->'ends' AS ends,
+  e.hs_heading, e.hs_chapter, e.hs_codes, e.meta,
+  e.effective_from::text AS effective_from, e.effective_to::text AS effective_to, e.effectiveness, e.verification,
   CASE WHEN e.effective_from > ${d} THEN 'upcoming' ELSE 'current' END AS "window"`;
 
+/**
+ * A window row (meta.part) comes back as the whole section it was cut from (meta.parent = the parent's source_ref).
+ * Classification cases never come from here: they enter by heading only (caseSections).
+ */
 export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts): Promise<RetrievedEvidence[]> {
   const { queryText, queryVec, asOf, topK = 10, candPerBranch = 50 } = opts;
   const d = sql`p.d`;
@@ -96,10 +108,19 @@ export async function evidenceRetrieve(db: Database, opts: EvidenceRetrieveOpts)
       GROUP BY id
       ORDER BY score DESC
       LIMIT ${topK}
+    ),
+    sections AS (
+      SELECT coalesce(par.id, w.id) AS id, max(f.score) AS score, min(f.best_dist) AS best_dist
+      FROM fused f
+      JOIN evidence_section w ON w.id = f.id
+      LEFT JOIN evidence_section par ON par.kind = w.kind AND par.instrument = w.instrument
+        AND par.source_ref = w.meta->>'parent' AND par.meta->>'part' IS NULL
+      GROUP BY 1
     )
-    SELECT ${columns(d)}, f.score::float8 AS score, f.best_dist::float8 AS best_dist
-    FROM fused f JOIN evidence_section e ON e.id = f.id, params p
-    ORDER BY f.score DESC
+    SELECT ${columns(d)}, s.score::float8 AS score, s.best_dist::float8 AS best_dist
+    FROM sections s JOIN evidence_section e ON e.id = s.id, params p
+    WHERE e.meta->>'case_id' IS NULL
+    ORDER BY s.score DESC
   `)) as unknown as Array<Record<string, unknown>>;
   return rows.map(toEvidence);
 }
@@ -125,7 +146,7 @@ export async function namedStatus(db: Database, documentNumbers: string[], asOf:
  * nào") — the list that contains the code IS the answer, and the simple parser cannot match "6506.10.10" by
  * keyword. Binding sources first. A list entry covers its children ("2404.11" lists 2404.11.00), and a heading asked
  * finds its listed lines; entries shorter than four digits never match. Window rows (meta.part) are left to retrieval:
- * a pin returns the whole section.
+ * a pin returns the whole section. Classification cases list codes too, but enter by heading only (caseSections).
  */
 export async function hsCodeSections(db: Database, codes: string[], asOf: string, limit = 3): Promise<RetrievedEvidence[]> {
   if (!codes.length) return [];
@@ -133,7 +154,7 @@ export async function hsCodeSections(db: Database, codes: string[], asOf: string
   const rows = (await db.execute(sql`
     SELECT ${columns(d)}, 1::float8 AS score, NULL::float8 AS best_dist
     FROM evidence_section e
-    WHERE e.meta->>'part' IS NULL AND ${valid(d)}
+    WHERE e.meta->>'part' IS NULL AND e.meta->>'case_id' IS NULL AND ${valid(d)}
       AND EXISTS (
         SELECT 1 FROM unnest(e.hs_codes) c, unnest(ARRAY[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[]) q
         WHERE length(replace(c, '.', '')) >= 4
@@ -149,9 +170,11 @@ export async function hsCodeSections(db: Database, codes: string[], asOf: string
 /**
  * The Explanatory Notes of the headings a question names (as `30.05`) and the HS notes of their chapters. "3005.10.10
  * gồm những hàng gì, khác 3005.90 chỗ nào" names heading 30.05 only as digits, which neither branch matches to the
- * note titled "nhóm 30.05": the model abstained with that note in the table (observed 2026-09-14).
+ * note titled "nhóm 30.05": the model abstained with that note in the table (observed 2026-09-14). The default limit
+ * leaves room for one note per heading and two notes per chapter: a flat 6 cut the chapter notes of a four-heading
+ * code check (review 2026-09-14 #6).
  */
-export async function headingSections(db: Database, headings: string[], asOf: string, limit = 6): Promise<RetrievedEvidence[]> {
+export async function headingSections(db: Database, headings: string[], asOf: string, limit?: number): Promise<RetrievedEvidence[]> {
   if (!headings.length) return [];
   const d = sql`${asOf}::date`;
   const chapters = [...new Set(headings.map((h) => Number(h.slice(0, 2))))];
@@ -163,12 +186,33 @@ export async function headingSections(db: Database, headings: string[], asOf: st
            OR (e.kind = 'hs_note' AND e.hs_chapter IN ${inIds(chapters)}))
       AND e.meta->>'part' IS NULL AND ${valid(d)}
     ORDER BY CASE e.kind WHEN 'en' THEN 0 ELSE 1 END, e.hs_heading, e.hs_chapter, e.id
+    LIMIT ${limit ?? headings.length + 2 * chapters.length}
+  `)) as unknown as Array<Record<string, unknown>>;
+  return rows.map(toEvidence);
+}
+
+/**
+ * Classification cases (ruling rows carrying meta.case_id) filed under the headings asked, and only while the case's
+ * code still stands in AHTN 2022: a case whose code was split or dropped concluded under an old catalogue (plan 08 §0,
+ * G11). ponytail: two per heading on average, ordered by heading and id; the seed holds at most three per heading
+ * (2026-09-14) — rank them when a heading gathers more.
+ */
+export async function caseSections(db: Database, headings: string[], asOf: string, limit = 2 * headings.length): Promise<RetrievedEvidence[]> {
+  if (!headings.length) return [];
+  const d = sql`${asOf}::date`;
+  const rows = (await db.execute(sql`
+    SELECT ${columns(d)}, 1::float8 AS score, NULL::float8 AS best_dist
+    FROM evidence_section e
+    WHERE e.kind = 'ruling' AND e.meta->>'case_id' IS NOT NULL AND e.hs_heading IN ${inIds(headings)}
+      AND starts_with(e.meta->'ahtn_2022'->>'trang_thai', 'hien_hanh') AND e.meta->>'part' IS NULL AND ${valid(d)}
+    ORDER BY e.hs_heading, e.id
     LIMIT ${limit}
   `)) as unknown as Array<Record<string, unknown>>;
   return rows.map(toEvidence);
 }
 
 function toEvidence(r: Record<string, unknown>): RetrievedEvidence {
+  const meta = (r.meta ?? {}) as Record<string, unknown>;
   return {
     id: Number(r.id),
     kind: String(r.kind),
@@ -177,12 +221,16 @@ function toEvidence(r: Record<string, unknown>): RetrievedEvidence {
     title: String(r.title),
     body: String(r.body),
     documentNumber: (r.document_number as string | null) ?? null,
+    hsHeading: (r.hs_heading as string | null) ?? null,
+    hsChapter: r.hs_chapter == null ? null : Number(r.hs_chapter),
+    hsCodes: Array.isArray(r.hs_codes) ? (r.hs_codes as string[]) : [],
     effectiveFrom: (r.effective_from as string | null) ?? null,
     effectiveTo: (r.effective_to as string | null) ?? null,
     effectiveness: String(r.effectiveness),
     verification: String(r.verification),
-    status: (r.status as string | null) ?? null,
-    ends: Array.isArray(r.ends) ? (r.ends as StatusEnd[]) : [],
+    status: typeof meta.status === 'string' ? meta.status : null,
+    ends: Array.isArray(meta.ends) ? (meta.ends as StatusEnd[]) : [],
+    meta,
     window: r.window === 'upcoming' ? 'upcoming' : 'current',
     score: Number(r.score),
     bestDist: r.best_dist == null ? null : Number(r.best_dist),
