@@ -297,6 +297,32 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     expect(res.tariff).toBe(t);
   });
 
+  it('a tariff follow-up naming no code looks up the state\'s code as a key: never prompted in any spelling, never a userCodes line (R4)', async () => {
+    const t = tariffOf([{ ...rate('AJCEP', 'ASEAN–Nhật Bản', 'Theo dòng 10 số: 8481.80.99.10 Van bi: 0%; 84818099 90 Loại khác: 5%'), form: 'AJ', requiresCo: true }]);
+    const { svc, tariff, prompts } = setup({ drafts: [TARIFF_DRAFT], tariff: t });
+    const body: AnswerRequest = {
+      q: 'còn từ Nhật thì sao',
+      context: { topic: 'tariff', state: { tariff: { dotted: '8481.80.99', origin: 'CN' } }, turns: [{ role: 'user', body: 'thuế nk 8481.80.99 tq' }] },
+      plan: { intent: 'tariff', origin: 'JP', date: '2026-09-01' },
+      forceIntent: 'tariff',
+    };
+    const res = await svc.answer(body);
+    expect(tariff.lookup).toHaveBeenCalledWith('84818099', 'JP', '2026-09-01');
+    const [compose] = prompts(SYSTEM);
+    expect(compose!.prompt).toContain('Van bi');
+    expect(compose!.prompt.replace(/[.\s]/g, '')).not.toMatch(/8481/);
+    expect(res).toMatchObject({ mode: 'tariff', userCodes: [], answerMd: TARIFF_DRAFT.answerMd, calls: 1 });
+    expect(res.tariff).toBe(t);
+
+    // No 8-digit state code, or a planned tariff turn that neither is forced nor reuses the last code: the plan alone, as before.
+    const planned = { q: 'van bi bằng đồng thuế bao nhiêu', context: body.context };
+    for (const [f, req] of [[{}, { ...body, context: { state: { tariff: { dotted: '8481.80' } } } }], [{ plan: { intent: 'tariff' } }, planned]] as const) {
+      const other = setup({ ...f, drafts: [TARIFF_DRAFT], tariff: t });
+      expect(await other.svc.answer(req)).toMatchObject({ mode: null, answerMd: '' });
+      expect(other.tariff.lookup).not.toHaveBeenCalled();
+    }
+  });
+
   it('R4 addendum: a premise hs turn looks up no rate for the user code, and no prompt line carries it', async () => {
     const t = tariffOf([{ ...rate('ACFTA', 'ASEAN–Trung Quốc', 'Theo dòng 10 số: 3005.10.10.10 Miếng dán: 0%'), form: 'E', requiresCo: true }]);
     const { svc, prompts, tariff } = setup({ plan: PHOTO_PLAN, drafts: [PHOTO_DRAFT], sources: [EN3005], tariff: t, lines: [{ prefix: '3005', heading: HEADING_TEXT }] });

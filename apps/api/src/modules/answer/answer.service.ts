@@ -189,6 +189,12 @@ export class AnswerService {
     // §4.2: a subject is only a lookup key for legal, status or mixed; a premise turns those into hs.
     if (role === 'subject' && !LEGAL.includes(intent)) role = 'premise';
     if (role === 'premise' && LEGAL.includes(intent)) intent = 'hs';
+    // "còn từ Nhật thì sao": a tariff turn naming no code, forced by the bot or reusing the last code, looks up the code the
+    // state holds — a key the user did not write this turn, so no userCodes line, and its digits reach no prompt (R4).
+    const reuses = intent === 'tariff' && role === 'none' && (forced === 'tariff' || plan.reuseLastHs);
+    const held = reuses && /^\d{4}\.\d{2}\.\d{2}$/.test(String(state.tariff?.dotted)) ? userCodes(state.tariff!.dotted!) : [];
+    if (held.length) role = 'key';
+    const keys = [...users, ...held];
     const mode: ComposeMode | null = PROSE.includes(intent) ? (intent as ComposeMode) : intent === 'tariff' && role === 'key' ? 'tariff' : null;
 
     const finish = async (part: Partial<AnswerResponse>, lines?: Map<string, string | null>): Promise<AnswerResponse> => {
@@ -239,7 +245,7 @@ export class AnswerService {
     if (!mode) return finish({}); // general, confirm, correction, a tariff question without a code: the bot's branches
 
     const asOf = isIsoDate(body.asOf) ? body.asOf : (extractAsOf(q) ?? todayVN());
-    const code8 = users.find((u) => u.level === 8);
+    const code8 = keys.find((u) => u.level === 8);
     const tariff =
       code8 && (mode === 'tariff' || (mode === 'mixed' && role === 'subject'))
         ? await timed('retrieve', () => this.lookup(digits(code8.code), plan.origin, plan.date ?? asOf))
@@ -284,7 +290,7 @@ export class AnswerService {
     ];
     if (role === 'premise' || role === 'key') {
       // What the model is told about the question and what retrieval runs on, never the evidence: D1 lets a premise heading's notes in.
-      const latch = assertNoUserCodes(parts, users, role);
+      const latch = assertNoUserCodes(parts, keys, role);
       parts = latch.parts;
       leakDrops.push(...latch.leakDrops);
     }
@@ -393,7 +399,7 @@ export class AnswerService {
         // The latch before every spawn (§4.2 step 4): a sentence or quote copied from evidence may name the user's own code.
         // D1 lets its heading in, never a deeper code; such an item is not sent, and its sentence stays cut.
         if (role !== 'premise' && role !== 'key') return true;
-        const drops = assertNoUserCodes([{ name: 'repair', text: [it.sentence, ...it.quotes].join('\n') }], users.filter((u) => u.level > 4), 'key').leakDrops;
+        const drops = assertNoUserCodes([{ name: 'repair', text: [it.sentence, ...it.quotes].join('\n') }], keys.filter((u) => u.level > 4), 'key').leakDrops;
         leakDrops.push(...drops);
         return !drops.length;
       });
