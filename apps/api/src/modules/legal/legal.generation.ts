@@ -88,7 +88,13 @@ export async function generate(
   if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) return null;
   const prompt = buildPrompt(query, asOf, sources, facts);
   try {
-    const stdout = await runClaude(prompt, { timeoutMs: WRITE_TIMEOUT_MS });
+    const res = await runClaude(prompt, { timeoutMs: WRITE_TIMEOUT_MS });
+    if (!res || res.isError) {
+      // The runner already logged why a null came back. An is_error result can be model prose restating the question: size only.
+      console.warn(`[legal] generation failed after ${sources.length} sources: ${res ? `is_error (${res.text.length} chars)` : 'no result'}`);
+      return null;
+    }
+    const stdout = res.text;
     const m = stdout.match(/\{[\s\S]*\}/);
     if (!m) {
       console.warn(`[legal] generation returned no JSON (${stdout.length} chars)`);
@@ -110,7 +116,7 @@ export async function generate(
       reason: j.reason ? String(j.reason) : null,
     };
   } catch (e) {
-    // CLI missing, timeout, or unparseable — fall back to citations-only. Only the error goes to the log, never the prompt.
+    // Unparseable JSON, or no temp dir for the CLI — fall back to citations-only. Only the error goes to the log, never the prompt.
     console.warn(`[legal] generation failed after ${sources.length} sources: ${String((e as Error)?.message ?? e).slice(0, 200)}`);
     return null;
   }
