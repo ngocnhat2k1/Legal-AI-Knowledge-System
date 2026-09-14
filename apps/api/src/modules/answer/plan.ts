@@ -5,6 +5,8 @@
  */
 import { statedIn } from '../legal/legal.grounding';
 import { foldDocNumber, parseDocRef } from '../legal/legal.scope';
+import type { ClaudeOpts, ClaudeResult } from './claude';
+import { looseJson } from './compose';
 
 export const INTENTS = ['tariff', 'hs', 'legal', 'status', 'mixed', 'general', 'confirm', 'correction', 'refine'] as const;
 export type Intent = (typeof INTENTS)[number];
@@ -212,6 +214,154 @@ export function normalizePlan(raw: unknown, userTexts: string[]): Plan | null {
     verdict: o.verdict === 'correct' || o.verdict === 'wrong' || o.verdict === 'unsure' ? o.verdict : null,
     reply: str(o.reply, 1500),
   };
+}
+
+// --- The plan call (Việc 6) --------------------------------------------------------------------------------------------
+
+/** What the bot keeps between turns that a plan may read (conversation state, plan 08 §6.1). */
+export interface PlanState {
+  tariff?: { dotted?: string | null; origin?: string | null; desc?: string | null; candidates?: string[] } | null;
+  legal?: { query?: string | null; question?: string | null; citations?: Array<{ provisionLabel?: string | null }>; missingDoc?: string | null } | null;
+  answer?: { mode?: string | null; question?: string | null } | null;
+}
+
+export interface PlanInput {
+  text: string;
+  quote: string | null;
+  topic: string | null;
+  state: PlanState;
+  turns: Array<{ role: string; body: string }>;
+  documents: Array<{ number: string; title?: string | null; consolidates?: string | null }>;
+}
+
+export type Runner = (prompt: string, opts: ClaudeOpts) => Promise<ClaudeResult | null>;
+
+export interface PlanStepResult {
+  plan: Plan;
+  /** Every code the parts carried, in [mã n] order: the service gives a subject's codes back. */
+  codes: string[];
+  codeRole: CodeRole;
+  userCodes: UserCode[];
+  /** Names of prompt parts the latch dropped: logged, never their text. */
+  leakDrops: string[];
+  calls: number;
+  /** The model gave no usable plan; defaultPlan stood in. */
+  fallback: boolean;
+}
+
+/** Measured on the server 2026-09-14: a plan-size prompt at sonnet/low took 22–30 s. */
+export const PLAN_TIMEOUT_MS = 30_000;
+
+export const PLAN_SYSTEM = [
+  'Bạn là bước KẾ HOẠCH của trợ lý biểu thuế + pháp luật Việt Nam, đang đọc tin nhắn của một chuyên viên xuất nhập khẩu.',
+  'Đọc CẢ hội thoại, HIỂU người hỏi thật sự cần gì, rồi trả về đúng một JSON một dòng, không chữ nào ngoài JSON.',
+  'Mọi mã và nhóm HS đã được thay bằng [mã 1], [mã 2]…: bạn không thấy chữ số, đừng đoán chúng. Không phải câu nào có mã cũng là hỏi thuế.',
+  '',
+  'intent:',
+  '- tariff: hỏi THUẾ SUẤT của một mã đã nêu ("thuế bao nhiêu", "còn từ Nhật thì sao").',
+  '- hs: nhờ TÌM mã cho một mặt hàng; hỏi mã đã nêu có đúng, phù hợp, dùng được cho hàng không; vì sao hàng vào nhóm này mà không vào nhóm kia; hoặc bổ sung dữ kiện hàng cho câu vừa hỏi.',
+  '- legal: hỏi nội dung văn bản pháp luật (mọi lĩnh vực), hoặc giải nghĩa một mã/nhóm, chú giải, SEN, quy tắc GRI, danh mục chính sách.',
+  '- status: hỏi một văn bản còn hiệu lực, bị thay thế hay chưa có hiệu lực.',
+  '- mixed: vừa hỏi thuế suất vừa hỏi một điều pháp lý về cùng mặt hàng.',
+  '- general: chào hỏi, hỏi bot làm được gì.',
+  '- confirm: chỉ xác nhận kết quả tra thuế vừa rồi đúng/sai/không chắc.',
+  '- correction: đưa MÃ ĐÚNG để sửa kết quả tra thuế vừa rồi.',
+  '- refine: nói câu trả lời vừa rồi chưa đúng ý, muốn tìm lại mà chưa nêu đáp án. Lượt trước là pháp luật thì "không phải/sai rồi" là refine, không bao giờ là correction.',
+  '',
+  'Các trường (thiếu thì null hoặc mảng rỗng):',
+  '{"intent":"…",',
+  '"understanding":"≤ 30 từ, người hỏi cần gì — không chữ số, không mã",',
+  '"question":"MỘT câu hỏi ĐỘC LẬP ghép ngữ cảnh các lượt trước, giữ nguyên nhãn [mã n]",',
+  '"queries":["tối đa 2 cách diễn đạt khác để tìm nguồn; một câu viết như câu trả lời giả định"],',
+  '"goods":{"facts":["chỉ đặc điểm hàng người dùng ĐÃ VIẾT — không thêm công dụng, không suy"],"missing":["tối đa 3 dữ kiện còn thiếu có thể quyết định nhóm"]},',
+  '"refines":<true nếu tin này bổ sung hay sửa dữ kiện cho câu vừa hỏi>,',
+  '"scope":{"doc":"số hiệu văn bản người dùng nhắm tới hoặc null","article":"số Điều hoặc null","clause":"số Khoản hoặc null"},',
+  '"keywords":["2-4 từ khoá tiếng Việt theo CHỨC NĂNG hàng, khi intent là hs hoặc tariff"],',
+  '"hsHints":["3-6 nhóm HS 4-6 số ứng viên theo MÔ TẢ HÀNG, xếp cao→thấp, gồm cả nhóm cạnh tranh"],',
+  '"origin":"mã nước 2 chữ ISO hoặc null","date":"YYYY-MM-DD hoặc null",',
+  '"reuseLastHs":<true nếu hỏi tiếp về chính mã vừa tra>,',
+  '"verdict":"correct|wrong|unsure khi intent=confirm, else null",',
+  '"reply":"chỉ khi intent=general: ≤ 80 từ, chỉ nói việc bot làm được — tra thuế theo mã, tìm và đối chiếu mã HS có giải thích chú giải, hỏi văn bản pháp luật; không con số, không số hiệu, không mã"}',
+  '',
+  'Phân loại hàng theo CHỨC NĂNG (thiết bị làm gì) và luôn cân nhắc nhóm cạnh tranh.',
+].join('\n');
+
+const transcriptOf = (turns: PlanInput['turns']): string =>
+  turns.length
+    ? turns
+        .slice(-6)
+        .map((t) => `${t.role === 'user' ? 'NGƯỜI DÙNG' : 'BOT'}: ${String(t.body ?? '').replace(/\s+/g, ' ').slice(0, 300)}`)
+        .join('\n')
+    : '(chưa có lượt nào trước đó)';
+
+/** What the pronouns in the new message can point at. */
+function stateOf(topic: string | null, state: PlanState): string {
+  const bits = [`chủ đề đang bàn: ${topic ?? 'chưa có'}`];
+  const t = state.tariff;
+  if (t?.dotted) bits.push(`mã HS vừa tra: ${t.dotted}${t.origin ? ` · xuất xứ ${t.origin}` : ''}${t.desc ? ` (${t.desc})` : ''}`);
+  if (t?.candidates?.length) bits.push(`nhóm ứng viên vừa nêu cho ${t.desc || 'mặt hàng'}: ${t.candidates.join(', ')}`);
+  const question = state.answer?.question ?? state.legal?.question ?? state.legal?.query;
+  if (question) bits.push(`câu hỏi vừa trả lời: ${String(question).slice(0, 200)}`);
+  const cites = (state.legal?.citations ?? []).map((c) => c.provisionLabel).filter(Boolean);
+  if (cites.length) bits.push(`nguồn vừa trích: ${cites.slice(0, 3).join(' · ')}`);
+  if (state.legal?.missingDoc) bits.push(`văn bản người dùng hỏi mà kho KHÔNG có: ${state.legal.missingDoc}`);
+  return bits.join('\n');
+}
+
+const manifestOf = (docs: PlanInput['documents']): string =>
+  docs.length
+    ? docs.map((d) => `- ${d.number}${d.consolidates ? ` (hợp nhất ${d.consolidates})` : ''}: ${String(d.title ?? '').slice(0, 70)}`).join('\n')
+    : '(không đọc được danh mục)';
+
+/** The conversation parts the plan reads, every code masked with one shared numbering, the new message first so its code is [mã 1]. */
+export function planParts(input: PlanInput): { parts: PromptPart[]; codes: string[] } {
+  let book: string[] = [];
+  const mask = (t: string): string => {
+    const r = maskCodes(t, book);
+    book = r.codes;
+    return r.text;
+  };
+  const parts: PromptPart[] = [{ name: 'message', text: mask(String(input.text ?? '').replace(/["\n]/g, ' ').slice(0, 600)) }];
+  if (input.quote) parts.push({ name: 'quote', text: mask(input.quote.replace(/\s+/g, ' ').slice(0, 600)) });
+  parts.push({ name: 'turns', text: mask(transcriptOf(input.turns)) }, { name: 'state', text: mask(stateOf(input.topic, input.state)) });
+  return { parts, codes: book };
+}
+
+/** The user prompt of the plan call; a part the latch dropped says so instead of silently vanishing. */
+export function buildPlanInput(parts: PromptPart[], documents: PlanInput['documents']): string {
+  const part = (name: string): string | undefined => parts.find((p) => p.name === name)?.text;
+  const quote = part('quote');
+  return [
+    'HỘI THOẠI GẦN ĐÂY:',
+    part('turns') ?? '(đã lược)',
+    '',
+    'NGỮ CẢNH ĐANG MỞ:',
+    part('state') ?? '(đã lược)',
+    ...(quote ? ['', `TIN ĐƯỢC TRẢ LỜI: "${quote}"`] : []),
+    '',
+    'KHO VĂN BẢN PHÁP LUẬT (chỉ có bấy nhiêu — không hứa văn bản ngoài danh sách):',
+    manifestOf(documents),
+    '',
+    `TIN NHẮN MỚI: "${part('message') ?? ''}"`,
+  ].join('\n');
+}
+
+/**
+ * Claude call #1 (plan 08 §2.1 step 4): mask, latch, ask, normalise. Any failure — no message left after the latch, no
+ * result, is_error, no JSON, an unknown intent — falls back to defaultPlan, so the bot always has a plan to act on.
+ */
+export async function planStep(input: PlanInput, run: Runner): Promise<PlanStepResult> {
+  const users = userCodes(input.text);
+  const { parts, codes } = planParts(input);
+  const { parts: kept, leakDrops } = assertNoUserCodes(parts, users, codeRole(input.text));
+  const done = (plan: Plan | null, calls: number): PlanStepResult => {
+    const final = plan ?? defaultPlan(input.text, input.topic);
+    return { plan: final, codes, codeRole: codeRole(input.text, final), userCodes: users, leakDrops, calls, fallback: !plan };
+  };
+  if (!kept.some((p) => p.name === 'message')) return done(null, 0);
+  const res = await run(buildPlanInput(kept, input.documents), { timeoutMs: PLAN_TIMEOUT_MS, systemPrompt: PLAN_SYSTEM, model: 'sonnet', effort: 'low' });
+  const userTexts = [input.text, input.quote ?? '', ...input.turns.filter((t) => t.role === 'user').map((t) => t.body)];
+  return done(res && !res.isError ? normalizePlan(looseJson(res.text), userTexts) : null, 1);
 }
 
 /**

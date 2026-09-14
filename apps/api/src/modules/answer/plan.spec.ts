@@ -1,4 +1,56 @@
-import { assertNoUserCodes, codeRole, defaultPlan, fold, maskCodes, normalizePlan, userCodes } from './plan';
+import type { ClaudeOpts } from './claude';
+import { assertNoUserCodes, codeRole, defaultPlan, fold, maskCodes, normalizePlan, PLAN_SYSTEM, PLAN_TIMEOUT_MS, type PlanInput, planStep, userCodes } from './plan';
+
+describe('planStep — claude call #1 (Việc 6)', () => {
+  const screenshot: PlanInput = {
+    text: 'e có mặt hàng miếng dán bàn chân thành phần từ ngải cứu, e đang tham khảo mã này không biết được không ạ 30051010',
+    quote: 'Mã 3005.10.10 bạn tham khảo thuộc nhóm 30.05, trùng một nhóm ứng viên',
+    topic: 'tariff',
+    state: { tariff: { dotted: '3005.10.10', desc: 'miếng dán', candidates: ['30.05', '38.24'] }, answer: { question: 'Miếng dán nhóm [mã 1] được không' } },
+    turns: [
+      { role: 'user', body: 'mã 30051010 thuế bao nhiêu' },
+      { role: 'bot', body: 'Hàng hóa có mã HS 3005.10.10 có thuế MFN …' },
+    ],
+    documents: [{ number: '08/2015/NĐ-CP', title: 'Quy định chi tiết thủ tục hải quan', consolidates: null }],
+  };
+  const runner = (reply: { text: string; isError?: boolean } | null) => {
+    const calls: Array<{ prompt: string; opts: ClaudeOpts }> = [];
+    const run = async (prompt: string, opts: ClaudeOpts) => {
+      calls.push({ prompt, opts });
+      return reply && { text: reply.text, isError: reply.isError ?? false, durationMs: 1 };
+    };
+    return { run, calls };
+  };
+
+  it('never shows the model a digit of the user code — message, quote, earlier turns or state line — and asks at sonnet/low within 30 s', async () => {
+    const { run, calls } = runner({ text: 'Kế hoạch: {"intent":"hs","understanding":"Người hỏi muốn biết miếng dán ngải cứu thuộc nhóm nào","question":"Miếng dán bàn chân ngải cứu thuộc nhóm nào","goods":{"facts":["miếng dán bàn chân","ngải cứu"],"missing":["có tẩm dược chất không"]}}' });
+    const out = await planStep(screenshot, run);
+    expect(calls).toHaveLength(1);
+    expect(PLAN_SYSTEM + calls[0]!.prompt).not.toMatch(/3005|30\.05|30051010|38\.24/);
+    expect(calls[0]!.prompt).toContain('08/2015/NĐ-CP');
+    expect(calls[0]!.prompt).toContain('TIN NHẮN MỚI: "e có mặt hàng miếng dán bàn chân thành phần từ ngải cứu, e đang tham khảo mã này không biết được không ạ [mã 1]"');
+    expect(calls[0]!.opts).toEqual({ timeoutMs: PLAN_TIMEOUT_MS, systemPrompt: PLAN_SYSTEM, model: 'sonnet', effort: 'low' });
+    expect(out).toMatchObject({ calls: 1, fallback: false, codeRole: 'premise', leakDrops: [] });
+    expect(out.plan.intent).toBe('hs');
+    expect(out.plan.goods.facts).toEqual(['miếng dán bàn chân', 'ngải cứu']);
+    expect(out.userCodes.map((c) => c.code)).toEqual(['3005.10.10']);
+  });
+
+  it('falls back to defaultPlan on no result, is_error, no JSON or an unknown intent', async () => {
+    for (const reply of [null, { text: '{"intent":"hs"}', isError: true }, { text: 'không có JSON' }, { text: '{"intent":"check_code"}' }]) {
+      const out = await planStep({ ...screenshot, quote: null, turns: [], state: {} }, runner(reply).run);
+      expect(out).toMatchObject({ fallback: true, calls: 1 });
+      expect(out.plan.intent).toBe('hs'); // defaultPlan: a code the message doubts
+    }
+  });
+
+  it('reads a status question without a code as status when the model says so, the document kept only as the user wrote it', async () => {
+    const { run } = runner({ text: '{"intent":"status","question":"Nghị định 69/2018 còn áp dụng không","scope":{"doc":"69/2018/NĐ-CP"}}' });
+    const out = await planStep({ text: 'Nghị định 69/2018 còn áp dụng không', quote: null, topic: null, state: {}, turns: [], documents: [] }, run);
+    expect(out.plan).toMatchObject({ intent: 'status', scope: { doc: '69/2018' } });
+    expect(out.codeRole).toBe('none');
+  });
+});
 
 describe('maskCodes — the plan prompt never sees the digits of a code (R4)', () => {
   it('masks every spelling of a code or heading, NFD and no-diacritic text included', () => {
