@@ -43,15 +43,24 @@ const statedIn = (text: string, fact: string): boolean => {
   return groups.length > 0 && groups.every((g) => new RegExp(`(?<!\\d)0*${g.replace(/^0+/, '') || '0'}(?!\\d)`).test(text));
 };
 
-/** Facts a sentence may state only when its own [n] source contains them. `exempt`: the user may have written it. */
-const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean }> = [
+/**
+ * Facts a sentence may state only when its own [n] source contains them. `exempt`: the user may have written it.
+ * `label`: with `opts.labels` it may also stand in the label of [n] — a label is data, not model text (plan 08 §2.5).
+ */
+const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean; label?: true }> = [
   { re: /\d+(?:[.,]\d+)?\s*%/g, exempt: false, fatal: true },
   { re: /\d[\d.,]*\s*(?:USD|VND|đồng|đ)(?![\p{L}\d])/giu, exempt: false, fatal: true },
   { re: /\d{1,2}\/\d{1,2}\/\d{4}/g, exempt: true, fatal: false },
   { re: /\d+\s*(?:ngày|tháng)(?![\p{L}])/giu, exempt: false, fatal: false },
   // The tail stops at emphasis, quotes and brackets: `**08/2015/NĐ-CP**` and `“…”[1]` must still anchor.
-  { re: /\d{1,4}\/(?:\d{4}|VBHN)[^\s,;)*"'“”‘’[\]]*/gi, exempt: true, fatal: false },
-  { re: /\d{4}(?:\.\d{2}){1,2}/g, exempt: true, fatal: false },
+  { re: /\d{1,4}\/(?:\d{4}|VBHN)[^\s,;)*"'“”‘’[\]]*/gi, exempt: true, fatal: false, label: true },
+  { re: /\d{4}(?:\.\d{2}){1,2}/g, exempt: true, fatal: false, label: true },
+];
+
+/** Checked only with `opts` (POST /answer, plan 08 G3): a dotted heading ("33.07") and a provision number ("Điều 97"). */
+const ANSWER_FACTS: typeof FACTS = [
+  { re: /(?<![\d.,/])\d{2}\.\d{2}(?![\d/%]|[.,]\d)/g, exempt: true, fatal: false, label: true },
+  { re: /(?<![\p{L}])(?:Điều|khoản|điểm)\s+\d+[a-zđ]?/giu, exempt: true, fatal: false, label: true },
 ];
 
 /** A sentence saying an instrument applies or has yet to end. "không/chưa còn hiệu lực" and "đã hết hiệu lực" do not match. */
@@ -83,33 +92,51 @@ export function dropInForceClaims(answer: string, expired: string[], current: st
  *   sentence itself marks (unmarked sentence: any cited source). A sentence failing that loses its markers
  *   and its bold; an unanchored % or amount anywhere empties the whole answer (citations-only reply).
  * - Markers are renumbered by first appearance; `order[k]` is the original position of new marker k+1.
+ * - `opts` (POST /answer): `sources[i]` holds only the verbatim quotes of source i+1, `labels[i]` its label, where a
+ *   document number, HS code, heading or "Điều/khoản/điểm N" may also anchor; with `cut` an unanchored sentence is
+ *   dropped and returned in `cut` instead of losing its markers.
  *
  * A string check of support, not of entailment: a number present in the provision can still be attached to
- * the wrong obligation. The full guards of the /answer path (Mảng 3) take this over.
+ * the wrong obligation.
  */
-export function numberMarkers(answer: string, cited: number[], sources: string[], userText: string): { answer: string; order: number[] } {
+export function numberMarkers(
+  answer: string,
+  cited: number[],
+  sources: string[],
+  userText: string,
+  opts?: { cut: boolean; labels: string[] },
+): { answer: string; order: number[]; cut?: string[] } {
   const k = sources.length;
   const inRange = (n: number) => Number.isInteger(n) && n >= 1 && n <= k;
   const text = answer
     .replace(/\[(\d+(?:\s*,\s*\d+)+)\]/g, (_, list: string) => list.split(',').map((n) => `[${n.trim()}]`).join(' '))
     .replace(/\s*\[(\d+)\]/g, (m, n: string) => (inRange(Number(n)) ? m : ''));
   const validCited = [...new Set(cited.filter(inRange))];
+  const facts = opts ? [...FACTS, ...ANSWER_FACTS] : FACTS;
 
   const sentences = text.split(/(?<=[.?!;])(?= )|(?<=\n)/);
   const out: string[] = [];
+  const cut: string[] = [];
   for (const s of sentences) {
     const marks = [...s.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
-    const hay = (marks.length ? marks : validCited).map((n) => norm(sources[n - 1] ?? ''));
+    const ids = marks.length ? marks : validCited;
+    const hay = ids.map((n) => norm(sources[n - 1] ?? ''));
+    const labels = ids.map((n) => norm(opts?.labels[n - 1] ?? ''));
     let anchored = true;
-    for (const { re, exempt, fatal } of FACTS) {
+    for (const { re, exempt, fatal, label } of facts) {
       for (const [fact] of s.matchAll(re)) {
         const f = norm(fact.replace(/[.:]+$/, ''));
-        if (hay.some((h) => figureIn(h, f)) || (exempt && statedIn(userText, fact))) continue;
+        if (hay.some((h) => figureIn(h, f)) || (label && labels.some((h) => figureIn(h, f))) || (exempt && statedIn(userText, fact))) continue;
         if (fatal) return { answer: '', order: [] };
         anchored = false;
       }
     }
-    out.push(anchored ? s : s.replace(/\s*\[\d+\]/g, '').replace(/\*\*/g, ''));
+    if (anchored) out.push(s);
+    else if (opts?.cut) {
+      cut.push(s.trim());
+      // Keep the line break: md() reads bullets per line, so the next line must still start one.
+      out.push(s.replace(/[^\n]+/, ''));
+    } else out.push(s.replace(/\s*\[\d+\]/g, '').replace(/\*\*/g, ''));
   }
 
   const order: number[] = [];
@@ -122,6 +149,6 @@ export function numberMarkers(answer: string, cited: number[], sources: string[]
       return `[${order.length}]`;
     })
     .replace(/(\[\d+\])(?:\s*\1)+/g, '$1');
-  if (order.length) return { answer: renumbered, order };
-  return { answer: renumbered, order: validCited };
+  const numbered = { answer: renumbered, order: order.length ? order : validCited };
+  return opts?.cut ? { ...numbered, cut } : numbered;
 }
