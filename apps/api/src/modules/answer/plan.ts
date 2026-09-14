@@ -225,7 +225,8 @@ export function normalizePlan(raw: unknown, userTexts: string[]): Plan | null {
 /** What the bot keeps between turns that a plan may read (conversation state, plan 08 §6.1). */
 export interface PlanState {
   tariff?: { dotted?: string | null; origin?: string | null; desc?: string | null; candidates?: string[] } | null;
-  legal?: { query?: string | null; question?: string | null; citations?: Array<{ provisionLabel?: string | null }>; missingDoc?: string | null } | null;
+  /** citations[].label since the bot answers through /answer; provisionLabel in a state saved before. */
+  legal?: { query?: string | null; question?: string | null; citations?: Array<{ label?: string | null; provisionLabel?: string | null }>; missingDoc?: string | null } | null;
   answer?: { mode?: string | null; question?: string | null } | null;
 }
 
@@ -309,7 +310,7 @@ function stateOf(topic: string | null, state: PlanState): string {
   const question = state.answer?.question ?? state.legal?.question ?? state.legal?.query;
   if (question) bits.push(`câu hỏi vừa trả lời: ${String(question).slice(0, 200)}`);
   const citations: unknown = state.legal?.citations;
-  const cites = (Array.isArray(citations) ? citations : []).map((c) => c?.provisionLabel).filter(Boolean);
+  const cites = (Array.isArray(citations) ? citations : []).map((c) => c?.label ?? c?.provisionLabel).filter(Boolean);
   if (cites.length) bits.push(`nguồn vừa trích: ${cites.slice(0, 3).join(' · ')}`);
   if (state.legal?.missingDoc) bits.push(`văn bản người dùng hỏi mà kho KHÔNG có: ${state.legal.missingDoc}`);
   return bits.join('\n');

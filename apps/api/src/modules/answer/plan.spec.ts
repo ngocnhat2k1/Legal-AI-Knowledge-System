@@ -1,5 +1,5 @@
 import type { ClaudeOpts } from './claude';
-import { assertNoUserCodes, codeRole, defaultPlan, fold, maskCodes, normalizePlan, PLAN_SYSTEM, PLAN_TIMEOUT_MS, type PlanInput, planStep, userCodes } from './plan';
+import { assertNoUserCodes, codeRole, defaultPlan, fold, maskCodes, normalizePlan, PLAN_SYSTEM, PLAN_TIMEOUT_MS, type PlanInput, planParts, planStep, userCodes } from './plan';
 
 describe('planStep — claude call #1 (Việc 6)', () => {
   const screenshot: PlanInput = {
@@ -49,6 +49,14 @@ describe('planStep — claude call #1 (Việc 6)', () => {
       const out = await planStep({ ...screenshot, quote: null, turns: [], state: {} }, runner(reply).run);
       expect(out).toMatchObject({ fallback: true, calls: 1 });
       expect(out.plan.intent).toBe('hs'); // defaultPlan: a code the message doubts
+    }
+  });
+
+  it('names the sources just cited by the label the bot saves, or by the provisionLabel of a state saved before it', () => {
+    const label = 'Khoản 1 Điều 18 Nghị định 08/2015/NĐ-CP';
+    for (const cite of [{ label, kind: null, instrument: '08/2015/NĐ-CP', documentNumber: '08/2015/NĐ-CP' }, { provisionLabel: label }]) {
+      const { parts } = planParts({ text: 'nguyên văn điều đó', quote: null, topic: 'legal', state: { legal: { citations: [cite] } }, turns: [], documents: [] });
+      expect(parts.find((p) => p.name === 'state')!.text).toContain(`nguồn vừa trích: ${label}`);
     }
   });
 
