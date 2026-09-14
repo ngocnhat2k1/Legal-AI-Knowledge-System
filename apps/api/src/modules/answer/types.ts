@@ -65,10 +65,13 @@ export type WalkthroughSectionKey =
 /** Sections are what the checks work on, never a visible template: an empty section is omitted. */
 export interface WalkthroughSection {
   key: WalkthroughSectionKey;
-  /** Markdown in the md() subset, [n] markers pointing at `cite_ids`. No rate or amount (owner decision 2026-09-14). */
+  /** Markdown in the md() subset, [n] markers pointing at `cites`. No rate or amount (owner decision 2026-09-14). */
   markdown: string;
-  /** Evidence row ids, in [n] order. */
-  cite_ids: number[];
+  /**
+   * [n] ↔ cites[n-1]: the evidence row id and the verbatim phrases the section quotes from it, which verify() keeps a
+   * citation on (R10). Built by code from the section's own sentences, never re-pointed; `quotes: []` leaves G2 to decide.
+   */
+  cites: Array<{ id: number; quotes: string[] }>;
 }
 
 export type HeadingAssessment = 'phu_hop' | 'co_the_neu' | 'loai' | 'chua_du_du_kien';
