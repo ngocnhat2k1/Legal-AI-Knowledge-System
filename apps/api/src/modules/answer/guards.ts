@@ -3,7 +3,7 @@
  * the model is told in the prompt is also checked here, because a rule held only by prompt wording is not held (ADR
  * 2026-08-14). The sentence-level anchoring of numbers to their own citation stays in legal.grounding.ts numberMarkers.
  */
-import { dropInForceClaims, numberMarkers } from '../legal/legal.grounding';
+import { cutPieces, dropInForceClaims, numberMarkers } from '../legal/legal.grounding';
 import type { Violation } from './types';
 
 const SENTENCE_END = /(?<=[.?!;])(?= )|(?<=\n)/;
@@ -24,17 +24,23 @@ const RATE = /\d+(?:[.,]\d+)?\s*%|(?<![\p{L}])phần trăm(?![\p{L}])|\d[\d.,]*\
 export const ratesInProse = (text: string): string[] => splitSentences(text).filter((s) => RATE.test(s));
 
 const HEADING_OR_CODE = /(?<![\d.,/])(?:\d{2}\.\d{2}|\d{4}(?:\.\d{2}){0,2}|\d{8})(?![\d/%]|[.,]\d)/;
-const SETTLING =
-  /(?<![\p{L}])(?:phải\s+xét(?:\s+vào)?|chắc\s+chắn\s+(?:thuộc|là|vào)|chỉ\s+có\s+thể\s+(?:thuộc|là|vào)|chốt\s+(?:mã|nhóm)|nên\s+(?:khai|áp)(?:\s+(?:mã|nhóm|vào))?|đề\s+xuất\s+(?:khai\s+|áp\s+)?(?:mã|nhóm)|kết\s+luận\s+(?:là\s+)?(?:mã|nhóm)|thuộc\s+hẳn)(?![\p{L}])/iu;
-// "sau khi đối chiếu, chắc chắn thuộc …" reads as a condition but settles all the same.
-const CONDITIONAL = /(?<![\p{L}])(?:nếu|(?<!(?:sau|trước)\s)khi|trường\s+hợp|tùy|tuỳ)(?![\p{L}])/iu;
+// A settling verb, any of "phải/xét/khai/áp/vào/là/thuộc", an optional "mã/nhóm (số/HS)", then the heading: "phải khai
+// 38.24", "Mình chốt là 38.24". After "có/không/chưa (thể)" the verb asks or denies: "có phải 38.24 không" settles nothing.
+const SETTLING = new RegExp(
+  `(?<![\\p{L}])(?<!(?:có|không|chưa)(?:\\s+thể)?\\s+)(?:(?:phải|nên|chỉ\\s+có\\s+thể|chắc\\s+chắn|chốt|đề\\s+xuất|kết\\s+luận)(?:\\s+(?:phải|xét|khai|áp|vào|là|thuộc))*(?:\\s+(?:mã|nhóm)(?:\\s+(?:số|HS))?)?\\s+\\**${HEADING_OR_CODE.source}|thuộc\\s+hẳn(?![\\p{L}]))`,
+  'iu',
+);
+// "khi" and "trường hợp" make a condition only with a "thì" ("khi hàng có lớp dính thì …") or as "khi đó": "Khi chưa rõ
+// công dụng, phải xét 38.24", "trong trường hợp này … chắc chắn thuộc" and "sau khi đối chiếu, chắc chắn thuộc" settle.
+const CONDITIONAL = /(?<![\p{L}])(?:nếu|tùy|tuỳ|trừ\s+khi|khi\s+đó|(?:khi|trường\s+hợp)(?!\s+này)(?:[^.;?!]|\.(?=\d))*?\sthì)(?![\p{L}])/iu;
 const CONFIDENCE = /(?<![\p{L}])độ\s+tin\s+cậy(?![\p{L}])/iu;
 
 /**
- * Sentences settling goods under one heading or code (R2, R3, R5): a heading or code next to "phải xét", "chắc chắn thuộc",
- * "chốt mã", "nên khai", outside a "nếu/khi/trường hợp/tùy" condition; and any "độ tin cậy". Observed 2026-09-14 on
- * "miếng dán bàn chân ngải cứu": "chưa xác định được công dụng cụ thể … nên phải xét vào 38.24". Conditional reasoning
- * ("nếu có chỉ định điều trị thì hướng về 30.04", "… khi đó phải xét tiếp nhóm 38.24") passes.
+ * Sentences settling goods under one heading or code (R2, R3, R5): "phải (xét/khai/thuộc)", "nên (là/thuộc)", "chắc chắn
+ * thuộc", "chốt (là)", "đề xuất", "kết luận" before a heading or code, outside a "nếu/tùy/trừ khi/khi đó" or "khi/trường
+ * hợp … thì" condition; and any "độ tin cậy". Observed 2026-09-14 on "miếng dán bàn chân ngải cứu": "chưa xác định được
+ * công dụng cụ thể … nên phải xét vào 38.24". Conditional reasoning ("nếu có chỉ định điều trị thì hướng về 30.04",
+ * "… khi đó phải xét tiếp nhóm 38.24") and a heading still to check ("nên xét thêm nhóm 38.24") pass.
  */
 export const settlementClaims = (text: string): string[] =>
   splitSentences(text).filter((s) => CONFIDENCE.test(s) || (HEADING_OR_CODE.test(s) && SETTLING.test(s) && !CONDITIONAL.test(s)));
@@ -65,10 +71,13 @@ const normQuote = (s: string): string =>
     .replace(/^[\s"'“”‘’.,;:…-]+|[\s"'“”‘’.,;:…-]+$/g, '')
     .trim();
 
-/** A quote proves nothing unless it is verbatim in the section it cites (spec §3.6 check 2, R10): string support, not entailment. */
+/**
+ * A quote proves nothing unless it is verbatim in the section it cites (spec §3.6 check 2, R10): string support, not
+ * entailment. Under 20 characters it must be the whole body: "5%" is inside "15%".
+ */
 export const quoteInBody = (quote: string, body: string): boolean => {
   const q = normQuote(quote);
-  return q.length > 0 && normQuote(body).includes(q);
+  return q.length > 0 && (q.length >= 20 ? normQuote(body).includes(q) : q === normQuote(body));
 };
 
 /** What compose returns (plan 08 §3.1): [n] in `answerMd` and in `evidence` points at sources[n-1]. */
@@ -93,7 +102,7 @@ export interface Source {
 }
 
 export interface VerifyContext {
-  /** The user's words as the compose prompt showed them — codes masked unless subject — so a figure they wrote needs no source. */
+  /** The user's words, so a figure they wrote needs no source; unless subject, verify strips `userCodes` and their headings. */
   userText: string;
   codeRole: 'none' | 'premise' | 'subject' | 'key';
   userCodes: string[];
@@ -112,10 +121,9 @@ export interface VerifyResult {
   citations: Array<{ n: number; source: number; quotes: string[] }>;
   candidates: Array<{ hs: string; evidence: number[] }>;
   violations: GuardViolation[];
+  /** Sentences taken out. formatAnswerMd prints the "bị lược" line when it is above 0; verify never writes it. */
   cut: number;
 }
-
-export const CUT_LINE = 'Một phần câu trả lời bị lược vì không dẫn được nguồn.';
 
 const EVIDENCE_KINDS = new Set(['en', 'sen', 'hs_note', 'gri', 'ruling', 'guidance', 'annex_table']);
 const CODE8 = /(?<![\d.,/])(?:\d{4}\.\d{2}\.\d{2}|\d{8})(?![\d/%]|[.,]\d)/g;
@@ -125,6 +133,8 @@ const PLACED_UNDER = new RegExp(`(?<!\\p{L})(?:thuộc|vào|áp|khai)\\s+(?:mã|
 const dotted = (d: string): string =>
   d.length <= 4 ? `${d.slice(0, 2)}.${d.slice(2)}` : [d.slice(0, 4), d.slice(4, 6), d.slice(6)].filter(Boolean).join('.');
 const names = (text: string, d: string): boolean => new RegExp(`(?<![\\d.,/])${dotted(d).replace(/\./g, '\\.')}(?![\\d/%]|[.,]\\d)`).test(text);
+/** The digits `d` in any spelling: "3005.10.10", "30051010", "3005 10 10". */
+const spelled = (d: string): RegExp => new RegExp(`(?<!\\d)${[...d].join('[.\\s]?')}(?!\\d)`, 'g');
 
 /**
  * The code guards over a compose draft (plan 08 §4.1), pure: G2 keeps a citation only on verbatim quotes; G5 keeps one to
@@ -140,6 +150,10 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
       if (sources[n - 1] && quoteInBody(q, sources[n - 1]!.body)) quotes.set(n, [...(quotes.get(n) ?? []), q]);
       else violations.push({ rule: 'G2', detail: 'quote is not verbatim in its source', citation: n });
     }
+  }
+  const markers = [...draft.answerMd.matchAll(/\[(\d+(?:\s*,\s*\d+)*)\]/g)].flatMap(([, list]) => list!.split(',').map(Number));
+  for (const n of new Set([...draft.citations.map((c) => c.n), ...markers.filter((m) => m >= 1 && m <= sources.length)])) {
+    if (!quotes.has(n) && !violations.some((v) => v.citation === n)) violations.push({ rule: 'G2', detail: 'no verbatim quote holds this citation', citation: n });
   }
 
   const candidates: Draft['candidates'] = [];
@@ -180,7 +194,16 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
     ['G1', 'rate or amount in prose', (s) => rates.includes(s)],
     ['G4', 'settles the goods under one heading', (s) => settling.includes(s)],
     ['G5', 'eight-digit code that is no candidate', (s) => [...s.matchAll(CODE8)].some(([c]) => !eights.has(digits(c)) && !(subject && own.includes(digits(c))))],
-    ['G6', 'places the goods under the code asked about', (s) => subject && [...s.matchAll(PLACED_UNDER)].some(([, c]) => own.some((u) => u.startsWith(digits(c!)) || digits(c!).startsWith(u)))],
+    // "Mã 3005.10.10 thuộc nhóm 30.05" explains the code itself: the user's code before the verb is its subject.
+    [
+      'G6',
+      'places the goods under the code asked about',
+      (s) =>
+        subject &&
+        [...s.matchAll(PLACED_UNDER)].some(
+          (m) => own.some((u) => u.startsWith(digits(m[1]!)) || digits(m[1]!).startsWith(u)) && !own.some((u) => spelled(u).test(s.slice(0, m.index))),
+        ),
+    ],
     ['G7', 'calls an ended instrument in force', (s) => dropInForceClaims(s, expired, current) !== s],
   ];
   const bad = new Set<string>();
@@ -192,12 +215,14 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
     }
   }
 
+  // A code the user offered as a premise is never their evidence (R4), whatever the caller masked.
+  const userText = subject ? ctx.userText : [...own, ...own.map((u) => u.slice(0, 4))].reduce((t, u) => t.replace(spelled(u), ' '), ctx.userText);
   // Every rate sentence is cut; one whose figure its own quote lacks was made up, and so may be the rest (R1, R10).
-  const dropped = rates.length > 0 && !numberMarkers(rates.join(' '), cited, quoteText, ctx.userText).answer;
+  const dropped = rates.length > 0 && !numberMarkers(rates.join(' '), cited, quoteText, userText).answer;
   if (dropped) violations.push({ rule: 'G1', detail: 'a rate or amount its quote lacks: prose dropped' });
-  const kept = dropped ? '' : draft.answerMd.split(SENTENCE_END).map((p) => (bad.has(p.trim()) ? p.replace(/[^\n]+/, '') : p)).join('');
+  const kept = dropped ? '' : cutPieces(draft.answerMd.split(SENTENCE_END), (p) => bad.has(p.trim()));
   const labels = sources.map((s, i) => (quotes.has(i + 1) ? s.label : ''));
-  const numbered = numberMarkers(kept, cited, quoteText, ctx.userText, { cut: true, labels });
+  const numbered = numberMarkers(kept, cited, quoteText, userText, { cut: true, labels });
   const unanchored = numbered.cut ?? [];
   for (const sentence of unanchored) violations.push({ rule: 'G3', detail: 'a figure neither its quotes nor its label hold', sentence });
 
@@ -207,7 +232,7 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
     if (!order.includes(n)) order.push(n);
     return order.indexOf(n) + 1;
   };
-  let answer = numbered.answer
+  const answer = numbered.answer
     .replace(/\s*\[(\d+)\]/g, (m, k: string) => {
       const n = numbered.order[Number(k) - 1]!;
       return quotes.has(n) ? m.replace(k, String(at(n))) : '';
@@ -217,7 +242,6 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
   const outCandidates = candidates.map((c) => ({ hs: c.hs, evidence: c.evidence.map(at) }));
 
   const cut = dropped ? splitSentences(draft.answerMd).length : bad.size + unanchored.length;
-  if (cut && answer && !answer.includes(CUT_LINE)) answer += `\n\n${CUT_LINE}`;
   if (candidates.length >= 2 && !draft.missingFacts.some((f) => f.trim())) {
     violations.push({ rule: 'G4', detail: 'two or more candidates and no missing fact', repairOnly: true });
   }

@@ -1,5 +1,4 @@
 import {
-  CUT_LINE,
   type Draft,
   quoteInBody,
   ratesInProse,
@@ -121,8 +120,8 @@ const lead = 'Nhóm 30.05 gồm hàng đã thấm tẩm dược chất [1].';
 describe('verify — the code guards over a compose draft (plan 08 §4.1)', () => {
   it('G1: cuts "MFN là 0% [1]" even when its quote holds the rate', () => {
     const tariff = source({ kind: 'annex_table', label: 'Nghị định 26/2023/NĐ-CP · Phụ lục II', body: 'Thuế suất MFN 0% cho mã này.' });
-    const r = verify(draft('Hàng cần C/O hợp lệ mới được hưởng ưu đãi [1]. MFN là 0% [1].', [{ n: 1, quotes: ['Thuế suất MFN 0%'] }]), [tariff], ctx());
-    expect(r.answerMd).toBe(`Hàng cần C/O hợp lệ mới được hưởng ưu đãi [1].\n\n${CUT_LINE}`);
+    const r = verify(draft('Hàng cần C/O hợp lệ mới được hưởng ưu đãi [1]. MFN là 0% [1].', [{ n: 1, quotes: ['Thuế suất MFN 0% cho mã này'] }]), [tariff], ctx());
+    expect(r.answerMd).toBe('Hàng cần C/O hợp lệ mới được hưởng ưu đãi [1].');
     expect(r.violations).toEqual([expect.objectContaining({ rule: 'G1', sentence: 'MFN là 0% [1].' })]);
     expect(r.cut).toBe(1);
   });
@@ -132,6 +131,23 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     const r = verify(draft('Đúng, 5% [1]. Cần C/O mẫu E [1].', [{ n: 1, quotes: ['Thuế suất ưu đãi 10%'] }]), [tariff], ctx());
     expect(r.answerMd).toBe('');
     expect(r.citations).toEqual([{ n: 1, source: 0, quotes: ['Thuế suất ưu đãi 10%'] }]);
+  });
+
+  it('G2: a quote under 20 characters holds only a body it equals: "5%" against "15%" does not anchor "Đúng, 5% [1]"', () => {
+    const r = verify(draft('Đúng, 5% [1]. Cần C/O mẫu E [1].', [{ n: 1, quotes: ['5%'] }]), [source({ kind: 'annex_table', body: '15%' })], ctx());
+    expect(r.answerMd).toBe('');
+    expect(r.citations).toEqual([]);
+    expect(quoteInBody('15%', '15%')).toBe(true);
+    expect(quoteInBody('đã thấm tẩm', en3005.body)).toBe(false);
+  });
+
+  it('G2: a citation with no quote left and an in-range marker with no citation are each a violation', () => {
+    const r = verify(draft(`${lead} Chương 38 gồm chế phẩm hóa chất [2]. Xem [3].`, [q1, { n: 3, quotes: [] }]), [en3005, en3824, note30], ctx());
+    expect(r.answerMd).toBe(`${lead} Chương 38 gồm chế phẩm hóa chất. Xem.`);
+    expect(r.violations.map((v) => [v.rule, v.citation])).toEqual([
+      ['G2', 3],
+      ['G2', 2],
+    ]);
   });
 
   it('G2: a paraphrased quote or an id outside the sources takes its [n] away', () => {
@@ -161,8 +177,8 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     });
     const prose = 'Hồ sơ nộp theo điểm b khoản 4 Điều 97 NĐ 37/2026/NĐ-CP [1]. Nộp bản chính [1].';
     expect(verify(draft(prose, [{ n: 1, quotes: ['điểm b khoản 4 Điều 97 Nghị định 37/2026/NĐ-CP'] }]), [nd37], ctx()).answerMd).toBe(prose);
-    const r = verify(draft(prose, [{ n: 1, quotes: ['điểm b khoản 4'] }]), [nd37], ctx());
-    expect(r.answerMd).toBe(`Nộp bản chính [1].\n\n${CUT_LINE}`);
+    const r = verify(draft(prose, [{ n: 1, quotes: ['Hồ sơ thực hiện theo điểm b khoản 4'] }]), [nd37], ctx());
+    expect(r.answerMd).toBe('Nộp bản chính [1].');
     expect(r.violations).toEqual([expect.objectContaining({ rule: 'G3', sentence: 'Hồ sơ nộp theo điểm b khoản 4 Điều 97 NĐ 37/2026/NĐ-CP [1].' })]);
   });
 
@@ -184,10 +200,24 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     expect(r.answerMd).toBe(prose);
   });
 
+  it('G3: a heading, provision or code is exempt only as the user wrote it: a stray 38 and 24 exempt nothing', () => {
+    const r = verify(draft(`${lead} Chú giải loại trừ nhóm 38.24 theo Điều 24 [1].`, [q1]), [en3005], ctx({ userText: 'lô 38 kiện giao trong 24 giờ' }));
+    expect(r.answerMd).toBe(lead);
+    expect(r.violations).toEqual([expect.objectContaining({ rule: 'G3', sentence: 'Chú giải loại trừ nhóm 38.24 theo Điều 24 [1].' })]);
+    expect(verify(draft(`${lead} Theo khoản 1 Chú giải Chương 30 [1].`, [q1]), [en3005], ctx({ userText: '[mã 1] dùng được không' })).answerMd).toBe(lead);
+    const abstain = `${lead} Kho chưa có Nghị định 08/2015/NĐ-CP.`;
+    expect(verify(draft(abstain, [q1]), [en3005], ctx({ userText: 'NĐ 08/2015 còn áp dụng không' })).answerMd).toBe(abstain);
+  });
+
+  it('G3: at premise role the user\'s code and its heading exempt nothing, even from unmasked userText', () => {
+    const c = ctx({ userText: 'miếng dán khai 3004.90.99 (nhóm 30.04) được không', codeRole: 'premise', userCodes: ['3004.90.99'] });
+    expect(verify(draft(`${lead} Nhóm 30.04 gồm thuốc [1].`, [q1]), [en3005], c).answerMd).toBe(lead);
+  });
+
   it('G4: cuts the over-conclusion from the 14/09 log, "phải xét vào 38.24" and "phải xét 38.24" alike', () => {
     for (const settle of ['nên phải xét vào 38.24', 'phải xét 38.24']) {
       const r = verify(draft(`${lead} Miếng dán chưa rõ công dụng, ${settle} [2].`, [q1, q2]), [en3005, en3824], ctx());
-      expect(r.answerMd).toBe(`${lead}\n\n${CUT_LINE}`);
+      expect(r.answerMd).toBe(lead);
       expect(r.violations).toEqual([expect.objectContaining({ rule: 'G4', sentence: `Miếng dán chưa rõ công dụng, ${settle} [2].` })]);
     }
   });
@@ -197,6 +227,37 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     const r = verify(draft(prose, [q1, q2]), [en3005, en3824], ctx());
     expect(r.answerMd).toBe(prose);
     expect(r.violations).toEqual([]);
+  });
+
+  it('G4: reworded over-conclusions are cut; a bare "khi" or "trường hợp này" is no condition', () => {
+    for (const s of [
+      'Khi chưa rõ công dụng, phải xét 38.24 [2].',
+      'Chưa rõ công dụng khi dùng, nên phải xét vào 38.24 [2].',
+      'Trong trường hợp này hàng chắc chắn thuộc 38.24 [2].',
+      'Hàng phải khai 38.24 [2].',
+      'Hàng phải thuộc nhóm 38.24 [2].',
+      'Hàng nên thuộc nhóm 38.24 [2].',
+      'Hàng nên là 38.24 [2].',
+      'Mình chốt 38.24 [2].',
+      'Mình chốt là 38.24 [2].',
+      'Mình đề xuất 38.24 [2].',
+    ]) {
+      const r = verify(draft(`${lead} ${s}`, [q1, q2]), [en3005, en3824], ctx());
+      expect([r.answerMd, r.violations]).toEqual([lead, [expect.objectContaining({ rule: 'G4', sentence: s })]]);
+    }
+  });
+
+  it('G4: "khi … thì", "trường hợp … thì", a heading still to check and a question pass', () => {
+    const prose = [
+      'Nên xét thêm nhóm 38.24 [2].',
+      'Nếu chỉ để làm ấm thì chương loại nó ra, khi đó phải xét tiếp nhóm 38.24 [2].',
+      'Khi hàng có tẩm dược chất thì xét 30.05 [1].',
+      'Trường hợp hàng có lớp dính thì thuộc phân nhóm 3005.10 [1].',
+      'Khi hàng có lớp dính và thuộc nhóm 30.05 thì phải xét 3005.10 [1].',
+      'Để biết có phải 38.24 không, cần xác định công dụng.',
+      'Chưa thể chốt 38.24 khi thiếu nhãn, và hàng không phải là 30.04 [1].',
+    ];
+    expect(settlementClaims(prose.join(' '))).toEqual([]);
   });
 
   it('G4: two candidates with no missing fact is a violation for repair only', () => {
@@ -227,7 +288,7 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
 
   it('G5: "8422.90.90" in prose, no candidate, is cut', () => {
     const r = verify(draft(`${lead} Có thể khai 8422.90.90 [1].`, [q1]), [en3005], ctx());
-    expect(r.answerMd).toBe(`${lead}\n\n${CUT_LINE}`);
+    expect(r.answerMd).toBe(lead);
     expect(r.violations).toEqual([expect.objectContaining({ rule: 'G5', sentence: 'Có thể khai 8422.90.90 [1].' })]);
   });
 
@@ -253,8 +314,18 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
       [en3005],
       ctx({ userText: '3005.10.10 gồm những hàng gì, khác 3005.90 chỗ nào', codeRole: 'subject', userCodes: ['3005.10.10'] }),
     );
-    expect(r.answerMd).toBe(`Mã 3005.10.10 gồm băng dán có lớp dính [1].\n\n${CUT_LINE}`);
+    expect(r.answerMd).toBe('Mã 3005.10.10 gồm băng dán có lớp dính [1].');
     expect(r.violations).toEqual([expect.objectContaining({ rule: 'G6', sentence: 'Miếng dán thuộc mã 3005.10.10 [1].' })]);
+  });
+
+  it('G6: at subject role a sentence explaining the code itself stands: "Mã 3005.10.10 thuộc nhóm 30.05, gồm …"', () => {
+    const c = ctx({ userText: '3005.10.10 gồm những hàng gì', codeRole: 'subject', userCodes: ['3005.10.10'] });
+    const q = [{ n: 1, quotes: ['Phân nhóm 3005.10 gồm loại có lớp dính'] }];
+    for (const code of ['3005.10.10', '30051010']) {
+      const prose = `Mã ${code} thuộc nhóm 30.05, gồm băng có lớp dính [1].`;
+      expect(verify(draft(prose, q), [en3005], c).answerMd).toBe(prose);
+    }
+    expect(verify(draft('Miếng dán thuộc mã 3005.10.10 [1]. Hàng này thuộc nhóm 30.05 [1].', q), [en3005], c).answerMd).toBe('');
   });
 
   it('G7: "Có, Nghị định 69/2018/NĐ-CP hiện vẫn còn hiệu lực" is dropped when the data says it ended', () => {
@@ -267,15 +338,20 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     });
     const prose = 'Có, Nghị định 69/2018/NĐ-CP hiện vẫn còn hiệu lực [1]. Văn bản thay thế là Nghị định 292/2026/NĐ-CP [1].';
     const r = verify(draft(prose, [{ n: 1, quotes: ['được thay thế bởi Nghị định 292/2026/NĐ-CP'] }]), [status], ctx());
-    expect(r.answerMd).toBe(`Văn bản thay thế là Nghị định 292/2026/NĐ-CP [1].\n\n${CUT_LINE}`);
+    expect(r.answerMd).toBe('Văn bản thay thế là Nghị định 292/2026/NĐ-CP [1].');
     expect(r.violations).toEqual([expect.objectContaining({ rule: 'G7', sentence: 'Có, Nghị định 69/2018/NĐ-CP hiện vẫn còn hiệu lực [1].' })]);
   });
 
-  it('cut > 0 appends exactly one "bị lược" line, and a cut sentence leaves the next line a line', () => {
-    const d = draft(`${lead} Có thể khai 8422.90.90.\n\n• Hoặc 8479.89.10.\n• Nếu có lớp dính thì xét 30.05 [1].`, [q1]);
-    const r = verify(d, [en3005], ctx());
+  it('cut counts what was taken out and adds no "bị lược" line (formatAnswerMd prints it); a cut keeps line breaks and list markers', () => {
+    const r = verify(draft(`${lead} Có thể khai 8422.90.90.\n\n• Hoặc 8479.89.10.\n• Nếu có lớp dính thì xét 30.05 [1].`, [q1]), [en3005], ctx());
     expect(r.cut).toBe(2);
-    expect(r.answerMd).toBe(`${lead}\n\n• Nếu có lớp dính thì xét 30.05 [1].\n\n${CUT_LINE}`);
-    expect(verify({ ...d, answerMd: r.answerMd }, [en3005], ctx()).answerMd.split(CUT_LINE)).toHaveLength(2);
+    expect(r.answerMd).toBe(`${lead}\n\n• Nếu có lớp dính thì xét 30.05 [1].`);
+    const lists = verify(
+      draft(`${lead}\n• Có thể khai 8422.90.90. Nếu có lớp dính thì xét 30.05 [1].\n- Theo Điều 97 [1]. Nộp bản chính [1].\n1. Có thể khai 8479.89.10.\n2. Cần nhãn hàng [1].`, [q1]),
+      [en3005],
+      ctx(),
+    );
+    expect(lists.cut).toBe(3);
+    expect(lists.answerMd).toBe(`${lead}\n• Nếu có lớp dính thì xét 30.05 [1].\n- Nộp bản chính [1].\n2. Cần nhãn hàng [1].`);
   });
 });

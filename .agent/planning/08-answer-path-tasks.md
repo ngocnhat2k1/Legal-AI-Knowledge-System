@@ -482,7 +482,7 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 
 **Sửa và cắt (`compose.ts`):**
 - Có vi phạm và đã trôi dưới 90 s → gọi #3 với **chỉ các câu vi phạm** cùng quote của chúng: "Viết lại từng câu, chỉ dùng số, mã, số hiệu có trong quote kèm theo; không được thì trả chuỗi rỗng."
-- Kiểm lại. Câu còn vi phạm thì cắt, và thêm đúng một dòng "Một phần câu trả lời bị lược vì không dẫn được nguồn."
+- Kiểm lại. Câu còn vi phạm thì cắt; `verify` chỉ báo `cut`, dòng "Một phần câu trả lời bị lược vì không dẫn được nguồn." do `formatAnswerMd` in đúng một lần khi `cut > 0` (chủ kế hoạch chốt 2026-09-14).
 - Câu đầu bị cắt, hoặc hơn một phần ba số câu bị cắt → chỉ trả nguồn, kèm một câu thật.
 - Không bao giờ gửi câu văn không có nguồn.
 
@@ -788,7 +788,7 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 - [ ] **Giao diện:** `verify(draft, sources, ctx) → {answerMd, citations, candidates, violations, cut}`. Hàm thuần; sự tồn tại của nhóm nhận vào dưới dạng `Set`.
 - [ ] **Test (mỗi ca một `it`):**
   - các ca kiểm chứng của G1–G7 ở §4.1;
-  - thêm: `cut > 0` thì nối đúng một dòng "bị lược";
+  - thêm: `cut` đếm câu bị cắt, `verify` không nối dòng "bị lược" (của `formatAnswerMd`);
   - "Mức độ tin cậy 95%" làm rỗng văn xuôi;
   - "phải xét 38.24" và "phải xét vào 38.24" đều là vi phạm;
   - từ 2 ứng viên mà `missingFacts` rỗng → vi phạm loại `repairOnly`.

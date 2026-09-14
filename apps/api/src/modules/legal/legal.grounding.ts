@@ -43,8 +43,21 @@ const statedIn = (text: string, fact: string): boolean => {
   return groups.length > 0 && groups.every((g) => new RegExp(`(?<!\\d)0*${g.replace(/^0+/, '') || '0'}(?!\\d)`).test(text));
 };
 
+const LIST_MARKER = /^\s*(?:[-*•]|\d+[.)])(?=\s)/;
+
 /**
- * Facts a sentence may state only when its own [n] source contains them. `exempt`: the user may have written it.
+ * Join `pieces` (split as numberMarkers splits) without those `drop` names. A cut piece keeps its line break, since md()
+ * reads bullets per line, and the list marker opening its line; a line left holding only a marker goes.
+ */
+export const cutPieces = (pieces: string[], drop: (piece: string) => boolean): string =>
+  pieces
+    .map((p, i) => (drop(p) ? p.replace(/[^\n]+/, (line) => (i === 0 || pieces[i - 1]!.endsWith('\n') ? (line.match(LIST_MARKER)?.[0] ?? '') : '')) : p))
+    .join('')
+    .replace(/^[ \t]*(?:[-*•]|\d+[.)])[ \t]*(?:\n|$)/gm, '');
+
+/**
+ * Facts a sentence may state only when its own [n] source contains them. `exempt`: the user may have written it — with
+ * `opts`, a `label` fact only as written (a document number by its number/year), never by stray digit groups.
  * `label`: with `opts.labels` it may also stand in the label of [n] — a label is data, not model text (plan 08 §2.5).
  */
 const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean; label?: true }> = [
@@ -113,6 +126,9 @@ export function numberMarkers(
     .replace(/\s*\[(\d+)\]/g, (m, n: string) => (inRange(Number(n)) ? m : ''));
   const validCited = [...new Set(cited.filter(inRange))];
   const facts = opts ? [...FACTS, ...ANSWER_FACTS] : FACTS;
+  const said = norm(userText);
+  const userWrote = (fact: string, f: string, label?: true): boolean =>
+    opts && label ? figureIn(said, f.replace(/^(\d{1,4}\/(?:\d{4}|vbhn)).*/, '$1')) : statedIn(userText, fact);
 
   const sentences = text.split(/(?<=[.?!;])(?= )|(?<=\n)/);
   const out: string[] = [];
@@ -126,22 +142,18 @@ export function numberMarkers(
     for (const { re, exempt, fatal, label } of facts) {
       for (const [fact] of s.matchAll(re)) {
         const f = norm(fact.replace(/[.:]+$/, ''));
-        if (hay.some((h) => figureIn(h, f)) || (label && labels.some((h) => figureIn(h, f))) || (exempt && statedIn(userText, fact))) continue;
+        if (hay.some((h) => figureIn(h, f)) || (label && labels.some((h) => figureIn(h, f))) || (exempt && userWrote(fact, f, label))) continue;
         if (fatal) return { answer: '', order: [] };
         anchored = false;
       }
     }
-    if (anchored) out.push(s);
-    else if (opts?.cut) {
-      cut.push(s.trim());
-      // Keep the line break: md() reads bullets per line, so the next line must still start one.
-      out.push(s.replace(/[^\n]+/, ''));
-    } else out.push(s.replace(/\s*\[\d+\]/g, '').replace(/\*\*/g, ''));
+    if (anchored || opts?.cut) out.push(s);
+    else out.push(s.replace(/\s*\[\d+\]/g, '').replace(/\*\*/g, ''));
+    if (!anchored && opts?.cut) cut.push(s.trim());
   }
 
   const order: number[] = [];
-  const renumbered = out
-    .join('')
+  const renumbered = (opts?.cut ? cutPieces(out, (s) => cut.includes(s.trim())) : out.join(''))
     .replace(/\[(\d+)\]/g, (_, n: string) => {
       const at = order.indexOf(Number(n));
       if (at >= 0) return `[${at + 1}]`;
