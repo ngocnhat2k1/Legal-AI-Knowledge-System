@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { asksCodeFit, codebook, fallbackIntent, fastPath, guardIntent, isBareLookup, legalAboutCode, parseVerifyDocCommand, unmaskCodes } from './dispatch.mjs';
-import { answerByHs, answerCodeCheck, answerLegal, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
+import { answerByHs, answerCodeCheck, answerLegal, captionForVision, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
 import {
   CAPABILITIES,
   formatAnswer,
@@ -560,7 +560,7 @@ test('ứng viên HS nằm ranh giới vẫn in lịch sử xác nhận của m�
 });
 
 test('chỉ mã + xuất xứ + từ tra thuế mới tra thẳng; mã nằm trong câu hỏi về hàng thì để router đọc (2026-09-14)', () => {
-  for (const t of ['8481.80.99 TQ', 'Thuế nhập khẩu mã 8481.80.99 xuất xứ Trung Quốc là bao nhiêu phần trăm?', 'Thuế nhập khẩu 2710.12.21 ngày 2026-05-15', '30051010', 'thuế nk 8481.80.99 tq form D ngày 15/05/2026']) {
+  for (const t of ['8481.80.99 TQ', 'Thuế nhập khẩu mã 8481.80.99 xuất xứ Trung Quốc là bao nhiêu phần trăm?', 'Thuế nhập khẩu 2710.12.21 ngày 2026-05-15', '30051010', 'thuế nk 8481.80.99 tq form D ngày 15/05/2026', '8479.89.10 thuế của hscode này', 'thue nk 84818099 tq']) {
     assert.equal(isBareLookup(t), true, t);
   }
   for (const t of ['e có mặt hàng miếng dán bàn chân thành phần từ ngải cứu, e đang tham khảo mã này không biết được không ạ 30051010', 'giải thích mã 3005.10.10', '30051010 được không']) {
@@ -588,6 +588,24 @@ test('router không thấy chữ số của mã nào (R4); mỗi mã một nhãn
   }
   assert.equal(asksCodeFit('vì sao miếng dán ngải cứu vào mã 30051010'), true);
   assert.equal(asksCodeFit('mã 3005.10.10 gồm những hàng gì, khác 3005.90 chỗ nào'), false);
+  for (const t of [
+    'vi sao mieng dan ngai cuu vao ma 30051010',
+    'mã 30051010 dùng cho miếng dán ngải cứu được ko',
+    'miếng dán ngải cứu mã 30051010 đc k',
+    'e có mặt hàng miếng dán, e đang tham khảo mã này không biết được không ạ 30051010',
+    'mã 30.05.10.10 dùng được không',
+  ]) {
+    assert.equal(asksCodeFit(t), true, t);
+  }
+  assert.equal(asksCodeFit('Xe 8703.23.51 đã qua sử dụng nhập khẩu được không'), false);
+  assert.equal(asksCodeFit('Mũ bảo hiểm mã 6506.10.10 thuộc danh mục rủi ro nào theo Thông tư 36/2026?'), false);
+});
+
+test('lời chào trả danh sách năng lực ngay, không qua router; chú thích ảnh không mang mã vào vision (R4)', () => {
+  for (const t of ['hi', 'Chào bot!', 'xin chào', 'Hello']) assert.equal(fastPath({ text: t })?.action, 'greeting', t);
+  assert.equal(fastPath({ text: 'hi, mã 8481.80.99 thuế bao nhiêu' }), null);
+  assert.equal(fastPath({ text: 'hi', hasImage: true }), null);
+  assert.equal(captionForVision('e tham khảo mã 30051010 được không, nhóm 3005 hay 3824'), 'e tham khảo mã được không, nhóm hay');
 });
 
 test('một câu HỎI mã có sai/đúng không không bao giờ ghi sổ (R13); "đúng là <mã cũ>" vẫn xác nhận', async () => {

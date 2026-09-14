@@ -233,7 +233,7 @@ export async function answerCodeCheck(q, clues, text) {
     lines.push(L(['Mã ', [q.dotted, 'b'], ' bạn tham khảo thuộc nhóm ', [dot4(own), 'b'], ', trùng một nhóm ứng viên mình tra từ mô tả hàng — mới khớp ở cấp nhóm 4 số; hàng vào nhóm nào, phân nhóm nào còn tùy đặc điểm của nó, xem phần căn cứ bên dưới trước khi chốt.']));
   } else {
     // Not orange: the candidates are a model's ranking and move run to run, so their absence is no finding.
-    lines.push(L(['Mã ', [q.dotted, 'b'], ' thuộc nhóm ', [dot4(own), 'b'], ', chưa nằm trong các nhóm mình tra từ mô tả hàng; phần căn cứ bên dưới so cả nhóm này với các nhóm ứng viên.']));
+    lines.push(L(['Mã ', [q.dotted, 'b'], ' thuộc nhóm ', [dot4(own), 'b'], ', chưa nằm trong các nhóm mình tra từ mô tả hàng.']));
   }
   lines.push(
     mine?.goods?.path
@@ -269,7 +269,8 @@ export async function answerCodeCheck(q, clues, text) {
     tariff: null,
     legal: grounded
       ? {
-          query,
+          // The description-only question: the heading list would carry the user's heading into the next router prompt (R4).
+          query: ask,
           asOf: legal.asOf ?? null,
           docNumbers: [...new Set(legal.citations.map((c) => c.documentNumber))],
           citations: legal.citations.slice(0, 3).map((c) => ({ documentNumber: c.documentNumber, provisionLabel: c.provisionLabel })),
@@ -472,6 +473,9 @@ export async function handleCorrection(tariff, text, senderName, quote) {
 
 // --- Image --------------------------------------------------------------------
 
+/** A photo caption as vision may read it: no code or heading the user typed, so it cannot seed the heading guesses (R4). */
+export const captionForVision = (caption) => codebook().mask(caption).replace(CODE_MARK, ' ').replace(/\s+/g, ' ').trim();
+
 /** Answer a photo message: download → vision-identify → deterministic tariff lookup. */
 export async function answerImage(imageUrls, caption) {
   const file = await downloadImage(imageUrls);
@@ -483,7 +487,7 @@ export async function answerImage(imageUrls, caption) {
     };
   }
   try {
-    const clues = await claudeVision(file, caption, VISION_DIR);
+    const clues = await claudeVision(file, captionForVision(caption), VISION_DIR);
     if (!clues || (!clues.keywords.length && !clues.hsHints.length)) {
       return {
         text: 'Mình chưa nhận ra mặt hàng trong ảnh. Bạn mô tả bằng chữ (tên hàng + chất liệu + công dụng) kèm xuất xứ giúp mình nhé.',

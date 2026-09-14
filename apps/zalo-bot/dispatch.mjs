@@ -64,13 +64,19 @@ export function legalAboutCode(text) {
   return hasHs(t) && !TARIFF_CUE.test(t) && LEGAL_LIST_CUE.test(t);
 }
 
+/** Lower case without diacritics: staff type "thue nk", "ma hs", "dc k" as often as the accented forms. */
+export const fold = (text) =>
+  String(text ?? '').normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+
 /** Every word a plain rate lookup is made of: "thuế nhập khẩu mã 8481.80.99 xuất xứ Trung Quốc là bao nhiêu %". */
 const LOOKUP_WORDS = new Set(
-  ('thuế suất nhập xuất khẩu xứ mã hs code bao nhiêu nhiêu phần trăm % là của cho hàng hoá hóa mfn fta c/o co form ' +
-    'ưu đãi biểu ngày từ nước tra cứu thì sao ạ nhé nha ơi em e anh chị ad hỏi giúp với hiện nay năm bây giờ mấy ' +
+  ('thuế suất nhập xuất khẩu xứ mã hs code hscode bao nhiêu nhiêu phần trăm % là của cho hàng hoá hóa mfn fta c/o co form ' +
+    'ưu đãi biểu ngày từ nước tra cứu thì sao ạ nhé nha ơi em e anh chị ad hỏi giúp với hiện nay này năm bây giờ mấy ' +
     'tq cn jp kr au nz th my sg id ph de eu gb uk us vn trung quốc nhật bản hàn thái lan úc mỹ đức ấn độ châu âu ' +
     'singapore malaysia indonesia philippines new zealand china japan korea nk xk vat gtgt d ak aj rcep cptpp evfta ' +
-    'acfta atiga aanzfta akfta ajcep vjepa vkfta aifta ahkfta ukvfta rex').split(' '),
+    'acfta atiga aanzfta akfta ajcep vjepa vkfta aifta ahkfta ukvfta rex')
+    .split(' ')
+    .map(fold),
 );
 
 /**
@@ -79,9 +85,7 @@ const LOOKUP_WORDS = new Set(
  * fits the goods, and the direct lookup answered it with the MFN rate (observed 2026-09-14).
  */
 export function isBareLookup(text) {
-  const rest = String(text ?? '')
-    .normalize('NFC')
-    .toLowerCase()
+  const rest = fold(text)
     .replace(new RegExp(HS_RE.source, 'g'), ' ')
     .replace(/\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}/g, ' ');
   return rest.split(/[^\p{L}\d/%]+/u).filter((w) => w && !LOOKUP_WORDS.has(w)).length === 0;
@@ -130,9 +134,19 @@ export function codebook() {
 
 export const unmaskCodes = (text, codes = []) => String(text ?? '').replace(/\[mã (\d+)\]/g, (m, n) => codes[n - 1] ?? m);
 
-/** "Vì sao hàng của em vào mã X", "mã này có phù hợp không": the user's code as the premise of a classification (R4). */
+/**
+ * "Vì sao hàng của em vào mã X", "mã này dùng đc k": a question about the code itself, the user's code as the premise
+ * of a classification (R4). Read without diacritics and with the short forms staff type; a question about what a list or
+ * a rule allows ("xe 8703.23.51 nhập khẩu được không") is not one.
+ */
 export const asksCodeFit = (text) =>
-  /vì sao|tại sao|sao lại|phù hợp|được không|có đúng|đúng không|áp mã|thuộc mã|vào mã/.test(String(text ?? '').toLowerCase().normalize('NFC'));
+  /(?<![a-z])(?:ma|code|hs|nhom)(?![a-z])[^?!\n]{0,40}(?<![a-z])(?:duoc|dc|dung|sai|phu hop|ok|chuan)\s*(?:khong|ko|k|chua|ha|a|nhi)(?![a-z])|(?<![a-z])(?:vi sao|tai sao|sao lai)(?![a-z])|(?<![a-z])(?:ap|vao|thuoc|khai|tham khao)\s+(?:ma|nhom|code)(?![a-z])/.test(
+    fold(text),
+  );
+
+/** A bare greeting gets the capabilities at once: "hi" used to go through the router and come back as a product search. */
+const GREETINGS = ['hi', 'hello', 'hey', 'alo', 'chao', 'xin chao', 'chao bot', 'chao ban', 'hi bot', 'hello bot'];
+export const isGreeting = (text) => GREETINGS.includes(fold(text).replace(/[.!,?…\s]+$/g, '').trim());
 
 /**
  * A quoted bot reply that looked a code up. Any reply naming a code is not one: "Mã 3005.10.10 bạn tham khảo thuộc nhóm
@@ -170,6 +184,7 @@ export function fastPath({ text, hasImage = false, quoteText = '', topic = null,
   // An open offer to fetch a document consumes a bare "nạp"/"ok" first: the same word
   // would otherwise read as a tariff confirmation, which is a different topic entirely.
   if (pendingIngest && isAcceptIngest(text) && !hasImage) return { action: 'ingest' };
+  if (!hasImage && isGreeting(text)) return { action: 'greeting' };
 
   const verdict = confirmVerdict(text);
   if (verdict) {

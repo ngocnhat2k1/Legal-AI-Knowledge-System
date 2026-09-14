@@ -26,7 +26,7 @@ import { ackIngestReports, ingestReports, legalDocuments, requestIngest, verifyD
 import { loadContext, saveContext } from './conversation.mjs';
 import { asksCodeFit, fallbackIntent, fastPath, guardIntent, isBareLookup, legalAboutCode, parseVerifyDocCommand, readsAsQuestion, unmaskCodes } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
-import { formatGeneral, formatIngestQueued, formatIngestReport } from './format.mjs';
+import { CAPABILITIES, formatGeneral, formatIngestQueued, formatIngestReport } from './format.mjs';
 import { docNumberStatedIn, mergeQuote, parseQuery, statedDocNumber, stripMentions, todayVN } from './parse.mjs';
 import { L, render } from './render.mjs';
 import { route } from './router.mjs';
@@ -142,6 +142,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
       intent: 'legal',
     };
   }
+  if (fast?.action === 'greeting') return { text: CAPABILITIES, topic: 'general', intent: 'general' };
   if (fast?.action === 'confirm') return { ...(await handleConfirm(ctx.tariff, fast.verdict, senderName)), intent: 'confirm' };
   if (fast?.action === 'correction') return { ...(await handleCorrection(ctx.tariff, text, senderName, quote)), intent: 'correction' };
 
@@ -150,7 +151,8 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
 
   // 3. Mã HS nằm ngay trong câu hỏi mới → tra thẳng, không cần định tuyến. Trừ khi câu hỏi hỏi văn bản nào
   // liệt kê mã đó ("thuộc danh mục rủi ro nào theo Thông tư 36/2026"): đó là câu hỏi pháp luật.
-  if (legalAboutCode(text)) return { ...(await answerLegal(text, {})), intent: 'legal' };
+  // Hỏi mã có hợp không mà tên hàng có từ danh mục ("pin năng lượng mặt trời áp mã … được không"): vẫn là đối chiếu (R4).
+  if (legalAboutCode(text) && !asksCodeFit(text)) return { ...(await answerLegal(text, {})), intent: 'legal' };
   const direct = parseQuery(text);
   const byCode = () => answerByHs(direct, { showFooter: ctx.topic !== 'tariff' });
   // Chỉ có mã + xuất xứ + từ tra thuế thì tra thẳng. Câu có nội dung khác ("e tham khảo mã 30051010 không biết được
