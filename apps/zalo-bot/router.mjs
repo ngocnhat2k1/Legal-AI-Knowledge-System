@@ -17,6 +17,7 @@
  */
 import { spawn } from 'node:child_process';
 
+import { codebook } from './dispatch.mjs';
 import { CAPABILITIES } from './format.mjs';
 import { toText } from './render.mjs';
 
@@ -96,7 +97,7 @@ function manifestOf(docs) {
   return docs.map((d) => `- ${d.number}${d.consolidates ? ` (hợp nhất ${d.consolidates})` : ''}: ${String(d.title || '').slice(0, 70)}`).join('\n');
 }
 
-const INTENTS = ['tariff', 'legal', 'general', 'confirm', 'correction', 'refine'];
+const INTENTS = ['tariff', 'check_code', 'legal', 'general', 'confirm', 'correction', 'refine'];
 
 /**
  * Classify the new message against the conversation.
@@ -107,24 +108,33 @@ const INTENTS = ['tariff', 'legal', 'general', 'confirm', 'correction', 'refine'
  */
 export async function route(text, ctx = {}) {
   if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) return null;
+  // The new message first, so its code is [mã 1].
+  const book = codebook();
+  const message = book.mask(String(text).replace(/["\n]/g, ' ').slice(0, 600));
   const prompt = [
     'Bạn là bộ định tuyến cho trợ lý tra cứu biểu thuế + pháp luật Việt Nam, đang nhắn tin với chuyên viên.',
     'Đọc CẢ hội thoại rồi phân loại TIN NHẮN MỚI. Trả JSON MỘT dòng, KHÔNG markdown, KHÔNG chữ ngoài JSON.',
     '',
     'HỘI THOẠI GẦN ĐÂY:',
-    transcriptOf(ctx.turns),
+    book.mask(transcriptOf(ctx.turns)),
     '',
     'NGỮ CẢNH ĐANG MỞ:',
-    stateOf(ctx.topic, ctx.state),
+    book.mask(stateOf(ctx.topic, ctx.state)),
     '',
     'KHO VĂN BẢN PHÁP LUẬT (chỉ có bấy nhiêu — KHÔNG hứa văn bản ngoài danh sách):',
     manifestOf(ctx.documents),
     '',
-    `TIN NHẮN MỚI: "${String(text).replace(/["\n]/g, ' ').slice(0, 600)}"`,
+    `TIN NHẮN MỚI: "${message}"`,
+    '(Mọi mã và nhóm HS đã được thay bằng [mã 1], [mã 2]…: bạn không thấy chữ số, đừng đoán chúng.)',
+    '',
+    'Đọc HIỂU người dùng muốn gì. Không phải câu nào có mã HS cũng là hỏi thuế.',
     '',
     'PHÂN LOẠI (intent):',
-    '- tariff: hỏi thuế suất hoặc mã HS của MỘT mặt hàng cụ thể.',
-    '- legal: hỏi bất kỳ VĂN BẢN PHÁP LUẬT Việt Nam nào — luật/nghị định/thông tư/quyết định của BẤT KỲ bộ ngành nào, không giới hạn hải quan.',
+    '- tariff: hỏi THUẾ SUẤT (của mã đã nêu hoặc của một mặt hàng), hoặc nhờ TÌM mã HS cho một mặt hàng.',
+    '- check_code: người dùng nêu một [mã n] cho mặt hàng họ mô tả và hỏi mã đó có đúng, phù hợp, dùng được không, hoặc vì sao hàng vào mã đó ("e tham khảo mã này không biết được không").',
+    '- legal: hỏi bất kỳ VĂN BẢN PHÁP LUẬT Việt Nam nào — luật/nghị định/thông tư/quyết định của BẤT KỲ bộ ngành nào, không giới hạn hải quan;',
+    '  HOẶC cần GIẢI NGHĨA, LẬP LUẬN về phân loại: một mã/nhóm HS bao gồm những gì, chú giải phần/chương, chú giải chi tiết, SEN, quy tắc GRI,',
+    '  vì sao hàng vào nhóm này mà không vào nhóm kia, cách phân biệt hai nhóm — câu cần ĐỌC nguồn rồi giải thích, không phải tra thuế.',
     '- confirm: xác nhận kết quả TRA THUẾ vừa rồi đúng hay sai ("đúng rồi", "sai").',
     '- correction: đưa MÃ HS ĐÚNG để sửa kết quả tra thuế vừa rồi ("HS đúng là 7326.90.99").',
     '- refine: nói kết quả VỪA RỒI chưa đúng ý và muốn tìm lại, nhưng CHƯA nêu đáp án ("không phải cái đó", "ý tôi là thông tư khác").',
@@ -132,16 +142,16 @@ export async function route(text, ctx = {}) {
     'QUY TẮC QUAN TRỌNG: nếu lượt trước là PHÁP LUẬT thì "không phải/sai rồi" là refine của câu hỏi pháp luật — TUYỆT ĐỐI không phải correction mã HS.',
     '',
     'CÁC TRƯỜNG:',
-    '{"intent":"tariff|legal|confirm|correction|refine|general",',
-    '"search_query":"<BẮT BUỘC khi intent=legal hoặc refine: viết lại thành MỘT câu hỏi ĐỘC LẬP, đầy đủ chủ ngữ, ghép ngữ cảnh các lượt trước — người đọc câu này không thấy hội thoại>",',
+    '{"intent":"tariff|check_code|legal|confirm|correction|refine|general",',
+    `"search_query":"<BẮT BUỘC khi intent=legal, refine hoặc check_code: viết lại thành MỘT câu hỏi ĐỘC LẬP, đầy đủ chủ ngữ, ghép ngữ cảnh các lượt trước — người đọc câu này không thấy hội thoại. Mã nào thì giữ nguyên nhãn [mã n] của nó. Riêng check_code: hỏi căn cứ phân loại mặt hàng theo MÔ TẢ, chất liệu, công dụng, KHÔNG nhắc mã>",`,
     '"doc_number":"<số hiệu văn bản người dùng nhắm tới, vd 38/2015/TT-BTC — null nếu không nêu>",',
     '"article":"<số Điều nếu nêu, else null>","clause":"<số Khoản nếu nêu, else null>",',
-    '"keywords":["<nếu tariff: 2-4 từ khoá TIẾNG VIỆT theo CHỨC NĂNG để tra Danh mục HS>"],',
-    '"hs_hints":["<nếu tariff: 3-6 nhóm HS 4-6 số ỨNG VIÊN xếp CAO→THẤP, GỒM cả nhóm CẠNH TRANH>"],',
+    '"keywords":["<nếu tariff hoặc check_code: 2-4 từ khoá TIẾNG VIỆT theo CHỨC NĂNG để tra Danh mục HS>"],',
+    '"hs_hints":["<nếu tariff hoặc check_code: 3-6 nhóm HS 4-6 số ỨNG VIÊN xếp CAO→THẤP theo MÔ TẢ HÀNG, GỒM cả nhóm CẠNH TRANH>"],',
     '"origin":"<mã nước 2 chữ ISO HOA hoặc null>","date":"<YYYY-MM-DD hoặc null>",',
     '"reuse_last_hs":<true nếu người dùng hỏi tiếp về CHÍNH mã HS vừa tra, vd "còn từ Nhật thì sao">,',
     '"verdict":"<correct|wrong|unsure nếu intent=confirm, else null>",',
-    '"note":"<nếu tariff: MỘT câu ≤22 từ mô tả mặt hàng + chức năng chính>",',
+    '"note":"<nếu tariff hoặc check_code: MỘT câu ≤22 từ mô tả mặt hàng + chức năng chính>",',
     '"lead":"<1-2 câu TIẾNG VIỆT tự nhiên dẫn vào câu trả lời, như đồng nghiệp nói chuyện. TUYỆT ĐỐI KHÔNG chứa con số thuế (%), số Điều/Khoản, hay mã HS — phần đó hệ thống tự điền>",',
     '"reply":"<CHỈ khi intent=general: câu trả lời TIẾNG VIỆT ≤120 từ, chỉ nhắc các việc trong NĂNG LỰC CỦA BOT; KHÔNG nêu con số thuế, phần trăm, số hiệu văn bản hay mã HS>"}',
     '',
@@ -152,7 +162,8 @@ export async function route(text, ctx = {}) {
     '(vd điện tử: truyền dữ liệu 8517 · định vị vô tuyến 8526 · báo hiệu 8531 · lưu trữ 8523).',
   ].join('\n');
 
-  return normalize(await runClaude(prompt), { intents: INTENTS });
+  const routed = normalize(await runClaude(prompt), { intents: INTENTS });
+  return routed && { ...routed, codes: book.codes };
 }
 
 // --- Vision -----------------------------------------------------------------

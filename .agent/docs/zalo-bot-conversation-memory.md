@@ -94,6 +94,22 @@ Trường quan trọng nhất là `search_query`: câu hỏi được **viết l
 trả lời tôi muốn, tìm đúng thông tư"* tự nó là rác với retriever; chỉ khi ghép ngữ cảnh nó mới thành
 câu tra được. Đây là cách chuẩn để chữa RAG nhiều lượt.
 
+### Có mã HS trong câu chưa chắc là hỏi thuế (2026-09-14)
+
+*"e có miếng dán bàn chân ngải cứu, e tham khảo mã này không biết được không ạ 30051010"* hỏi **mã có hợp
+với hàng không**, và bot đã trả MFN + FTA vì mọi tin có mã 8 số đi thẳng vào tra thuế. Nay:
+
+- Tra thẳng chỉ khi tin **chỉ gồm** mã + xuất xứ + ngày + từ tra thuế (`isBareLookup` trong dispatch.mjs).
+  Câu có nội dung khác thì router đọc trước.
+- Router thấy mã người dùng dưới dạng `[mã người dùng nêu]` (`maskHs`), cả trong các lượt trước —
+  [R4](../business-rules.md): mã ưa thích không bao giờ là tiền đề.
+- Intent `check_code` → `answerCodeCheck`: nhóm ứng viên lấy từ **mô tả hàng**, `/legal` đọc chú giải của
+  đúng các nhóm đó rồi lập luận, còn so mã người dùng với ứng viên là việc của **code**. Chủ đề ghi là
+  `legal`, để một câu "sai" sau đó không ghi mã người dùng là sai vào sổ ([R13](../business-rules.md)).
+- Câu hỏi giải nghĩa mã/nhóm, chú giải, GRI thuộc intent `legal`. `/legal` giữ luôn Chú giải chi tiết của
+  nhóm được nêu và chú giải chương của nó (`headingSections`), vì "3005.10.10" không khớp tiêu đề
+  "nhóm 30.05" theo cả từ khoá lẫn vector — mô hình đã từ chối trong khi chú giải nằm sẵn trong kho.
+
 ## Lời dẫn tự nhiên — cưỡng chế bằng code, không bằng lời dặn
 
 Mỗi câu trả lời = **LEAD** (1-2 câu LLM viết) + **KHỐI TẤT ĐỊNH** (do code dựng từ giá trị DB).

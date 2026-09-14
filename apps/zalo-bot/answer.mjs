@@ -23,6 +23,7 @@ import {
 import { stampTariff } from './conversation.mjs';
 import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
+import { CODE_MARK, codebook } from './dispatch.mjs';
 import { citationFrom, cleanGazetteTitle, detectOrigin, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
 import { L } from './render.mjs';
 import { claudeVision } from './router.mjs';
@@ -61,12 +62,16 @@ export async function answerByHs(q, { showFooter = true } = {}) {
 
 // --- Tariff from clues (keywords + candidate headings) -----------------------
 
-/** Đường TẤT ĐỊNH: từ gợi ý (từ khoá + nhóm HS) → tra DB → thuế mã khả dĩ nhất + mã thay thế. */
-export async function tariffByClues(clues, text, { showFooter = true } = {}) {
-  const lower = String(text || '').toLowerCase();
-  const origin = clues?.origin || detectOrigin(lower);
-  const date = clues?.date || today();
+const grp4 = (hs) => String(hs).replace(/\./g, '').slice(0, 4);
+const dot4 = (g) => `${g.slice(0, 2)}.${g.slice(2, 4)}`;
+/** The first (best-ranked) line of each 4-digit heading. */
+const perHeading = (cands) => cands.filter((c, i) => cands.findIndex((x) => grp4(x.hs) === grp4(c.hs)) === i);
+const tail = (c) => (c.path || '').split(' › ').slice(-2).join(' › ');
 
+/** Candidate lines for a description: the model's headings first (its rank order), then keyword search. */
+async function gatherCandidates(clues, text) {
+  const origin = clues?.origin || detectOrigin(String(text || '').toLowerCase());
+  const date = clues?.date || today();
   const seen = new Set();
   const cands = [];
   const add = (list) => {
@@ -81,6 +86,12 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
     }
     add(l);
   }
+  return { origin, date, cands, keywords };
+}
+
+/** Đường TẤT ĐỊNH: từ gợi ý (từ khoá + nhóm HS) → tra DB → thuế mã khả dĩ nhất + mã thay thế. */
+export async function tariffByClues(clues, text, { showFooter = true } = {}) {
+  const { origin, date, cands, keywords } = await gatherCandidates(clues, text);
 
   if (!cands.length) {
     return {
@@ -119,10 +130,7 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
     break;
   }
 
-  const grp4 = (hs) => String(hs).replace(/\./g, '').slice(0, 4);
-  const reps = [];
-  const repSeen = new Set();
-  for (const c of cands) { const g = grp4(c.hs); if (!repSeen.has(g)) { repSeen.add(g); reps.push(c); } }
+  const reps = perHeading(cands);
   // RANH GIỚI theo THỨ HẠNG của LLM: 2 gợi ý ĐẦU rơi khác nhóm 4 số ⇒ mô hình thực sự phân vân.
   // Prompt cố tình liệt kê nhóm cạnh tranh ở HẠNG THẤP để MỞ RỘNG tra DB — sự có mặt của chúng
   // KHÔNG phải bằng chứng ranh giới (nếu không "van bi" cũng kèm 7307/7318 sẽ nổ cờ oan). Độc lập
@@ -133,7 +141,6 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   const top = cands[0];
   const full = await lookupFull(top.hsDotted, origin, date);
   const confirm = full ? await confirmations(top.hsDotted, origin) : null;
-  const tail = (c) => (c.path || '').split(' › ').slice(-2).join(' › ');
   // /tariff/search prices MFN at Postgres CURRENT_DATE (UTC): print it only when that is the lookup date (R8).
   // ponytail: between 00:00 and 07:00 Vietnam time the menus show "—"; pass the date to /tariff/search if that matters.
   const mfnOf = (c) => (date === new Date().toISOString().slice(0, 10) && c.mfn != null ? `${Number(c.mfn)}%` : '—');
@@ -188,6 +195,78 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
       ? stampTariff({ hs: top.hsDotted.replace(/\./g, ''), dotted: top.hsDotted, origin, date, snapshot: full || null, desc, keywords: productKw })
       : null;
   return { text: withLead(sanitizeLead(clues?.lead, ''), lines), topic: 'tariff', tariff };
+}
+
+// --- "Mã này dùng được không" -------------------------------------------------
+
+/**
+ * The user named a code for goods they described and asks whether it fits. Their code never reaches a prompt (R4):
+ * the router read the message with the code masked, the candidate headings come from the description, and the
+ * reasoning is /legal reading the notes of those headings. The code meets both only here, in code.
+ */
+export async function answerCodeCheck(q, clues, text) {
+  const plain = codebook().mask(text).replace(CODE_MARK, ' ');
+  // No description from the router: a keyword search on "được không" lists headings about nothing.
+  const described = Boolean(clues?.hsHints?.length || clues?.keywords?.length);
+  const { origin, date, cands } = described ? await gatherCandidates(clues, plain) : { origin: null, date: clues?.date || today(), cands: [] };
+  const own = grp4(q.hs);
+  const heads = perHeading(cands).slice(0, 3);
+  // Only the headings shown: /legal reads three evidence sections, and five named headings left 30.05's note out.
+  const groups = heads.map((c) => grp4(c.hs));
+  const ask = String(clues?.searchQuery || '').replace(CODE_MARK, '').trim() || `Căn cứ phân loại mã HS cho: ${plain.trim()}`;
+  const query = groups.length ? `${ask} Các nhóm ứng viên cần phân biệt: ${groups.map(dot4).join(', ')}.` : ask;
+  const [mine, legal] = await Promise.all([
+    lookupFull(q.dotted, q.origin ?? origin, q.date),
+    groups.length ? legalAnswer(query, { asOf: date }) : null,
+  ]);
+
+  const lines = [];
+  if (!heads.length) {
+    lines.push(L(['Mình chưa tìm được nhóm ứng viên nào từ mô tả để đối chiếu với mã ', [q.dotted, 'b'], '. Bạn cho thêm thành phần, chất liệu, công dụng của hàng nhé.']));
+  } else if (heads.some((c) => grp4(c.hs) === own)) {
+    lines.push(L(['Mã ', [q.dotted, 'b'], ' bạn tham khảo thuộc nhóm ', [dot4(own), 'b'], ', trùng một nhóm ứng viên mình tra từ mô tả hàng — mới khớp ở cấp nhóm 4 số; hàng vào nhóm nào, phân nhóm nào còn tùy đặc điểm của nó, xem phần căn cứ bên dưới trước khi chốt.']));
+  } else {
+    lines.push(L(['Mã ', [q.dotted, 'b'], ' (nhóm ', [dot4(own), 'b'], ') ', ['không nằm trong các nhóm ứng viên mình tra từ mô tả hàng', 'orange'], ' — nên xem lại trước khi khai.']));
+  }
+  lines.push(
+    mine?.goods?.path
+      ? L(['Danh mục mô tả mã này: ', [cleanGazetteTitle('', mine.goods.path, 320), 'i']])
+      : L(['Mình chưa tra được mã ', [q.dotted, 'b'], ' trong biểu đã nạp — bạn kiểm tra lại mã giúp mình.']),
+  );
+  if (heads.length) {
+    lines.push(
+      L(['Nhóm ứng viên theo mô tả hàng:']),
+      ...heads.map((c) =>
+        L([[dot4(grp4(c.hs)), 'b'], ' · ', [cleanGazetteTitle('', c.heading || tail(c), 70), 'i'], grp4(c.hs) === own ? ' (nhóm của mã bạn tham khảo)' : ''], 'ul'),
+      ),
+    );
+  }
+  lines.push(L([]));
+  if (legal?.answer && legal.citations?.length) {
+    lines.push(L([['Căn cứ phân loại', 'b']]), ...formatLegal(legal));
+  } else if (heads.length) {
+    lines.push(L(['Mình chưa tìm được chú giải đủ căn cứ để giải thích — bạn đối chiếu Chú giải chương và Chú giải chi tiết của các nhóm trên trước khi chốt.'], 'note'));
+  }
+  lines.push(L([`Đây là gợi ý để đối chiếu, chưa phải mã đã xác định; cần chắc chắn trước khi khai thì đề nghị hải quan xác định trước mã số. Muốn xem thuế, nhắn "thuế ${q.dotted} xuất xứ <nước>".`], 'note'));
+
+  const grounded = Boolean(legal?.answer && legal.citations?.length);
+  return {
+    // No router lead: it is written before any evidence and can pass the gate saying "mã này phù hợp" (R2).
+    text: lines,
+    // A "sai" after this disputes the reasoning: it must never reach the trail as "the user's code is wrong" (R13).
+    topic: 'legal',
+    // Not remembered: "mã HS vừa tra: 3005.10.10 (miếng dán ngải cứu)" in the next prompt is the premise R4 forbids.
+    tariff: null,
+    legal: grounded
+      ? {
+          query,
+          asOf: legal.asOf ?? null,
+          docNumbers: [...new Set(legal.citations.map((c) => c.documentNumber))],
+          citations: legal.citations.slice(0, 3).map((c) => ({ documentNumber: c.documentNumber, provisionLabel: c.provisionLabel })),
+          missingDoc: null,
+        }
+      : null,
+  };
 }
 
 // --- Legal -------------------------------------------------------------------

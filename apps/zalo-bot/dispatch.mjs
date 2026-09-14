@@ -24,7 +24,7 @@
  * so a cue that does not match the current topic is never allowed to reach a handler
  * that would write to the audit trail.
  */
-import { hasHs, parseDocRef } from './parse.mjs';
+import { HS_RE, hasHs, parseDocRef } from './parse.mjs';
 
 /** Whole-message confirmations. Matched EXACTLY, so a real caption never trips them. */
 export const CONFIRM_WORDS = {
@@ -64,6 +64,66 @@ export function legalAboutCode(text) {
   return hasHs(t) && !TARIFF_CUE.test(t) && LEGAL_LIST_CUE.test(t);
 }
 
+/** Every word a plain rate lookup is made of: "thuế nhập khẩu mã 8481.80.99 xuất xứ Trung Quốc là bao nhiêu %". */
+const LOOKUP_WORDS = new Set(
+  ('thuế suất nhập xuất khẩu xứ mã hs code bao nhiêu nhiêu phần trăm % là của cho hàng hoá hóa mfn fta c/o co form ' +
+    'ưu đãi biểu ngày từ nước tra cứu thì sao ạ nhé nha ơi em e anh chị ad hỏi giúp với hiện nay năm bây giờ mấy ' +
+    'tq cn jp kr au nz th my sg id ph de eu gb uk us vn trung quốc nhật bản hàn thái lan úc mỹ đức ấn độ châu âu ' +
+    'singapore malaysia indonesia philippines new zealand china japan korea nk xk vat gtgt d ak aj rcep cptpp evfta ' +
+    'acfta atiga aanzfta akfta ajcep vjepa vkfta aifta ahkfta ukvfta rex').split(' '),
+);
+
+/**
+ * A message that is only a code, an origin, a date and lookup words is a rate lookup and skips the router. Anything
+ * more is read first: "e có miếng dán ngải cứu, tham khảo mã 30051010 không biết được không ạ" asks whether the code
+ * fits the goods, and the direct lookup answered it with the MFN rate (observed 2026-09-14).
+ */
+export function isBareLookup(text) {
+  const rest = String(text ?? '')
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(new RegExp(HS_RE.source, 'g'), ' ')
+    .replace(/\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}/g, ' ');
+  return rest.split(/[^\p{L}\d/%]+/u).filter((w) => w && !LOOKUP_WORDS.has(w)).length === 0;
+}
+
+/** An 8-digit code in any spelling, or a heading/subheading named after "nhóm", "mã", "hs" ("nhóm 3005", "mã 30.05"). */
+const HS_TOKEN = new RegExp(`${HS_RE.source}|(?<=(?:nhóm|mã|hs)\\s*)(?:\\d{4}(?:\\.\\d{2})?|\\d{2}\\.\\d{2})(?![\\d/])`, 'giu');
+export const CODE_MARK = /\[mã \d+\]/g;
+
+/**
+ * The router never sees the digits of a code (R4): a code the user prefers is not a premise, whether it is in the new
+ * message, an earlier turn or the "code just looked up" line. Each code becomes `[mã n]`, the same n wherever it recurs,
+ * so a rewritten question can be given its codes back.
+ */
+export function codebook() {
+  const codes = [];
+  const key = (m) => {
+    const d = m.replace(/[.\s]/g, '');
+    return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : m;
+  };
+  const mask = (text) =>
+    String(text ?? '').replace(HS_TOKEN, (m) => {
+      const k = key(m);
+      const i = codes.includes(k) ? codes.indexOf(k) : codes.push(k) - 1;
+      return `[mã ${i + 1}]`;
+    });
+  return { codes, mask };
+}
+
+export const unmaskCodes = (text, codes = []) => String(text ?? '').replace(/\[mã (\d+)\]/g, (m, n) => codes[n - 1] ?? m);
+
+/** "Vì sao hàng của em vào mã X", "mã này có phù hợp không": the user's code as the premise of a classification (R4). */
+export const asksCodeFit = (text) =>
+  /vì sao|tại sao|sao lại|phù hợp|được không|có đúng|đúng không|áp mã|thuộc mã|vào mã/.test(String(text ?? '').toLowerCase().normalize('NFC'));
+
+/**
+ * A quoted bot reply that looked a code up. Any reply naming a code is not one: "Mã 3005.10.10 bạn tham khảo thuộc nhóm
+ * 30.05…" (a code check) quoted with "sai rồi" would record the user's own code as wrong.
+ * ponytail: every tariff reply prints "MFN" and every verdict reply "Cảm ơn"; tag replies in memory if that stops holding.
+ */
+const tariffReply = (quoteText) => hasHs(quoteText) && /MFN|Cảm ơn/.test(quoteText);
+
 /**
  * The pre-router fast path. Returns an action when a cheap, unambiguous reading
  * exists (no LLM round trip needed), else null to let the router decide with history.
@@ -98,7 +158,7 @@ export function fastPath({ text, hasImage = false, quoteText = '', topic = null,
   // Correction carries a NEW HS code and writes to the verify-on-use trail, so it needs
   // a tariff answer to correct. `quoteText` counts only when it actually contains an HS
   // code — the old `is a reply at all` test is what let legal replies in here.
-  if (isDisagreement(text) && onTariff && (tariffFresh || hasHs(quoteText))) {
+  if (isDisagreement(text) && onTariff && (tariffFresh || tariffReply(quoteText))) {
     return { action: 'correction' };
   }
   return null;
@@ -129,7 +189,7 @@ export function parseVerifyDocCommand(text) {
   return m ? m[1].replace(/[.,;:]+$/, '').toUpperCase() : null;
 }
 
-const INTENTS = new Set(['tariff', 'legal', 'general', 'confirm', 'correction', 'refine']);
+const INTENTS = new Set(['tariff', 'legal', 'general', 'confirm', 'correction', 'refine', 'check_code']);
 
 /**
  * Apply the same topic guards to the ROUTER's answer. The model sees the transcript and
@@ -141,7 +201,7 @@ const INTENTS = new Set(['tariff', 'legal', 'general', 'confirm', 'correction', 
  */
 export function guardIntent(intentRaw, { topic = null, tariffFresh = false, quoteText = '' } = {}) {
   const intent = INTENTS.has(intentRaw) ? intentRaw : 'tariff';
-  const correctable = topic === 'tariff' && (tariffFresh || hasHs(quoteText));
+  const correctable = topic === 'tariff' && (tariffFresh || tariffReply(quoteText));
 
   if (intent === 'correction') return correctable ? 'correction' : topic === 'legal' ? 'legal' : 'tariff';
   if (intent === 'confirm') return topic === 'tariff' && tariffFresh ? 'confirm' : topic === 'legal' ? 'legal' : 'general';

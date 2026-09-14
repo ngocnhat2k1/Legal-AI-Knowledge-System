@@ -10,8 +10,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { fallbackIntent, fastPath, guardIntent, legalAboutCode, parseVerifyDocCommand } from './dispatch.mjs';
-import { answerByHs, answerLegal, handleConfirm, tariffByClues } from './answer.mjs';
+import { asksCodeFit, codebook, fallbackIntent, fastPath, guardIntent, isBareLookup, legalAboutCode, parseVerifyDocCommand, unmaskCodes } from './dispatch.mjs';
+import { answerByHs, answerCodeCheck, answerLegal, handleConfirm, tariffByClues } from './answer.mjs';
 import {
   CAPABILITIES,
   formatAnswer,
@@ -552,6 +552,81 @@ test('ứng viên HS nằm ranh giới vẫn in lịch sử xác nhận của m�
   );
   assert.ok(text.includes('Từng bị báo sai 1 lần (Chuyên viên A: là 7307) — kiểm tra kỹ'), 'thiếu lịch sử báo sai');
   assert.ok(text.indexOf('Từng bị báo sai') < text.indexOf('Nhắn mã bạn chốt'), 'lịch sử đứng trước ghi chú chốt mã');
+});
+
+test('chỉ mã + xuất xứ + từ tra thuế mới tra thẳng; mã nằm trong câu hỏi về hàng thì để router đọc (2026-09-14)', () => {
+  for (const t of ['8481.80.99 TQ', 'Thuế nhập khẩu mã 8481.80.99 xuất xứ Trung Quốc là bao nhiêu phần trăm?', 'Thuế nhập khẩu 2710.12.21 ngày 2026-05-15', '30051010', 'thuế nk 8481.80.99 tq form D ngày 15/05/2026']) {
+    assert.equal(isBareLookup(t), true, t);
+  }
+  for (const t of ['e có mặt hàng miếng dán bàn chân thành phần từ ngải cứu, e đang tham khảo mã này không biết được không ạ 30051010', 'giải thích mã 3005.10.10', '30051010 được không']) {
+    assert.equal(isBareLookup(t), false, t);
+  }
+});
+
+test('router không thấy chữ số của mã nào (R4); mỗi mã một nhãn, trả về đúng mã; số hiệu văn bản và ngày không bị che', () => {
+  const book = codebook();
+  assert.equal(book.mask('tham khảo nhóm 3005, mã 30051010 và 3005.90.10; lại mã 3005.10.10'), 'tham khảo nhóm [mã 1], mã [mã 2] và [mã 3]; lại mã [mã 2]');
+  assert.equal(book.mask('mã HS vừa tra: 3005.10.10'), 'mã HS vừa tra: [mã 2]', 'cùng mã ở dòng trạng thái cùng nhãn');
+  assert.equal(unmaskCodes('phân biệt [mã 2] và [mã 3]', book.codes), 'phân biệt 3005.10.10 và 3005.90.10');
+  assert.equal(book.mask('Nghị định 26/2023/NĐ-CP ngày 31/05/2023, năm 2026'), 'Nghị định 26/2023/NĐ-CP ngày 31/05/2023, năm 2026');
+  assert.equal(asksCodeFit('vì sao miếng dán ngải cứu vào mã 30051010'), true);
+  assert.equal(asksCodeFit('mã 3005.10.10 gồm những hàng gì, khác 3005.90 chỗ nào'), false);
+});
+
+test('câu đối chiếu mã được quote kèm "sai rồi" không ghi mã người dùng là sai (R13); câu tra thuế thì vẫn đính chính', () => {
+  const quoteText = 'Mã 3005.10.10 bạn tham khảo thuộc nhóm 30.05, trùng một nhóm ứng viên mình tra từ mô tả hàng.';
+  const text = 'sai rồi, không phải nhóm này';
+  assert.equal(fastPath({ text, quoteText, topic: 'tariff', tariffFresh: false }), null);
+  assert.notEqual(guardIntent('correction', { topic: 'tariff', tariffFresh: false, quoteText }), 'correction');
+  assert.equal(fastPath({ text, quoteText: TARIFF_ANSWER_QUOTE, topic: 'tariff', tariffFresh: false })?.action, 'correction');
+});
+
+async function codeCheck(q, clues) {
+  const real = globalThis.fetch;
+  let legalQ = null;
+  globalThis.fetch = async (url) => {
+    const u = new URL(url);
+    if (u.pathname === '/legal') legalQ = u.searchParams.get('q');
+    const body =
+      u.pathname === '/tariff/search' ? CANDS[u.searchParams.get('prefix')] ?? []
+      : u.pathname === '/tariff' ? { ...tariff8481({}), goods: { heading: 'Van', path: 'Vòi, van › Van loại khác' } }
+      : u.pathname === '/legal'
+        ? { asOf: '2026-09-14', answer: 'Van điều chỉnh dòng chảy vào **84.81** [1].', citations: [{ documentNumber: 'CV 1810/TCHQ-TXNK', provisionLabel: 'Chú giải chi tiết HS 2022 · nhóm 84.81', verbatimText: '84.81 - Vòi, van', kind: 'en', effectiveness: 'con_hieu_luc' }] }
+        : null;
+    return { ok: body !== null, status: body !== null ? 200 : 404, json: async () => body };
+  };
+  try {
+    const r = await answerCodeCheck(q, { keywords: ['van'], date: '2026-09-14', ...clues }, `van này dùng mã ${q.dotted} được không`);
+    return { r, text: toText(r.text), legalQ };
+  } finally {
+    globalThis.fetch = real;
+  }
+}
+const hasOrange = (lines) => lines.some((l) => l.segs.some((s) => Array.isArray(s) && s.includes('orange')));
+
+test('đối chiếu mã người dùng nêu: mã không vào câu hỏi gửi LLM (R4), nhóm lệch ứng viên thì báo cam, căn cứ đọc từ /legal', async () => {
+  const off = await codeCheck(
+    { hs: '73079990', dotted: '7307.99.90', origin: null, date: '2026-09-14' },
+    { hsHints: ['8481'], searchQuery: 'Căn cứ phân loại van điều chỉnh, mã [mã 1]', lead: 'Mã bạn tham khảo phù hợp với van.' },
+  );
+  assert.ok(!off.text.includes('phù hợp với van'), 'lời dẫn router viết trước khi có căn cứ không được in');
+  assert.equal(off.r.tariff, null, 'mã người dùng không vào trí nhớ để thành tiền đề lượt sau');
+  assert.ok(off.legalQ?.includes('84.81'), off.legalQ);
+  assert.doesNotMatch(off.legalQ, /7307|73\.07|\[mã/, 'mã người dùng không được thành tiền đề');
+  assert.match(off.text, /Mã 7307\.99\.90 \(nhóm 73\.07\) không nằm trong các nhóm ứng viên/);
+  assert.match(off.text, /Căn cứ phân loại\n[\s\S]*84\.81 \[1\][\s\S]*Chú giải chi tiết HS 2022/);
+  assert.ok(hasOrange(off.r.text));
+  assert.equal(off.r.topic, 'legal', 'một "sai" sau đó bàn về lập luận, không ghi mã người dùng là sai vào sổ');
+
+  const same = await codeCheck({ hs: '84818099', dotted: '8481.80.99', origin: null, date: '2026-09-14' }, { hsHints: ['8481', '7307'] });
+  assert.doesNotMatch(same.legalQ, /8481\.80\.99|84818099/);
+  assert.match(same.text, /thuộc nhóm 84\.81, trùng một nhóm ứng viên/);
+  assert.match(same.text, /84\.81 · .*\(nhóm của mã bạn tham khảo\)/);
+  assert.ok(!hasOrange(same.r.text));
+
+  const bare = await codeCheck({ hs: '84818099', dotted: '8481.80.99', origin: null, date: '2026-09-14' }, { keywords: [], hsHints: [] });
+  assert.match(bare.text, /chưa tìm được nhóm ứng viên nào từ mô tả/);
+  assert.equal(bare.legalQ, null, 'không mô tả hàng thì không tra từ khoá rác, không gọi /legal');
 });
 
 test('ứng viên HS không còn mô tả nào sau cổng thì không in "Với mô tả" rỗng', async () => {

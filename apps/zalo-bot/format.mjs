@@ -353,7 +353,9 @@ export function formatLegal(r) {
       !c.kind && late && c.effectiveFrom
         ? ` · hiệu lực ${c.effectiveTo ? `${dmy(c.effectiveFrom)}–${dmy(c.effectiveTo)}` : `từ ${dmy(c.effectiveFrom)}`}`
         : '';
-    return { n: i + 1, label: `${c.provisionLabel}${window}${c.note ? ` (${c.note})` : ''}`, quote: ex.text, cut: ex.cut, url: c.gazetteUrl };
+    // An Explanatory Note's title repeats the heading text its quote opens with: keep the part that names the note.
+    const label = c.kind === 'en' ? String(c.provisionLabel).split(' — ')[0] : c.provisionLabel;
+    return { n: i + 1, label: `${label}${window}${c.note ? ` (${c.note})` : ''}`, quote: ex.text, cut: ex.cut, url: c.gazetteUrl };
   });
   lines.push(...sourceLines(items));
   return lines;
@@ -445,8 +447,9 @@ export function formatIngestReport(report) {
 
 /** The only capabilities the router's reply may mention, and the reply when the gate drops it. */
 export const CAPABILITIES = [
-  L(['Mình tra được hai việc:']),
+  L(['Mình giúp được ba việc:']),
   L([['Biểu thuế xuất nhập khẩu', 'b'], ' — gõ tên hàng hoặc mã HS, kèm xuất xứ.'], 'ol'),
+  L([['Đối chiếu mã HS', 'b'], ' bạn đang tham khảo với mô tả hàng, giải thích chú giải và căn cứ phân loại.'], 'ol'),
   L([['Văn bản pháp luật hải quan', 'b'], ' — hỏi nội dung văn bản mình đang có; chưa có thì mình tìm trên Công báo và nạp về.'], 'ol'),
   L([['Ví dụ: "thuế nhập khẩu 8481.80.99 xuất xứ Trung Quốc"', 'i']]),
 ];

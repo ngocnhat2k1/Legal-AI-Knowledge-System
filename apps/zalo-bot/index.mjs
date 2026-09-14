@@ -21,10 +21,10 @@ import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 
-import { answerByHs, answerImage, answerLegal, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
+import { answerByHs, answerCodeCheck, answerImage, answerLegal, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
 import { ackIngestReports, ingestReports, legalDocuments, requestIngest, verifyDocument } from './api.mjs';
 import { loadContext, saveContext } from './conversation.mjs';
-import { fallbackIntent, fastPath, guardIntent, legalAboutCode, parseVerifyDocCommand } from './dispatch.mjs';
+import { asksCodeFit, fallbackIntent, fastPath, guardIntent, isBareLookup, legalAboutCode, parseVerifyDocCommand, unmaskCodes } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
 import { formatGeneral, formatIngestQueued, formatIngestReport } from './format.mjs';
 import { docNumberStatedIn, mergeQuote, parseQuery, statedDocNumber, stripMentions, todayVN } from './parse.mjs';
@@ -103,7 +103,7 @@ async function connect() {
  * cho regex soi cả ngữ cảnh thì một câu hỏi pháp luật reply vào tin có "8481.10.11"
  * sẽ bị bắt nhầm thành tra thuế.
  */
-export async function respond({ text, image, quote, ctx, senderName, threadId, userId }) {
+export async function respond({ text, image, quote, ctx, senderName, threadId, userId, notify }) {
   const quoteText = String(quote?.msg || '');
 
   // 0. "xác nhận văn bản <số hiệu>" — người đọc đứng ra bảo đảm cho một văn bản bot tự
@@ -152,19 +152,36 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   // liệt kê mã đó ("thuộc danh mục rủi ro nào theo Thông tư 36/2026"): đó là câu hỏi pháp luật.
   if (legalAboutCode(text)) return { ...(await answerLegal(text, {})), intent: 'legal' };
   const direct = parseQuery(text);
-  if (direct) return { ...(await answerByHs(direct, { showFooter: ctx.topic !== 'tariff' })), intent: 'tariff' };
+  const byCode = () => answerByHs(direct, { showFooter: ctx.topic !== 'tariff' });
+  // Chỉ có mã + xuất xứ + từ tra thuế thì tra thẳng. Câu có nội dung khác ("e tham khảo mã 30051010 không biết được
+  // không ạ") hỏi mã có hợp với hàng không: để router đọc trước, mã bị che (R4).
+  if (direct && isBareLookup(text)) return { ...(await byCode()), intent: 'tariff' };
 
-  // 4. Định tuyến có ngữ cảnh.
+  // 4. Định tuyến có ngữ cảnh. Router không thấy chữ số của mã nào (R4).
   const routed = await route(text, {
     topic: ctx.topic,
     state: ctx.state,
     turns: ctx.turns,
     documents: await legalDocuments(),
   });
-  const intent = routed
+  // Không có LLM để đọc câu: tra mã vẫn là cách hiểu tốt nhất.
+  if (direct && !routed) return { ...(await byCode()), intent: 'tariff' };
+  let intent = routed
     ? guardIntent(routed.intent, { topic: ctx.topic, tariffFresh: ctx.tariffFresh, quoteText })
     : fallbackIntent({ topic: ctx.topic, text });
 
+  // Router không thấy mã nên không biết "em chốt 8481.80.59" khác mã vừa tra: một mã trong tin không bao giờ để nó
+  // ghi sổ cho mã cũ (R13). Đính chính tường minh ("HS đúng là …") đã đi đường tắt ở bước 1.
+  if (direct && (intent === 'confirm' || intent === 'correction')) return { ...(await byCode()), intent: 'tariff' };
+  // "Vì sao hàng của em vào mã X" là phân loại lấy mã người dùng làm tiền đề: đối chiếu, không để /legal bênh mã (R4).
+  if (direct && intent === 'legal' && asksCodeFit(text)) intent = 'check_code';
+  if (intent === 'check_code') {
+    const q = direct ?? (ctx.tariff?.hs ? { hs: ctx.tariff.hs, dotted: ctx.tariff.dotted, origin: ctx.tariff.origin ?? null, date: todayVN() } : null);
+    if (q) {
+      await notify?.('Mình đang đọc chú giải các nhóm liên quan để đối chiếu mã, chờ khoảng một phút nhé.');
+      return { ...(await answerCodeCheck(q, routed, text)), intent };
+    }
+  }
   if (intent === 'confirm') {
     return { ...(await handleConfirm(ctx.tariff, routed?.verdict || 'correct', senderName)), intent };
   }
@@ -175,7 +192,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     // `search_query` là câu hỏi ĐỘC LẬP do router viết lại từ cả hội thoại. Câu tinh chỉnh
     // ("không phải câu trả lời tôi muốn") tự nó là rác với retriever; chỉ khi ghép ngữ cảnh
     // nó mới thành câu tra được. Không có router → dùng câu đã ghép quote.
-    const query = routed?.searchQuery || mergeQuote(text, quote);
+    const query = unmaskCodes(routed?.searchQuery, routed?.codes) || mergeQuote(text, quote);
     // The router may RECOGNISE a document number, never MINT one. `doc=` is trusted
     // absolutely downstream, so a number the human never wrote redirects the whole
     // answer: asked "thông tư 36 của bộ Khoa học công nghệ" — no year at all — the
@@ -204,7 +221,9 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     };
   }
 
-  // intent === 'tariff'. "Còn từ Nhật thì sao" — cùng mặt hàng, khác xuất xứ: giữ mã cũ.
+  // intent === 'tariff' (hoặc check_code mà câu không có mã). Câu hỏi thuế có kèm mã: tra đúng mã đó.
+  if (direct) return { ...(await byCode()), intent: 'tariff' };
+  // "Còn từ Nhật thì sao" — cùng mặt hàng, khác xuất xứ: giữ mã cũ.
   if (routed?.reuseLastHs && ctx.tariff?.hs) {
     const q = {
       hs: ctx.tariff.hs,
@@ -267,7 +286,9 @@ async function main() {
         await api.sendMessage({ ...wire(render('Mình đang xem ảnh, bạn chờ khoảng 20 giây nhé.')[0]), quote: msg.data }, msg.threadId, msg.type).catch(() => {});
       }
 
-      const result = await respond({ text, image, quote: msg.data?.quote, ctx, senderName, threadId: msg.threadId, userId });
+      // A long answer path (code check) says it is working, as the image path does.
+      const notify = (t) => api.sendMessage({ ...wire(render(t)[0]), quote: msg.data }, msg.threadId, msg.type).catch(() => {});
+      const result = await respond({ text, image, quote: msg.data?.quote, ctx, senderName, threadId: msg.threadId, userId, notify });
       if (process.env.BOT_DEBUG) {
         console.log(`[zalo] topic=${ctx.topic ?? '-'} tariffFresh=${ctx.tariffFresh} → intent=${result.intent}`);
       }
