@@ -188,6 +188,21 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
     expect(res.answer).toBe('Phần nhãn hàng hóa đã hết hiệu lực từ 23/01/2026 [1].');
   });
 
+  it('moves the lines naming the asked HS code above the prompt cut, under the table label and header', async () => {
+    const block = ['36/2026/TT-BKHCN — Bảng 4 (sau: Phụ lục II) — khối 1/10', 'STT | Tên sản phẩm | Mã số HS', ...Array.from({ length: 80 }, (_, i) => `${i} | ${'etanol '.repeat(12)}`), '2 | Mũ bảo hiểm cho người đi mô tô, xe máy | 6506.10.10'].join('\n');
+    expect(block.indexOf('6506.10.10')).toBeGreaterThan(6000); // past the cut, as on production
+    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([]);
+    (hsCodeSections as jest.Mock).mockResolvedValueOnce([ev({ id: 36, kind: 'annex_table', title: '36/2026/TT-BKHCN — Bảng 4', body: block })]);
+    (generate as jest.Mock).mockResolvedValueOnce(null);
+    const res = await svc().ask('Mũ bảo hiểm mã 6506.10.10 thuộc danh mục rủi ro nào theo Thông tư 36/2026', '2026-09-14');
+    expect(lastSources()[0]!.text.split('\n').slice(0, 3)).toEqual([
+      '36/2026/TT-BKHCN — Bảng 4 (sau: Phụ lục II) — khối 1/10',
+      'STT | Tên sản phẩm | Mã số HS',
+      '2 | Mũ bảo hiểm cho người đi mô tô, xe máy | 6506.10.10',
+    ]);
+    expect(res.citations[0]!.verbatimText).toContain('Mũ bảo hiểm');
+  });
+
   it('labels a section that is not yet in force with the date it starts', async () => {
     (hybridRetrieve as jest.Mock).mockResolvedValueOnce([]);
     (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([

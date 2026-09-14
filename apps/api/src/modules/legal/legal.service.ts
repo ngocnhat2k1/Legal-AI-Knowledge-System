@@ -215,6 +215,7 @@ export class LegalService {
 
     // A document held only as evidence has no clauses to search; a named Điều is a clause lookup, not evidence.
     const onlyEvidence = !documentIds.length && evidenceNumbers.length > 0;
+    const hsInQuery = [...new Set(query.match(HS_CODE) ?? [])];
     const [all, evidence, named, byCode] = await Promise.all([
       onlyEvidence
         ? Promise.resolve([] as RetrievedArticle[])
@@ -223,7 +224,7 @@ export class LegalService {
         ? Promise.resolve([] as RetrievedEvidence[])
         : evidenceRetrieve(this.db, { queryText: query, queryVec: vec, asOf, documentNumbers: evidenceNumbers }),
       namedStatus(this.db, namedNumbers, asOf),
-      hsCodeSections(this.db, [...new Set(query.match(HS_CODE) ?? [])], asOf),
+      hsCodeSections(this.db, hsInQuery, asOf),
     ]);
 
     // The relevance gate exists to stop the dense branch handing back its nearest
@@ -241,7 +242,7 @@ export class LegalService {
       .filter((e) => !pinned.some((p) => p.id === e.id))
       .sort((a, b) => (a.bestDist ?? 1) - (b.bestDist ?? 1));
     const keptEvidence = [...pinned, ...ranked].slice(0, Math.max(EVIDENCE_K, pinned.length));
-    const sources = [...kept.map(articleSource), ...keptEvidence.map((e) => evidenceSource(e, asOf))];
+    const sources = [...kept.map(articleSource), ...keptEvidence.map((e) => evidenceSource(e, asOf, hsInQuery))];
     const scope = {
       requestedDoc: ref?.core ?? null,
       missingDoc: null,
@@ -366,7 +367,20 @@ const AUTHORITY_NOTE: Record<string, string | null> = {
 
 const dmy = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 
-function evidenceSource(e: RetrievedEvidence, asOf: string): Source {
+/**
+ * Lines naming an HS code the question asks about move up under the section's label and table header, so the prompt
+ * cut keeps them (spec §3.4). TT 36/2026 lists 6506.10.10 past character 6,000 of a 15,000-character annex block: cut
+ * as it stood, the model never saw the helmet row and leaned on the internal summary sheet instead (2026-09-14).
+ */
+function focusOn(body: string, codes: string[]): string {
+  const lines = body.split('\n');
+  const hit = (l: string) => codes.some((c) => l.includes(c));
+  if (!codes.length || !lines.slice(2).some(hit)) return body;
+  return [...lines.slice(0, 2), ...lines.slice(2).filter(hit), '…', ...lines.slice(2).filter((l) => !hit(l))].join('\n');
+}
+
+function evidenceSource(e: RetrievedEvidence, asOf: string, codes: string[] = []): Source {
+  const body = focusOn(e.body, codes);
   const part = (x: StatusEnd) => (x.scope ? ` (phần: ${x.scope})` : '');
   const past = e.ends.filter((x) => x.from <= asOf);
   const coming = e.ends.filter((x) => x.from > asOf);
@@ -388,13 +402,14 @@ function evidenceSource(e: RetrievedEvidence, asOf: string): Source {
   return {
     label: e.title,
     note: [expired, note].filter(Boolean).join(' · ') || null,
-    text: e.body.slice(0, EVIDENCE_PROMPT_CHARS),
+    text: body.slice(0, EVIDENCE_PROMPT_CHARS),
     citation: {
       documentNumber: e.documentNumber ?? e.instrument,
       documentTitle: e.title,
       articleLabel: e.title,
       provisionLabel: e.title,
-      verbatimText: e.body,
+      verbatimText: body, // the same verbatim lines, the ones naming the asked code first
+
       path: e.title,
       effectiveness: e.effectiveness,
       effectiveFrom: e.effectiveFrom,
