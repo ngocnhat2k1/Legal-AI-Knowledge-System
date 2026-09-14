@@ -1,0 +1,116 @@
+name: CI/CD
+
+# Every PR and every push to main: build, then every test suite, with the golden set run against
+# a freshly seeded Postgres. Pushes to main also build the images (here, never on the shared
+# server) and deploy them. Runbook: .agent/docs/mona-dev-server-operations.md §5.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['.agent/**', '**.md']
+  pull_request:
+    paths-ignore: ['.agent/**', '**.md']
+
+# A newer push cancels an older PR run; on main runs queue instead, so no deploy is cut off midway.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      db:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: customs_assistant
+        ports: ['5432:5432']
+        # Over TCP: during init the image runs a socket-only server that pg_isready would already accept.
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U app -d customs_assistant"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://app:app@localhost:5432/customs_assistant
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - run: yarn install --immutable
+      - run: yarn build
+      # A seeded DATABASE_URL turns on db/seed/golden.spec.ts; legal-golden also needs an embedder and stays skipped.
+      - run: yarn db:migrate && yarn db:seed
+      - run: yarn test
+      - run: yarn test:bot
+      - run: yarn test:parser
+
+  images:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io/${{ github.repository_owner }}
+      # Connects each package to this repository on GitHub.
+      SOURCE_LABEL: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: printf '%s' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+        env:
+          TOKEN: ${{ github.token }}
+      # The docker-container driver can read and write a registry build cache; the default driver cannot.
+      - run: docker buildx create --use
+      - name: App image (api, migrate, seed, zalo-bot)
+        run: >-
+          docker buildx build --push -f apps/api/Dockerfile --label "$SOURCE_LABEL"
+          -t "$REGISTRY/customs-assistant:$GITHUB_SHA"
+          --cache-from "type=registry,ref=$REGISTRY/customs-assistant:cache"
+          --cache-to "type=registry,ref=$REGISTRY/customs-assistant:cache,mode=max" .
+      - name: Ingest image
+        run: >-
+          docker buildx build --push -f apps/ingest/Dockerfile --label "$SOURCE_LABEL"
+          -t "$REGISTRY/customs-assistant-ingest:$GITHUB_SHA" .
+      # 6 GB (torch + BGE-M3), so it is tagged by the git tree hash of apps/embedder and built only
+      # when no image exists for that tree, i.e. when the folder changed.
+      - name: Embedder image
+        run: |
+          image="$REGISTRY/legal-embedder:$(git rev-parse HEAD:apps/embedder)"
+          if docker manifest inspect "$image" >/dev/null 2>&1; then echo "unchanged: $image"; exit 0; fi
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker buildx build --push --label "$SOURCE_LABEL" -t "$image" apps/embedder
+
+  deploy:
+    needs: images
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # DEPLOY_* secrets live in this environment, which only main may use (Settings → Environments).
+    environment: production
+    permissions:
+      packages: read
+    steps:
+      # No checkout and no third-party action in the one job that holds the SSH key.
+      - name: Deploy over SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          TOKEN: ${{ github.token }}
+        run: |
+          host=${DEPLOY_HOST#ssh://}; host=${host#*@}; host=${host%:*}
+          echo "::add-mask::$host" # the repository, and so its Actions logs, are public
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # deploy.sh is this key's forced command on the server: SHA on the command line, token on stdin.
+          printf '%s\n' "$TOKEN" | ssh -o BatchMode=yes -o ServerAliveInterval=30 "$DEPLOY_HOST" "$GITHUB_SHA"

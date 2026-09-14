@@ -16,7 +16,7 @@ tiếp theo, và điều gì đã học được mà code không cho thấy.
 
 | | |
 |---|---|
-| **Đang chạy** | Server dev dùng chung của MONA (`<MONA_DEV_HOST>`; giá trị thật trong `.agent/local/mona-dev-server.md`), stack `/opt/docker-projects/customs-assistant`, cổng 127.0.0.1 3060/5435/8060: API + web UI + kho pháp lý 15 văn bản + worker ingest + bot Zalo (đã đăng nhập, `ALLOWED_THREADS` đã đặt), `/health` báo `llm: up`. Deploy mới nhất `40fc5b3` (2026-09-14, dọn over-engineering). **LLM đang hết hạn mức subscription** (`claude -p`: "org's monthly spend limit", reset 2026-09-15 09:00 UTC): legal RAG chỉ trả nguyên văn, router bot chạy đường dự phòng; `/health` vẫn báo `llm: up` vì chỉ kiểm token + binary. Vận hành: [runbook](../docs/mona-dev-server-operations.md). |
+| **Đang chạy** | Server dev dùng chung của MONA (`<MONA_DEV_HOST>`; giá trị thật trong `.agent/local/mona-dev-server.md`), stack `/opt/docker-projects/customs-assistant`, cổng 127.0.0.1 3060/5435/8060: API + web UI + kho pháp lý 15 văn bản + worker ingest + bot Zalo (đã đăng nhập, `ALLOWED_THREADS` đã đặt), `/health` báo `llm: up`. Deploy mới nhất `40fc5b3` (2026-09-14, dọn over-engineering). **Từ 2026-09-14 deploy bằng CI/CD:** push `main` → GitHub Actions test, build image lên ghcr.io, server chỉ kéo về ([runbook §5](../docs/mona-dev-server-operations.md#5-deploy-bản-mới)). **LLM đang hết hạn mức subscription** (`claude -p`: "org's monthly spend limit", reset 2026-09-15 09:00 UTC): legal RAG chỉ trả nguyên văn, router bot chạy đường dự phòng; `/health` vẫn báo `llm: up` vì chỉ kiểm token + binary. Vận hành: [runbook](../docs/mona-dev-server-operations.md). |
 | **Việc tiếp theo** | Mảng 2 của [kế hoạch 05](05-bot-parity-tasks.md): nạp 32 nguồn notebook vào `evidence_section`. |
 | **Chờ chủ dự án** | (1) chat thử bot sau deploy `69d1ab4`, báo chỗ chưa ổn; (2) có nạp 4 nghị định biểu thuế còn thiếu (144/2024, 108/2025, 199/2025, 201/2026) không; (3) đối chiếu PDF Công báo EVFTA 8711.20.x (9,3% năm 2026 → 20,4% năm 2027); (4) quyết corpus sinh lại theo từng văn bản và sửa `gazette_issue` 128/2020/NĐ-CP — [kế hoạch 05](05-bot-parity-tasks.md) Task 5; (5) [kế hoạch 06](06-deploy-mona-dev-server.md): kiểm thử bot trong nhóm, domain + mật khẩu basic auth, `rclone.conf`; (6) thêm 16 nguồn mới vào notebook (TASK-021; sau mỗi lần đẩy `verify_drive.py` phải ra `0 lệch`); (7) các câu hỏi mở của phiên 2026-09-14 bên dưới. |
 | **Việc của agent** | `docker rm customs-assistant-gazette-full` (crawl đã thoát). |
@@ -63,6 +63,29 @@ khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — 
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
 
 ---
+
+### 2026-09-14 (chiều) — CI/CD trên GitHub: test mọi PR/push, image build trên GitHub, server chỉ kéo về
+
+- **Vì sao:** chủ dự án muốn push `main` là deploy và đổi server phải dễ, rồi hỏi build trên server có làm quá tải không.
+  Có: `docker build` không chịu `mem_limit` của override, còn host lúc kiểm chỉ có 2,2 GiB `available`, không swap. Deploy
+  tay còn dính bẫy `tar` không xoá file cũ và `| tail` nuốt mã lỗi.
+- **Đã làm:** `.github/workflows/ci-cd.yml` (test → images → deploy), `deploy.sh`,
+  [ADR](../architecture-decisions/2026-09-14-ci-cd-build-on-github-pull-on-server.md), runbook §5 viết lại (CD, khoá và
+  secret, chuyển server, deploy tay dự phòng). Trên server: thư mục stack thành git clone, thêm dòng khoá `restrict,command=…/deploy.sh` vào `authorized_keys`. Trên GitHub: environment `production`
+  chỉ cho `main`, 3 secret `DEPLOY_*`.
+- **Kiểm trước khi push:** actionlint và shellcheck sạch. 7 nhánh của `deploy.sh` chạy với docker giả: SHA sai hoặc cờ chèn
+  qua ssh thì thoát 2; SHA không ở đầu `main` thì thoát 0, không làm gì; server cũ và server mới đi đúng chuỗi lệnh; api
+  chạy image cũ thì thoát 1, không ghi `DEPLOYED_COMMIT`; thiếu token thì dừng trước mọi lệnh compose. Job test chạy thử
+  trên clone sạch: `c75e8ca` và `8fa69dc` đều xanh (Jest 97 và 116, bot 61, parser 3 bộ). Khoá mới thử từ máy dev: không
+  mở được shell, lệnh tuỳ ý bị thay bằng `deploy.sh`.
+- **Chưa kiểm được trước:** golden set với Postgres. Docker trên máy dev không chạy, còn Postgres 16 của Homebrew không có
+  pgvector, nên lần chạy CI đầu là lần kiểm đầu.
+- **Bất ngờ:** một phiên khác commit `8fa69dc` (tầng bằng chứng, migration 0011) lúc 14:34 ngay trong working tree này,
+  chưa push, rồi tự deploy nó lên server lúc 14:39 bằng `git archive` và chạy `seed-evidence`. Chín phút sau, lệnh
+  `git checkout -f` biến thư mục stack thành git clone của phiên này đè các file đã track của `8fa69dc` về `c75e8ca`
+  (container đang chạy không bị ảnh hưởng); đã khôi phục bằng `git archive 8fa69dc`. Commit CI/CD soạn trong git worktree
+  riêng để không đụng working tree của phiên kia. Chủ dự án chọn đặt nó lên trên `8fa69dc` và push sau khi `seed-evidence`
+  xong, để lần deploy đầu chạy đúng mã đang chạy và không thay embedder giữa lúc seed. Phiên kia chỉ cần `git pull --rebase`.
 
 ### 2026-09-14 (sau deploy) — Dọn over-engineering: code gọn hơn, markdown từ ~20k còn ~12k dòng; đã deploy `40fc5b3`
 

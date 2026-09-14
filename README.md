@@ -51,10 +51,10 @@ không thể gỡ cổng host qua file override; cổng host là biến môi tr�
 (gồm `API_HOST_PORT`, `DB_HOST_PORT`, `EMBEDDER_HOST_PORT` — kiểm lại bằng `grep -n '\${' docker-compose.yml`). BuildKit build được
 mà không cần plugin buildx.
 
-1. **Đưa mã lên** (giữ nguyên `.env` trên máy chủ). `git archive HEAD` chỉ gói các file **đã commit** — commit trước, file chưa commit sẽ không lên máy chủ: `git archive HEAD | ssh <host> 'mkdir -p /opt/customs-assistant && cd /opt/customs-assistant && tar xf -'`
+1. **Đưa mã lên**: `git clone https://github.com/ngocnhat2k1/Legal-AI-Knowledge-System.git /opt/customs-assistant`. Mỗi lần deploy sau chỉ checkout commit mới; `.env` và override nằm ngoài git nên không bị đè.
 2. **`.env`** theo `.env.example`: `CLAUDE_CODE_OAUTH_TOKEN` (lấy bằng `claude setup-token` trên máy đã đăng nhập, không bao giờ in ra), `ALLOWED_THREADS`, `EMBED_MAX_TOKENS`.
 3. **rclone** cho sao lưu: `scp ~/.config/rclone/rclone.conf <host>:~/.config/rclone/` — file này chứa token Drive, không commit.
-4. **Dựng**: `docker compose build migrate embedder && docker compose up -d` — thứ tự tự đảm bảo: db → migrate → seed → seed-legal (embed qua sidecar, ~1 giờ lần đầu) → api → zalo-bot.
+4. **Dựng**: cài khoá deploy và secret theo [runbook §5](.agent/docs/mona-dev-server-operations.md#chuyển-sang-server-khác), rồi Re-run job `deploy` trên GitHub: image build trên GitHub, `deploy.sh` kéo về và chạy `up -d` cả chuỗi. Không dùng GitHub Actions thì build ngay trên máy: `docker compose build migrate embedder && docker compose up -d` — thứ tự tự đảm bảo: db → migrate → seed → seed-legal (embed qua sidecar, ~1 giờ lần đầu) → api → zalo-bot.
    Lần đầu, `up -d` đứng chờ `seed-legal` khoảng một giờ — chạy trong `tmux`, hoặc tách bước:
    `docker compose up -d db embedder`, rồi `docker compose run --rm --no-deps migrate`,
    `docker compose run --rm --no-deps seed`, `docker compose run --rm --no-deps seed-legal`, rồi
@@ -74,7 +74,7 @@ mà không cần plugin buildx.
 8. **Đo embedder** (một lần, trước khi nạp tầng bằng chứng): xem `research/inbox-loader/measure_embed.py`. Script mặc định
    gọi cổng 8000; nếu đổi `EMBEDDER_HOST_PORT`, đặt `EMBEDDER_URL=http://127.0.0.1:<cổng>`.
 
-Cập nhật mã: bước 1 lại, rồi `docker compose build migrate && docker compose run --rm --no-deps migrate && docker compose up -d --no-deps --force-recreate api zalo-bot` (không đụng db/embedder). Chỉ bot: `docker compose up -d --no-deps zalo-bot`.
+Cập nhật mã: push lên `main`. GitHub Actions chạy test, build image rồi deploy ([runbook §5](.agent/docs/mona-dev-server-operations.md#5-deploy-bản-mới)); commit chỉ đổi tài liệu thì không deploy.
 
 ## Bắt đầu tại đây
 

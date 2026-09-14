@@ -19,6 +19,8 @@ db/
 research/                           # bộ nạp chạy trên máy dev (legal-, fta-, inbox-, hs-notes-loader) + README các spike đã xong
 fixtures/                           # golden set, bộ câu pháp luật / notebook, baseline eval
 public/index.html                   # web UI
+.github/workflows/ci-cd.yml         # CI: build + test mọi PR/push; CD: push main → image lên ghcr.io → deploy
+deploy.sh                           # nửa trên server của CD: forced command của khoá deploy
 ```
 
 ## Quy tắc

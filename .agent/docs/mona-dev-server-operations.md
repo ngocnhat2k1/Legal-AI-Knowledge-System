@@ -5,6 +5,7 @@ updated: 2026-09-14
 related:
   - ../planning/06-deploy-mona-dev-server.md
   - ../architecture-decisions/2026-09-13-host-on-mona-dev-server.md
+  - ../architecture-decisions/2026-09-14-ci-cd-build-on-github-pull-on-server.md
   - ../../README.md
   - zalo-bot-conversation-memory.md
   - legal-corpus-self-extension.md
@@ -25,7 +26,7 @@ Trong tài liệu này, `<MONA_DEV_HOST>` là đích ssh của server. Giá tr�
 Server dev dùng chung của MONA, nhiều dự án khác cùng chạy. Máy không có swap, lúc khảo sát còn trống khoảng
 4,9 GB RAM, nên mỗi container có giới hạn RAM cứng (mục 3).
 
-- **Thư mục stack:** `/opt/docker-projects/customs-assistant` (mã lấy từ `git archive`, cộng các file ngoài git ở mục 3).
+- **Thư mục stack:** `/opt/docker-projects/customs-assistant` (git clone; mỗi lần deploy checkout đúng commit được deploy; cộng các file ngoài git ở mục 3).
 - **Compose project:** `customs-assistant`. Container tên `customs-assistant-<service>-1`, network và volume cũng mang tiền tố này.
 
 | Service | Image | Việc | Cổng host |
@@ -36,8 +37,8 @@ Server dev dùng chung của MONA, nhiều dự án khác cùng chạy. Máy kh�
 | `ingest` | `customs-assistant-ingest:local` | Worker xử lý hàng đợi `ingest_request` do bot ghi, hỏi việc mỗi 15 giây | — |
 | `zalo-bot` | `customs-assistant:local` | Bot Zalo, session ở volume `customs-assistant_zalo_session` | — |
 
-Năm service trên có `restart: unless-stopped`. Chạy một lần rồi thoát: `migrate` (service dùng để build image
-`customs-assistant:local`), `seed` (biểu thuế), `seed-legal` (kho pháp lý, cần `embedder` healthy).
+Năm service trên có `restart: unless-stopped`. Chạy một lần rồi thoát: `migrate` (chạy migration; khi build tay, image
+`customs-assistant:local` build qua service này), `seed` (biểu thuế), `seed-legal` (kho pháp lý, cần `embedder` healthy).
 
 **Crawl danh mục Công báo** (`gazette_document`) là container rời `customs-assistant-gazette-full`, dùng image của
 `migrate`. Lần crawl đầy đủ ngày 2026-09-13 chạy từ 10:43 tới 11:34 UTC (~51 phút), được 24.581 văn bản:
@@ -55,7 +56,8 @@ Bỏ `FULL=1` thì crawl chạy kiểu incremental: gặp một trang không có
 | Cron sao lưu `/etc/cron.d/customs-backup`, log `/var/log/customs-backup.log` | Chưa tạo, chờ `rclone.conf` (Task 10) |
 | Vhost `/opt/nginx/conf/vhosts/bieuthue.ngocnhat.info.conf`, htpasswd `/opt/nginx/conf/htpasswd-customs-assistant`, cert Let's Encrypt của `bieuthue.ngocnhat.info` | Chưa tạo, chờ domain và mật khẩu basic auth (Task 8) |
 
-Không có gì cài lên host. CLI `claude` nằm sẵn trong image.
+Không có gì cài lên host. CLI `claude` nằm sẵn trong image. Ngoài thư mục stack chỉ có thêm một dòng khoá deploy của
+CI trong `authorized_keys` (mục 5).
 
 **Dữ liệu đang chạy (2026-09-13):** kho pháp lý là bản cũ đã commit (15 văn bản / 6.637 điều khoản / 2.806 chunk).
 Bản sinh lại của [kế hoạch 05](../planning/05-bot-parity-tasks.md) còn chờ chủ dự án quyết theo từng văn bản.
@@ -84,7 +86,7 @@ giờ mở cổng 3060 ra ngoài. Chỉ vào qua tunnel, hoặc qua nginx có ba
 
 ## 3. Cấu hình ngoài git
 
-Hai file này nằm trong thư mục stack. `git archive` không đè lên chúng.
+Hai file này nằm trong thư mục stack, ngoài git: checkout của mỗi lần deploy không đụng tới chúng.
 
 ### `.env` (`chmod 600`)
 
@@ -194,54 +196,82 @@ Nếu exit code khác 0, đọc log trước rồi mới chạy lại.
 
 ## 5. Deploy bản mới
 
-`git archive HEAD` chỉ gói những gì **đã commit**. Commit trước khi deploy. Tar ghi đè file nhưng không xoá những file
-đã bị xoá khỏi git, còn `.env`, override, `DEPLOYED_COMMIT` và `teardown.sh` thì giữ nguyên.
+Push lên `main` là deploy. Lý do chọn cách này: [ADR 2026-09-14](../architecture-decisions/2026-09-14-ci-cd-build-on-github-pull-on-server.md).
+Workflow [`.github/workflows/ci-cd.yml`](../../.github/workflows/ci-cd.yml) có ba job:
 
-**Bước 1, trên máy dev:** xem khác gì so với bản đang chạy, rồi đẩy mã lên.
+1. **test** (mọi PR và mọi push lên `main`): `yarn build`, migrate và seed một Postgres pgvector tạm, Jest (có golden
+   set), test bot, test parser.
+2. **images** (push lên `main`): build trên máy của GitHub, đẩy lên ghcr.io (private): `customs-assistant:<sha>`,
+   `customs-assistant-ingest:<sha>`, `legal-embedder:<tree hash của apps/embedder>`. Embedder 6 GB chỉ build lại khi thư
+   mục `apps/embedder` đổi.
+3. **deploy**: SSH vào server, chạy [`deploy.sh`](../../deploy.sh). Script checkout commit, kéo 3 image và gắn lại tên
+   `:local`, chạy `migrate`, tạo lại những service trong `embedder api zalo-bot ingest` có image hoặc `.env` đổi. Sau đó
+   script kiểm api chạy đúng image vừa kéo và `/health` ok, ghi `DEPLOYED_COMMIT`, xoá image cũ không còn container hay tag
+   nào giữ.
+
+Commit chỉ đổi `.agent/**` hoặc `*.md` không chạy workflow. Server không build gì, nên deploy không ăn RAM của host.
+Theo dõi ở tab Actions trên GitHub (hoặc `gh run watch`); deploy xong thì kiểm theo mục 4.
+
+- **Chỉ commit ở đầu `main` được deploy.** Re-run một run cũ khi `main` đã đi tiếp thì script in `main has moved past …`
+  và không làm gì. Quay lui bằng `git revert` rồi push.
+- **Image cũ bị xoá sau mỗi lần deploy thành công,** trừ image còn mang tag khác. Muốn giữ một bản để quay lui khẩn cấp
+  thì gắn tag trước: `docker tag customs-assistant:local customs-assistant:rollback-<sha>`.
+- **Mỗi lần deploy code tạo lại `api`, `zalo-bot`, `ingest`.** Bot đăng nhập lại bằng session trong volume, không cần QR.
+  Embedder chỉ bị tạo lại khi image của nó đổi; khi đó `/legal` trả 400 khoảng 2 phút trong lúc nạp model.
+- **Không tự động:** nạp lại dữ liệu (các mục dưới) và crawl Công báo (mục 1) vẫn chạy tay.
+- **Nâng CLI `claude`:** lớp cài CLI nằm trong cache build, ở tag `cache` của package `customs-assistant`. Xoá phiên bản đó
+  trong GitHub → Packages, rồi push để build lại lớp này.
+
+### Khoá deploy và secret
+
+| Ở đâu | Gì |
+|---|---|
+| GitHub → Settings → Environments → `production` (chỉ nhánh `main` đọc được) | `DEPLOY_HOST`: đích ssh dạng `user@host` (cổng khác 22 thì `ssh://user@host:cổng`) · `DEPLOY_SSH_KEY`: khoá riêng ed25519 · `DEPLOY_KNOWN_HOSTS`: dòng `known_hosts` của server |
+| Server: `~/.ssh/authorized_keys` của user deploy | `restrict,command="/opt/docker-projects/customs-assistant/deploy.sh" ssh-ed25519 … customs-assistant-ci` |
+
+`command=` ép khoá này chỉ chạy được `deploy.sh`, không mở được shell. SHA đi trên dòng lệnh ssh. `GITHUB_TOKEN` của job
+(chỉ đọc package, hết hạn khi job xong) đi qua stdin, và script đăng nhập ghcr.io bằng một thư mục cấu hình tạm nên không
+đụng `~/.docker/config.json` của user trên server.
+
+Kiểm khoá từ máy giữ khoá riêng: `ssh -i <khoá> -o IdentitiesOnly=yes <MONA_DEV_HOST> 0000000000000000000000000000000000000000`
+phải in `main has moved past …` và thoát 0; không kèm lệnh thì in `usage` và thoát 2.
+
+Log Actions của repo công khai thì ai cũng đọc được. Job deploy che địa chỉ host. `deploy.sh` không in log ứng dụng, vì log
+có thể chứa nội dung chat ([R14](../business-rules.md)); khi lỗi, script chỉ in trạng thái container. Log thật xem trên
+server (mục 4).
+
+### Chuyển sang server khác
+
+1. Cài Docker (compose v2, plugin hay bản standalone đều được) và git.
+2. `git clone https://github.com/ngocnhat2k1/Legal-AI-Knowledge-System.git <thư mục stack>`.
+3. Tạo `.env` theo mục 3 (`chmod 600`); thêm override nếu máy dùng chung cần giới hạn RAM.
+4. Thêm dòng khoá ở bảng trên vào `authorized_keys`, sửa đường dẫn `deploy.sh` cho khớp thư mục stack.
+5. Sửa secret `DEPLOY_HOST` và `DEPLOY_KNOWN_HOSTS` (lấy bằng `ssh-keyscan <host>`, đối chiếu fingerprint trên máy thật).
+   Khoá giữ nguyên.
+6. Tab Actions → run mới nhất của `main` → Re-run job `deploy`. Server chưa có `DEPLOYED_COMMIT`, nên script chạy `up -d`
+   cả chuỗi: db → migrate → seed → seed-legal (nhúng corpus, ~20 phút) → api, bot.
+7. Quét QR cho bot (mục 6). Làm nginx + basic auth và sao lưu theo [README](../../README.md#triển-khai-máy-chủ); phục hồi
+   `lookup_confirmation` theo bước 7 ở đó.
+8. Gỡ server cũ theo mục 8.
+
+### Deploy tay khi GitHub Actions không dùng được
+
+Build ngay trên server. Build không chịu giới hạn RAM của override (2026-09-14 host chỉ còn 2,2 GiB trống, không swap),
+nên làm ngoài giờ và theo dõi `free -h`. Chạy `git status` trước: file chưa track trong `apps/` hay `db/` cũng lọt vào
+image build tay.
 
 ```bash
-git status --short && git log -1 --oneline
-git diff --stat "$(ssh <MONA_DEV_HOST> 'cat /opt/docker-projects/customs-assistant/DEPLOYED_COMMIT')" HEAD
-git archive HEAD | ssh <MONA_DEV_HOST> 'tar xf - -C /opt/docker-projects/customs-assistant'
-# Tar không xoá gì: gỡ file đã xoá VÀ phía cũ của file đổi tên, không thì `nest build` vẫn biên dịch chúng.
-OLD=$(git diff --name-status -M "$(ssh <MONA_DEV_HOST> 'cat /opt/docker-projects/customs-assistant/DEPLOYED_COMMIT')" HEAD | awk '$1=="D" || $1 ~ /^R/ {print $2}' | tr '\n' ' ')
-ssh <MONA_DEV_HOST> "cd /opt/docker-projects/customs-assistant && rm -f -- $OLD"
-git rev-parse HEAD | ssh <MONA_DEV_HOST> 'cat > /opt/docker-projects/customs-assistant/DEPLOYED_COMMIT'
+cd /opt/docker-projects/customs-assistant
+set -o pipefail
+git fetch origin main && git checkout -f --detach origin/main
+docker-compose build migrate                 # thêm `ingest` hoặc `embedder` nếu thư mục của chúng đổi
+docker-compose run --rm --no-deps migrate </dev/null
+docker-compose up -d --no-deps --force-recreate api zalo-bot ingest
+git rev-parse HEAD > DEPLOYED_COMMIT
 ```
 
-Bài học 2026-09-14: `--diff-filter=D` bỏ sót `embedding.service.ts` vì git coi nó là file đổi tên; bản cũ còn trên server
-import một package đã gỡ và làm build lỗi.
-
-Lần deploy đầu sau khi push: `DEPLOYED_COMMIT` còn ghi một commit cục bộ không có trên GitHub (mã runtime giống
-`41ac65a`). Nếu `git diff` báo `bad object` hoặc `bad revision` thì so với `41ac65a`. Lần deploy đó ghi lại
-`DEPLOYED_COMMIT` bằng HEAD đã push.
-
-**Bước 2: build đúng image cần build**, dựa vào danh sách file đổi ở bước 1.
-
-| File đổi | Build | Recreate |
-|---|---|---|
-| `apps/api`, `apps/zalo-bot`, `db/` (gồm migration và dữ liệu seed), `public/`, file `.ts` trong `apps/ingest`, `package.json`, `yarn.lock`, `.yarnrc.yml`, `tsconfig.json`, `nest-cli.json`, `drizzle.config.ts` | `docker-compose build migrate` | `api zalo-bot` (chạy migration trước) |
-| `apps/embedder` | `docker-compose build embedder` | `embedder` |
-| `apps/ingest` (Dockerfile, Python), `research/legal-loader/parse_provisions.py`, `research/legal-loader/build_chunks.py` | `docker-compose build ingest` | `ingest` |
-
-Image `api` được build qua service `migrate`. Lệnh `docker-compose build api` không làm gì.
-
-**Bước 3: migration và recreate.** Đây là trường hợp thường gặp:
-
-```bash
-ssh <MONA_DEV_HOST> 'cd /opt/docker-projects/customs-assistant \
-  && docker-compose build migrate \
-  && docker-compose run --rm --no-deps migrate </dev/null \
-  && docker-compose up -d --no-deps --force-recreate api zalo-bot ingest'
-```
-
-Đừng nối `| tail` sau `docker-compose build` trong chuỗi `&&`: mã thoát là của `tail`, build lỗi vẫn chạy tiếp và
-recreate bằng image cũ (2026-09-14). Cần cắt log thì đặt `set -o pipefail` trước.
-
-Nếu chỉ đổi code bot: `docker-compose build migrate && docker-compose up -d --no-deps zalo-bot`. Session Zalo nằm
-trong volume nên recreate không phải quét QR lại. Container crawl đang chạy vẫn giữ image cũ cho tới khi thoát.
-
-**Bước 4: kiểm tra** theo mục 4 (`/health`, log `api` và `zalo-bot`).
+Không có `pipefail` thì đừng nối `| tail` sau `docker-compose build`: mã thoát là của `tail`, build lỗi vẫn chạy tiếp và
+recreate bằng image cũ (2026-09-14). Lần deploy tự động kế tiếp sẽ thay các image build tay này.
 
 ### Nạp lại kho pháp lý (`FORCE_RESEED`)
 
@@ -418,6 +448,9 @@ Trước khi chạy:
 Script không gỡ rclone. Nếu đã cài rclone ở Task 10 thì xoá tay:
 `sudo rm /usr/bin/rclone /root/.config/rclone/rclone.conf`. Không có gì cần hoàn tác ở dịch vụ dùng chung của host.
 
+Script cũng không gỡ phần CD: xoá tay dòng khoá `customs-assistant-ci` trong `authorized_keys`; environment
+`production` và các package trên ghcr.io thì xoá trên GitHub nếu không dùng nữa.
+
 ## 9. Bẫy đã gặp
 
 - **Compose v2.15.1 standalone không có `!reset`.** `ports` trong override bị **cộng dồn** chứ không thay thế. Vì vậy cổng
@@ -426,13 +459,17 @@ Script không gỡ rclone. Nếu đã cài rclone ở Task 10 thì xoá tay:
 - **Script qua `ssh <MONA_DEV_HOST> 'bash -s' <<'EOF'` bị nuốt stdin.** `docker-compose run`/`exec` đọc stdin nên nuốt
   phần còn lại của script: bash thoát giữa chừng, tiến trình nền bị mồ côi. Trong script dạng này, mọi
   `docker-compose run`/`exec` phải có `</dev/null`.
-- **Image `api` build qua `migrate`.** Service `api` không có khối `build`, nên `docker-compose build api` không làm gì.
+- **Khi build tay, image `api` build qua `migrate`.** Service `api` không có khối `build`, nên `docker-compose build api` không làm gì.
   `seed`, `seed-legal`, `zalo-bot` và container crawl dùng chung image này.
 - **CLI `claude` nằm trong image** (`apps/api/Dockerfile`: `npm install -g @anthropic-ai/claude-code`). Không cài lên host,
-  không mount. Nâng CLI thì build lại `migrate` rồi recreate `api zalo-bot`.
+  không mount. Nâng CLI: mục 5.
 - **Sửa `.env` phải recreate**, `restart` không đủ (mục 3).
+- **Image build tay trên server bị lần deploy kế tiếp thay.** `deploy.sh` gắn lại tên `:local` bằng image kéo từ ghcr.io.
+- **Hai phiên cùng đụng thư mục stack.** 2026-09-14: `git checkout -f` của phiên dựng CI/CD đè file của một deploy tay
+  mới chạy chín phút trước. Trước khi sửa file hay chạy lệnh ghi trong thư mục stack, xem `DEPLOYED_COMMIT`, `docker ps` và mtime.
 - **Giới hạn log nằm trong override.** Thêm service mới vào `docker-compose.yml` thì thêm
-  luôn giới hạn log cho nó trong override, nếu không log sẽ phình không giới hạn.
+  luôn giới hạn log cho nó trong override, nếu không log sẽ phình không giới hạn. Ngược lại, bỏ một service khỏi
+  `docker-compose.yml` thì bỏ luôn dòng của nó trong override: compose 2.15 báo lỗi service không có image, và deploy dừng.
 - **Không có swap.** Giới hạn RAM từng container là thứ ngăn OOM lan sang dự án khác. Khi đổi giới hạn, kiểm tra lại
   `OOMKilled` (mục 4).
 - **nginx chỉ `/opt/nginx/sbin/nginx -t && /opt/nginx/sbin/nginx -s reload`**, không restart. Không restart hay đổi cấu

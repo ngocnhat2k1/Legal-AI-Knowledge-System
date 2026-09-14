@@ -15,5 +15,5 @@ Ngôn ngữ của code và tài liệu: xem [AGENTS.md](AGENTS.md).
 
 ## Repo / hạ tầng
 
-- **Tên package:** `customs-assistant`. **Image Docker:** `customs-assistant:local`. **Service compose:** `db`, `migrate`, `seed`, `seed-legal`, `embedder`, `api`, `ingest`, `zalo-bot`.
+- **Tên package:** `customs-assistant`. **Image Docker:** trên máy chạy là `customs-assistant:local`, `customs-assistant-ingest:local`, `legal-embedder:local`; trên ghcr.io là `ghcr.io/<owner>/<tên>:<commit sha>`, riêng `legal-embedder` mang tag là tree hash của `apps/embedder`. **Service compose:** `db`, `migrate`, `seed`, `seed-legal`, `embedder`, `api`, `ingest`, `zalo-bot`.
 - **Biến môi trường:** `SCREAMING_SNAKE_CASE` — `DATABASE_URL`, `PORT`, `EMBEDDER_URL`, `CLAUDE_CODE_OAUTH_TOKEN`.
