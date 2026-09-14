@@ -7,6 +7,7 @@ import { extractAsOf } from './legal.asof';
 import {
   evidenceInstruments,
   evidenceRetrieve,
+  headingSections,
   hsCodeSections,
   namedStatus,
   type RetrievedEvidence,
@@ -42,6 +43,21 @@ const EVIDENCE_K = 3;
 const EVIDENCE_MAX_DIST = 0.5;
 const EVIDENCE_MARGIN = 0.05;
 const HS_CODE = /(?<!\d)\d{4}\.\d{2}\.\d{2}(?!\d)/g;
+
+/**
+ * Headings an HS question names, as `30.05`: written so, as `nhóm 3005`, or as the first four digits of a code
+ * (`3005.90`, `3005.10.10`, `30051010`). Only in a question about HS codes, so a date or an amount is never a heading.
+ */
+export function namedHeadings(query: string): string[] {
+  if (!/mã|nhóm|hs|chương|chú giải|phân loại/i.test(query)) return [];
+  const pairs = [
+    ...query.matchAll(/(?<![\d./])(\d{2})\.(\d{2})(?!\d|\.\d|\/|%)/g),
+    ...query.matchAll(/(?<![\d./])(\d{2})(\d{2})(?:\.\d{2}){1,2}(?!\d|\/)/g),
+    ...query.matchAll(/(?<![\d./])(\d{2})(\d{2})\d{4}(?![\d./])/g),
+    ...query.matchAll(/nhóm\s+(\d{2})(\d{2})(?!\d)/gi),
+  ];
+  return [...new Set(pairs.map((m) => `${m[1]}.${m[2]}`))].slice(0, 3);
+}
 /** Evidence enters the prompt cut here (≈ the embedded window); the citation keeps the whole body. */
 const EVIDENCE_PROMPT_CHARS = 6000;
 
@@ -216,7 +232,7 @@ export class LegalService {
     // A document held only as evidence has no clauses to search; a named Điều is a clause lookup, not evidence.
     const onlyEvidence = !documentIds.length && evidenceNumbers.length > 0;
     const hsInQuery = [...new Set(query.match(HS_CODE) ?? [])];
-    const [all, evidence, named, byCode] = await Promise.all([
+    const [all, evidence, named, byCode, byHeading] = await Promise.all([
       onlyEvidence
         ? Promise.resolve([] as RetrievedArticle[])
         : hybridRetrieve(this.db, { queryText: query, queryVec: vec, asOf, topK: TOP_K, documentIds, articleProvisionIds }),
@@ -225,6 +241,7 @@ export class LegalService {
         : evidenceRetrieve(this.db, { queryText: query, queryVec: vec, asOf, documentNumbers: evidenceNumbers }),
       namedStatus(this.db, namedNumbers, asOf),
       hsCodeSections(this.db, hsInQuery, asOf),
+      articleProvisionIds.length ? Promise.resolve([] as RetrievedEvidence[]) : headingSections(this.db, namedHeadings(query), asOf),
     ]);
 
     // The relevance gate exists to stop the dense branch handing back its nearest
@@ -236,7 +253,7 @@ export class LegalService {
     const limit = Math.min(EVIDENCE_MAX_DIST, Math.min(...all.map((a) => a.bestDist ?? Infinity)) + EVIDENCE_MARGIN);
     // What the question names outright — a document's status row, a section listing its HS code — may be the whole
     // answer ("replaced from 05/09/2026", "high-risk list of TT 36/2026"), so it is never cut.
-    const pinned = [...named, ...byCode].filter((e, i, a) => a.findIndex((x) => x.id === e.id) === i);
+    const pinned = [...named, ...byCode, ...byHeading].filter((e, i, a) => a.findIndex((x) => x.id === e.id) === i);
     // Closest first: RRF lets a long section that merely repeats the query words outrank the right one.
     const ranked = (onlyEvidence ? evidence : evidence.filter((e) => e.bestDist != null && e.bestDist <= limit))
       .filter((e) => !pinned.some((p) => p.id === e.id))

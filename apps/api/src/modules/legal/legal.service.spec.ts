@@ -1,10 +1,10 @@
 import type { SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 
-import { evidenceInstruments, evidenceRetrieve, hsCodeSections, namedStatus, type RetrievedEvidence } from './legal.evidence';
+import { evidenceInstruments, evidenceRetrieve, headingSections, hsCodeSections, namedStatus, type RetrievedEvidence } from './legal.evidence';
 import { generate, type PromptSource } from './legal.generation';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
-import { LegalService } from './legal.service';
+import { LegalService, namedHeadings } from './legal.service';
 
 jest.mock('./legal.generation', () => ({ generate: jest.fn() }));
 jest.mock('./legal.retrieval', () => ({ hybridRetrieve: jest.fn() }));
@@ -13,6 +13,7 @@ jest.mock('./legal.evidence', () => ({
   evidenceRetrieve: jest.fn(async () => []),
   namedStatus: jest.fn(async () => []),
   hsCodeSections: jest.fn(async () => []),
+  headingSections: jest.fn(async () => []),
 }));
 
 const gazette = (number: string, docType: string) => ({ number, docType, title: `${number} — tiêu đề`, sourceUrl: 'https://congbao.chinhphu.vn/x', congbaoId: 1 });
@@ -145,6 +146,23 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
       'Chú giải Phần XVI',
       'EN Chương 84 — mở đầu',
     ]);
+  });
+
+  it('keeps the notes of a heading the question names only as digits (3005.10.10 → nhóm 30.05)', async () => {
+    (hybridRetrieve as jest.Mock).mockResolvedValueOnce([]);
+    (evidenceRetrieve as jest.Mock).mockResolvedValueOnce([ev({ id: 40, kind: 'hs_note', title: 'Chú giải Phần VI', bestDist: 0.4 })]);
+    (headingSections as jest.Mock).mockResolvedValueOnce([ev({ id: 41, kind: 'en', title: 'Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05 — Bông, gạc' })]);
+    (generate as jest.Mock).mockResolvedValueOnce(null);
+    const res = await svc().ask('Mã HS 3005.10.10 gồm những hàng gì, khác phân nhóm 3005.90 chỗ nào', '2026-09-14');
+    expect((headingSections as jest.Mock).mock.calls.at(-1)![1]).toEqual(['30.05']);
+    expect(res.citations.map((c) => c.provisionLabel)).toEqual(['Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05 — Bông, gạc', 'Chú giải Phần VI']);
+  });
+
+  it('reads headings only from an HS question, never from a date or an amount', () => {
+    expect(namedHeadings('Căn cứ phân loại miếng dán. Các nhóm ứng viên cần phân biệt: 30.05, 33.07, 30.04.')).toEqual(['30.05', '33.07', '30.04']);
+    expect(namedHeadings('nhóm 3005 và mã 30051010')).toEqual(['30.05']);
+    expect(namedHeadings('Thời hạn nộp thuế từ 14.09.2026, phạt 12.50%')).toEqual([]);
+    expect(namedHeadings('mã HS khai trước 15.07.2023 phạt 12.50%')).toEqual([]);
   });
 
   it('compares a status row\'s end of force with the as-of date itself: expired for the model and the bot, coming otherwise', async () => {

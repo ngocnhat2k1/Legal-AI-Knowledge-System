@@ -139,6 +139,26 @@ export async function hsCodeSections(db: Database, codes: string[], asOf: string
   return rows.map(toEvidence);
 }
 
+/**
+ * The Explanatory Notes of the headings a question names (as `30.05`) and the HS notes of their chapters. "3005.10.10
+ * gồm những hàng gì, khác 3005.90 chỗ nào" names heading 30.05 only as digits, which neither branch matches to the
+ * note titled "nhóm 30.05": the model abstained with that note in the table (observed 2026-09-14).
+ */
+export async function headingSections(db: Database, headings: string[], asOf: string, limit = 6): Promise<RetrievedEvidence[]> {
+  if (!headings.length) return [];
+  const d = sql`${asOf}::date`;
+  const chapters = [...new Set(headings.map((h) => Number(h.slice(0, 2))))];
+  const rows = (await db.execute(sql`
+    SELECT ${columns(d)}, 1::float8 AS score, NULL::float8 AS best_dist
+    FROM evidence_section e
+    WHERE ((e.kind = 'en' AND e.hs_heading IN ${inIds(headings)}) OR (e.kind = 'hs_note' AND e.hs_chapter IN ${inIds(chapters)}))
+      AND ${valid(d)}
+    ORDER BY CASE e.kind WHEN 'en' THEN 0 ELSE 1 END, e.hs_heading, e.hs_chapter, e.id
+    LIMIT ${limit}
+  `)) as unknown as Array<Record<string, unknown>>;
+  return rows.map(toEvidence);
+}
+
 function toEvidence(r: Record<string, unknown>): RetrievedEvidence {
   return {
     id: Number(r.id),
