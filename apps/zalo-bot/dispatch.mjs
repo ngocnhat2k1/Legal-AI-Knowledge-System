@@ -174,6 +174,16 @@ export const readsAsQuestion = (text) =>
   );
 
 /**
+ * "HS đúng là 8422.90.90", "mã đúng: …": a confirming word right before the code — a ruling typed on purpose. "8481.80.99
+ * có sai không" names a code too, and is a doubt (R13).
+ */
+export function confirmingCue(text) {
+  const t = fold(text);
+  const at = t.search(HS_RE);
+  return at > 0 && /(dung la|ma dung|hs dung|chinh xac la|chuan la)\s*(la|:)?\s*(ma\s*)?$/.test(t.slice(0, at));
+}
+
+/**
  * The pre-router fast path. Returns an action when a cheap, unambiguous reading
  * exists (no LLM round trip needed), else null to let the router decide with history.
  *
@@ -183,9 +193,10 @@ export const readsAsQuestion = (text) =>
  * @param {string} input.quoteText   the replied-to message body, '' when not a reply
  * @param {?string} input.topic      what the conversation was about: 'tariff'|'legal'|'general'
  * @param {boolean} input.tariffFresh a recent tariff lookup is still referable
+ * @param {boolean} input.candidatesFresh a composed hs reply's candidate headings are still referable (no code)
  * @param {boolean} input.pendingIngest the bot has offered to fetch a document and is awaiting a yes
  */
-export function fastPath({ text, hasImage = false, quoteText = '', topic = null, tariffFresh = false, pendingIngest = false }) {
+export function fastPath({ text, hasImage = false, quoteText = '', topic = null, tariffFresh = false, candidatesFresh = false, pendingIngest = false }) {
   const onTariff = topic === 'tariff';
 
   // Checked BEFORE the image branch on purpose: replying to a photo and typing exactly
@@ -208,7 +219,10 @@ export function fastPath({ text, hasImage = false, quoteText = '', topic = null,
   // Correction carries a NEW HS code and writes to the verify-on-use trail, so it needs
   // a tariff answer to correct. `quoteText` counts only when it actually contains an HS
   // code — the old `is a reply at all` test is what let legal replies in here.
-  if (isDisagreement(text) && !readsAsQuestion(text) && onTariff && (tariffFresh || tariffReply(quoteText))) {
+  // On a candidates thread only "HS đúng là <mã>" is one: there is no old code, and a quoted composed reply names only
+  // candidates or the user's own code, neither of which may be recorded as wrong (plan 08 §6.3).
+  const correctable = candidatesFresh ? confirmingCue(text) : tariffFresh || tariffReply(quoteText);
+  if (isDisagreement(text) && !readsAsQuestion(text) && onTariff && correctable) {
     return { action: 'correction' };
   }
   return null;
@@ -239,24 +253,25 @@ export function parseVerifyDocCommand(text) {
   return m ? m[1].replace(/[.,;:]+$/, '').toUpperCase() : null;
 }
 
-const INTENTS = new Set(['tariff', 'legal', 'general', 'confirm', 'correction', 'refine', 'check_code']);
+const INTENTS = new Set(['tariff', 'hs', 'legal', 'status', 'mixed', 'general', 'confirm', 'correction', 'refine', 'check_code']);
 
 /**
- * Apply the same topic guards to the ROUTER's answer. The model sees the transcript and
+ * Apply the same topic guards to the PLAN's intent. The model sees the transcript and
  * is usually right, but it is still a model: it can answer "correction" on a thread where
  * there is no HS code to correct. A guard here means no model output can reach a handler
- * that writes to the audit trail unless the conversation actually supports it.
+ * that writes to the audit trail unless the conversation actually supports it — and since plan 08 a plan's confirm or
+ * correction only ever gets an offer (codeOffer); the trail is written from fastPath's explicit cues alone (§6.3).
  *
- * Returns a terminal action: 'tariff' | 'legal' | 'general' | 'confirm' | 'correction'.
+ * Returns a terminal action: 'tariff' | 'hs' | 'legal' | 'status' | 'mixed' | 'general' | 'confirm' | 'correction'.
  */
-export function guardIntent(intentRaw, { topic = null, tariffFresh = false, quoteText = '' } = {}) {
+export function guardIntent(intentRaw, { topic = null, tariffFresh = false, candidatesFresh = false, quoteText = '' } = {}) {
   const intent = INTENTS.has(intentRaw) ? intentRaw : 'tariff';
-  const correctable = topic === 'tariff' && (tariffFresh || tariffReply(quoteText));
+  const correctable = topic === 'tariff' && (tariffFresh || candidatesFresh || tariffReply(quoteText));
 
   if (intent === 'correction') return correctable ? 'correction' : topic === 'legal' ? 'legal' : 'tariff';
-  if (intent === 'confirm') return topic === 'tariff' && tariffFresh ? 'confirm' : topic === 'legal' ? 'legal' : 'general';
-  // "Refine" is "not that one" — it belongs to whatever we were already doing.
-  if (intent === 'refine') return topic === 'legal' ? 'legal' : topic === 'tariff' ? 'tariff' : 'general';
+  if (intent === 'confirm') return topic === 'tariff' && (tariffFresh || candidatesFresh) ? 'confirm' : topic === 'legal' ? 'legal' : 'general';
+  // "Refine" is "not that one" — it belongs to whatever we were already doing; after candidates, the classification.
+  if (intent === 'refine') return topic === 'legal' ? 'legal' : topic === 'tariff' ? (candidatesFresh ? 'hs' : 'tariff') : 'general';
   return intent;
 }
 

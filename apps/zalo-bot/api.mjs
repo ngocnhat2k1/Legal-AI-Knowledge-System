@@ -15,12 +15,13 @@ async function getJson(path) {
   }
 }
 
-async function postJson(path, body) {
+async function postJson(path, body, timeoutMs) {
   try {
     const res = await fetch(`${API}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
     });
     return res.ok ? await res.json().catch(() => ({})) : null;
   } catch {
@@ -62,6 +63,11 @@ export async function confirmationsMatch(keywords) {
 }
 
 export const postConfirm = (payload) => postJson('/tariff/confirm', payload).then((r) => r !== null);
+
+// --- Answer path (plan 08) --------------------------------------------------
+
+/** POST /answer (plan 08 §2.4). The API stops at 120 s after the message; 125 s leaves its last reply room to arrive. */
+export const answer = (body) => postJson('/answer', body, 125_000);
 
 // --- Legal ------------------------------------------------------------------
 

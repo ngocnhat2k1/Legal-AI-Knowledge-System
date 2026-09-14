@@ -74,8 +74,11 @@ function prefState(p) {
   return 'null';
 }
 
-/** Verdict history as one small line, or null when nobody has confirmed anything yet (R18). */
-export function confirmFooter(c) {
+/**
+ * Verdict history as one small line, or null when nobody has confirmed anything yet (R18). `prompt: false` drops the
+ * "trả lời đúng/sai" invitation, for a reply that puts no code on the table to confirm.
+ */
+export function confirmFooter(c, { prompt = true } = {}) {
   if (!c || !(c.correct || c.wrong || c.unsure)) return null;
   const recent = Array.isArray(c.recent) ? c.recent : [];
   const lastOf = (v) => recent.find((r) => r.verdict === v);
@@ -91,7 +94,7 @@ export function confirmFooter(c) {
   }
   if (c.unsure) parts.push([`chưa chắc ${c.unsure} lần`]);
   parts[0][0] = parts[0][0][0].toUpperCase() + parts[0][0].slice(1);
-  return L([...parts.flatMap((p, k) => (k ? [' · ', p] : [p])), ' — trả lời "đúng"/"sai" để cập nhật.'], 'note');
+  return L([...parts.flatMap((p, k) => (k ? [' · ', p] : [p])), prompt ? ' — trả lời "đúng"/"sai" để cập nhật.' : '.'], 'note');
 }
 
 /**
@@ -103,10 +106,11 @@ export function confirmFooter(c) {
  * @param {{dotted: string, origin: string|null, date: string}} q
  * @param {object} r         TariffResponse
  * @param {object|null} confirm  verdict history from /tariff/confirmations
- * @param {{showFooter?: boolean, candidate?: boolean, refBase?: number}} opts  candidate: the code is not settled (R2);
- *   refBase: [n] start after it, for a block printed under sources already numbered from [1] (R10)
+ * @param {{showFooter?: boolean, candidate?: boolean, refBase?: number, verdictPrompt?: boolean}} opts  candidate: the code
+ *   is not settled (R2); refBase: [n] start after it, for a block printed under sources already numbered from [1] (R10);
+ *   verdictPrompt: false keeps the verdict history without its "trả lời đúng/sai" (a composed reply, plan 08 §6.3)
  */
-export function formatAnswer(q, r, confirm, { showFooter = true, candidate = false, refBase = 0 } = {}) {
+export function formatAnswer(q, r, confirm, { showFooter = true, candidate = false, refBase = 0, verdictPrompt = true } = {}) {
   const origin = r.origin ?? q.origin ?? null;
   const name = origin ? (ORIGIN_LABEL[origin] ?? origin) : null;
   const verified = Boolean(r.ftaMembership);
@@ -246,7 +250,7 @@ export function formatAnswer(q, r, confirm, { showFooter = true, candidate = fal
   ];
   lines.push(L([sources.join(' · ')], 'note'));
 
-  const history = confirmFooter(confirm);
+  const history = confirmFooter(confirm, { prompt: verdictPrompt });
   if (history) {
     lines.push(history);
   } else if (showFooter) {
@@ -440,8 +444,9 @@ export function formatAnswerMd(res, { tariffLines = [] } = {}) {
   // A block's [n] continue after the sources, so "[1]" is never both a decree and an Explanatory Note (R10).
   let refBase = Math.max(0, ...cites.map((c) => c.n ?? 0));
   for (const t of blocks) {
-    // A verdict history ends in "trả lời đúng/sai"; after a composed hs reply no code is on the table to confirm (§6.3).
-    const block = formatAnswer(t.q, t.tariff, hs ? null : (t.confirm ?? null), { showFooter: false, candidate: hs, refBase });
+    // After a composed reply no code is on the table to confirm (§6.3): mixed keeps the history of the code asked about
+    // (R18) without its "trả lời đúng/sai"; a candidate's history is not printed at all.
+    const block = formatAnswer(t.q, t.tariff, hs ? null : (t.confirm ?? null), { showFooter: false, candidate: hs, refBase, verdictPrompt: false });
     // Every [k] a block prints is one of its refs: the highest is where the next block starts.
     refBase = Math.max(refBase, ...[...toText(block).matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])));
     // Mixed: the heading shares the block's first paragraph, so render never sends the rates without it.

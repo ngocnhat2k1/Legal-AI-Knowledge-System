@@ -23,8 +23,8 @@ import {
 import { stampTariff } from './conversation.mjs';
 import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, rulingLine, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
-import { CODE_MARK, codebook } from './dispatch.mjs';
-import { citationFrom, cleanGazetteTitle, detectOrigin, HS_RE, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
+import { CODE_MARK, codebook, confirmingCue } from './dispatch.mjs';
+import { citationFrom, cleanGazetteTitle, detectOrigin, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
 import { L } from './render.mjs';
 import { claudeVision } from './router.mjs';
 
@@ -349,7 +349,7 @@ export async function answerLegal(query, { asOf, doc, article, clause, lead } = 
  * `pendingIngest` is what lets the next turn act on "nạp" — the offer and the thing
  * being offered have to survive between messages, which is what conversation memory is for.
  */
-function missingDocAnswer(query, label, apiAnswer, asOf) {
+export function missingDocAnswer(query, label, apiAnswer, asOf) {
   // A catalogue hit equal to the number asked for IS that document: offer it, never list it as another one.
   const { kind, matches } = missingKind(label, apiAnswer?.gazetteMatches ?? [], apiAnswer?.gazetteMatchKind ?? 'none');
   // Only an EXACT catalogue hit may be offered for ingest. A near-miss by number is a
@@ -406,9 +406,12 @@ export async function handleConfirm(tariff, verdict, senderName) {
  */
 export async function handleCorrection(tariff, text, senderName, quote) {
   // Mã CŨ (bị coi là sai): ưu tiên kết quả đã nhớ; nếu hết hạn thì lấy lại từ tin được quote.
+  // After a composed hs reply there is none: its codes are candidates or the user's own, and neither is ever recorded as
+  // wrong (plan 08 §6.3).
+  const candidates = !tariff?.hs && Boolean(tariff?.candidates?.length);
   const old = tariff?.hs
     ? { hs: tariff.hs, dotted: tariff.dotted, origin: tariff.origin, date: tariff.date, snapshot: tariff.snapshot }
-    : parseQuotedTariff(quote?.msg);
+    : candidates ? null : parseQuotedTariff(quote?.msg);
   const fix = parseQuery(text); // mã đúng người dùng đưa ra (nếu có)
   const now = today();
   // Mô tả hàng đã lưu từ lần phân loại trước — để đính vào bản ghi 'correct' cho mã đúng,
@@ -421,8 +424,7 @@ export async function handleCorrection(tariff, text, senderName, quote) {
 
   // The same code confirms only after a confirming word ("đúng là 8481.80.99"): "8481.80.99 có sai không" names it too,
   // and is a doubt, not a ruling (R13). Unclear → ask, write nothing.
-  const lower = String(text || '').toLowerCase().normalize('NFC');
-  const cued = /(đúng là|dung la|mã đúng|ma dung|hs đúng|hs dung|chính xác là|chuẩn là)\s*(là|:)?\s*(mã\s*)?$/.test(lower.slice(0, Math.max(0, lower.search(HS_RE))));
+  const cued = confirmingCue(text);
   if (fix && old?.hs && fix.hs === old.hs && !cued) {
     return {
       text: [L(['Bạn muốn xác nhận mã ', [old.dotted, 'b'], ' là đúng, hay đang hỏi mã này có hợp với hàng không? Nhắn "đúng" để xác nhận, hoặc mô tả hàng để mình đối chiếu nhé.'])],
@@ -453,7 +455,9 @@ export async function handleCorrection(tariff, text, senderName, quote) {
 
   // Tra mã đúng. Xuất xứ chỉ lấy khi lời sửa nêu rõ (không kéo theo xuất xứ cũ có thể sai).
   const origin = detectOrigin(text);
-  const head = L([`Đã ghi nhận đính chính từ ${senderName}: mã `, ...(old?.dotted ? [[old.dotted, 'b'], ' '] : []), 'chưa đúng, sửa thành ', [fix.dotted, 'b'], '.']);
+  const head = candidates
+    ? L(['Đã ghi nhận mã ', [fix.dotted, 'b'], ...(prodDesc ? [' cho ', [prodDesc, 'i']] : []), ` (theo ${senderName}).`])
+    : L([`Đã ghi nhận đính chính từ ${senderName}: mã `, ...(old?.dotted ? [[old.dotted, 'b'], ' '] : []), 'chưa đúng, sửa thành ', [fix.dotted, 'b'], '.']);
   const res = await tariffResponse(fix.hs, origin, fix.date);
   if (!res.ok) {
     const why = res.status === 404 ? 'không có trong dữ liệu đã nạp' : `lỗi ${res.status}`;
@@ -467,6 +471,37 @@ export async function handleCorrection(tariff, text, senderName, quote) {
     text: [head, L([]), ...formatAnswer({ dotted: fix.dotted, origin, date: fix.date }, data, confirm)],
     topic: 'tariff',
     tariff: stampTariff({ hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data, desc: prodDesc || undefined, keywords: prevKw }),
+  };
+}
+
+/**
+ * A plan read a verdict with no confirming cue ("63079090 mới đúng"): an offer, never a write (plan 08 §6.3). It spells out
+ * what would be recorded, so the ledger only gets a verdict the user typed on purpose. `fix`: the code in the message, or null.
+ */
+export async function codeOffer(tariff, fix) {
+  const desc = String(tariff?.desc || '').replace(/\s+/g, ' ').trim();
+  const forDesc = desc ? [' cho ', [desc, 'i']] : [];
+  if (!fix) {
+    return {
+      text: [
+        L([
+          'Mình chưa ghi nhận gì. Muốn ghi nhận mã đúng', ...forDesc, ', nhắn "HS đúng là <mã>" (kèm số công văn nếu có)',
+          ...(tariff?.hs ? ['; mã ', [tariff.dotted, 'b'], ' vừa tra đúng với lô hàng thì nhắn "đúng".'] : ['.']),
+        ]),
+      ],
+    };
+  }
+  const row = (await searchByPrefix(fix.hs)).find((c) => c.hs === fix.hs);
+  const heading = row ? cleanGazetteTitle('', row.heading || tail(row), 50) : '';
+  const cands = tariff?.candidates ?? [];
+  const where = cands.length ? ` ${cands.includes(dot4(grp4(fix.hs))) ? 'nằm trong' : 'khác'} các nhóm mình vừa nêu.` : '.';
+  return {
+    text: [
+      L([
+        'Mã ', [fix.dotted, 'b'], ...(heading ? [' (', [heading, 'i'], ')'] : []), where,
+        ' Muốn mình ghi nhận mã này', ...forDesc, `, nhắn "HS đúng là ${fix.dotted}". Cần thuế thì nhắn thêm xuất xứ.`,
+      ]),
+    ],
   };
 }
 
