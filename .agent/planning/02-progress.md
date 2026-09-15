@@ -236,7 +236,8 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
     - Callback của `maskCodes` đã tuyến tính (lookbehind sticky thay cho cắt chuỗi, Map chỉ số mã, Set nhóm 4 số). Kết quả che mã giống hệt bản trước: battery/probe byte-identical, 300.000 câu sinh ngẫu nhiên không lệch.
     - Test tăng trưởng chứng minh bắt được 3 biến thể bậc hai.
     - Trên `main`: jest chức năng 367, bot 146, `tsc` sạch.
-  - **Việc 13 xong, nhánh `plan08/viec13-delete-templates`:** xoá lớp khuôn mẫu và lưới regex định tuyến của bot — `answerCodeCheck`,
+  - **Đã gộp `866df1c`: Việc 13.** Rà độc lập: không blocker; 3 major đã sửa ở `12cfca0` (mặt nạ caption mất test, bản che mã ở bot lệch bản API nên lọt mã 6 số vào prompt vision, quy tắc "mục bằng chứng không sinh dòng đỏ" mất test) — mỗi bản sửa có mutation test chứng minh. `noCodes` nay dùng chung cho caption và state, chạy trước `HS_TOKEN`. Xoá thêm code chết: `DISAGREE_CUE`/`isDisagreement`, `mergeQuote`, `parseDocRef` bản bot, nhánh "(trích đoạn đầu)", 6 chuỗi `TEMPLATE_STRINGS`. Trên `main`: jest 367, bot 136, `tsc` sạch, bot còn 2.806 dòng.
+  - **Việc 13, chi tiết:** xoá lớp khuôn mẫu và lưới regex định tuyến của bot — `answerCodeCheck`,
     `answerLegal`, `missingDocAnswer` (chuyển vào `index.mjs`), `formatLegal`, `withLead`, `excerpt`, `codebook`/`unmaskCodes`/
     `asksCodeFit`/`legalAboutCode`/`fallbackIntent` và cả bộ `route()` của `router.mjs` (còn `claudeVision` + `normalize` cho ảnh),
     `legalAnswer`/`legalDocuments` của `api.mjs`; `tariffByClues` không còn `lead`. Ảnh vẫn che mã trước khi vào vision
