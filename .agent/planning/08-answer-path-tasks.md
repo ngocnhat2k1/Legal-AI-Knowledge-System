@@ -233,7 +233,7 @@ Kế hoạch không có `lead`, `note` hay `search_query`. Chữ duy nhất ngư
 Trả về:
 
 ```json
-{ "plan": {}, "codeRole": "none|premise|subject|key", "mode": "hs|legal|status|mixed|null",
+{ "plan": {}, "codeRole": "none|premise|subject|key", "mode": "hs|legal|status|mixed|tariff|null",
   "userCodes": [{ "code": "3005.10.10", "level": 8, "heading": "30.05", "exists": true, "inCandidates": true }],
   "ack": "…", "answerMd": "…[1]…",
   "citations": [{ "n": 1, "key": "e:812", "kind": "en", "label": "…", "instrument": "…", "hsHeading": "30.05",
@@ -244,8 +244,19 @@ Trả về:
   "warnings": ["unverified", "undetermined", "upcoming", "old_catalog"],
   "cut": 0, "repaired": false,
   "missingDoc": null, "gazetteMatchKind": "none", "gazetteMatches": [],
+  "tariff": null, "fallback": false, "reason": "no_sources|compose_failed|deadline|latch|null",
   "calls": 2, "timingMs": { "plan": 0, "retrieve": 0, "compose": 0, "verify": 0, "repair": 0 } }
 ```
+
+- **`mode: "tariff"`:** kế hoạch `tariff` với mã vai `key`, hoặc mã trong state của câu tiếp nối (§6.2). API tra `/tariff`; compose chế độ `tariff` giải thích từ các dòng `statement` (Q1).
+- **`tariff`:** kết quả `/tariff` mà lượt `tariff`, hoặc `mixed` có vai `subject`, đã đọc, để bot in khối thuế mà không gọi lần hai. `null` khi không tra.
+- **`fallback`:** `true` khi `defaultPlan` thay cho bước kế hoạch (không có kết quả, timeout, `is_error`, không đọc được kế hoạch). `false` khi bước kế hoạch không chạy: bot gửi `plan`, kể cả `plan` không đọc được, hoặc `forceIntent` không kèm `plan`.
+- **`reason`:** vì sao một lượt đang đi tới compose không có văn xuôi.
+  - `no_sources`: `gather` không có nguồn (chế độ `tariff`: cũng không còn dòng thuế nào).
+  - `compose_failed`: compose trả null, `is_error` hoặc không đọc được bản nháp; bot in nguồn một mình.
+  - `deadline`: còn dưới 15 s cho compose; bot in nguồn một mình.
+  - `latch`: chốt R4 bỏ tin nhắn hoặc câu hỏi, không truy vấn nào chạy.
+  - `null` ở mọi lượt khác (`planOnly`, không có `mode`, `missingDoc`, không tra được thuế) và khi đã soạn văn xuôi, kể cả khi sau đó bị cắt hết.
 
 **Nguồn tái dùng (Việc 8).** `LegalService` tách thành:
 - `scope(query, doc)`: phần tìm văn bản và Công báo ở `legal.service.ts:147-225`;
@@ -501,7 +512,7 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 
    | Vai | Khi nào | Hệ quả |
    |---|---|---|
-   | `premise` | Có cue FIT: `(ma\|code\|hs)[^.?!]{0,40}(duoc\|dung\|sai\|phu hop\|ok\|chuan)\s*(khong\|ko\|k\|chua\|ha\|a\|nhi)`, `vi sao\|tai sao\|sao lai`, `(ap\|vao\|thuoc\|khai\|dung\|tham khao)\s+(ma\|nhom\|code)`. **Cũng là mặc định khi không có cue nào.** | Mã bị che ở mọi nơi; nhãn `[mã n]` bị bỏ trước compose. Kế hoạch `legal`, `status` hoặc `mixed` bị ép sang `hs`. |
+   | `premise` | Có cue FIT: `(ma\|code\|hs)[^.?!]{0,40}(duoc\|dung\|sai\|ok\|chuan\|hop)\s*(khong\|ko\|k\|chua\|ha\|a\|nhi)`, trong đó `hop` chỉ tính khi đứng sau `co\|phu\|thich\|nay` hoặc chính mã ("có hợp không", "mã này hợp không"; "trường hợp không có C/O" thì không), `vi sao\|tai sao\|sao lai`, `(ap\|vao\|thuoc\|khai\|dung\|tham khao)\s+(ma\|nhom\|code)`. **Cũng là mặc định khi không có cue nào.** | Mã bị che ở mọi nơi; nhãn `[mã n]` bị bỏ trước compose. Kế hoạch `legal`, `status` hoặc `mixed` bị ép sang `hs`. |
    | `subject` | Không có FIT, và có cue danh mục (`LEGAL_LIST_CUE` gập dấu ∪ `nhap khau duoc\|co can\|co phai`) hoặc cue giải nghĩa (`gom\|bao gom\|khac\|phan biet\|giai thich\|chu giai\|nghia la\|la gi\|nhung hang`) | Mã là khoá tra (`hsCodeSections`, `headingSections`), được viết nguyên văn trong câu hỏi. Chỉ hợp lệ với `legal`, `status`, `mixed`. |
    | `key` | Có cue thuế, không có FIT, danh mục hay giải nghĩa | Chỉ là khoá cho `answerByHs`, không vào prompt compose. Nếu kế hoạch không phải `tariff` thì xử như `premise`. |
    | `none` | Tin không có mã | — |

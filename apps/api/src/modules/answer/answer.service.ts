@@ -113,6 +113,10 @@ export interface AnswerResponse {
   gazetteMatches: DocScope['gazetteMatches'];
   /** The /tariff lookup a tariff or mixed answer reasoned over, so the bot prints its block without a second call. */
   tariff: TariffResponse | null;
+  /** defaultPlan stood in for the plan step (no result, timeout, is_error, no usable plan); false when no plan step ran. */
+  fallback: boolean;
+  /** Why a turn bound for compose has no prose; null for every other turn and once prose was composed, even if later cut. */
+  reason: 'no_sources' | 'compose_failed' | 'deadline' | 'latch' | null;
   calls: number;
   timingMs: Record<'plan' | 'retrieve' | 'compose' | 'verify' | 'repair', number>;
 }
@@ -163,9 +167,7 @@ export class AnswerService {
     const forced = INTENTS.includes(body.forceIntent as Intent) ? (body.forceIntent as Intent) : null;
     let plan: Plan;
     if (body.plan != null) {
-      const given = normalizePlan(body.plan, [q, quote ?? '', ...turns.filter((t) => t.role === 'user').map((t) => t.body)]);
-      fallback = !given;
-      const p = given ?? defaultPlan(q, topic);
+      const p = normalizePlan(body.plan, [q, quote ?? '', ...turns.filter((t) => t.role === 'user').map((t) => t.body)]) ?? defaultPlan(q, topic);
       // A plan from the client is text a prompt reads: every text of it masked again, so no raw code reaches a model (R4).
       // A partial plan (the bot's tariff branch) has no question: the masked message stands in.
       const mask = (s: string): string => maskCodes(s, codes).text;
@@ -240,13 +242,17 @@ export class AnswerService {
         gazetteMatchKind: 'none',
         gazetteMatches: [],
         tariff: null,
+        reason: null,
         ...part,
+        fallback,
         calls,
         timingMs,
       };
       // One line per turn and no user text in it (R14): dropped prompt parts by name only.
       this.log.log(
-        JSON.stringify({ mode, intent: plan.intent, codeRole: role, calls, sources: sourceCount, cut: res.cut, repaired: res.repaired, fallback, leakDrops, timingMs }),
+        JSON.stringify({
+          mode, intent: plan.intent, codeRole: role, calls, sources: sourceCount, cut: res.cut, repaired: res.repaired, fallback, reason: res.reason, leakDrops, timingMs,
+        }),
       );
       return res;
     };
@@ -306,7 +312,7 @@ export class AnswerService {
     }
     const kept = (name: string): string[] => parts.filter((p) => p.name === name).map((p) => p.text);
     // Fail closed before retrieval: nothing is left to ask, and no query runs on the user's code.
-    if (!kept('message').length || !kept('question').length) return finish(common);
+    if (!kept('message').length || !kept('question').length) return finish({ ...common, reason: 'latch' });
 
     const queries = [...new Set([question, ...kept('queries')])].filter(Boolean).slice(0, 3);
     const ownHeadings = [...new Set(users.flatMap((u) => (u.heading ? [u.heading] : [])))];
@@ -332,7 +338,7 @@ export class AnswerService {
       .slice(0, MAX_SOURCES);
     sourceCount = sources.length;
     // Tariff mode explains from the statements alone; with none left, the bot prints the rate block by itself (Q1).
-    if (!sources.length && (mode !== 'tariff' || !kept('tariffLines').length)) return finish(common);
+    if (!sources.length && (mode !== 'tariff' || !kept('tariffLines').length)) return finish({ ...common, reason: 'no_sources' });
     // Compose skipped or failed: the sources alone, so the bot still prints them and their end-of-force line from data
     // (§10 risk 1, G7). No prose cites them, so they claim no quote (R10).
     const warningsOf = (listed: typeof sources): string[] => [
@@ -344,7 +350,7 @@ export class AnswerService {
     const listed = sources.slice(0, 3);
     const sourcesOnly = { ...common, citations: listed.map((s, i) => citationOf(i + 1, s, [])), warnings: warningsOf(listed) };
     const timeoutMs = Math.min(100_000, deadline - Date.now() - 5_000);
-    if (timeoutMs < 15_000) return finish(sourcesOnly);
+    if (timeoutMs < 15_000) return finish({ ...sourcesOnly, reason: 'deadline' });
 
     const tariffMode = mode === 'tariff';
     const prompt = buildComposeInput({
@@ -372,7 +378,7 @@ export class AnswerService {
       }),
     );
     const parsed = reply && !reply.isError ? parseDraft(reply.text) : null;
-    if (!parsed) return finish(sourcesOnly);
+    if (!parsed) return finish({ ...sourcesOnly, reason: 'compose_failed' });
     // Markers as verify reads them ("[1, 2]" → "[1] [2]", one out of range gone), so the sentence verify names is the
     // draft's own for a repair and for the first-sentence rule.
     const draft = { ...parsed, answerMd: expandMarkers(parsed.answerMd, sources.length) };

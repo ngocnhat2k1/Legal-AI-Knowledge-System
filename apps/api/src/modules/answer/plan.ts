@@ -113,9 +113,12 @@ export function userCodes(text: string): UserCode[] {
 }
 
 const cue = (words: string): RegExp => new RegExp(`(?<![a-z])(?:${words})(?![a-z])`);
-/** The message doubts or defends the code (§4.2): "mã này được không", "vì sao … vào mã", "áp mã". */
+/**
+ * The message doubts or defends the code (§4.2): "mã này được không", "có hợp không", "vì sao … vào mã", "áp mã". A bare
+ * "hợp" counts only after có, phù, thích, này or the code: "trường hợp không có C/O" and "hỗn hợp không" doubt nothing.
+ */
 const FIT = new RegExp(
-  String.raw`(?<![a-z])(?:ma|code|hs)(?![a-z])[^.?!]{0,40}(?<![a-z])(?:duoc|dung|sai|phu hop|ok|chuan)\s*(?:khong|ko|k|chua|ha|a|nhi)(?![a-z])` +
+  String.raw`(?<![a-z])(?:ma|code|hs)(?![a-z])[^.?!]{0,40}(?<![a-z])(?:duoc|dung|sai|ok|chuan|(?<=(?:^|[^a-z])(?:co|phu|thich|nay|#)\s+)hop)\s*(?:khong|ko|k|chua|ha|a|nhi)(?![a-z])` +
     String.raw`|(?<![a-z])(?:vi sao|tai sao|sao lai|(?:ap|vao|thuoc|khai|dung|tham khao)\s+(?:ma|nhom|code))(?![a-z])`,
 );
 const LIST = cue(

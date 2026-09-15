@@ -197,7 +197,8 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     expect(repair!.opts).toMatchObject({ model: 'sonnet', effort: 'low' });
 
     const bad = setup({ plan: LEGAL_PLAN, drafts: [MFN_DRAFT], repairs: [{ sentences: ['MFN vẫn là 0% [1].'] }], sources: [GUIDE] });
-    expect(await bad.svc.answer({ q: LEGAL_Q })).toMatchObject({ cut: 1, repaired: true, answerMd: '' });
+    // Prose was composed, then cut: no reason code.
+    expect(await bad.svc.answer({ q: LEGAL_Q })).toMatchObject({ cut: 1, repaired: true, answerMd: '', reason: null });
   });
 
   it('(f) under 30 s left after compose, no repair is asked', async () => {
@@ -211,7 +212,18 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const { svc, prompts } = setup({ plan: LEGAL_PLAN });
     const res = await svc.answer({ q: LEGAL_Q });
     expect(prompts(SYSTEM)).toHaveLength(0);
-    expect(res).toMatchObject({ coverage: 'none', answerMd: '', calls: 1 });
+    expect(res).toMatchObject({ coverage: 'none', answerMd: '', calls: 1, reason: 'no_sources' });
+  });
+
+  it('fallback is true only when defaultPlan stood in for the plan step', async () => {
+    // No model result, or a reply naming no known intent.
+    for (const plan of [undefined, { intent: 'check_code' }]) {
+      expect(await setup({ plan }).svc.answer({ q: LEGAL_Q, planOnly: true })).toMatchObject({ fallback: true, calls: 1 });
+    }
+    expect((await setup({ plan: LEGAL_PLAN }).svc.answer({ q: LEGAL_Q, planOnly: true })).fallback).toBe(false);
+    // The plan step never ran: a client plan, even one naming no known intent, and forceIntent without a plan.
+    expect((await setup().svc.answer({ q: LEGAL_Q, plan: { intent: 'check_code' }, planOnly: true })).fallback).toBe(false);
+    expect((await setup().svc.answer({ q: LEGAL_Q, forceIntent: 'legal', planOnly: true })).fallback).toBe(false);
   });
 
   it('(h) planOnly carries a missing document from scope', async () => {
@@ -293,7 +305,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const { svc, run } = setup({ drafts: [TARIFF_DRAFT], tariff: t });
     const res = await svc.answer({ q: 'thuế nk 8481.80.99 tq', plan: { intent: 'tariff', origin: 'CN' }, forceIntent: 'tariff' });
     expect(run).not.toHaveBeenCalled();
-    expect(res).toMatchObject({ mode: 'tariff', answerMd: '', calls: 0 });
+    expect(res).toMatchObject({ mode: 'tariff', answerMd: '', calls: 0, reason: 'no_sources' });
     expect(res.tariff).toBe(t);
   });
 
@@ -395,7 +407,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const question = setup({ drafts: [PHOTO_DRAFT], sources: [EN3005] });
     const res = await question.svc.answer({ q: PHOTO, plan: { ...PHOTO_PLAN, question: 'Miếng dán có hợp 30 05 10 10 không' } });
     expect(question.legal.gather).not.toHaveBeenCalled();
-    expect(res).toMatchObject({ answerMd: '', calls: 0 });
+    expect(res).toMatchObject({ answerMd: '', calls: 0, reason: 'latch' });
   });
 
   it('a premise message writing its heading bare is still answered, the heading never prompted (R4)', async () => {
@@ -476,11 +488,17 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const status = source(3, { kind: 'status', label: 'Tình trạng hiệu lực — 69/2018/NĐ-CP', documentNumber: '69/2018/NĐ-CP', expired, body: 'Nghị định 69/2018/NĐ-CP được thay thế.' });
     const q = 'Nghị định 69/2018/NĐ-CP còn áp dụng không';
     const plan = { intent: 'status', question: q, scope: { doc: '69/2018/NĐ-CP' } };
-    for (const body of [{ q, plan }, { q, plan, deadlineAt: Date.now() }]) {
+    for (const [body, reason] of [[{ q, plan }, 'compose_failed'], [{ q, plan, deadlineAt: Date.now() }, 'deadline']] as const) {
       const res = await setup({ sources: [status] }).svc.answer(body);
-      expect(res).toMatchObject({ answerMd: '', coverage: 'none' });
+      expect(res).toMatchObject({ answerMd: '', coverage: 'none', reason });
       expect(res.citations).toHaveLength(1);
       expect(res.citations[0]).toMatchObject({ n: 1, key: 'e:3', expired, quotes: [] });
+    }
+    // An is_error reply and a reply that is no draft fail compose the same way.
+    for (const reply of [{ text: '{"answerMd":"x"}', isError: true, durationMs: 1 }, { text: 'không có JSON', isError: false, durationMs: 1 }]) {
+      const failed = setup({ sources: [status] });
+      failed.run.mockResolvedValueOnce(reply);
+      expect(await failed.svc.answer({ q, plan })).toMatchObject({ answerMd: '', calls: 1, reason: 'compose_failed' });
     }
   });
 

@@ -148,6 +148,10 @@ describe('codeRole — code decides what a code in the message is (§4.2)', () =
     expect(codeRole('e có măt hàng miếng dán bàn chân thành phần từ ngải cứu, e đang tham khảo mã này không biết được không ạ 30051010')).toBe('premise');
     expect(codeRole('nhập 94054090 có phải kiểm tra năng lượng, áp mã này được không')).toBe('premise');
     expect(codeRole('8481.80.99 có sai không ạ')).toBe('premise');
+    expect(codeRole('miếng dán ngải cứu mã 3005.10.10 có hợp không')).toBe('premise');
+    expect(codeRole('mũ bảo hiểm mã 6506.10.10 thuộc danh mục rủi ro, mã này hợp không')).toBe('premise');
+    // "trường hợp không" is no doubt about the code.
+    expect(codeRole('thuế mã 8481.80.99 trường hợp không có C/O bao nhiêu')).toBe('key');
   });
 
   it('subject for a list or explanation question, key for a rate question, none without a code', () => {
@@ -281,6 +285,8 @@ describe('defaultPlan — no model, timeout or is_error (§2.2 row 23)', () => {
   it('code with a FIT cue, code, document number, then the topic', () => {
     expect(defaultPlan('Nghị định 69/2018/NĐ-CP còn áp dụng không', null)).toMatchObject({ intent: 'status', scope: { doc: '69/2018/NĐ-CP' } });
     expect(defaultPlan('vì sao miếng dán vào mã 30051010', 'tariff')).toMatchObject({ intent: 'hs', question: 'vì sao miếng dán vào mã [mã 1]' });
+    expect(defaultPlan('miếng dán ngải cứu mã 3005.10.10 có hợp không', null).intent).toBe('hs');
+    expect(defaultPlan('thuế mã 8481.80.99 trường hợp không có C/O', null).intent).toBe('tariff');
     expect(defaultPlan('thuế 8481.80.99 TQ', null).intent).toBe('tariff');
     expect(defaultPlan('Nghị định 08/2015/NĐ-CP quy định gì về hồ sơ', null).intent).toBe('legal');
     expect(defaultPlan('còn trường hợp khác thì sao', 'legal').intent).toBe('legal');
