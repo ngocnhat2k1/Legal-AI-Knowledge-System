@@ -179,7 +179,9 @@ Bỏ sót một phán quyết tốn một lượt nhắn lại; ghi nhầm một
   markdown chen giữa ("Hàng hóa có **mã HS X**"), nên `formatAnswerMd` đổi các câu mở đó **trên dòng đã qua `md()`**, giữ
   nghĩa ("Hàng có mã HS", "Có ghi nhận"; dòng bị đổi mất đậm/nghiêng), và đổi ngoặc thẳng của `"HS đúng là …"` thành ngoặc
   cong: không tin nào của câu soạn khớp `tariffReply` hay `offerReply`, ở chế độ nào và tách tin ở đâu cũng vậy. Lời báo đã
-  hiểu câu hỏi (`ack`, chữ mô hình) cũng qua `unlikeTariffReply` trước khi gửi.
+  hiểu câu hỏi (`ack`, chữ mô hình) cũng qua `unlikeTariffReply` trước khi gửi. Ở chế độ mixed, tiêu đề "Thuế của mã trong
+  câu hỏi:" mở chính dòng câu dẫn khối thuế ("Thuế của mã trong câu hỏi: hàng hóa có mã HS …"): khối dài hơn một tin (một biểu
+  by_subline 70 dòng) bị tách từng dòng, và tiêu đề đứng riêng một dòng từng nằm cuối tin này trong khi câu dẫn trần mở tin sau.
 - Đính chính kèm mã mới ghi `correct` cho mã mới trước, rồi `wrong` cho mã cũ. `correct` lỗi thì không ghi gì, giữ bộ nhớ để
   gửi lại; `wrong` lỗi sau đó thì nói rõ đã ghi được gì, bỏ bộ nhớ để gửi lại không ghi trùng.
 - Lời mời nạp văn bản chỉ nhận "có"/"nạp" khi chủ đề còn là pháp luật.

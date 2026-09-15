@@ -465,8 +465,11 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false } = {
     const block = formatAnswer(t.q, t.tariff, hs ? null : (t.confirm ?? null), opts);
     // Every [k] a block prints is one of its refs: the highest is where the next block starts.
     refBase = Math.max(refBase, ...[...toText(block).matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])));
-    // Mixed: the heading shares the block's first paragraph, so render never sends the rates without it.
-    lines.push(L([]), ...(res.mode === 'mixed' ? [L([MIXED_TARIFF])] : []), ...block);
+    // Mixed: the heading opens the lead's own line ("Thuế của mã trong câu hỏi: hàng hóa có mã HS …"). A block longer than a
+    // message is split line by line, and a heading on a line of its own ended one message while the bare lead opened the next.
+    const [lead, ...rest] = block;
+    const headed = () => L([`${MIXED_TARIFF} `, ...lead.segs.map((s, k) => (k || typeof s !== 'string' ? s : s[0].toLowerCase() + s.slice(1)))], ...(lead.marks ?? []));
+    lines.push(L([]), ...(res.mode === 'mixed' ? [headed(), ...rest] : block));
   }
   if (hs && cands.length && !blocks.length) lines.push(L([TARIFF_HINT], 'note'));
 

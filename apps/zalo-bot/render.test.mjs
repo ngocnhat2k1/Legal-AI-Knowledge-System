@@ -268,6 +268,26 @@ test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp 
   }
 });
 
+test('bất biến R13 mixed: khối by_subline 70 dòng dài hơn một tin, tách ở đâu cũng không tin nào khớp tariffReply hay mở dòng bằng câu dẫn khối thuế', () => {
+  const base = lookup('8481.80.99');
+  const acfta = base.tariff.import.preferential[0];
+  const sublines = Array.from({ length: 70 }, (_, i) => ({
+    codeDotted: `8481.80.99.${String(i).padStart(2, '0')}`, desc: 'Loại khác, bằng thép không gỉ, dùng cho đường ống', percent: '5', type: 'ad_valorem', originExcluded: null,
+  }));
+  const huge = { ...base, tariff: { ...base.tariff, import: { ...base.tariff.import, preferential: [{ ...acfta, type: 'by_subline', rate: null, originEligible: null, originExcluded: null, sublines }] } } };
+  const sentence = 'Van thuộc danh mục phải kiểm tra chuyên ngành trước khi thông quan theo quy định hiện hành [1]. ';
+  const res = { ...HS_PHOTO, mode: 'mixed', userCodes: [], candidates: [] };
+  // Re-review round 3 (D05): the block's first paragraph outgrew a message, render split it line by line, and the heading ended
+  // one message while the bare lead opened the next.
+  for (let chars = 1; chars <= 1800; chars++) {
+    const answerMd = sentence.repeat(Math.ceil(chars / sentence.length)).slice(0, chars);
+    for (const msg of render(formatAnswerMd({ ...res, answerMd }, { tariffLines: [huge] })).map((p) => p.msg)) {
+      assert.equal(tariffReply(msg), false, `+${chars}: ${msg.slice(0, 120)}`);
+      assert.doesNotMatch(msg, /^(?:Đối với h|H)àng hóa có mã HS/m, `+${chars}`);
+    }
+  }
+});
+
 test('bất biến R13: câu pháp luật, tình trạng và hs không ứng viên có "Cảm ơn"/"MFN"/"bạn nêu" hay mở dòng bằng câu dẫn khối thuế không khớp tariffReply, tách tin ở đâu cũng vậy; khối thuế thật vẫn khớp', () => {
   // Re-review 2026-09-15: a subject code is unmasked into the compose prompt, so prose can open a line with the tariff lead.
   // Re-review round 2: markdown inside an opener ("Hàng hóa có **mã HS …**") went through the reword, then md() dropped the
