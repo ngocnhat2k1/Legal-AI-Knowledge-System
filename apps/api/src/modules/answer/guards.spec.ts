@@ -332,6 +332,30 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     expect(settlementClaims(prose.join(' '))).toEqual([]);
   });
 
+  it('G1, G4: a criterion quoted verbatim from a cited note is its wording; unquoted, from a table or beside a tariff it is cut', () => {
+    const note = source({
+      kind: 'hs_note',
+      label: 'Chú giải Chương 30',
+      body: 'Hàng chứa trên 50% tính theo trọng lượng là dược chất thì thuộc nhóm 30.04. Chế phẩm không chứa dược chất thì phải xét vào nhóm 38.24.',
+    });
+    const rate = { n: 1, quotes: ['trên 50% tính theo trọng lượng'] };
+    const quoted = 'Chú giải chỉ nhận hàng chứa “trên 50% tính theo trọng lượng” là dược chất [1].';
+    expect(verify(draft(quoted, [rate]), [note], ctx()).answerMd).toBe(quoted);
+    for (const [prose, kind] of [
+      ['Chú giải chỉ nhận hàng chứa trên 50% tính theo trọng lượng là dược chất [1].', 'hs_note'],
+      [quoted, 'annex_table'],
+      ['Thuế suất ưu đãi chỉ áp cho hàng chứa "trên 50% tính theo trọng lượng" là dược chất [1].', 'hs_note'],
+    ]) {
+      const r = verify(draft(prose!, [rate]), [{ ...note, kind: kind! }], ctx());
+      expect(r.violations).toContainEqual(expect.objectContaining({ rule: 'G1', sentence: prose }));
+    }
+    const settle = { n: 1, quotes: ['chế phẩm không chứa dược chất thì phải xét vào nhóm 38.24'] };
+    const criterion = 'Chú giải viết “chế phẩm không chứa dược chất thì phải xét vào nhóm 38.24” [1].';
+    expect(verify(draft(criterion, [settle]), [note], ctx()).answerMd).toBe(criterion);
+    const r = verify(draft(criterion.replace(/[“”]/g, ''), [settle]), [note], ctx());
+    expect(r.violations).toEqual([expect.objectContaining({ rule: 'G4' })]);
+  });
+
   it('G4: two candidates with no missing fact is a violation for repair only', () => {
     const d = draft('Hai hướng [1] [2].', [q1, q2], { candidates: [{ hs: '30.05', evidence: [1] }, { hs: '38.24', evidence: [2] }] });
     const r = verify(d, [en3005, en3824], ctx());

@@ -131,10 +131,9 @@ const normQuote = (s: string): string => {
  * A quote proves nothing unless it is verbatim in the section it cites (spec §3.6 check 2, R10): string support, not
  * entailment. Under 20 characters it must be the whole body: "5%" is inside "15%".
  */
-export const quoteInBody = (quote: string, body: string): boolean => {
-  const q = normQuote(quote);
-  return q.length > 0 && (q.length >= 20 ? normQuote(body).includes(q) : q === normQuote(body));
-};
+export const quoteInBody = (quote: string, body: string): boolean => holds(normQuote(quote), normQuote(body));
+/** quoteInBody over texts already through normQuote, so a body is normalised once for many quotes. */
+const holds = (q: string, body: string): boolean => q.length > 0 && (q.length >= 20 ? body.includes(q) : q === body);
 
 /** What compose returns (plan 08 §3.1): [n] in `answerMd` and in `evidence` points at sources[n-1]. */
 export interface Draft {
@@ -203,6 +202,13 @@ const names = (text: string, d: string): boolean => new RegExp(`(?<![\\d.,/])${d
 /** The digits `d` in any spelling: "3005.10.10", "30051010", "3005 10 10". */
 const spelled = (d: string): RegExp => new RegExp(`(?<!\\d)${[...d].join('[.\\s]?')}(?!\\d)`, 'g');
 
+// Quoted criteria (agreed with the walkthrough session): a span in "…" or “…” verbatim in the body of a cited note, SEN,
+// GRI or ruling is that source's wording, so G1 and G4 read the sentence with the span as "…". Never a tariff table's
+// wording, never in a sentence about thuế suất/MFN/ưu đãi/FTA; G2 and G3 still read the sentence whole.
+const CRITERIA_KINDS = new Set(['en', 'sen', 'hs_note', 'gri', 'ruling']);
+const QUOTED = /"([^"\n]{1,300})"|“([^“”\n]{1,300})”/g;
+const TARIFF_WORDS = /(?<![\p{L}])(?:thuế\s+suất|ưu\s+đãi|MFN|[a-z]{0,4}FTA)(?![\p{L}])/iu;
+
 /**
  * The code guards over a compose draft (plan 08 §4.1), pure: G2 keeps a citation only on verbatim quotes; G5 keeps one to
  * three candidates, each proven by a live note, SEN, ruling or annex naming it; G1, G4–G7 cut whole sentences, G3 cuts
@@ -255,11 +261,17 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
   const eights = new Set(candidates.map((c) => digits(c.hs)).filter((d) => d.length === 8));
   const expired = sources.filter((s) => s.expired && s.documentNumber).map((s) => s.documentNumber!);
   const current = sources.filter((s) => !s.expired && s.documentNumber).map((s) => s.documentNumber!);
-  const rates = ratesInProse(draft.answerMd);
-  const settling = settlementClaims(draft.answerMd);
+  const criteria = sources.filter((s, i) => quotes.has(i + 1) && CRITERIA_KINDS.has(s.kind)).map((s) => normQuote(s.body));
+  const unquoted = (s: string): string =>
+    !criteria.length || TARIFF_WORDS.test(s)
+      ? s
+      : s.replace(QUOTED, (span: string, a?: string, b?: string) => (criteria.some((body) => holds(normQuote(a ?? b ?? ''), body)) ? '…' : span));
+  const sentences = splitSentences(draft.answerMd);
+  const rates = sentences.filter((s) => ratesInProse(unquoted(s)).length > 0);
+  const settling = new Set(sentences.filter((s) => settlementClaims(unquoted(s)).length > 0));
   const rules: Array<[string, string, (s: string) => boolean]> = [
     ['G1', 'rate or amount in prose', (s) => rates.includes(s)],
-    ['G4', 'settles the goods under one heading', (s) => settling.includes(s)],
+    ['G4', 'settles the goods under one heading', (s) => settling.has(s)],
     ['G5', 'eight-digit code that is no candidate', (s) => [...s.matchAll(CODE8)].some(([c]) => !eights.has(digits(c)) && !(subject && own.includes(digits(c))))],
     // "Mã 3005.10.10 thuộc nhóm 30.05" explains the code itself: the user's code in the clause right before the verb is its
     // subject. "Với mã 3005.10.10, miếng dán thuộc mã …" and "… nên miếng dán cũng thuộc nhóm 30.05" place the goods.
