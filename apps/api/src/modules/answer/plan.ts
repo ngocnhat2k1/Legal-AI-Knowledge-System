@@ -61,8 +61,16 @@ const NOT_HEADING = String.raw`(?!\d{2}\.?00|19\.?(?:0[6-9]|[1-9]\d)|20\.?[1-9]\
  */
 const GAP = String.raw`\s*(?:l[aà]\s*)?(?:[:\-=]\s*)?(?:["“'‘(]\s*)?`;
 const HS_WORD = String.raw`hs(?:\s*code)?(?:\s*s[oố])?`;
-/** Only "hs" or "hs code" names a ten-digit line: "hs số" is also "hồ sơ số", and a record or tax number stays "[số]". */
-const HS_WORD_BEFORE = new RegExp(String.raw`(?<!\[)hs(?:\s*code)?${GAP}$`, 'iu');
+/**
+ * Only "hs" or "hs code" names a ten-digit line: "hs số" is also "hồ sơ số", and a record or tax number stays "[số]". A
+ * sticky lookbehind read back from the digits only as far as the words and gap reach (never past a digit): testing "…$"
+ * on everything before each run scanned the whole prefix, quadratic on a text of ten-digit runs.
+ */
+const HS_WORD_BEFORE = new RegExp(String.raw`(?<=(?<!\[)hs(?:\s*code)?${GAP})`, 'iuy');
+const hsWordBefore = (all: string, at: number): boolean => {
+  HS_WORD_BEFORE.lastIndex = at;
+  return HS_WORD_BEFORE.test(all);
+};
 const MONTH_DAY = String.raw`-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?!\d)`;
 /** An ISO date ("2005-06-15"): its year may be a heading, so a dash between pairs would read it as a code. */
 const NOT_ISO_DATE = String.raw`(?!(?:19|20)\d{2}${MONTH_DAY})`;
@@ -112,16 +120,25 @@ export const CODE_MARK = /\[mã \d+\]/gu;
  */
 export function maskCodes(text: string, book: string[] = []): { text: string; codes: string[] } {
   const codes = [...book];
+  // Each code's first index and the four digits every code opens with, kept as codes grow: scanning `codes` per match
+  // was quadratic on a text of many distinct codes.
+  const index = new Map<string, number>();
+  const heads = new Set<string>();
+  const add = (code: string, i: number): void => {
+    if (!index.has(code)) index.set(code, i);
+    heads.add(code.replace(/\D/g, '').slice(0, 4));
+  };
+  codes.forEach(add);
   const mark = (m: string): string => {
     const d = m.replace(/[.\s-]/g, '').slice(0, 8);
     const key = /^\d{8}$/.test(d) ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : m;
-    const i = codes.indexOf(key);
-    return `[mã ${i < 0 ? codes.push(key) : i + 1}]`;
+    if (!index.has(key)) add(key, codes.push(key) - 1);
+    return `[mã ${index.get(key)! + 1}]`;
   };
   const s = String(text ?? '')
     .normalize('NFC')
-    .replace(HS_TOKEN, (m: string, long: string | undefined, at: number, all: string) => (long && !HS_WORD_BEFORE.test(all.slice(0, at)) ? '[số]' : mark(m)))
-    .replace(BARE_HEADING, (m) => (codes.some((c) => c.replace(/\D/g, '').startsWith(m)) ? mark(m) : m))
+    .replace(HS_TOKEN, (m: string, long: string | undefined, at: number, all: string) => (long && !hsWordBefore(all, at) ? '[số]' : mark(m)))
+    .replace(BARE_HEADING, (m) => (heads.has(m) ? mark(m) : m))
     .replace(JOINED_LIST, (list) =>
       list.replace(JOINED_HEADING, (item: string, head: string, code: string, date: string) => (LISTED_CODE.test(code + date) ? head + mark(code) + date : item)),
     );

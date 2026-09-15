@@ -175,13 +175,29 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
     expect(maskCodes('nhóm 3005, 2026 và 3824 gồm gì').text).toBe('nhóm [mã 1], 2026 và [mã 2] gồm gì');
   });
 
-  it('stays linear: ten thousand characters of any shape mask in well under 50 ms', () => {
-    for (const unit of [' ', 'mã hs ', ', 3824', ', 2026 - 2005-06-15', ' hay là', " '", '12-', '8481 80 ', '1234567890 ', 'e khai mã 3005.10.10 được không ']) {
-      const text = `nhóm 3005${unit.repeat(Math.ceil(10_000 / unit.length))}848180`;
+  // Growth, not a wall-clock budget: under parallel jest workers an absolute 50 ms flakes, while doubling the input of a
+  // linear scan stays near 2x on a loaded machine and a quadratic one reaches 4x. The sizes alternate and each keeps its
+  // fastest of five, so a burst of load on other workers slows both alike. The backstop still fails a hang fast.
+  it('stays linear: doubling ten thousand characters of any shape at most triples the time', () => {
+    const time = (fn: (t: string) => unknown, text: string): number => {
+      const t0 = performance.now();
+      fn(text);
+      return performance.now() - t0;
+    };
+    const units = [' ', 'mã hs ', ', 3824', ', 2026 - 2005-06-15', ' hay là', " '", '12-', '8481 80 ', '1234567890 ', 'hs 1234567890 ', 'e khai mã 3005.10.10 được không '];
+    // Distinct codes, each looked up in the book grown so far: a listed heading, or a dotted one with a bare heading none opens.
+    const listed = (n: number) => Array.from({ length: n / 6 }, (_, i) => `, ${1001 + i}`).join('');
+    const distinct = (n: number) => Array.from({ length: n / 15 }, (_, i) => `, ${3001 + (i % 900)}.${10 + (i % 89)}, 2826`).join('');
+    for (const shape of [...units.map((unit) => (n: number) => unit.repeat(Math.ceil(n / unit.length))), listed, distinct]) {
+      const [text10, text20] = [10_000, 20_000].map((n) => `nhóm 3005${shape(n)}848180`);
       for (const fn of [maskCodes, userCodes]) {
-        const t0 = performance.now();
-        fn(text);
-        expect(performance.now() - t0).toBeLessThan(50);
+        let [t10, t20] = [Infinity, Infinity];
+        for (let i = 0; i < 5; i++) {
+          t10 = Math.min(t10, time(fn, text10!));
+          t20 = Math.min(t20, time(fn, text20!));
+        }
+        expect(t20).toBeLessThan(1_000);
+        if (t10 >= 5 || t20 >= 5) expect(t20 / Math.max(t10, 0.5)).toBeLessThan(3);
       }
     }
   });
