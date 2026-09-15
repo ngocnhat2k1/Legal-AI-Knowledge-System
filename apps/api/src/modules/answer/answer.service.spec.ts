@@ -433,12 +433,18 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
       ['mã hs "848180" dùng cho van được không', '848180'],
       ['mã hs là 848180 dùng cho van được không', '848180'],
       ['mã hs 300510 hay 382490 được không', '382490'],
+      ['8481 809910 dùng cho van được không', '84818099'],
+      ['8481-80-99-10 dùng cho van được không', '84818099'],
+      ["mã hs '848180' dùng cho van được không", '848180'],
+      ['mã hs số 848180 dùng cho van được không', '848180'],
+      ['mã hs 300510 với 382490 được không', '382490'],
+      ['mã hs 300510-382490 được không', '382490'],
     ] as const) {
       for (const intent of ['hs', 'legal']) {
         const { svc, run, legal } = setup({ plan: { intent, question: 'Hàng này có dùng được [mã 1] không' }, sources: [GUIDE] });
         expect(await svc.answer({ q })).toMatchObject({ codeRole: 'premise', mode: 'hs', reason: 'compose_failed' });
         for (const text of [...run.mock.calls.map(([prompt]) => prompt), ...legal.gather.mock.calls.map(([query]) => query)]) {
-          expect(text.replace(/[.\s"]/g, '')).not.toContain(code);
+          expect(text.replace(/[.\s"'-]/g, '')).not.toContain(code);
         }
       }
     }
