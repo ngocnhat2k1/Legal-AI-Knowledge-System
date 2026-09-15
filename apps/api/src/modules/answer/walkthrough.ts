@@ -12,7 +12,7 @@
  * 100 s compose cap. List rows (policyRows) never reach the prompt: whether goods are on a list is printed by code from
  * policyStatus (R10, R12, R18), and the model wrote a used-equipment list into answers about new goods.
  */
-import { quoteInBody, splitSentences } from './guards';
+import { digits, dotted, quoteInBody, splitSentences } from './guards';
 import type { Authority, CandidateHeading, ClassifyInput, EvidenceRow, WalkthroughOutput, WalkthroughSection, WalkthroughSectionKey } from './types';
 import { citesNoNoteOrGri, coerce, ids, QUOTED, SCHEMA } from './walkthrough.checks';
 
@@ -39,10 +39,10 @@ const DEPTH: Record<ClassifyInput['depth'], string> = {
 
 // Citations are [#id] with a quote in the same sentence: numbering left to the model ran on across sections and its cite_ids
 // fell out of step (G runs 2026-09-15); code numbers them and takes the quotes verify() needs (normalizeWalkthrough).
-const RULES = `Câu đầu trả lời thẳng. Hỏi "mã [mã n] được không" thì câu đầu nói dữ kiện đã đủ để đối chiếu chưa, không phán mã đó đúng sai: hệ thống tự so. Viết như đồng nghiệp nói chuyện (xưng mình, gọi bạn), không khuôn; chưa chốt được thì nói theo điều kiện.
+const RULES = `Câu đầu trả lời thẳng. Hỏi "mã [mã n] được không" thì câu đầu nói dữ kiện đã đủ để đối chiếu chưa, không phán mã đó đúng sai: hệ thống tự so. Viết như đồng nghiệp nói chuyện (xưng mình, gọi bạn), không khuôn; chưa chốt được thì nói dữ kiện nào quyết định và mỗi khả năng của nó dẫn tới nhóm nào, không viết nhãn như "Kết luận:" rồi một nhóm hay "nếu/khi chưa rõ … thì phải xét/thuộc …".
 
 Ràng buộc:
-- Không viết thuế suất, %, số tiền, không so mức thuế giữa các dòng: số do hệ thống in theo tariff_ref.
+- Không viết thuế suất, không so mức thuế giữa các dòng: số do hệ thống in theo tariff_ref.
 - Không viết hàng có thuộc danh mục, cần giấy phép hay kiểm tra chuyên ngành không: hệ thống in riêng.
 - Mã chỉ lấy từ LINES hoặc từ câu chữ bằng chứng; nội dung nhóm chép nguyên văn trong "…", không cắt bỏ vế làm hẹp nghĩa.
 - [mã n] là mã người hỏi viết, đã che: đừng đoán số hay nhóm của nó.
@@ -50,7 +50,7 @@ Ràng buộc:
 - Markdown chỉ **đậm**, *nghiêng*, "- ", "1. ", "## ".
 
 Dẫn nguồn:
-- Câu dựa vào dòng nào thì ghi [#id] của dòng đó cuối câu, trước dấu chấm, và chép ngay trong câu một cụm quyết định nguyên văn 20–60 ký tự của dòng trong "…"; câu dựa hai dòng thì chép từ mỗi dòng một cụm riêng của dòng đó, câu mở chung như "Chương này không bao gồm" không tính. Cụm chép không mang %, số tiền hay lời kết luận mã của ruling: câu có chúng bị cắt. Không tự đánh số, không liệt kê nguồn trong sections. [#id] chỉ đặt ở câu mà dòng đó thật sự nói ra ý ấy; câu nêu số hiệu văn bản, ngày cần [#id] của dòng chứa đúng chuỗi đó.
+- Câu dựa vào dòng nào thì ghi [#id] của dòng đó cuối câu, trước dấu chấm, và chép ngay trong câu một cụm quyết định nguyên văn 20–60 ký tự của dòng trong "…"; câu dựa hai dòng thì chép từ mỗi dòng một cụm riêng của dòng đó, câu mở chung như "Chương này không bao gồm" không tính. Cụm chép nguyên văn của Chú giải, Chú giải chi tiết, SEN, GRI hay ruling được mang %, số tiền, tiêu chí hay lời xếp mã, ngoài "…" thì câu có chúng bị cắt; cụm đó từ 20 ký tự, chép trọn, không rút bằng dấu …, và câu mang nó không nói thuế, ưu đãi, MFN, FTA, VAT. Không tự đánh số, không liệt kê nguồn trong sections. [#id] chỉ đặt ở câu mà dòng đó thật sự nói ra ý ấy; câu nêu số hiệu văn bản, ngày cần [#id] của dòng chứa đúng chuỗi đó; số, %, ngày viết y như dòng viết.
 - Gọi nguồn theo kind: hs_note là Chú giải, gri là Quy tắc/GIR, cả hai ràng buộc; en là Chú giải chi tiết, có thẩm quyền, không ghi đè Chú giải; sen là SEN, tầng ASEAN, không tự ràng buộc, nêu điều kiện của SEN thì nói rõ là SEN; note, internal không phải căn cứ; CHƯA CÓ HIỆU LỰC thì nói từ ngày nào.
 - ruling: kết luận hành chính cho đúng mặt hàng đó, ràng buộc theo phạm vi ghi ở dòng; hàng tương tự chỉ để đối chiếu; hai dòng dẫn tới nhóm khác nhau thì nêu cả hai. Dòng ghi "không nêu chú giải hay GIR" thì chỉ nói nó kết luận gì cho hàng nào, không viết "Hải quan lập luận".
 - Câu nói về thuế, C/O không kèm [#id]: không dòng bằng chứng nào nói về thuế.
@@ -99,12 +99,6 @@ function row(r: EvidenceRow): string {
   ].filter(Boolean);
   return `${[`[#${r.id}] ${r.kind}`, standing(r), r.title, ...tags].join(' · ')}\n${r.body.trim()}`;
 }
-
-const digits = (code: string): string => code.replace(/\D/g, '');
-const dotted = (code: string): string => {
-  const d = digits(code);
-  return d.length === 8 ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : code;
-};
 
 /**
  * Whether the prompt prints DÒNG THUẾ, which tariff_ref may only point into. Fail closed (R4): the runner drops the user's

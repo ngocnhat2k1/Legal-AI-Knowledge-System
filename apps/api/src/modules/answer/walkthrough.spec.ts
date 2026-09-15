@@ -122,7 +122,9 @@ describe('buildWalkthroughPrompt', () => {
   it('asks for [#id] beside a verbatim quote in the same sentence, and sections carry no cite list', () => {
     expect(prompt).toContain('ghi [#id] của dòng đó cuối câu');
     // verify() cuts a sentence whose quote holds a rate or a ruling's settling words; a shared opener proves neither row.
-    expect(prompt).toContain('Cụm chép không mang %, số tiền hay lời kết luận mã của ruling');
+    // guards now exempt a criterion quoted verbatim from a note (G1/G4), so the prompt asks for the quote instead of forbidding the figure.
+    expect(prompt).toContain('được mang %, số tiền, tiêu chí hay lời xếp mã');
+    expect(prompt).toContain('không nói thuế, ưu đãi, MFN, FTA, VAT');
     expect(prompt).toContain('câu mở chung như "Chương này không bao gồm" không tính');
     expect(prompt).toContain('"markdown":"…"}],"candidates"');
     expect(prompt).not.toContain('"markdown":"…","cite_ids"');
@@ -603,6 +605,20 @@ describe('normalizeWalkthrough', () => {
     for (const i of [input, bothLines, { ...input, tariffLines: [] }])
       expect(normalizeWalkthrough(draft([], { tariff_ref }), i).tariff_ref.length > 0).toBe(buildWalkthroughPrompt(i).includes('\nDÒNG THUẾ ('));
     expect(normalizeWalkthrough(draft([], { tariff_ref }), bothLines).tariff_ref).toEqual(['3005.10.10', '3824.99.99']);
+  });
+
+  it("dots codes with guards' dotted: 8 digits as before; a 4- or 6-digit code, which DB checks keep out of LINES and DÒNG THUẾ, now dots as verify's anchors do", () => {
+    // Before the swap the local helper dotted 8 digits only and printed "3005" and "300510" as written.
+    const short: ClassifyInput = {
+      ...input,
+      candidates: [{ ...input.candidates[0]!, lines: [{ code: '3005', path: 'a' }, { code: '300510', path: 'b' }, { code: '30051010', path: 'c' }] }],
+      tariffLines: [{ code: '300510', line: 'x' }],
+    };
+    const p = buildWalkthroughPrompt(short);
+    for (const l of ['- 30.05 · a', '- 3005.10 · b', '- 3005.10.10 · c', '- 3005.10: x']) expect(p).toContain(l);
+    const out = normalizeWalkthrough(draft([], { tariff_ref: ['3005.10', '300510', '3005.10.10'] }), short);
+    expect(out.tariff_ref).toEqual(['3005.10']);
+    expect(normalizeWalkthrough(out, short).tariff_ref).toEqual(['3005.10']);
   });
 
   it('keeps candidates to given ids, deduped in order, drops empty sections, leaves the draft alone and reads its own output back unchanged', () => {

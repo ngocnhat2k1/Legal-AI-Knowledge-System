@@ -23,7 +23,7 @@
  *  policy-claim, risk-score, persona, ruling-reasoning   R3, R10, R12, audit §3; lists are printed by code.
  *  length, brief-headings, template-headings, markdown-subset   owner decision 4 and the markdown Zalo renders.
  */
-import { ratesInProse, splitSentences } from './guards';
+import { digits, ratesInProse, splitSentences } from './guards';
 import type { ClassifyInput, EvidenceRow, HeadingAssessment, Violation, WalkthroughOutput, WalkthroughSectionKey } from './types';
 
 // --- Schema -------------------------------------------------------------------------------------
@@ -109,7 +109,6 @@ export function coerce(v: unknown, s: Schema): unknown {
 // --- Text helpers -------------------------------------------------------------------------------
 
 const nfc = (s: unknown): string => String(s ?? '').normalize('NFC');
-const digits = (s: string): string => s.replace(/\D/g, '');
 const esc = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const decimal = (s: string): string => s.replace(/(\d),(?=\d)/g, '$1.');
 const textOf = (r: EvidenceRow): string => `${r.title}\n${r.body}`;
@@ -120,6 +119,7 @@ const MASK = /\[mã\s*\d+\]/giu;
 export const QUOTED = /["“][^"“”\n]*["”]/g;
 const markers = (s: string): number[] => [...s.matchAll(MARKER)].flatMap((m) => m[1].split(',').map(Number));
 /** A four-digit heading as prose writes it, not part of a code (3005.10) or a date (14.09.2026). */
+// Not guards' HEADING_OR_CODE: that also reads "3005.10.10" and "HS 2022" as codes, and neither is an excluded heading.
 const HEADING = /(?<![\d.])\d{2}\.\d{2}(?!\d|\.\d)/g;
 
 /** A figure with a unit; the unit must match the user's, not only the digits ("5 g" ≠ "5 kg"). */
