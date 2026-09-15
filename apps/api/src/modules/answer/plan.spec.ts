@@ -54,10 +54,13 @@ describe('planStep — claude call #1 (Việc 6)', () => {
 
   it('names the sources just cited by the label the bot saves, or by the provisionLabel of a state saved before it', () => {
     const label = 'Khoản 1 Điều 18 Nghị định 08/2015/NĐ-CP';
+    const stateLine = (cite: object) =>
+      planParts({ text: 'nguyên văn điều đó', quote: null, topic: 'legal', state: { legal: { citations: [cite] } }, turns: [], documents: [] }).parts.find((p) => p.name === 'state')!.text;
     for (const cite of [{ label, kind: null, instrument: '08/2015/NĐ-CP', documentNumber: '08/2015/NĐ-CP' }, { provisionLabel: label }]) {
-      const { parts } = planParts({ text: 'nguyên văn điều đó', quote: null, topic: 'legal', state: { legal: { citations: [cite] } }, turns: [], documents: [] });
-      expect(parts.find((p) => p.name === 'state')!.text).toContain(`nguồn vừa trích: ${label}`);
+      expect(stateLine(cite).split('\n')).toContain(`nguồn vừa trích: ${label}`);
     }
+    // Row 19: "nguyên văn điều đó" needs the document of an article label that does not name it.
+    expect(stateLine({ label: 'Điều 18', documentNumber: '08/2015/NĐ-CP' })).toContain('nguồn vừa trích: Điều 18 (08/2015/NĐ-CP)');
   });
 
   it('reads a status question without a code as status when the model says so, the document kept only as the user wrote it', async () => {

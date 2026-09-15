@@ -599,8 +599,12 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
   1. kế hoạch trả `refine`, `refines: true` và `goods` đã sửa;
   2. API chạy lại chế độ hs;
   3. compose nhận LƯỢT TRƯỚC và được dặn mở bằng một câu ghi nhận đính chính ("À, là hộp bằng vải — …").
-- **"nguyên văn điều đó":** `scope.article` lấy từ `state.legal.citations` → `legalProvision`.
-- **"còn từ Nhật thì sao":** `reuseLastHs` → `answerByHs`.
+- **"nguyên văn điều đó":** `scope.article` lấy từ `state.legal.citations` → `legalProvision`. Dòng trạng thái của prompt kế hoạch nêu nhãn nguồn (`label`, hoặc `provisionLabel` của state cũ), kèm số hiệu văn bản khi nhãn chưa có nó: "Điều 18 (08/2015/NĐ-CP)".
+- **"còn từ Nhật thì sao":** tin không nêu mã, kế hoạch `tariff` có `reuseLastHs` hoặc bot ép `forceIntent: "tariff"`.
+  - API lấy `state.tariff.dotted` (đủ 8 số) làm mã vai `key` để tra `/tariff`; xuất xứ và ngày theo kế hoạch.
+  - Chữ số của mã đó không vào prompt nào, kể cả đuôi dòng 10 số trong dòng thuế.
+  - Mã đó không thành dòng `userCodes`, vì người dùng không viết nó ở lượt này.
+  - `state.tariff.dotted` không đủ 8 số, hoặc kế hoạch tariff không reuse mà cũng không bị ép: chỉ trả kế hoạch như trước.
 - **Mục tiêu so sánh** chỉ lấy từ mã **có trong tin nhắn**, không bao giờ từ `ctx.tariff`. Vì vậy phát hiện "câu hỏi hợp nhóm chỉ nêu nhóm lại so mã vừa tra" không còn xảy ra.
 
 ### 6.3 Sổ `lookup_confirmation` (R13)

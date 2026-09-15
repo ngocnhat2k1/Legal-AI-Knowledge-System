@@ -335,6 +335,21 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     }
   });
 
+  it('a planned tariff turn reusing the last code, not forced, looks up the state\'s code too: no prompt spells it, no userCodes line (R4)', async () => {
+    const plan = { intent: 'tariff', reuseLastHs: true, origin: 'JP' };
+    const context = { topic: 'tariff', state: { tariff: { dotted: '8481.80.99', origin: 'CN' } }, turns: [{ role: 'user', body: 'thuế nk 8481.80.99 tq' }] };
+    // The model's plan, then the same plan sent back by the bot.
+    for (const [f, sent] of [[{ plan }, {}], [{}, { plan }]] as const) {
+      const t = tariffOf([{ ...rate('AJCEP', 'ASEAN–Nhật Bản', 'Theo dòng 10 số: 8481.80.99.10 Van bi: 0%; 84818099 90 Loại khác: 5%'), form: 'AJ', requiresCo: true }]);
+      const { svc, run, tariff } = setup({ ...f, drafts: [TARIFF_DRAFT], tariff: t });
+      const res = await svc.answer({ q: 'còn từ Nhật thì sao', context, ...sent });
+      expect(tariff.lookup).toHaveBeenCalledWith('84818099', 'JP', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
+      expect(run).toHaveBeenCalled();
+      for (const [prompt] of run.mock.calls) expect(prompt.replace(/[.\s]/g, '')).not.toMatch(/8481/);
+      expect(res).toMatchObject({ mode: 'tariff', codeRole: 'key', userCodes: [], answerMd: TARIFF_DRAFT.answerMd });
+    }
+  });
+
   it('drops every non-status source of 128/2020/NĐ-CP and 102/2021/NĐ-CP before compose, the cap and the sources-only reply', async () => {
     const penalty = (id: number, documentNumber: string, kind = 'guidance') =>
       source(id, { kind, documentNumber, label: `Nguồn ${id} — ${documentNumber}`, body: `Mức phạt theo ${documentNumber}.` });
