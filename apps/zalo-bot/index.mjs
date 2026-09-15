@@ -435,10 +435,13 @@ export function messageHandler(api, myId = '') {
         // Part 1 is delivered and remembered: a later failure only logs, never sends the generic error.
         await send(wire(p)).catch((e) => console.warn('[zalo] send part failed:', e?.message));
       }
-      // A verdict reply memory did not keep: memory still shows the table this reply answered, open (R13, round 6).
-      if (!saved && (result.intent === 'confirm' || result.intent === 'correction')) {
+      // A reply memory did not keep, whatever it was: memory still shows the table before it, open, which is not the reply on screen
+      // (R13, rounds 6, 8). A verdict that wrote a row leaves that table unruled in memory: it returns `ruled`, or `tariff: null`
+      // after "mã này sai" or a half-written correction.
+      if (!saved) {
         lastAnswered.delete(msg.threadId);
-        if (result.tariff?.ruled && ctx.state.tariff) ruledTables.add(tableKey(msg.threadId, userId, ctx.state.tariff));
+        const verdict = result.intent === 'confirm' || result.intent === 'correction';
+        if (verdict && (result.tariff === null || result.tariff?.ruled) && ctx.state.tariff) ruledTables.add(tableKey(msg.threadId, userId, ctx.state.tariff));
       }
     } catch (e) {
       console.error('[zalo] lỗi xử lý tin:', e?.message);

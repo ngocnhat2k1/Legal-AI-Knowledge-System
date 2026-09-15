@@ -39,36 +39,41 @@ export const fold = (text) =>
  * này") wrote once a heuristic missed it. Such a message goes to the plan, and the offer there spells out the form to send; a
  * ruling not written costs one round trip, a written doubt stays in the trail. A "?" anywhere, or a typed "à", "á", "hả", rules
  * nothing.
- * Read as typed: a message with any diacritic matches the accented forms exactly, and only a message with none ("dung roi", "hs
- * dung la 84818091") the same forms folded. Folding an accented message turned other words into verdicts: "dùng rồi" (already
- * used) wrote 'correct', "không dùng" and "sài rồi" 'wrong', and "sai á", "sai nhẹ" passed as a courtesy particle (round 4).
+ * Read as typed: a message with any diacritic matches the accented forms exactly, and only a message with none ("dung roi") the
+ * one-word and code-less forms folded, fewer of them. Folding an accented message turned other words into verdicts: "dùng rồi"
+ * (already used) wrote 'correct', "không dùng" and "sài rồi" 'wrong', and "sai á", "sai nhẹ" passed as a courtesy particle (round 4).
  */
-/** The courtesy particle and closing marks, as written and folded: unaccented, a bare "a" may be "à" ("dung a" is "đúng à?"). */
-const TAIL = ['(?: (?:ạ|a|nhé|nhe|nha|nhá|bạn|ban))?[.!]*$', '(?: (?:nhe|nha|ban))?[.!]*$'];
+/**
+ * The courtesy particle and closing marks, as written and folded: unaccented, a bare "a" may be "à" ("dung a" is "đúng à?"), and
+ * "nhe", "nha" may close "dùng nhé" ("dung nhe", round 8).
+ */
+const TAIL = ['(?: (?:ạ|a|nhé|nhe|nha|nhá|bạn|ban))?[.!]*$', '(?: ban)?[.!]*$'];
 /** A form as written, and folded; `folded` when the unaccented reading takes less than the folded form. */
 const grammar = (source, folded = fold(source)) => [new RegExp(source.normalize('NFC') + TAIL[0]), new RegExp(folded + TAIL[1])];
-// Unaccented, "khong dung", "ko dung", "k dung" and "chua dung" may be "không dùng", "chưa dùng" (round 6).
+// Unaccented, "khong dung", "ko dung", "k dung" and "chua dung" may be "không dùng", "chưa dùng" (round 6); "k chac" is left to the
+// accented form too (U08, round 8).
 const VERDICT = {
   correct: grammar('^(?:đúng(?: rồi| r)?|chuẩn|chính xác)'),
   wrong: grammar('^(?:sai(?: rồi| r)?|(?:không|ko|k) đúng)', '^sai(?: roi| r)?'),
-  unsure: grammar('^(?:không|ko|k) chắc'),
+  unsure: grammar('^(?:không|ko|k) chắc', '^(?:khong|ko) chac'),
 };
 /**
  * "mã này sai", "kết quả vừa tra không đúng": the code on the table is wrong, and nothing else is said. "nhầm mã rồi" and "vừa tra
- * nhầm mã rồi" usually own a typo in the code the user typed (round 6), so "vừa tra" needs its subject.
+ * nhầm mã rồi" usually own a typo in the code the user typed (round 6), so "vừa tra" needs its subject. Unaccented, the subject needs
+ * its noun: "nay sai", "do sai" may be other words than "này", "đó" (round 8).
  */
-const SUBJECT = '^(?:(?:mã hs|mã|hs|code|kết quả) (?:(?:này|đó|vừa tra) )?|(?:này|đó) )?';
-const CODELESS_WRONG = grammar(`${SUBJECT}(?:sai(?: rồi| r)?|(?:không|ko|k|chưa) đúng)`, fold(`${SUBJECT}sai(?: rồi| r)?`));
+const SUBJECT = '(?:mã hs|mã|hs|code|kết quả) (?:(?:này|đó|vừa tra) )?';
+const CODELESS_WRONG = grammar(`^(?:${SUBJECT}|(?:này|đó) )?(?:sai(?: rồi| r)?|(?:không|ko|k|chưa) đúng)`, fold(`^(?:${SUBJECT})?sai(?: rồi| r)?`));
 /**
- * The origin spellings detectOrigin (parse.mjs) reads, as written and folded; its codes only in capitals. handleCorrection checks a
- * named origin against the lookup's with detectOrigin, so a spelling it cannot read ("xuất xứ jp", "xuat xu nhat") skipped the
- * check and wrote under the lookup's origin (round 6). A spec reads every one, so the two lists cannot drift apart.
+ * The origin spellings detectOrigin (parse.mjs) reads, as written; its codes only in capitals. handleCorrection checks a named origin
+ * against the lookup's with detectOrigin, so a spelling it cannot read ("xuất xứ jp") skipped the check and wrote under the lookup's
+ * origin (round 6). A spec reads every one, so the two lists cannot drift apart.
  */
-const PLAIN = ['tq', 'china', 'japan', 'korea', 'australia', 'new zealand', 'thailand', 'malaysia', 'singapore', 'indonesia', 'philippines', 'germany', 'india'];
 const CODES = ['TQ', 'CN', 'JP', 'KR', 'AU', 'NZ', 'TH', 'MY', 'SG', 'ID', 'PH', 'DE', 'EU', 'GB', 'UK', 'US', 'VN'];
 export const COUNTRY = [
-  ['trung quốc', 'nhật bản', 'nhật', 'hàn quốc', 'thái lan', 'mã lai', 'châu âu', 'ấn độ', 'anh quốc', ...PLAIN, ...CODES],
-  ['trung quoc', ...PLAIN, ...CODES],
+  'trung quốc', 'nhật bản', 'nhật', 'hàn quốc', 'thái lan', 'mã lai', 'châu âu', 'ấn độ', 'anh quốc',
+  'tq', 'china', 'japan', 'korea', 'australia', 'new zealand', 'thailand', 'malaysia', 'singapore', 'indonesia', 'philippines', 'germany', 'india',
+  ...CODES,
 ];
 const oneOf = (list) => `(?:${list.join('|').toLowerCase()})`;
 const CITATION = '(?:(?:theo|căn cứ) )?(?:cv|công văn|qđ|quyết định|tb|thông báo)(?: số)?:? ?\\d[a-zđ0-9/.-]*';
@@ -76,9 +81,13 @@ const CITATION = '(?:(?:theo|căn cứ) )?(?:cv|công văn|qđ|quyết định|t
 const coded = (country) =>
   `^(?:sai(?: rồi| r)?[,.]? )?(?:mã hs|mã|hs|code)(?: hs)? (?:đúng|chuẩn|chính xác)(?: phải)?(?: là ?|: ?)` +
   `\\d{4}[. ]?\\d{2}[. ]?\\d{2}(?!\\d|\\.\\d)(?:,? (?:xuất xứ ${country}|${CITATION})){0,2}`;
-const CODED = grammar(coded(oneOf(COUNTRY[0])), fold(coded(oneOf(COUNTRY[1]))));
+/**
+ * Accented only: unaccented, "hs dung la X" and "ma dung la X" may be "HS dùng là", "mã dùng là" (round 8). Every offer naming this
+ * command spells it with accents.
+ */
+const CODED = grammar(coded(oneOf(COUNTRY)), '(?!)');
 /** The country of the origin slot, as typed. */
-const ORIGIN_SLOT = new RegExp(`(?:xuất xứ|xuat xu) (${[...COUNTRY[0], ...COUNTRY[1]].join('|')})(?![\\p{L}\\d])`, 'iu');
+const ORIGIN_SLOT = new RegExp(`xuất xứ (${COUNTRY.join('|')})(?![\\p{L}\\d])`, 'iu');
 const ALL_CODES = new RegExp(HS_RE.source, 'g');
 
 /** {verdict} for a one-word verdict, {wrong} for a code-less "the code is wrong", {coded} for "HS đúng là <mã>"; else null. */
@@ -92,9 +101,10 @@ export function ruling(text) {
   if (is(CODELESS_WRONG)) return { wrong: true };
   if (!is(CODED) || (t.match(ALL_CODES) ?? []).length !== 1) return null;
   // One named origin, read from its slot as typed, and the message exactly as handleCorrection reads it (not normalised: typed
-  // decomposed it reads none) reads that origin and no other (a citation number may hold "12/tq").
-  const named = t.match(/xuất xứ|xuat xu/g)?.length ?? 0;
-  if (!named) return { coded: true };
+  // decomposed it reads none) reads that origin and no other (a citation number may hold "12/tq"). With no slot it reads none: on a
+  // candidates or photo table there is no lookup origin to hold a citation's "CV 12/HQ-CN" or "TB 12/TB-TH" to (round 8).
+  const named = t.match(/xuất xứ/g)?.length ?? 0;
+  if (!named) return detectOrigin(text) ? null : { coded: true };
   const origin = named === 1 && detectOrigin(raw.match(ORIGIN_SLOT)?.[1]);
   return origin && origin === detectOrigin(text) ? { coded: true } : null;
 }

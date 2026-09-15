@@ -515,7 +515,9 @@ export async function handleCorrection(tariff, text, senderName, quote) {
 export async function codeOffer(tariff, fix) {
   // A table whose ruling was recorded takes no second one (R13): it is not reopened, and "chưa ghi nhận gì" would be untrue.
   if (tariff?.ruled) {
-    return { text: [L(['Mình đã ghi nhận phán quyết cho mã ', [tariff.dotted, 'b'], ' vừa rồi nên không ghi thêm. Muốn ghi nhận khác, bạn tra lại mã rồi nhắn "đúng", "sai" hoặc "HS đúng là <mã>".'])] };
+    // A candidates table has no code of its own: its ruling was for the goods (round 8).
+    const ruled = tariff.dotted ? ['mã ', [tariff.dotted, 'b'], ' vừa rồi'] : ['hàng vừa hỏi'];
+    return { text: [L(['Mình đã ghi nhận phán quyết cho ', ...ruled, ' nên không ghi thêm. Muốn ghi nhận khác, bạn tra lại mã rồi nhắn "đúng", "sai" hoặc "HS đúng là <mã>".'])] };
   }
   const desc = String(tariff?.desc || '').replace(/\s+/g, ' ').trim();
   const forDesc = desc ? [' cho ', [desc, 'i']] : [];

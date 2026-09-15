@@ -1575,7 +1575,7 @@ test('R13 văn phạm đóng: một từ phán quyết có "?" hay "à" không g
     assert.equal(fastPath({ text, ...fresh }), null, text);
   }
   for (const [text, verdict] of [
-    ['đúng ạ', 'correct'], ['chuẩn ạ', 'correct'], ['đúng rồi nhé', 'correct'], ['dung roi nha', 'correct'], ['Đúng rồi bạn', 'correct'], ['chính xác ạ', 'correct'],
+    ['đúng ạ', 'correct'], ['chuẩn ạ', 'correct'], ['đúng rồi nhé', 'correct'], ['đúng rồi nha', 'correct'], ['Đúng rồi bạn', 'correct'], ['chính xác ạ', 'correct'],
     ['đúng nha', 'correct'], ['dung r', 'correct'], ['sai ạ', 'wrong'], ['Sai.', 'wrong'], ['sai rồi!', 'wrong'], ['không đúng nhá', 'wrong'], ['ko đúng', 'wrong'], ['không chắc', 'unsure'],
   ]) {
     assert.deepEqual(fastPath({ text, ...fresh }), { action: 'confirm', verdict }, text);
@@ -1597,7 +1597,7 @@ test('R13 văn phạm đóng: "HS đúng là <một mã>" chỉ kèm xuất xứ
   const fresh = { topic: 'tariff', tariffFresh: true, table: OPEN };
   for (const text of [
     'HS đúng là 8481.80.91', 'HS đúng là 8481.80.91 nhé', 'HS đúng là 8481.80.91 theo CV 123/HQ-TXNK', 'sai rồi, mã đúng phải là 8481.80.91 xuất xứ Trung Quốc',
-    'Sai. Mã đúng là 8481.80.91.', 'mã HS đúng: 8481.80.91', 'hs dung la 84818091 can cu cong van so 12/TCHQ nha', 'HS ĐÚNG LÀ 8481 80 91',
+    'Sai. Mã đúng là 8481.80.91.', 'mã HS đúng: 8481.80.91', 'HS đúng là 84818091 căn cứ công văn số 12/TCHQ nha', 'HS ĐÚNG LÀ 8481 80 91',
   ]) {
     assert.deepEqual(fastPath({ text, ...fresh }), { action: 'correction' }, text);
   }
@@ -1688,7 +1688,7 @@ test('R13 văn phạm đóng (F01–F20): tin có dấu chỉ khớp dạng có 
   }
   assert.deepEqual(fastPath({ text: 'dung roi', ...fresh }), { action: 'confirm', verdict: 'correct' });
   assert.deepEqual(fastPath({ text: 'sai roi', ...fresh }), { action: 'confirm', verdict: 'wrong' });
-  assert.deepEqual(fastPath({ text: 'hs dung la 8481.80.91', ...fresh }), { action: 'correction' });
+  assert.deepEqual(fastPath({ text: 'HS đúng là 8481.80.91', ...fresh }), { action: 'correction' });
 });
 
 test('R13 luồng ứng viên (D08–D10): quote câu ứng viên hay lời mời của hàng khác cùng các nhóm không ghi cho hàng đang nhớ', async () => {
@@ -1747,19 +1747,23 @@ test('R13 xuất xứ (D21, D22): "HS đúng là <mã> xuất xứ <nước>" kh
   assert.deepEqual(pairs(await same.say('HS đúng là 8481.80.99 xuất xứ Trung Quốc', fakeApi())), [['84818099', 'correct']]);
 });
 
-test('R13 ảnh ranh giới (D23, D24): ba mã ngang nhau là bàn ứng viên: "đúng" không ghi; "HS đúng là <mã thứ hai>" chỉ ghi correct cho mã đó', async () => {
+/** The photo reply for "van nhựa" whose three hints tie: a candidates table of full codes. */
+async function borderlinePhoto(origin) {
   const real = globalThis.fetch;
   globalThis.fetch = async (url) => {
     const u = new URL(url);
-    const body = u.pathname === '/tariff/search' ? CANDS[u.searchParams.get('prefix')] ?? [] : u.pathname === '/tariff/confirmations/match' ? [] : u.pathname === '/tariff' ? tariff8481({ origin: 'CN' }) : null;
+    const body = u.pathname === '/tariff/search' ? CANDS[u.searchParams.get('prefix')] ?? [] : u.pathname === '/tariff/confirmations/match' ? [] : u.pathname === '/tariff' ? tariff8481({ origin }) : null;
     return { ok: body !== null, status: body !== null ? 200 : 404, json: async () => body };
   };
-  let photo;
   try {
-    photo = await tariffByClues({ keywords: ['van nhựa'], origin: 'CN', hsHints: ['8481', '7307', '3926'], date: '2026-09-13' }, 'van nhựa');
+    return await tariffByClues({ keywords: ['van nhựa'], origin, hsHints: ['8481', '7307', '3926'], date: '2026-09-13' }, 'van nhựa');
   } finally {
     globalThis.fetch = real;
   }
+}
+
+test('R13 ảnh ranh giới (D23, D24): ba mã ngang nhau là bàn ứng viên: "đúng" không ghi; "HS đúng là <mã thứ hai>" chỉ ghi correct cho mã đó', async () => {
+  const photo = await borderlinePhoto('CN');
   assert.deepEqual([photo.tariff.hs, photo.tariff.candidates], [null, ['8481.80.99', '7307.99.90', '3926.90.99']]);
   const onPhoto = () => {
     const c = conversation();
@@ -1908,13 +1912,11 @@ test('R13 nhóm (fastPath): tin cuối của bot trả lời người khác thì
 
 test('R13 xuất xứ (round 6): mỗi cách viết nước văn phạm nhận là một cách detectOrigin đọc được; "jp", "nhat", "han quoc", NFD, hai xuất xứ không ghi', () => {
   const fresh = { topic: 'tariff', tariffFresh: true, table: { ...OPEN, origin: 'CN' } };
-  for (const [read, spellings] of COUNTRY.entries()) {
-    for (const c of spellings) {
-      const text = `${read ? 'hs dung la 8481.80.99 xuat xu' : 'HS đúng là 8481.80.99 xuất xứ'} ${c}`;
-      assert.ok(detectOrigin(c), c);
-      assert.equal(detectOrigin(text), detectOrigin(c), text);
-      assert.deepEqual(ruling(text), { coded: true }, text);
-    }
+  for (const c of COUNTRY) {
+    const text = `HS đúng là 8481.80.99 xuất xứ ${c}`;
+    assert.ok(detectOrigin(c), c);
+    assert.equal(detectOrigin(text), detectOrigin(c), text);
+    assert.deepEqual(ruling(text), { coded: true }, text);
   }
   for (const text of [
     'HS đúng là 8481.80.99 xuất xứ jp', 'hs dung la 8481.80.99 xuat xu nhat', 'hs dung la 8481.80.91 xuat xu han quoc', 'HS đúng là 8481.80.99 xuất xứ cn',
@@ -1926,7 +1928,7 @@ test('R13 xuất xứ (round 6): mỗi cách viết nước văn phạm nhận l
     assert.equal(ruling(text), null, text);
     assert.equal(fastPath({ text, ...fresh }), null, text);
   }
-  for (const text of ['hs dung la 8481.80.99 xuat xu tq', 'HS đúng là 8481.80.99 xuất xứ TQ', 'HS ĐÚNG LÀ 8481 80 99 XUẤT XỨ TRUNG QUỐC', 'sai rồi, mã đúng phải là 8481.80.91 xuất xứ Trung Quốc theo CV 12/TCHQ nhé']) {
+  for (const text of ['HS đúng là 8481.80.99 xuất xứ tq', 'HS đúng là 8481.80.99 xuất xứ TQ', 'HS ĐÚNG LÀ 8481 80 99 XUẤT XỨ TRUNG QUỐC', 'sai rồi, mã đúng phải là 8481.80.91 xuất xứ Trung Quốc theo CV 12/TCHQ nhé']) {
     assert.deepEqual(fastPath({ text, ...fresh }), { action: 'correction' }, text);
   }
 });
@@ -1941,7 +1943,7 @@ test('R13 xuất xứ (round 6, O01–O10): trên lượt tra TQ, xuất xứ de
   await none.say('8481.80.99', fakeApi());
   assert.equal((await none.say('HS đúng là 8481.80.99 xuất xứ cn', planOf('correction'))).confirms.length, 0, 'O04: bàn không xuất xứ');
   const tq = await afterLookup();
-  assert.deepEqual((await tq.say('hs dung la 8481.80.99 xuat xu tq', fakeApi())).confirms.map((x) => [x.hs, x.verdict, x.origin]), [['84818099', 'correct', 'CN']]);
+  assert.deepEqual((await tq.say('HS đúng là 8481.80.99 xuất xứ tq', fakeApi())).confirms.map((x) => [x.hs, x.verdict, x.origin]), [['84818099', 'correct', 'CN']]);
   const jp = conversation();
   await jp.say('8481.80.99 JP', fakeApi());
   assert.deepEqual((await jp.say('HS đúng là 8481.80.99 xuất xứ Nhật Bản', fakeApi())).confirms.map((x) => [x.hs, x.verdict, x.origin]), [['84818099', 'correct', 'JP']]);
@@ -1960,9 +1962,9 @@ test('R13 văn phạm đóng (round 6, X06–X09): tin không dấu đọc đư�
     assert.equal(fastPath({ text, ...fresh }), null, text);
   }
   for (const [text, action] of [
-    ['không đúng', 'confirm'], ['ko đúng', 'confirm'], ['k đúng ạ', 'confirm'], ['đúng ạ', 'confirm'], ['sai ạ', 'confirm'], ['đúng a', 'confirm'], ['dung roi nha', 'confirm'],
+    ['không đúng', 'confirm'], ['ko đúng', 'confirm'], ['k đúng ạ', 'confirm'], ['đúng ạ', 'confirm'], ['sai ạ', 'confirm'], ['đúng a', 'confirm'], ['đúng rồi nha', 'confirm'],
     ['sai roi', 'confirm'], ['khong chac', 'confirm'], ['kết quả vừa tra sai rồi', 'correction'], ['mã vừa tra không đúng', 'correction'], ['ma nay sai', 'correction'],
-    ['này sai', 'correction'], ['chưa đúng', 'correction'], ['hs dung la 8481.80.91 nhe', 'correction'],
+    ['này sai', 'correction'], ['chưa đúng', 'correction'], ['HS đúng là 8481.80.91 nhé', 'correction'],
   ]) {
     assert.equal(fastPath({ text, ...fresh })?.action, action, text);
   }
@@ -1988,4 +1990,78 @@ test('R13 (round 6, H05, H06): phán quyết đã ghi mà lưu bộ nhớ lỗi:
     await say('u1', 'mã này sai');
     assert.deepEqual(confirms.map((x) => [x.hs, x.verdict]), [['84818091', 'correct'], ['84818099', 'wrong']], 'đính chính');
   }, { saveFails: failRuling });
+});
+
+// --- Plan 08 Việc 12 round 8 (2026-09-15): a citation that reads as an origin, any failed memory save, unaccented forms that read two
+// ways (R13) ----
+
+test('R13 xuất xứ (round 8, N19–N24): tin có mã không ô xuất xứ mà vẫn đọc ra xuất xứ (số "CV 12/HQ-CN", "TB 12/TB-TH") không ghi', async () => {
+  for (const text of ['HS đúng là 3005.90.00 theo CV 12/HQ-CN', 'HS đúng là 3005.90.00 theo TB 12/TB-TH', 'HS đúng là 8481.80.91 theo CV 12/tq', 'HS đúng là 8481.80.91 theo CV 12/HQ-CN']) {
+    assert.equal(ruling(text), null, text);
+  }
+  for (const text of ['HS đúng là 8481.80.91 theo CV 12/TCHQ', 'HS đúng là 8481.80.91 xuất xứ TQ theo CV 12/HQ-CN']) assert.deepEqual(ruling(text), { coded: true }, text);
+  for (const text of ['HS đúng là 3005.90.00 theo CV 12/HQ-CN', 'HS đúng là 3005.90.00 theo TB 12/TB-TH', 'hs dung la 3005.90.00 theo cv 12/tq']) {
+    const c = await afterHs();
+    assert.equal((await c.say(text, planOf('correction'))).confirms.length, 0, text);
+  }
+  const photo = conversation();
+  [photo.memo.topic, photo.memo.state] = ['tariff', nextState({}, await borderlinePhoto(null))];
+  assert.equal((await photo.say('HS đúng là 8481.80.99 theo CV 12/HQ-CN', planOf('correction'))).confirms.length, 0, 'N21: bàn ảnh');
+  const tq = await afterLookup();
+  assert.equal((await tq.say('HS đúng là 8481.80.91 theo CV 12/HQ-CN', planOf('correction'))).confirms.length, 0, 'N24: lượt tra TQ');
+});
+
+test('R13 văn phạm đóng (round 8, U01–U08): tin không dấu không nhận "nhe"/"nha", "nay"/"do" trơn, "k chac", dạng có mã ("hs dung la" có thể là "dùng là"); có dấu vẫn ghi', async () => {
+  const fresh = { topic: 'tariff', tariffFresh: true, table: OPEN };
+  const unaccented = ['dung nhe', 'dung nha', 'do sai', 'nay sai', 'dung roi nha', 'hs dung la 8481.80.91', 'ma dung la 8481.80.91', 'k chac'];
+  for (const text of [...unaccented, 'sai nha', 'ma nay sai nhe', 'hs dung la 8481.80.91 xuat xu tq', 'sai r, ma dung la 8481.80.91', 'code dung: 8481.80.91']) {
+    assert.equal(ruling(text), null, text);
+  }
+  for (const text of unaccented) {
+    const c = await afterLookup();
+    assert.equal((await c.say(text, planOf('correction'))).confirms.length, 0, text);
+  }
+  for (const [text, action] of [
+    ['đúng nhé', 'confirm'], ['sai nhé', 'confirm'], ['k chắc', 'confirm'], ['này sai', 'correction'], ['đó sai nhé', 'correction'], ['HS đúng là 8481.80.91 nhé', 'correction'],
+    ['mã đúng là 8481.80.91', 'correction'], ['dung roi', 'confirm'], ['khong chac', 'confirm'], ['ma nay sai', 'correction'],
+  ]) {
+    assert.equal(fastPath({ text, ...fresh })?.action, action, text);
+  }
+});
+
+test('R13 (round 8, S01, S03–S05, S08): lưu bộ nhớ lỗi ở bất cứ câu nào đóng đường không quote; "mã này sai" đã ghi thì bàn đóng; lời mời bàn ứng viên không in "undefined"', async () => {
+  const userSaid = (text) => (body) => body.turns.some((x) => x.role === 'user' && x.body === text);
+  const rows = (confirms) => confirms.map((x) => [x.hs, x.verdict, x.origin]);
+  await onThread(fakeApi(), async ({ say, sent, confirms }) => {
+    await say('u1', '8481.80.99 TQ');
+    const lookup = sent.at(-1);
+    await say('u1', 'mã này sai');
+    await say('u1', 'đúng', lookup);
+    assert.deepEqual(rows(confirms), [['84818099', 'wrong', 'CN']], 'S01');
+  }, { saveFails: userSaid('mã này sai') });
+  const legal = (path, body, u) => (path === '/answer' && body.q === LEGAL_Q ? (body.planOnly ? legalPlanned : composedLegal) : fakeApi()(path, body, u));
+  await onThread(legal, async ({ say, confirms }) => {
+    await say('u1', '8481.80.99 TQ');
+    await say('u1', LEGAL_Q);
+    await say('u1', 'đúng');
+    assert.equal(confirms.length, 0, 'S03');
+  }, { saveFails: userSaid(LEGAL_Q) });
+  for (const [id, text] of [['S04', 'sai'], ['S05', 'HS đúng là 8481.80.99']]) {
+    await onThread(fakeApi(), async ({ say, confirms }) => {
+      await say('u1', '8481.80.91 TQ');
+      await say('u1', '8481.80.99 TQ');
+      await say('u1', text);
+      assert.equal(confirms.length, 0, id);
+    }, { saveFails: userSaid('8481.80.99 TQ') });
+  }
+  const G1 = 'miếng dán ngải cứu mã gì';
+  const hs = (path, body, u) => (path === '/answer' && body.q === G1 ? (body.planOnly ? plannedOf(plan08({ question: G1 }), { codeRole: 'none' }) : composedHs) : planOf('correction')(path, body, u));
+  await onThread(hs, async ({ say, sent, confirms }) => {
+    await say('u1', G1);
+    await say('u1', 'HS đúng là 3005.90.00');
+    await say('u1', '3005.90.00 mới đúng');
+    assert.deepEqual(rows(confirms), [['30059000', 'correct', null]]);
+    assert.doesNotMatch(sent.at(-1), /undefined/);
+    assert.match(sent.at(-1), /đã ghi nhận phán quyết cho hàng vừa hỏi nên không ghi thêm/, 'S08');
+  }, { saveFails: userSaid('HS đúng là 3005.90.00') });
 });
