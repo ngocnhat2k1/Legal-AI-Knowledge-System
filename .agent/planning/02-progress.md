@@ -177,6 +177,19 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
     - Sửa ở `e7c3fc0`, `584e7c6`, `7494d94`; bot 108 test.
     - Rà lại chưa đạt: 1 blocker (dòng "Hàng hóa có mã HS …" do mô hình viết vẫn làm tin soạn khớp `tariffReply`) và 2 major (phán quyết quote tin tra cũ bị ghi cho mã mới; "em gõ sai" bị ghi `wrong`).
     - Đang chạy vòng sửa + rà lại (tối đa 2 vòng), quyết theo mã đang tra thay vì câu chữ.
+  - **Việc 12, thêm 2 vòng sửa/rà** (`be1b468`, `3b48b93`; bot 122): số lỗi thu hẹp dần (blocker 4 → 1) nhưng không hội tụ.
+    - Còn lại: "đúng?" vẫn ghi sổ; câu có mã kèm quote trên luồng ứng viên ghi được; "mã đúng là X thì thuế bao nhiêu" ghi được; khối thuế mixed dài tách tin.
+    - **Đổi cách làm:** sổ phán quyết chỉ ghi từ danh sách lệnh đóng khớp cả tin nhắn ("đúng", "sai rồi", "mã này sai", "HS đúng là X [xuất xứ] [căn cứ]"), và chỉ khi tin cuối của bot là kết quả tra đó. Mọi dạng khác không ghi, trả câu mời nêu đúng lệnh. Bỏ sót lệnh thật thì chấp nhận; ghi ngoài dự kiến là blocker.
+    - Cùng vòng này: nhãn R18 trên dòng nguồn, "còn từ Nhật thì sao" có prose, nhãn khối mixed đi cùng dòng mở đầu.
+  - **Đã gộp `451809c`: nhánh API trước deploy, đợt 1 + đợt 2.** Worktree sạch: jest 354 qua, `tsc` sạch, bot 83.
+    - Đợt 2 có 5 commit và 1 commit sửa `861d8a6`; rà lại đạt.
+    - Nội dung: `maskCodes` che mã viết liền sau từ khoá, dòng 10 số, danh sách phân nhóm viết liền; chuỗi ≥ 9 số (mã số thuế, SĐT) để nguyên; "HS 2022" không còn bị hiểu là nhóm.
+    - Response thêm `fallback` và `reason`; FIT nhận "có hợp không".
+    - `hsCodeSections` xếp dòng nêu đúng mã lên trước.
+    - Thứ tự pin: hs_note đứng trước SEN. Hệ quả đã ghi ở §2.4: nhóm hỏi trải từ 3 chương trở lên thì không còn chỗ cho SEN.
+    - Row 19: `stateOf` nêu văn bản của nguồn đã trích; `normalizePlan` giữ `scope.doc` khớp với văn bản đó.
+    - Tài liệu plan 08 §0, §2.4, §4.2, §6.2 đã cập nhật.
+  - **Đang chạy `plan08/api-mask-minors`:** mã 10 số tách 4+6; `JOINED_HEADING` áp `NOT_HEADING`; dấu nháy đơn, "hs số", các từ nối với/hay là/"/"/"-"; dấu gạch làm dấu tách mã ("8481-80-99", vẫn giữ nguyên ngày ISO); ghi chú HS 2002/2007; row 19 nhận số hiệu văn bản không có phần cơ quan ban hành.
   - **Việc API đợt 2** (sau khi workflow trước deploy xong, vì cùng đụng `plan.ts`):
     - (a) `maskCodes` che mã 6 số viết liền sau từ khoá ("mã hs 848180") — blocker R4.
     - (b) `stateOf` thêm `documentNumber` để "nguyên văn điều đó" điền được `scope.article`.
