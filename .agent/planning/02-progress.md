@@ -16,10 +16,10 @@ tiếp theo, và điều gì đã học được mà code không cho thấy.
 
 | | |
 |---|---|
-| **Đang chạy** | Server dev dùng chung của MONA (`<MONA_DEV_HOST>`; giá trị thật trong `.agent/local/mona-dev-server.md`), stack `/opt/docker-projects/customs-assistant`, cổng 127.0.0.1 3060/5435/8060: API + web UI + kho pháp lý 15 văn bản + worker ingest + bot Zalo (đã đăng nhập, `ALLOWED_THREADS` đã đặt), `/health` báo `llm: up`. Deploy mới nhất `0bf25af` (2026-09-14 ~09:22 UTC qua CI/CD: `/legal` dùng tầng bằng chứng); bản sửa hiệu lực + định tuyến theo ngay sau, sau deploy phải chạy `seed-evidence` một lần (runbook §5). **Từ 2026-09-14 deploy bằng CI/CD:** push `main` → GitHub Actions test, build image lên ghcr.io, server chỉ kéo về ([runbook §5](../docs/mona-dev-server-operations.md#5-deploy-bản-mới)). LLM (`claude -p` thuê bao) trả lời lại được từ ~09:20 UTC 2026-09-14; trước đó hết hạn mức ("org's monthly spend limit") mà `/health` vẫn báo `llm: up`, vì nó chỉ kiểm token + binary. Vận hành: [runbook](../docs/mona-dev-server-operations.md). |
-| **Việc tiếp theo** | **[Kế hoạch 08](08-answer-path-tasks.md) — `POST /answer`, bot soạn câu trả lời trên bằng chứng** (đọc §0 trước).<br>**Trên `main` local, chưa push:** Việc 4, 5, 6, 7, 8, 10, 11; `types.ts` với `cites`; stack dữ liệu của c8 (`591ec3c`…`adcf01d`).<br>**Nhánh đang rà hoặc sửa:**<br>• `plan08/predeploy-api-followups`: đã duyệt `df1f363`, đang chạy đợt 2.<br>• `plan08/guards-minimal`<br>• `plan08/viec12-bot-answer`: vòng sửa R13.<br>**Sau đó, theo thứ tự:**<br>1. Gộp các nhánh (merge, không rebase).<br>2. Làm Việc 13.<br>3. Bot: nhãn R18 "(trích tự động, chưa đối chiếu)" trên dòng nguồn, và "còn từ Nhật thì sao" gọi prose.<br>4. Nối walkthrough khi c8 báo chốt.<br>5. Kiểm trong worktree sạch, gồm full jest, `tsc` và bot.<br>6. Một lần push chung với c8.<br>7. Deploy.<br>8. Chạy `seed-evidence`, khoảng 80–85 phút, giờ do phiên này chọn.<br>9. Probe R4 (`.agent/local/r4-probe.mjs`).<br>10. Chủ dự án thử trên Zalo. |
+| **Đang chạy** | Server dev dùng chung của MONA (`<MONA_DEV_HOST>`; giá trị thật trong `.agent/local/mona-dev-server.md`), stack `/opt/docker-projects/customs-assistant`, cổng 127.0.0.1 3060/5435/8060. Deploy mới nhất **`2476aab`** (2026-09-15, cả kế hoạch 08 Việc 4–13 + stack dữ liệu của c8): API + web UI + worker ingest + bot Zalo (đã đăng nhập, `ALLOWED_THREADS` đã đặt). Kho pháp lý **23 văn bản**, 7.598 điều khoản, 3.196 chunk (`FORCE_RESEED=1 seed-legal`, 2026-09-15). `/health` ok và **`/health?llm=deep` trả `llmDeep: up`** — dùng cái sau để biết mô hình có thật sự trả lời, `llm` chỉ nói token + binary có mặt. Deploy bằng CI/CD: push `main` → GitHub Actions test → image lên ghcr.io → server kéo về ([runbook §5](../docs/mona-dev-server-operations.md#5-deploy-bản-mới)). Vận hành: [runbook](../docs/mona-dev-server-operations.md). |
+| **Việc tiếp theo** | 1. Probe R4 (`.agent/local/r4-probe.mjs`, chênh Jaccard ≤ 0,1) — cổng deploy của Việc 12–13.<br>2. Chủ dự án thử bot trên Zalo, báo chỗ chưa ổn.<br>3. **Nối walkthrough phân loại vào `POST /answer` chế độ hs** (phiên c8 mất trước khi chốt; code đã có ở `walkthrough*.ts`, `501eb2d`): runner `ClassifyInput`, `normalizeWalkthrough` → `verify` từng mục → `validateWalkthrough`, dựng lại `cites`, dòng thuế cho mọi ứng viên ở độ sâu đầy đủ, khối `policyStatus` do code in.<br>4. Các câu hỏi còn chờ chủ dự án ở [mục 2026-09-15 của c8](#2026-09-15--kho-tri-thức-ngochi-thành-json) (nạp 15/2024/TT-BYT, trường `notes`, phụ lục chữ Latin, bảng chuyển 18/2019/QĐ-TTg, người thẩm tra 36 case). |
 | **Chờ chủ dự án** | (1) chat thử bot sau deploy `69d1ab4`, báo chỗ chưa ổn; (2) có nạp 4 nghị định biểu thuế còn thiếu (144/2024, 108/2025, 199/2025, 201/2026) không; (3) đối chiếu PDF Công báo EVFTA 8711.20.x (9,3% năm 2026 → 20,4% năm 2027); (4) quyết corpus sinh lại theo từng văn bản và sửa `gazette_issue` 128/2020/NĐ-CP — [kế hoạch 05](05-bot-parity-tasks.md) Task 5; (5) [kế hoạch 06](06-deploy-mona-dev-server.md): kiểm thử bot trong nhóm, domain + mật khẩu basic auth, `rclone.conf`; (6) thêm 16 nguồn mới vào notebook (TASK-021; sau mỗi lần đẩy `verify_drive.py` phải ra `0 lệch`); (7) các câu hỏi mở của phiên 2026-09-14 bên dưới. |
-| **Việc của agent** | — (container seed-evidence và API nháp đã gỡ 2026-09-14). |
+| **Việc của agent** | `seed-evidence` chạy 2026-09-15 sau deploy `2476aab`; gỡ container `customs-assistant-seed-evidence` khi xong. |
 | **Đã mất vĩnh viễn** | VPS Contabo bị xoá (xác nhận 2026-09-13): `lookup_confirmation` (phán quyết chuyên viên), session Zalo, `.env` cũ. Bộ nhớ áp mã HS học lại từ đầu. |
 
 ## Trạng thái công việc
@@ -63,6 +63,52 @@ khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — 
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
 
 ---
+
+### 2026-09-15 (chiều) — Đẩy plan 08 lên server: CI bắt được một ReDoS phụ thuộc phiên bản Node, và `test:parser` thiếu thư viện Python
+
+- **Vì sao:** gộp xong Việc 4–13 của [kế hoạch 08](08-answer-path-tasks.md) cộng stack dữ liệu của phiên c8 (63 commit,
+  `8a01e94..8220f34`), push `main`. CI đỏ hai chỗ, mà deploy nằm sau `test` nên không có gì lên server.
+- **Đã làm:**
+  - **Bậc hai trong `maskCodes` ([plan.ts](../../apps/api/src/modules/answer/plan.ts)):** nhánh từ khoá của `HS_TOKEN` **mở đầu** bằng lookbehind, nên V8 thử đọc ngược
+    `từ khoá + GAP` ở **mọi vị trí**, kể cả từng dấu cách của một dãy dài. Tuyến tính ở mỗi vị trí × cả dãy = bậc hai.
+    Sửa bằng một guard rộng 0: `(?=\d)` đặt **trước** lookbehind. Mỗi dãy khoảng trắng chỉ được đọc ngược một lần, từ
+    chữ số đi sau nó; các dãy rời nhau nên tổng vẫn O(n). 40.000 ký tự trên node 20: **7.317 ms → 0,67 ms**.
+  - **`test:parser`:** thêm `actions/setup-python` (pin v7.0.0, đồng bộ với checkout/setup-node) + `pip install -r
+    research/inbox-loader/requirements.txt` vào job `test`, ngay trước `yarn test:parser`.
+  - Deploy `2476aab`; chạy `FORCE_RESEED=1 seed-legal` (23 văn bản, 7.598 điều khoản, 3.196 chunk) rồi `seed-evidence`.
+- **Bất ngờ:**
+  - **Lỗi chỉ lộ trên đúng phiên bản Node của server.** Node 20 và 22 chậm bậc hai; **24 và 25 tự tối ưu mất**. Máy này
+    chạy 25 nên bộ test thời gian xanh tại chỗ và đỏ trên CI. Bài học: đo ReDoS phải đo trên Node của `.nvmrc`, không
+    phải Node đang cắm.
+  - **Nguyên nhân không phải `GAP`.** Tôi đoán đầu tiên là chuỗi `\s*` lồng nhau trong `GAP` và định chặn bằng
+    `\s{0,8}`. Bản chặn đó **làm thủng R4**: `Mã HS` + 10 dấu cách + `300510` (một dòng dán từ bảng có đệm — tin nhắn
+    hải quan có thật) thôi không được che nữa. Đã fuzz ra trong 100.000 câu. Chỗ tốn kém là **vị trí đọc**, không phải
+    độ dài dãy; guard `(?=\d)` trị đúng chỗ đó mà không đổi một byte kết quả che mã (1,1 triệu câu sinh ngẫu nhiên,
+    5 bộ ngữ liệu, 2 bộ trùng từng byte). Hai dòng trong `plan.spec.ts` ghim lại chuyện này để lần sau ai chặn `\s{0,8}`
+    thì test đỏ.
+  - Cùng nguyên nhân còn 10 dạng nữa mà log CI không lộ: tab, xuống dòng, NBSP, dấu nháy hay dấu hai chấm nằm giữa
+    khoảng trắng, và cả **từ khoá không có chữ số nào phía sau** (x199–x312). Một dòng vá hết.
+  - `guards.ts` đã soi cùng cách: mọi lookbehind ở đó đều bị chặn sẵn bằng construction (`\s{1,8}`, `[^,;:]{0,300}`),
+    không có lỗi anh em.
+  - Đường **dùng lại vector theo md5** của `seed-evidence` (viết 2026-09-15, chưa từng chạy trên CSDL thật) chạy đúng:
+    174 mục đổi `source_ref` mà giữ được vector.
+  - `pgrep -f deploy.sh` qua ssh **luôn tự khớp chính lệnh của mình**; phải dùng `ps -eo args | grep "[d]eploy\.sh"`.
+  - Chạy jest từ trong `.claude/worktrees/*` thì `testPathIgnorePatterns: /\.claude/` (thêm ở `8220f34`) nuốt sạch
+    test; phải thêm `--testPathIgnorePatterns /node_modules/`. Checkout sạch của CI không dính.
+  - `node --test "apps/zalo-bot/*.test.mjs"` không nở glob trên node 20; CI chạy node 22 nên vẫn được.
+- **Kiểm:** `test:growth` xanh trên node 20 và 24 (10/10); jest mặc định 383 pass / 12 skip; `test:bot` 136/136; `tsc`
+  sạch. Trên server: `/health` ok, **`/health?llm=deep` trả `llmDeep: "up"`** (lần đầu chạy thật — mô hình có trả lời,
+  không chỉ có token), tra cứu biểu thuế và `/legal` đều trả dữ liệu, không container nào OOM hay restart.
+- **Giới hạn:**
+  - **Node 22 chưa chạy được ở máy này** (chỉ có 20, 24, 25). Lỗi tái hiện trên node 20 — cùng đời V8 — còn số của 22 là
+    số CI đọc được.
+  - Bước Python mới chỉ ghim 4 gói trực tiếp; các gói phụ thuộc (lxml, pillow, cryptography, pdfminer.six) không ghim,
+    nên một bản phát hành mới của chúng có thể làm job `test` đỏ mà repo không đổi dòng nào. Nếu dính thì
+    `pip-compile` cho riêng file đó.
+  - `legal_document` của `128/2020/NĐ-CP` vẫn là `con_hieu_luc`, `effective_to` rỗng, đúng như nguồn; chuyện nó hết hiệu
+    lực từ 01/07/2026 nằm ở `relations.ndjson` và do `seed-evidence` dựng thành mục tình trạng. Ai đọc thẳng cột thô sẽ
+    hiểu sai.
+  - Walkthrough phân loại vẫn **chưa nối** vào `POST /answer` (phiên c8 mất trước khi chốt) — để deploy sau.
 
 ### 2026-09-15 — Kho tri thức `ngochi` thành JSON: case phân loại, Chú giải chi tiết/SEN trích lại, 8 văn bản Công báo mới, sổ danh mục HS, chế độ hướng dẫn phân loại
 
