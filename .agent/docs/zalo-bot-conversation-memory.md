@@ -150,16 +150,26 @@ Kế hoạch `confirm`/`correction` không bao giờ tự ghi sổ. Sổ chỉ �
 dispatch.mjs): cả tin phải là một trong ba dạng dưới đây, gộp khoảng trắng, cho phép một tiểu từ lễ phép cuối tin (ạ, a, nhé, nhe,
 nha, nhá, bạn, ban) và dấu `.`/`!`. **Đọc đúng như gõ**: tin có một dấu nào thì phải khớp dạng có dấu, chỉ tin không dấu nào ("dung
 roi", "hs dung la 84818091") mới khớp dạng bỏ dấu; bỏ dấu cả tin có dấu từng biến "dùng rồi", "không dùng", "sài rồi", "sai á", "sai
-nhẹ" thành phán quyết. Có `?` ở bất cứ đâu, hay gõ "à"/"á"/"hả", thì không ghi. Không đoán ý từ câu
+nhẹ" thành phán quyết. Dạng bỏ dấu nhận ít hơn: tiểu từ cuối chỉ nhe, nha, ban (không "a": "dung a", "sai a" có thể là "đúng à?",
+"sai à?"), và không có "khong/ko/k/chua dung" (có thể là "không dùng", "chưa dùng"). Có `?` ở bất cứ đâu, hay gõ "à"/"á"/"hả", thì không ghi. Không đoán ý từ câu
 dài hơn: mỗi vòng review heuristic cũ đều tìm ra một cách nói nghi ngờ mới vẫn ghi sổ ("mã đúng là X thì thuế bao nhiêu", "… thì
 phải", "… hay sao ấy", "sai rồi, sao lại ra mã này", "đúng?"). Câu khác đi bước kế hoạch, và lời mời ở đó nói đúng lệnh cần gửi.
 Bỏ sót một phán quyết tốn một lượt nhắn lại; ghi nhầm một câu nghi ngờ thì nằm lại trong sổ cho người sau đọc (R18).
 
 | Dạng (cả tin) | Ghi | Khi nào |
 |---|---|---|
-| Một từ: đúng (rồi), chuẩn, chính xác · sai (rồi), không đúng · không chắc ("rồi" gõ "r", "không" gõ "ko"/"k") | `handleConfirm` | bàn thuế còn mới, mở, chưa ghi phán quyết (câu ngay trước gửi cho chính người này là câu tra); có quote thì quote phải là chính câu tra đó |
-| (mã / mã HS / HS / code / kết quả)? (này / đó / vừa tra)? + sai (rồi) · không đúng · chưa đúng · nhầm mã (rồi) | `handleCorrection`, dòng `wrong` | như dòng trên |
+| Một từ: đúng (rồi), chuẩn, chính xác · sai (rồi), không đúng · không chắc ("rồi" gõ "r", "không" gõ "ko"/"k"). Không dấu: dung (roi), chuan, chinh xac · sai (roi) · khong chac | `handleConfirm` | bàn thuế còn mới, mở, chưa ghi phán quyết (câu ngay trước gửi cho chính người này là câu tra); có quote thì quote phải là chính câu tra đó |
+| ((mã / mã HS / HS / code / kết quả) (này / đó / vừa tra)? · này · đó)? + sai (rồi) · không đúng · chưa đúng. Không dấu: chỉ + sai (roi). "nhầm mã (rồi)" và "vừa tra sai" (không chủ ngữ) không ghi: thường là tự nhận gõ nhầm | `handleCorrection`, dòng `wrong` | như dòng trên |
 | (sai (rồi),)? + HS / mã / mã HS / code (HS)? + đúng / chuẩn / chính xác (phải)? + là / `:` + **một** mã; sau mã chỉ "xuất xứ <nước>" và "(theo / căn cứ) CV / công văn / QĐ / TB <số>" | `handleCorrection`: `correct` mã mới trước, rồi `wrong` mã đang nhớ | bàn thuế: không quote thì câu trước là câu tra hoặc lời mời nêu lệnh này; quote thì chỉ câu tra đó (quote lời mời không bao giờ ghi). Xuất xứ nêu trong tin phải là xuất xứ của lượt tra đang nhớ, không thì không ghi và bảo tra xuất xứ đó trước. Luồng ứng viên: chỉ `correct`, chỉ khi không quote và câu trước là câu ứng viên hoặc lời mời |
+
+**Ô "xuất xứ <nước>"** (`COUNTRY`, dispatch.mjs) chỉ nhận đúng các cách viết `detectOrigin` (parse.mjs) đọc được, vì
+`handleCorrection` đối chiếu xuất xứ bằng hàm đó: một cách viết nó không đọc ("xuất xứ jp", "xuat xu nhat", "xuat xu han quoc")
+từng bỏ qua phép đối chiếu và ghi dưới xuất xứ của lượt tra (round 6). Có dấu: trung quốc, nhật bản, nhật, hàn quốc, thái lan, mã
+lai, châu âu, ấn độ, anh quốc; không dấu: trung quoc; cả hai: tq, china, japan, korea, australia, new zealand, thailand, malaysia,
+singapore, indonesia, philippines, germany, india; mã nước chỉ khi gõ **chữ hoa** (TQ, CN, JP, KR, AU, NZ, TH, MY, SG, ID, PH, DE,
+EU, GB, UK, US, VN). Một spec đọc từng cách viết bằng `detectOrigin`, nên hai danh sách không lệch nhau được. Thêm nữa, `ruling`
+chỉ nhận **một** ô xuất xứ, và cả tin đúng như gõ (chưa chuẩn hoá: gõ Unicode tổ hợp thì `detectOrigin` không đọc ra) phải đọc ra
+chính xuất xứ của ô đó, không xuất xứ nào khác (số công văn "12/tq", hai ô "xuất xứ Nhật Bản, xuất xứ Trung Quốc"): không thì không ghi.
 
 "ok", "oke", "okay", "okie" không phải phán quyết: ở đâu cũng là "đã xem" (câu `AGREED`, không qua bước kế hoạch). Từ đồng ý thường
 ("chuẩn rồi", "đúng vậy", "chính xác rồi"; `plainVerdict`, chỉ định tuyến) sau câu không phải kết quả tra cũng là `AGREED`, không soạn
@@ -174,6 +184,10 @@ nêu mã vừa tra và lệnh "đúng"/"sai"/"HS đúng là <mã>".
   thì ghi được, còn "đúng"/"ok" (trả lời lời mời) thì không. Ghi sổ lỗi chỉ để ngỏ đúng phán quyết vừa lỗi (`open: 'wrong'`).
 - **Bàn đã ghi phán quyết thì đóng hẳn** (`ruled: true`, đặt khi `handleConfirm` hay `handleCorrection` ghi được): không nhận
   phán quyết thứ hai, quote câu tra hay không; lời mời sau đó không mở lại và nói đã ghi rồi. Lượt tra mới (`stampTariff`) mới nhận lại.
+  Ghi sổ được mà lưu bộ nhớ lỗi (`saveContext` trả null sau câu `confirm`/`correction`) thì bộ nhớ vẫn thấy bàn mở, chưa ghi:
+  `messageHandler` xoá tin cuối của bot khỏi `lastAnswered` và nhớ trong RAM bàn đó (khoá luồng:người:mã:xuất xứ:ngày), lượt sau
+  nạp bộ nhớ thì đặt `ruled: true` cho bàn ấy, nên không ghi dòng thứ hai và lời mời nói đã ghi rồi. Khởi động lại thì quên. Vì khoá
+  không có giờ tra, tra lại đúng mã, xuất xứ, ngày đó trong cùng tiến trình cũng không nhận phán quyết nữa (bỏ sót, không ghi nhầm).
 - **Tin cuối của bot trong luồng phải gửi cho chính người này** thì dạng không quote mới ghi. `messageHandler` (index.mjs) nhớ
   trong RAM mỗi luồng tin cuối của bot trả lời ai (câu trả lời, lời báo đã hiểu, "đang xem ảnh", báo lỗi; báo cáo nạp văn bản
   xoá); trong nhóm tin đó có thể trả lời đồng nghiệp, và "chuẩn" khi ấy trả lời tin đó. Khởi động lại thì quên, tức là chỉ đóng:

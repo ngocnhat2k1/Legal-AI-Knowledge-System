@@ -24,7 +24,7 @@
  * so a cue that does not match the current topic is never allowed to reach a handler
  * that would write to the audit trail.
  */
-import { HS_RE, hasHs, ORIGIN_LABEL, parseDocRef } from './parse.mjs';
+import { detectOrigin, HS_RE, hasHs, ORIGIN_LABEL, parseDocRef } from './parse.mjs';
 
 const wholeMessage = (text) => String(text ?? '').toLowerCase().normalize('NFC').replace(/[.!,?…\s]+$/g, '').trim();
 
@@ -43,39 +43,60 @@ export const fold = (text) =>
  * dung la 84818091") the same forms folded. Folding an accented message turned other words into verdicts: "dùng rồi" (already
  * used) wrote 'correct', "không dùng" and "sài rồi" 'wrong', and "sai á", "sai nhẹ" passed as a courtesy particle (round 4).
  */
-const TAIL = '(?: (?:ạ|a|nhé|nhe|nha|nhá|bạn|ban))?[.!]*$';
-/** A form as written, and folded. */
-const grammar = (source) => [new RegExp(source.normalize('NFC')), new RegExp(fold(source))];
+/** The courtesy particle and closing marks, as written and folded: unaccented, a bare "a" may be "à" ("dung a" is "đúng à?"). */
+const TAIL = ['(?: (?:ạ|a|nhé|nhe|nha|nhá|bạn|ban))?[.!]*$', '(?: (?:nhe|nha|ban))?[.!]*$'];
+/** A form as written, and folded; `folded` when the unaccented reading takes less than the folded form. */
+const grammar = (source, folded = fold(source)) => [new RegExp(source.normalize('NFC') + TAIL[0]), new RegExp(folded + TAIL[1])];
+// Unaccented, "khong dung", "ko dung", "k dung" and "chua dung" may be "không dùng", "chưa dùng" (round 6).
 const VERDICT = {
-  correct: grammar(`^(?:đúng(?: rồi| r)?|chuẩn|chính xác)${TAIL}`),
-  wrong: grammar(`^(?:sai(?: rồi| r)?|(?:không|ko|k) đúng)${TAIL}`),
-  unsure: grammar(`^(?:không|ko|k) chắc${TAIL}`),
+  correct: grammar('^(?:đúng(?: rồi| r)?|chuẩn|chính xác)'),
+  wrong: grammar('^(?:sai(?: rồi| r)?|(?:không|ko|k) đúng)', '^sai(?: roi| r)?'),
+  unsure: grammar('^(?:không|ko|k) chắc'),
 };
-/** "mã này sai", "kết quả vừa tra không đúng", "nhầm mã rồi": the code on the table is wrong, and nothing else is said. */
-const CODELESS_WRONG = grammar(
-  `^(?:(?:mã hs|mã|hs|code|kết quả) )?(?:(?:này|đó|vừa tra) )?(?:sai(?: rồi| r)?|(?:không|ko|k|chưa) đúng|nhầm mã(?: rồi| r)?)${TAIL}`,
-);
-/** Country names detectOrigin reads (parse.mjs), and the codes staff type. */
-const COUNTRY =
-  '(?:trung quốc|tq|china|nhật bản|nhật|japan|hàn quốc|korea|australia|new zealand|thái lan|thailand|malaysia|mã lai|singapore|' +
-  'indonesia|philippines|germany|châu âu|ấn độ|india|anh quốc|cn|jp|kr|au|nz|th|my|sg|id|ph|de|eu|gb|uk|us|vn)';
+/**
+ * "mã này sai", "kết quả vừa tra không đúng": the code on the table is wrong, and nothing else is said. "nhầm mã rồi" and "vừa tra
+ * nhầm mã rồi" usually own a typo in the code the user typed (round 6), so "vừa tra" needs its subject.
+ */
+const SUBJECT = '^(?:(?:mã hs|mã|hs|code|kết quả) (?:(?:này|đó|vừa tra) )?|(?:này|đó) )?';
+const CODELESS_WRONG = grammar(`${SUBJECT}(?:sai(?: rồi| r)?|(?:không|ko|k|chưa) đúng)`, fold(`${SUBJECT}sai(?: rồi| r)?`));
+/**
+ * The origin spellings detectOrigin (parse.mjs) reads, as written and folded; its codes only in capitals. handleCorrection checks a
+ * named origin against the lookup's with detectOrigin, so a spelling it cannot read ("xuất xứ jp", "xuat xu nhat") skipped the
+ * check and wrote under the lookup's origin (round 6). A spec reads every one, so the two lists cannot drift apart.
+ */
+const PLAIN = ['tq', 'china', 'japan', 'korea', 'australia', 'new zealand', 'thailand', 'malaysia', 'singapore', 'indonesia', 'philippines', 'germany', 'india'];
+const CODES = ['TQ', 'CN', 'JP', 'KR', 'AU', 'NZ', 'TH', 'MY', 'SG', 'ID', 'PH', 'DE', 'EU', 'GB', 'UK', 'US', 'VN'];
+export const COUNTRY = [
+  ['trung quốc', 'nhật bản', 'nhật', 'hàn quốc', 'thái lan', 'mã lai', 'châu âu', 'ấn độ', 'anh quốc', ...PLAIN, ...CODES],
+  ['trung quoc', ...PLAIN, ...CODES],
+];
+const oneOf = (list) => `(?:${list.join('|').toLowerCase()})`;
 const CITATION = '(?:(?:theo|căn cứ) )?(?:cv|công văn|qđ|quyết định|tb|thông báo)(?: số)?:? ?\\d[a-zđ0-9/.-]*';
 /** "HS đúng là 8481.80.91", "sai rồi, mã đúng phải là … xuất xứ Trung Quốc theo CV 12/TCHQ nhé": one code, an origin, a citation. */
-const CODED = grammar(
+const coded = (country) =>
   `^(?:sai(?: rồi| r)?[,.]? )?(?:mã hs|mã|hs|code)(?: hs)? (?:đúng|chuẩn|chính xác)(?: phải)?(?: là ?|: ?)` +
-    `\\d{4}[. ]?\\d{2}[. ]?\\d{2}(?!\\d|\\.\\d)(?:,? (?:xuất xứ ${COUNTRY}|${CITATION})){0,2}${TAIL}`,
-);
+  `\\d{4}[. ]?\\d{2}[. ]?\\d{2}(?!\\d|\\.\\d)(?:,? (?:xuất xứ ${country}|${CITATION})){0,2}`;
+const CODED = grammar(coded(oneOf(COUNTRY[0])), fold(coded(oneOf(COUNTRY[1]))));
+/** The country of the origin slot, as typed. */
+const ORIGIN_SLOT = new RegExp(`(?:xuất xứ|xuat xu) (${[...COUNTRY[0], ...COUNTRY[1]].join('|')})(?![\\p{L}\\d])`, 'iu');
 const ALL_CODES = new RegExp(HS_RE.source, 'g');
 
 /** {verdict} for a one-word verdict, {wrong} for a code-less "the code is wrong", {coded} for "HS đúng là <mã>"; else null. */
 export function ruling(text) {
-  const t = String(text ?? '').normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+  const raw = String(text ?? '').normalize('NFC').replace(/\s+/g, ' ').trim();
+  const t = raw.toLowerCase();
   if (/\?|(?<!\p{L})(?:à|á|hả)(?!\p{L})/u.test(t)) return null;
   const read = t === fold(t) ? 1 : 0;
   const is = (form) => form[read].test(t);
   for (const [verdict, form] of Object.entries(VERDICT)) if (is(form)) return { verdict };
   if (is(CODELESS_WRONG)) return { wrong: true };
-  return is(CODED) && (t.match(ALL_CODES) ?? []).length === 1 ? { coded: true } : null;
+  if (!is(CODED) || (t.match(ALL_CODES) ?? []).length !== 1) return null;
+  // One named origin, read from its slot as typed, and the message exactly as handleCorrection reads it (not normalised: typed
+  // decomposed it reads none) reads that origin and no other (a citation number may hold "12/tq").
+  const named = t.match(/xuất xứ|xuat xu/g)?.length ?? 0;
+  if (!named) return { coded: true };
+  const origin = named === 1 && detectOrigin(raw.match(ORIGIN_SLOT)?.[1]);
+  return origin && origin === detectOrigin(text) ? { coded: true } : null;
 }
 
 /**

@@ -335,6 +335,12 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
 
 /** The user each thread's last bot message answered. In memory: a restart forgets, and forgetting only closes the no-quote path. */
 const lastAnswered = new Map();
+/**
+ * Tables whose ruling was written while its memory save failed: memory still shows them open and unruled, so a second ruling would
+ * be written and the offer would say "chưa ghi nhận gì" (round 6). In memory: a restart forgets, as it forgets lastAnswered.
+ */
+const ruledTables = new Set();
+const tableKey = (threadId, userId, t) => `${threadId}:${userId}:${t.hs ?? t.candidates}:${t.origin}:${t.date}`;
 const queues = new Map();
 
 /** Run `task` once the task queued before it under `key` has settled. */
@@ -385,6 +391,11 @@ export function messageHandler(api, myId = '') {
       const userId = String(msg.data?.uidFrom || '');
       const senderName = (msg.data?.dName || '').trim() || 'bạn';
       const ctx = await loadContext(msg.threadId, userId);
+      // Closed here as memory would have closed it (table.ruled): fastPath takes no ruling on it and codeOffer says it is recorded.
+      if (ctx.state.tariff && ruledTables.has(tableKey(msg.threadId, userId, ctx.state.tariff))) {
+        ctx.state.tariff = { ...ctx.state.tariff, ruled: true };
+        if (ctx.tariff) ctx.tariff = ctx.state.tariff;
+      }
       const lastReplyElsewhere = lastAnswered.get(msg.threadId) !== userId;
       const send = (content) => {
         lastAnswered.set(msg.threadId, userId);
@@ -410,7 +421,7 @@ export function messageHandler(api, myId = '') {
       // Ghi nhớ SAU khi đã trả lời — lỗi lưu trí nhớ không được làm mất câu trả lời.
       // `tariff`/`legal`/`answer` vắng mặt = giữ nguyên phần trí nhớ đó; null = xoá (không còn gì để trỏ tới).
       const state = nextState(ctx.state, result);
-      await saveContext({
+      const saved = await saveContext({
         threadId: msg.threadId,
         userId,
         staffName: senderName,
@@ -423,6 +434,11 @@ export function messageHandler(api, myId = '') {
       for (const p of parts.slice(1)) {
         // Part 1 is delivered and remembered: a later failure only logs, never sends the generic error.
         await send(wire(p)).catch((e) => console.warn('[zalo] send part failed:', e?.message));
+      }
+      // A verdict reply memory did not keep: memory still shows the table this reply answered, open (R13, round 6).
+      if (!saved && (result.intent === 'confirm' || result.intent === 'correction')) {
+        lastAnswered.delete(msg.threadId);
+        if (result.tariff?.ruled && ctx.state.tariff) ruledTables.add(tableKey(msg.threadId, userId, ctx.state.tariff));
       }
     } catch (e) {
       console.error('[zalo] lỗi xử lý tin:', e?.message);
