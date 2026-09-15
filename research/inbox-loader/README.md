@@ -75,6 +75,22 @@ Script **từ chối ghi** nếu: Điều không liên tục 1..N (cổng cấu 
 Sau đó đọc "Điều khoản thi hành" và ghi quan hệ thay thế/bãi bỏ vào
 `db/seed/data/legal/relations.ndjson` — **chép từ toàn văn**, không suy từ đoạn trích.
 
+#### Chú giải chi tiết HS (EN) và SEN
+
+Hai script riêng, đọc cột tiếng Việt bằng pymupdf; **script EN không còn ghi SEN**:
+
+```
+.venv/bin/python extract_explanatory_notes.py --en-dir "<…>/CHU GIAI/chu giai HS 2024" --out ../../db/seed/data/legal
+.venv/bin/python extract_sen.py --sen "<…>/CHU GIAI/Chu-giai-SEN (1).pdf" --out ../../db/seed/data/legal
+.venv/bin/python -m doctest extract_explanatory_notes.py extract_sen.py
+```
+
+- `hs-explanatory-notes.ndjson`: một dòng mỗi nhóm 4 số (`heading`, `title`); phần chung của chương có `heading` null.
+- `hs-sen.ndjson`: một dòng mỗi chú giải. Nhãn mã đầu chú giải cho `codes` (mã 8 số có chấm), `subheadings`
+  (6 số), `headings` (4 số); `heading` = NN.NN của mã đầu tiên; `title` = tiêu đề chú giải. Dòng mở chương
+  hoặc PHẦN có `heading` null.
+- Ghi vào thư mục tạm trước, chạy hai lần phải byte-identical, diff từng dòng với bản trong repo rồi mới ghi đè.
+
 ### 4. Công văn phân loại, văn bản scan — đọc kép
 
 ```
@@ -89,6 +105,29 @@ cha: một agent đọc ảnh gốc, một agent độc lập thẩm tra số hi
 ```
 python3 merge_rulings.py <workflow-output.json>
 ```
+
+#### Tách công văn thành case: `classification-cases.ndjson`
+
+Mỗi dòng là **một case = một kết luận riêng** của một công văn trong `classification-rulings.ndjson`
+(mã + điều kiện hoặc khoảng thời gian; một mặt hàng có hai tình huống là hai case), `case_id` =
+`<source_dir>#<n>`. Case bóc ra: phạm vi ràng buộc, sự kiện hàng hoá, căn cứ, nhóm ứng viên/loại trừ,
+kết luận, danh mục áp dụng, trạng thái mã theo AHTN 2022, mức lập luận L0–L4. Công văn không kết luận mã
+thì không có case.
+
+- **Chỉ trích, không diễn đạt lại:** mọi khoá bắt đầu bằng `trich` phải là chuỗi con nguyên văn của
+  `noi_dung` (gộp khoảng trắng); không sửa lỗi chính tả, giữ `[?]`; không trích thuế suất (R1). Không lấy
+  `mo_ta` / `ket_luan` / `ghi_chu` của bản ghi công văn làm bằng chứng — đó là diễn giải.
+- **Kiểm** (phải ra `OK: … all checks passed`):
+
+```
+python3 research/inbox-loader/check_cases.py db/seed/data/legal/classification-cases.ndjson
+python3 -m unittest research/inbox-loader/test_check_cases.py
+```
+
+- **Chạy lại khi đọc lại `noi_dung` của bất kỳ công văn nào:** `merge_rulings.py` ghi đè bản ghi, trích
+  dẫn cũ có thể không còn khớp, và trạng thái AHTN 2022 được chấm lại bằng `grade()`.
+- `xac_minh.verification` giữ `auto_unverified`, `verified_by` null cho tới khi **một người có tên** thẩm
+  tra ([R18](../../.agent/business-rules.md)).
 
 ### 5. Tài liệu chỉ vào notebook (lớp B, C, D)
 
@@ -142,23 +181,30 @@ python3 verify_drive.py   --dest ~/Desktop/Legal-AI-NotebookLM-Export/drive \
 Nó giữ `fileId` của từng Google Doc. Mất nó thì lần đẩy sau tạo Doc **mới**, và mọi nguồn trong notebook
 trỏ vào Doc mồ côi, không bao giờ cập nhật nữa — không có lỗi nào báo.
 
-## Khi có lại máy chủ
+## Nạp vào máy chủ
 
-1. `yarn install` — `node_modules` hiện hỏng (TypeScript, `@types/node`, `postgres` thiếu file).
-2. `FORCE_RESEED=1 yarn db:seed:legal` nạp 15 văn bản (8 văn bản mới ở `auto_unverified`).
-3. Chú giải chi tiết, SEN, công văn phân loại, bảng phụ lục, tài liệu chỉ-notebook **chưa có bảng trong
-   Postgres** — cần mở schema, vướng nợ snapshot drizzle 0007–0009 ([TASK-022](../../.agent/planning/04-inbox-ingest-tasks.md)).
+Mọi file script trong thư mục này ghi ra đều nằm ở `db/seed/data/legal/` và được commit. Máy chủ (kể cả máy chủ
+mới) dựng lại kho từ đó, không trích xuất lại:
+
+- `seed-legal` nạp `documents/provisions/chunks.ndjson` (23 văn bản, 2026-09-15).
+- `seed-evidence` nạp Chú giải, GRI, Chú giải chi tiết, SEN, công văn phân loại, case, bảng phụ lục, tài liệu
+  lớp B/C/D và ghi chú nghiệp vụ vào bảng `evidence_section`, rồi nhúng.
+- `policy-lists.json` không qua seed: API đọc thẳng lúc chạy.
+
+Lệnh, thứ tự và thời gian: [runbook §5](../../.agent/docs/mona-dev-server-operations.md#5-deploy-bản-mới).
 
 ## Tệp trong thư mục này
 
 | Tệp | Vai trò |
 |---|---|
 | `congbao_lookup.py` | Tìm văn bản trên Công báo không cần chỉ mục DB |
-| `ingest_congbao.py` | Công báo → `documents/provisions/chunks/annex-tables.ndjson` |
-| `extract_explanatory_notes.py` | Chú giải chi tiết HS + SEN (cột tiếng Việt) |
+| `ingest_congbao.py` + test | Công báo → `documents/provisions/chunks/annex-tables.ndjson`; đọc ô gộp, neo phụ lục, khoản Word đánh số tự động |
+| `extract_explanatory_notes.py` | Chú giải chi tiết HS 2022 → `hs-explanatory-notes.ndjson` (cột tiếng Việt) |
+| `extract_sen.py` | Chú giải bổ sung AHTN 2022 → `hs-sen.ndjson`, một dòng mỗi chú giải kèm `codes`/`headings` |
 | `ocr_vision.swift` | OCR tiếng Việt bằng macOS Vision, xuất ảnh trang |
 | `workflows/classification-rulings-dual-read.js` | Đọc kép công văn scan |
 | `merge_rulings.py` | Gộp kết quả đọc kép, chấm mã theo AHTN 2022 |
+| `check_cases.py` + test | Kiểm `classification-cases.ndjson`: trích nguyên văn, cấp mã, chấm AHTN 2022 |
 | `collect_notebook_only.py` | Tài liệu lớp B/C/D |
 | `render_notebook.py` | Sinh 32 nguồn notebook |
 | `push_notebook.py`, `manifest.py` + test | Đẩy lên Drive, giữ `fileId`, chặn sửa chữ đã đẩy |

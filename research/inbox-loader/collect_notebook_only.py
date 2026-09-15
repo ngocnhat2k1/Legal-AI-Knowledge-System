@@ -40,13 +40,18 @@ ENTRIES = [
      "source_file": "THÔNG TƯ/Nghị-quyết-12-2026-NQ-HĐND.pdf", "method": "lớp text PDF",
      "status": "Văn bản quy phạm pháp luật của ĐỊA PHƯƠNG — không đăng Công báo Chính phủ; "
                "bản văn lấy từ file nhận được (bậc 3), chưa đối chiếu với nguồn công bố của Thành phố."},
+    # Issued, not a draft, but not on Công báo yet, so its text stays out of the corpus (R16). The class stays C
+    # because the code picks notebook source 90 and the bot's evidence kind, and no kind means "awaiting the gazette".
     {"slug": "du-thao-tt-bnv-rui-ro", "class": "C", "number": None, "date": None, "issuer": "Bộ Nội vụ",
      "title": "Thông tư quy định Danh mục sản phẩm, hàng hóa có mức độ rủi ro trung bình, mức độ rủi ro cao "
               "thuộc trách nhiệm quản lý nhà nước của Bộ Nội vụ",
      "source_file": "THÔNG TƯ/16 2026 TT BNV bộ nội vụ đối với hàng hóa có mức dộ rủi ro.pdf", "method": "lớp text PDF",
-     "status": "CHƯA XÁC ĐỊNH TÌNH TRẠNG — ô số hiệu và ngày để trống. Đã dò Công báo toàn bộ thông tư đăng năm "
-               "2026 (ngày 2026-09-10): KHÔNG thấy. Tên file ghi '16/2026' nhưng văn bản không mang số nào. "
-               "Không dùng làm căn cứ."},
+     "status": "ĐÃ BAN HÀNH, CHƯA ĐĂNG CÔNG BÁO — không phải dự thảo. Danh mục văn bản trên vanban.chinhphu.vn ghi "
+               "Thông tư 16/2026/TT-BNV ngày 28/07/2026; file nhận được là bản Cổng Thông tin điện tử Chính phủ ký số "
+               "(người ký: Cục Thông tin và Truyền thông Chính phủ, lúc 29/07/2026 14:57:36), mang dấu '16', '28', '7', "
+               "dù ô số hiệu và ngày trong lớp text vẫn trống. Đã dò Công báo ngày 2026-09-14: CHƯA đăng. Bản văn lấy "
+               "từ file nhận được, chưa đối chiếu bản Công báo, nên chưa nạp vào kho văn bản; khi Công báo đăng thì nạp "
+               "bản Công báo (R16). Chưa dùng làm căn cứ cho tới khi đối chiếu."},
     {"slug": "09-bvhttdl", "class": "C", "number": None, "date": None, "issuer": "Bộ Văn hóa, Thể thao và Du lịch",
      "title": "Thông tư ban hành Danh mục hàng hóa xuất khẩu, nhập khẩu thuộc phạm vi quản lý chuyên ngành văn hóa "
               "của Bộ Văn hóa, Thể thao và Du lịch xác định mã số hàng hóa theo Danh mục hàng hóa xuất khẩu, nhập khẩu Việt Nam",
@@ -90,6 +95,29 @@ EXCLUDED = [
 ]
 
 
+#: The repository is PUBLIC. Private identifiers in an operational printout are replaced in the
+#: extracted text before it is written. Patterns key on the form's field LABELS, never on the
+#: values, so the values themselves are not committed here. Each pattern must match, or its
+#: placeholder already be present (a re-run over redacted text); otherwise the run stops
+#: instead of writing the text unredacted.
+REDACT = {
+    "ds-hang-qua-kvgs": [
+        (r"(Đơn vị XNK:[ \t]*)(?![\s\[])[^\n]+?(?=\s+\d+\.\s|$)", r"\1[đã ẩn tên doanh nghiệp]"),
+        (r"(Mã số thuế:[ \t]*)\d[\d-]*", r"\1[đã ẩn MST]"),
+        (r"(Số tờ khai:[ \t]*)\d+", r"\1[đã ẩn số tờ khai]"),
+        (r"(Số quản lý hàng hóa:[ \t]*)(?!\[)\S+", r"\1[đã ẩn số quản lý hàng hóa]"),
+    ],
+}
+
+
+def redact(slug: str, text: str) -> str:
+    for pattern, repl in REDACT.get(slug, []):
+        text, n = re.subn(pattern, repl, text, flags=re.M)
+        if not n and repl[2:] not in text:
+            raise SystemExit(f"{slug}: không tìm thấy trường cần ẩn {repl[2:]} — dừng, không ghi")
+    return text
+
+
 def nfc(s: str) -> str:
     return unicodedata.normalize("NFC", s or "")
 
@@ -110,7 +138,7 @@ def main() -> int:
         path = texts / f"{e['slug']}.txt"
         if not path.exists():
             raise SystemExit(f"thiếu text cho {e['slug']}")
-        text = nfc(path.read_text(encoding="utf-8")).strip()
+        text = redact(e["slug"], nfc(path.read_text(encoding="utf-8")).strip())
         title = e["title"] or vv_title(text) or e["slug"]
         rows.append({**e, "title": title, "text": text, "chars": len(text)})
     if args.rulings_extra:

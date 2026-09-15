@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Extract the Vietnamese text of the HS Explanatory Notes and the AHTN SEN.
+"""Extract the Vietnamese text of the HS Explanatory Notes, one row per heading.
 
     python3 extract_explanatory_notes.py \
         --en-dir "<…>/CHU GIAI/chu giai HS 2024" \
-        --sen    "<…>/CHU GIAI/Chu-giai-SEN (1).pdf" \
         --out    db/seed/data/legal
+    python3 -m doctest extract_explanatory_notes.py
 
-Sources (read from each PDF's first page, 2026-09-10):
+The AHTN SEN is extract_sen.py, which reuses the page helpers below.
+
+Source (read from each PDF's first page, 2026-09-10):
   EN2022  Chú giải chi tiết Danh mục HS 2022 — kèm công văn 1810/TCHQ-TXNK ngày 26/4/2024
-  SEN     Chú giải bổ sung AHTN 2022        — kèm công văn 3866/TCHQ-TXNK ngày 24/7/2023
 
-Both are attachments to công văn, not VBQPPL: interpretive guidance, not binding law.
+An attachment to a công văn, not a VBQPPL: interpretive guidance, not binding law.
 The legally binding Section/Chapter Notes are TT 31/2022/TT-BTC (hs-notes.ndjson).
 
 WHY PYMUPDF. pypdf inserts spaces inside Vietnamese syllables on these files
@@ -23,10 +24,6 @@ WHY VIETNAMESE ONLY. The PDFs are two-column, Vietnamese left, English right (98
 of characters, 95% of pages two-column). The English column is the WCO original, whose
 full text ADR 2026-09-09 deferred on copyright. It is also half the volume: dropping it
 takes the notebook cost from ~13 sources to ~7 of the free tier's 50.
-
-NOT LOADED: `PHU LUC III_SEN.pdf` is the SEN of TT 156/2011/TT-BTC (AHTN 2012), superseded
-by SEN 2022. Two SEN editions side by side in a notebook that cannot filter by validity
-is exactly R8.
 """
 from __future__ import annotations
 
@@ -41,18 +38,38 @@ import pymupdf
 from docs_safe import decode_symbol_font
 
 VI = set("ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ")
-# A heading: "84.18 - Tủ lạnh…". Requiring the dash AND an upper-case first letter keeps out
-# cross-references that also start lines: "84.72 (nhóm 84.73)", "84.01 đến 84.24 hoặc…".
-HEADING = re.compile(r"^(\d{2}\.\d{2})\s*[-–—‒]\s*(\S.*)$")
-# Upper case in the PDF ("CHƯƠNG 1"); the first version matched "Chương" only and split
-# nothing — all 250K characters landed in one record titled "Lời nói đầu".
-SEN_CHAPTER = re.compile(r"^CHƯƠNG\s+(\d{1,2})\b", re.I)
-PAGE_LABEL = re.compile(r"^(?:[IVXL]+\s*-\s*\d+|\d{1,4})$")
+# A heading: "84.18 - Tủ lạnh…". The Vietnamese column also prints "32.08.- Sơn…", "84.81. Vòi…",
+# "84. 82 - Ổ bi…" and, with no dash, "52.05  Sợi bông…" (52.05, 52.06, 67.02, 84.85, 86.07).
+# See heading_of() for how a dashless line is told apart from a cross-reference.
+HEADING = re.compile(r"^(\d{2})\.\s?(\d{2})\.?\s*([-–—‒])?\s*(\S.*)$")
+# Heading numbers misprinted in the source, fixed by hand: ch 68 p17 prints "868.08 – Panen…".
+# Only the record's `heading` is corrected; text_vi keeps the line as printed.
+HEADING_TYPOS = {"868.08": "68.08"}
+# Below this share of Vietnamese letters a page's left column holds no Vietnamese notes, only a
+# Latin-script annex (ch 29 drug/precursor lists and formulas, ch 33 essential oils, ch 44 wood
+# names, ch 71 gem names): those pages measure ≤ 0.018, every page of notes ≥ 0.027 (3,279 pages,
+# 2026-09-14). Such pages keep the language filter. The annexes stay out pending the owner's decision
+# under the copyright ADR: that filter alone let short Latin blocks through, so an ANNEX marker also
+# ends its chapter file and a page with no Vietnamese letter gives nothing (vietnamese_paragraphs).
+# ponytail: one page-level threshold; list the annex pages explicitly if a new PDF lands near it.
+VI_COLUMN_MIN = 0.02
+# First line of the block that opens an annex. All three close their chapter file: ch 33 p16
+# "ANNEX / List of the principal essential oils", ch 44 p46 "ANNEX / APPELLATION OF CERTAIN TROPICAL
+# WOODS" (to p83), ch 71 p43 "PHỤ LỤC / Danh mục các loại đá quý…". Upper case only: ch 1 p1 is the
+# công văn's cover, "Phụ lục / CHÚ GIẢI CHI TIẾT…".
+ANNEX = re.compile(r"^(?:ANNEX|PHỤ LỤC)$")
+# "VII-1", "41-1", "12": the EN page labels. "41-1" used to be dropped only as an off-column block;
+# since columns are decided by position, a label printed just left of the midline must match here.
+PAGE_LABEL = re.compile(r"^(?:(?:[IVXL]+|\d{1,2})\s*-\s*\d+|\d{1,4})$")
 CHAPTER_FILE = re.compile(r"[Cc]huong\s+(\d+)")
-LIST_MARK = re.compile(r"^(?:\(\w{1,3}\)|[-–•●]|\d+[.)]|[a-zđ]\))\s")
+# A list item: "(a)", "(A)", "(ij)" (the Notes letter after "(h)"), "(iii)", "(12)", "- ", "1.", "a)". Not any
+# short word in brackets: "(lều) (kể cả mái che…)" is the rest of the 63.06 title, "(INN) và…" the line above.
+# ponytail: roman numerals stop at 3 letters as before; "(viii)", "(xiii)"… still join the line above (8 rows).
+LIST_MARK = re.compile(r"^(?:\((?i:[a-zđ]|[iị]j|[ivxl]{1,3}|\d{1,3})\)|[-–•●]|\d+[.)]|[a-zđ]\))\s")
+# "0809.10 - Quả mơ", "8481.10     - Van giảm áp", a bare "0809.21": a subheading line is a list item.
+SUBHEADING_LINE = re.compile(r"^\d{4}\.\d{2}(?:\s*[-–]|$)")
 
 EN_INSTRUMENT = "Chú giải chi tiết HS 2022 — kèm CV 1810/TCHQ-TXNK ngày 26/4/2024"
-SEN_INSTRUMENT = "Chú giải bổ sung AHTN 2022 (SEN) — kèm CV 3866/TCHQ-TXNK ngày 24/7/2023"
 
 
 def nfc(text: str) -> str:
@@ -64,17 +81,65 @@ def vi_ratio(text: str) -> float:
     return sum(c in VI for c in letters) / max(len(letters), 1)
 
 
+def heading_of(line: str, prev: str = "") -> tuple[str, str] | None:
+    """(heading, title) when `line` opens a heading note; `prev` is the line read before it.
+
+    A dashless "NN.NN Title" is also how a wrapped cross-reference starts a line ("…vào nhóm" /
+    "29.02. Những điều khoản…": 9 such lines in the corpus). So without a dash the title must start
+    upper case and `prev` must not run on into it (end in a letter, digit or comma). Callers still
+    require a real heading of the chapter, strictly after the previous one.
+
+    >>> heading_of("84.18 - Tủ lạnh, tủ kết đông")
+    ('84.18', 'Tủ lạnh, tủ kết đông')
+    >>> heading_of("84. 82 - Ổ bi hoặc ổ đũa."), heading_of("32.08.- Sơn và vecni")
+    (('84.82', 'Ổ bi hoặc ổ đũa.'), ('32.08', 'Sơn và vecni'))
+    >>> heading_of("84.85 Máy móc sử dụng công nghệ sản xuất bồi đắp.", "Các vòng bịt dầu của nhóm 84.87.")
+    ('84.85', 'Máy móc sử dụng công nghệ sản xuất bồi đắp.')
+    >>> heading_of("868.08 – Panen, tấm, tấm lát")
+    ('68.08', 'Panen, tấm, tấm lát')
+    >>> [heading_of(l, p) for l, p in [("29.02. Những điều khoản", "được phân loại vào nhóm"),
+    ...     ("84.72 (nhóm 84.73)", ""), ("84.01 đến 84.24 hoặc", ""), ("27.07.10 - Benzen", "")]]
+    [None, None, None, None]
+    """
+    line = line.strip()
+    for typo, fixed in HEADING_TYPOS.items():
+        if line.startswith(typo):
+            line = fixed + line[len(typo):]
+    m = HEADING.match(line)
+    if not m:
+        return None
+    title = m.group(4).strip()
+    if not m.group(3) and (not title[0].isupper() or re.search(r"[\w,]$", prev.strip())):
+        return None
+    return f"{m.group(1)}.{m.group(2)}", title
+
+
 def unwrap(block: str) -> str:
     """Join visually wrapped lines inside one block, but keep list items apart."""
     out: list[str] = []
     for line in (l.strip() for l in block.split("\n")):
         if not line:
             continue
-        if out and not LIST_MARK.match(line) and not HEADING.match(line):
+        if out and not LIST_MARK.match(line) and not SUBHEADING_LINE.match(line) and not heading_of(line, out[-1]):
             out[-1] = f"{out[-1]} {line}"
         else:
             out.append(line)
     return "\n".join(out)
+
+
+def continues_title(line: str) -> bool:
+    """True when `line`, read right after a heading title with no final period, is the rest of that title.
+
+    The title's second line is often a block of its own: at the top of the next page (08.14 "…bảo quản
+    tạm thời trong" / "nước muối, …"), or not bold (32.15). Read as the next paragraph, it cut 85 titles
+    mid-phrase. What follows a finished title starts upper case ("Nhóm này…") or is a list item or code line.
+
+    >>> [continues_title(l) for l in ("bán lẻ.", "(China clay) hoặc bằng", "85.17.", "(lều) (kể cả mái che",
+    ...                                "Nhóm này bao gồm:", "- Sợi đơn", "5509.11 - - Sợi đơn", "(A) Mực in", "(ij) Hoa")]
+    [True, True, True, True, False, False, False, False, False]
+    """
+    c = line[:1]
+    return (c.islower() or c.isdigit() or c == "(") and not LIST_MARK.match(line) and not SUBHEADING_LINE.match(line)
 
 
 def official_headings(path: Path) -> dict[int, set[str]]:
@@ -105,18 +170,115 @@ def symbol_font_codepoints(page) -> bool:
     return bool(fonts) and all("Symbol" in f for f in fonts)
 
 
+def left_words(chars: list[dict], mid: float) -> list[dict]:
+    """The characters of one line that belong to the left column, decided WORD by word.
+
+    A span is not a column: 20 heading lines are ONE span holding both titles ("55.09 - Sợi …  55.09
+    - Yarn …", x 58→787), and "… tổng hợp  The" / "hoặc| dùng trong việc  84.77 - Machinery" cross
+    the midline mid-span. A word right of it is dropped, unless Vietnamese carries on across it:
+    the ch 1 cover title is centred on the page ("CHÚ GIẢI CHI TIẾT DANH MỤC HS2022", x 254→583).
+
+    >>> line = lambda s, x: [{"c": c, "bbox": (x + 6 * i, 0, x + 6 * i + 6, 10)} for i, c in enumerate(s)]
+    >>> ["".join(c["c"] for c in left_words(line(s, x), 421)) for s, x in [("tổng hợp  The", 360), ("DANH MỤC", 400), ("Yarn", 450)]]
+    ['tổng hợp  ', 'DANH MỤC', '']
+    """
+    words: list[list[dict]] = [[]]
+    for c in chars:
+        if c["c"].strip():
+            words[-1].append(c)
+        elif words[-1]:
+            words.append([])
+    words = [w for w in words if w]
+    right = [w for w in words if w[0]["bbox"][0] + w[-1]["bbox"][2] >= 2 * mid]
+    if len(right) == len(words):
+        return []
+    if any(c["c"].lower() in VI for w in right for c in w):
+        return chars
+    drop = {id(c) for w in right for c in w}
+    return [c for c in chars if id(c) not in drop]
+
+
 def vietnamese_paragraphs(page) -> list[str]:
     """Vietnamese paragraphs of one page, top to bottom.
 
-    Two-column page: keep the left column. One-column page (5%): keep every block that
-    is not English. Deciding per page rather than globally matters — a one-column page
-    has Vietnamese text whose centre sits right of the midline.
+    Two-column page: the left column, decided by POSITION — every word whose centre is left of
+    the midline, whatever its letters (left_words). The first version decided by Vietnamese letters and lost
+    title lines without diacritics ("28.10 – Oxit bo; axit boric." — 8 ch 28 headings), bare
+    subheading codes and ore/species names. It also sorted a block straddling the midline by the
+    block's own top edge, so "12.04 - Hạt lanh…" printed at its bottom came before the 12.03 body
+    beside it, and ~30 notes were filed under the next heading. Here each side of such a block
+    is placed by its own spans.
+
+    One-column page (5%), or a left column that is a Latin-script annex (VI_COLUMN_MIN): keep
+    every block that is not English. Deciding per page rather than globally matters — a
+    one-column page has Vietnamese text whose centre sits right of the midline.
     """
     mid = page.rect.width / 2
-    symbol = symbol_font_codepoints(page)
-    blocks = [(*b[:4], decode_symbol_font(b[4]) if symbol else b[4], *b[5:])
-              for b in page.get_text("blocks") if b[6] == 0]
+    fix = decode_symbol_font if symbol_font_codepoints(page) else str
+    raw_blocks = [b for b in page.get_text("rawdict")["blocks"] if b["type"] == 0]
+
+    def joined(lines: list[list[dict]]) -> str:  # lines of chars; same text as get_text("blocks")
+        return fix("".join("".join(c["c"] for c in chars) + "\n" for chars in lines))
+
+    def chars_of(line: dict) -> list[dict]:
+        return [c for s in line["spans"] for c in s["chars"]]
+
+    blocks = [(*b["bbox"], joined([chars_of(l) for l in b["lines"]])) for b in raw_blocks]
+    # Not one Vietnamese letter: a Latin-only annex page (ch 29 pp264-331 precursor list and chemical
+    # structures, pp212-235 narcotics list). The language filter below kept its short blocks —
+    # "PRECURSOR (P)", "29.04", "(1) Aniline" — 1,085 of the 1,557 chars filed under 29.42.
+    if not any(c in VI for b in blocks for c in b[4].lower()):
+        return []
     two_col = any((b[0] + b[2]) / 2 >= mid and vi_ratio(b[4]) <= 0.01 and len(b[4]) > 15 for b in blocks)
+    if two_col:
+        left = []
+        for b, (*_, full) in zip(raw_blocks, blocks):
+            if PAGE_LABEL.match(nfc(full).strip()):  # "29-134" at x 404→441 would leave "29-" behind
+                continue
+            rows: list[list] = []  # one per printed line: [top, x0, x1, bold, text]
+            for line in b["lines"]:
+                chars = left_words(chars_of(line), mid)
+                ink = [c for c in chars if c["c"].strip()]
+                if not ink:
+                    continue
+                if not rows:
+                    # Placed by its FIRST line: formula fragments share one row ("nhóm (- CH2SH), (" at
+                    # x 78 / "CSH) tương ứng." at x 259), and a block's later lines start further left.
+                    key = (round(min(c["bbox"][1] for c in chars)), round(min(c["bbox"][0] for c in chars)))
+                ids = {id(c) for c in ink}
+                bold = all(s["flags"] & 16 or "Bold" in s["font"] for s in line["spans"]
+                           if any(id(c) in ids for c in s["chars"]))
+                top, x0, x1 = min(c["bbox"][1] for c in ink), ink[0]["bbox"][0], ink[-1]["bbox"][2]
+                text = nfc(fix("".join(c["c"] for c in chars))).strip()
+                if rows and abs(top - rows[-1][0]) < 2 and x0 > rows[-1][2] - 1:
+                    # One printed line that pymupdf split at a wide gap: "0809.10" | "- Quả mơ" (ch 8 p11,
+                    # y 204). Read apart, the code was glued to the label above it: "tươi. 0809.10".
+                    rows[-1][2:] = [x1, rows[-1][3] and bold, f"{rows[-1][4]} {text}"]
+                else:
+                    rows.append([top, x0, x1, bold, text])
+            if rows:
+                # Rows are unwrapped in groups, and a group never spans
+                # - a change of weight: a bold heading line and the regular lines under it are never one
+                #   sentence (joined, the title "Dây thép hợp kim khác." took "7229.20 - Bằng thép…" and the body);
+                # - the end of a subheading line: the row after it starts the body when it starts 10 pt or more
+                #   left of the code, or a paragraph gap below (step ≥ 20 pt; a wrapped label steps 13.8-17).
+                #   Joined, ch 39 p38 read "3907.99 - - Loại khác Nhóm này bao gồm:" (516 such lines).
+                groups: list[list] = []
+                code = None  # the subheading row whose line the next row would continue
+                for r in rows:
+                    if groups and r[3] == groups[-1][-1][3] and not (
+                            code and (r[1] < code[1] - 10 or r[0] - groups[-1][-1][0] >= 20)):
+                        groups[-1].append(r)
+                    else:
+                        groups.append([r])
+                        code = None
+                    if SUBHEADING_LINE.match(r[4]):
+                        code = r
+                    elif LIST_MARK.match(r[4]):
+                        code = None
+                left.append((*key, "\n".join(unwrap("\n".join(r[4] for r in g)) for g in groups)))
+        if vi_ratio("".join(t for _, _, t in left)) > VI_COLUMN_MIN:
+            return [t for _, _, t in sorted(k for k in left if k[2] and not PAGE_LABEL.match(k[2]))]
     kept = []
     for b in blocks:
         text = nfc(b[4]).strip()
@@ -156,25 +318,37 @@ def extract_en(en_dir: Path, official: dict[int, set[str]]) -> list[dict]:
     for chapter, path in files:
         valid = official.get(chapter, set())
         current = new_record(chapter, None, None, 1)
-        last = ""
+        last = prev = ""  # prev: the line before, across paragraphs and pages ("…nhóm 84.59 hoặc" / "84.60. BỘ…")
+        title_open = False  # the line before ends a heading title that has no final period
         for pno, page in enumerate(pymupdf.open(path), 1):
+            if any(ANNEX.match(nfc(b[4]).strip().split("\n")[0].strip()) for b in page.get_text("blocks") if b[6] == 0):
+                break
             for block in vietnamese_paragraphs(page):
                 # Test EVERY line, not just the block's first: a heading often sits
                 # mid-block, after "* * *" separators or the tail of the previous note.
                 # Testing line one only caught 94.4% of headings; this catches ~99%.
                 part: list[str] = []
                 for line in block.split("\n"):
-                    h = HEADING.match(line.strip())
-                    if h and h.group(1) in valid and h.group(1) > last:
+                    h = heading_of(line, prev)
+                    is_heading = bool(h) and h[0] in valid and h[0] > last
+                    if is_heading:
                         if part:
                             current["paras"].append("\n".join(part))
                             part = []
                         if current["paras"]:
                             records.append(current)
-                        last = h.group(1)
-                        current = new_record(chapter, h.group(1), h.group(2).strip(), pno)
-                    part.append(line)
+                        last = h[0]
+                        current = new_record(chapter, h[0], h[1], pno)
+                    merge = not is_heading and title_open and continues_title(line)
+                    if merge:  # one line with the heading, as when the title is printed in one block
+                        part = part or [current["paras"].pop()]
+                        part[-1] = f"{part[-1]} {line}"
+                        current["title"] = f"{current['title']} {line}"
+                    else:
+                        part.append(line)
+                    title_open = (is_heading or merge) and not current["title"].endswith(".")
                     current["page_to"] = pno
+                    prev = line
                 if part:
                     current["paras"].append("\n".join(part))
         if current["paras"]:
@@ -205,26 +379,6 @@ def label_gaps(records: list[dict], official: dict[int, set[str]]) -> list[dict]
     return records
 
 
-def extract_sen(sen_pdf: Path) -> list[dict]:
-    records: list[dict] = []
-    current = {"source": "SEN2022", "instrument": SEN_INSTRUMENT, "chapter": None,
-               "heading": None, "title": "Lời nói đầu", "page_from": 1, "page_to": 1, "paras": []}
-    for pno, page in enumerate(pymupdf.open(sen_pdf), 1):
-        for para in vietnamese_paragraphs(page):
-            m = SEN_CHAPTER.match(para)
-            if m:
-                if current["paras"]:
-                    records.append(current)
-                current = {"source": "SEN2022", "instrument": SEN_INSTRUMENT, "chapter": int(m.group(1)),
-                           "heading": None, "title": para.split("\n", 1)[0][:160],
-                           "page_from": pno, "page_to": pno, "paras": []}
-            current["paras"].append(para)
-            current["page_to"] = pno
-    if current["paras"]:
-        records.append(current)
-    return [finish(r) for r in records]
-
-
 def finish(record: dict) -> dict:
     text = "\n\n".join(record.pop("paras"))
     return {**record, "text_vi": text, "chars": len(text)}
@@ -239,20 +393,13 @@ def write(path: Path, rows: list[dict]) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--en-dir", required=True)
-    ap.add_argument("--sen", required=True)
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
-    out = Path(args.out)
     root = Path(__file__).resolve().parents[2]
-    official = official_headings(root / "db/seed/data/hs-descriptions.ndjson")
-    en = extract_en(Path(args.en_dir), official)
-    sen = extract_sen(Path(args.sen))
-    write(out / "hs-explanatory-notes.ndjson", en)
-    write(out / "hs-sen.ndjson", sen)
-    for name, rows in (("EN2022", en), ("SEN2022", sen)):
-        chapters = sorted({r["chapter"] for r in rows if r["chapter"]})
-        total = sum(r["chars"] for r in rows)
-        print(f"{name}: {len(rows):,} bản ghi · {len(chapters)} chương · {total:,} ký tự")
+    en = extract_en(Path(args.en_dir), official_headings(root / "db/seed/data/hs-descriptions.ndjson"))
+    write(Path(args.out) / "hs-explanatory-notes.ndjson", en)
+    chapters = {r["chapter"] for r in en if r["chapter"]}
+    print(f"EN2022: {len(en):,} bản ghi · {len(chapters)} chương · {sum(r['chars'] for r in en):,} ký tự")
     return 0
 
 
