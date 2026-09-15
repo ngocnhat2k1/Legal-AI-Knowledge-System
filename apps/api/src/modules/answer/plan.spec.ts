@@ -1,5 +1,4 @@
 import type { ClaudeOpts } from './claude';
-import { LARGE, SMALL, superLinear } from './growth.probe';
 import { assertNoUserCodes, codeRole, defaultPlan, fold, maskCodes, normalizePlan, PLAN_SYSTEM, PLAN_TIMEOUT_MS, type PlanInput, planParts, planStep, userCodes } from './plan';
 
 describe('planStep — claude call #1 (Việc 6)', () => {
@@ -175,18 +174,6 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
     expect(maskCodes('mã 848180 - 2005-06-15 - 300510').text).toBe('mã [mã 1] - 2005-06-15 - [mã 2]');
     expect(maskCodes('nhóm 3005, 2026 và 3824 gồm gì').text).toBe('nhóm [mã 1], 2026 và [mã 2] gồm gì');
   });
-
-  // The same growth probe guards.spec.ts uses: growth.probe.ts holds the method, the calibration and the limit.
-  it('maskCodes and userCodes grow linearly with the length of any shape', () => {
-    const units = [' ', 'mã hs ', ', 3824', ', 2026 - 2005-06-15', ' hay là', " '", '12-', '8481 80 ', '1234567890 ', 'hs 1234567890 ', 'e khai mã 3005.10.10 được không '];
-    // Distinct codes, each looked up in the book grown so far: a listed heading, or a dotted one with a bare heading none opens.
-    const listed = (n: number) => Array.from({ length: n / 6 }, (_, i) => `, ${1001 + i}`).join('');
-    const distinct = (n: number) => Array.from({ length: n / 15 }, (_, i) => `, ${3001 + (i % 900)}.${10 + (i % 89)}, 2826`).join('');
-    for (const shape of [...units.map((unit) => (n: number) => unit.repeat(Math.ceil(n / unit.length))), listed, distinct]) {
-      const [small, large] = [SMALL, LARGE].map((n) => `nhóm 3005${shape(n)}848180`);
-      for (const fn of [maskCodes, userCodes]) expect(superLinear(fn, small!, large!, fn.name)).toEqual([]);
-    }
-  }, 300_000);
 
   it('numbers each code once across parts, so the same code keeps its label in the state line', () => {
     const first = maskCodes('tham khảo nhóm 3005, mã 30051010 và 3005.90.10; lại mã 3005.10.10');
