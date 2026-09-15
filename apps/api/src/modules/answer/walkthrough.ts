@@ -20,7 +20,7 @@ export { validateWalkthrough, walkthroughSchema } from './walkthrough.checks';
 
 const WALK = `Một đồng nghiệp hỏi qua Zalo về phân loại hàng hóa. Hãy chỉ cho họ như người đi trước chỉ người mới: trả lời câu hỏi và cho thấy lập luận đi thế nào. Chỉ dựa trên ĐỀ BÀI và bằng chứng bên dưới; người chốt mã là họ.
 
-Gắn mỗi đoạn một key để hệ thống kiểm; đó không phải dàn bài: chỉ viết điều câu hỏi này cần, theo mạch lập luận, không có gì để nói thì bỏ.
+Mỗi mục dưới đây là một phần tử của sections, gắn đúng key của nó. Viết đủ cả chín mục theo thứ tự này; mục nào chưa có gì để nói thì nói thẳng là chưa có (\"Chưa có nhóm nào phải loại trừ\"), đừng bỏ trống và đừng gộp sang mục khác.
 - facts, nature: dữ kiện nào của hàng quyết định; chỉ dùng đặc điểm người hỏi đã viết, thiếu thì nói thiếu.
 - candidates, exclusions: nhóm nào hợp hay bị loại, theo câu chữ nhóm và chú giải nào.
 - gir: quy tắc nào đã dùng cho hàng này, dẫn dòng GRI.
@@ -34,7 +34,8 @@ const DEPTH: Record<ClassifyInput['depth'], string> = {
   brief: 'Độ sâu brief: tối đa khoảng 170 từ kể cả phần chép nguyên văn, 2–3 đoạn liền, không "## ".',
   // 300 words asked came back as 526 in 103 s on crimper, 220 words with quotes in 107 s (2026-09-15); the model overshoots
   // word caps by 30–75%, and quotes add length.
-  full: 'Độ sâu full: tối đa khoảng 180 từ kể cả gạch đầu dòng và phần chép nguyên văn; gộp mục cho liền mạch, tối đa 3 dòng "## " ngắn tự đặt. Thuế nhiều nhất một câu, chỉ khi có DÒNG THUẾ: loại thuế nào áp khi nào, C/O hay tên biểu chỉ khi dòng đó nêu; không nêu số, số hiệu văn bản hay mã, không đoán xuất xứ.',
+  full:
+    'Độ sâu full: viết đủ chín mục, mỗi mục một phần tử riêng của sections, đúng thứ tự facts, nature, candidates, exclusions, gir, levels, explanation, risk, conclusion. Không gộp mục, không bỏ mục nào, không tự viết dòng "## ": hệ thống in tiêu đề của từng mục. Mỗi mục 2–4 câu, khoảng 40–55 từ; cả bài khoảng 420 từ kể cả phần chép nguyên văn. facts chỉ chép lại dữ kiện người hỏi đã cho, không thêm dữ kiện nào. levels liệt kê chương, nhóm, phân nhóm và mã của nhóm đứng nhất, mỗi cấp một gạch đầu dòng, câu chữ chép từ LINES. Thuế nhiều nhất một câu, chỉ khi có DÒNG THUẾ: loại thuế nào áp khi nào, C/O hay tên biểu chỉ khi dòng đó nêu; không nêu số, số hiệu văn bản hay mã, không đoán xuất xứ.',
 };
 
 // Citations are [#id] with a quote in the same sentence: numbering left to the model ran on across sections and its cite_ids

@@ -368,9 +368,14 @@ const shortQuote = (q: string): string => {
  * about a list nobody checked is the failure this block exists to make impossible.
  */
 export function policyBlock(registry: PolicyList[], rows: EvidenceRow[], codes: string[], asOf: string): string {
+  // Whether a list is loaded at all, and whether its rows came back whole, is a property of the corpus, not of the code
+  // being weighed: printed per candidate it repeated the same twenty names for every one and buried the findings under
+  // its own caveat. Gathered across the candidates, said once, after them.
+  const unchecked = new Map<string, PolicyResult>();
   const blocks = codes.map((code) => {
     const found = policyStatus(registry, rows, code, asOf);
     if (!found.length) return '';
+    for (const r of found) if ((r.status === 'NOT_LOADED' || r.status === 'UNCERTAIN') && !unchecked.has(listName(r))) unchecked.set(listName(r), r);
     const when = (r: PolicyResult): string => (r.appliesWhen ? ` (${APPLIES_WORDS[r.appliesWhen] ?? r.appliesWhen})` : '');
     const lines = [
       `Mã **${dotted(code)}** (ứng viên, chưa chốt):`,
@@ -381,20 +386,16 @@ export function policyBlock(registry: PolicyList[], rows: EvidenceRow[], codes: 
             `- **${listName(r)}**${when(r)}: có tên trong danh mục${r.match === 'parent' ? ' ở dòng rộng hơn — đối chiếu mô tả' : ''}${r.quote ? ` — "${shortQuote(r.quote)}"` : ''}`,
         ),
     ];
-    const group = (status: PolicyResult['status'], say: (rest: PolicyResult[]) => string): void => {
-      const rest = found.filter((r) => r.status === status);
-      if (rest.length) lines.push(`- ${say(rest)}`);
-    };
-    group('NOT_LOADED', (rest) => `Kho **chưa nạp** nên mình chưa kiểm tra được: ${named(rest)}`);
-    // The same overflow tail named() gives the other two: a list dropped in silence reads as if the six were the registry.
-    group(
-      'UNCERTAIN',
-      (rest) => `Chưa khẳng định được: ${rest.slice(0, MAX_NAMED).map((r) => `${listName(r)} (${UNCERTAIN_WORDS[r.reason!] ?? r.reason})`).join('; ')}${more(rest)}`,
-    );
-    group('NOT_LISTED', (rest) => `Không có tên trong danh mục đã nạp: ${named(rest)}`);
+    const rest = found.filter((r) => r.status === 'NOT_LISTED');
+    if (rest.length) lines.push(`- Không có tên trong danh mục đã nạp: ${named(rest)}`);
     return lines.length > 1 ? lines.join('\n') : '';
   });
-  return blocks.filter(Boolean).join('\n\n');
+  const left = [...unchecked.values()];
+  // The overflow tail named() gives: a list dropped in silence reads as if the six named were the whole registry.
+  const caveat = left.length
+    ? `Còn ${left.length} danh mục mình **chưa kiểm tra được** (kho chưa nạp, hoặc chưa chắc đã lấy đủ dòng): ${named(left)} — cần thì bạn nhắn tên danh mục, mình tra riêng.`
+    : '';
+  return [...blocks.filter(Boolean), caveat].filter(Boolean).join('\n\n');
 }
 
 // --- The reply -------------------------------------------------------------------------------------

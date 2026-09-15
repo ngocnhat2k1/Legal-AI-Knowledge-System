@@ -359,26 +359,31 @@ describe('policyBlock — printed by code, never by the model', () => {
       }),
     ];
     const block = policyBlock(registry, rows, ['30051010'], '2026-09-15');
-    expect(block.split('\n')).toEqual([
+    // Whether a list is loaded does not depend on the code, so those two groups are gathered across the candidates and
+    // said once, after them: per candidate they repeated the same twenty names and buried the findings (2026-09-15).
+    expect(block.split('\n').filter(Boolean)).toEqual([
       'Mã **3005.10.10** (ứng viên, chưa chốt):',
       '- **36/2026/TT-BKHCN Phụ lục I**: có tên trong danh mục — "1 | Băng dán y tế | 3005.10.10"',
-      '- Kho **chưa nạp** nên mình chưa kiểm tra được: 11/2024/TT-BTTTT',
-      '- Chưa khẳng định được: 33/2026/TT-BCT (hiệu lực của danh mục chưa xác minh)',
       '- Không có tên trong danh mục đã nạp: 27/2026/TT-BNNMT',
+      'Còn 2 danh mục mình **chưa kiểm tra được** (kho chưa nạp, hoặc chưa chắc đã lấy đủ dòng): 11/2024/TT-BTTTT, 33/2026/TT-BCT — cần thì bạn nhắn tên danh mục, mình tra riêng.',
     ]);
+    // Two candidates, one caveat: the unchecked lists are named once for the whole answer, not once per code.
+    const two = policyBlock(registry, rows, ['30051010', '84818099'], '2026-09-15');
+    expect(two.match(/chưa kiểm tra được/g)).toHaveLength(1);
     // "Không" is only ever said about a list that is loaded: an unloaded one is never folded into that line.
     expect(block).not.toMatch(/Không có tên[^\n]*11\/2024/);
     expect(policyBlock(registry, rows, [], '2026-09-15')).toBe('');
     expect(policyBlock(registry, rows, ['30.05'], 'hôm nay')).toBe('');
   });
 
-  it('the UNCERTAIN line says how many it left out, as the other two groups do', () => {
+  it('the unchecked-list caveat counts them all and names only the first six', () => {
     const doubt = Array.from({ length: 8 }, (_, i) =>
       list({ id: `d${i}`, instrument: `${10 + i}/2026/TT-BCT`, annex_anchor: null, validity_verified: false, loaded: { kind: 'annex_table', document_number: `${10 + i}/2026/TT-BCT`, source_hint: '' } }),
     );
-    const line = policyBlock(doubt, rows, ['30051010'], '2026-09-15').split('\n')[1]!;
-    expect(line.startsWith('- Chưa khẳng định được: 10/2026/TT-BCT (')).toBe(true);
-    expect(line.endsWith(' và 2 danh mục khác')).toBe(true);
+    const line = policyBlock(doubt, rows, ['30051010'], '2026-09-15').split('\n').filter(Boolean).at(-1)!;
+    // The count is of every list left unchecked, not of the six named: a silent drop reads as if six were the registry.
+    expect(line.startsWith('Còn 8 danh mục mình **chưa kiểm tra được**')).toBe(true);
+    expect(line).toContain('10/2026/TT-BCT, 11/2026/TT-BCT, 12/2026/TT-BCT, 13/2026/TT-BCT, 14/2026/TT-BCT, 15/2026/TT-BCT và 2 danh mục khác');
   });
 });
 
