@@ -34,7 +34,8 @@ export const ORIGIN_LABEL = {
 // out on purpose — "hàn"=hàn (weld), "anh"=anh (you), "in"=in (print), "phi"=Ø, "úc"⊂"phúc",
 // "đức"=name Đức, "hàng"⊂"hàn" — a WRONG origin silently changes the FTA answer, so prefer null.
 const ORIGIN_NAME = [
-  ['trung quốc', 'CN'], ['trung quoc', 'CN'], ['china', 'CN'],
+  // "tq" is no Vietnamese word, and a bare lookup is typed "thue nk 84818099 tq" as often as with "TQ".
+  ['trung quốc', 'CN'], ['trung quoc', 'CN'], ['china', 'CN'], ['tq', 'CN'],
   ['nhật bản', 'JP'], ['nhật', 'JP'], ['japan', 'JP'],
   ['hàn quốc', 'KR'], ['korea', 'KR'],
   ['australia', 'AU'], ['new zealand', 'NZ'],

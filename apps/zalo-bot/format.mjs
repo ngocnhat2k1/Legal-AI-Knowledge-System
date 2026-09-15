@@ -8,6 +8,7 @@
  * See the no-llm-on-tariff-numbers ADR.
  */
 
+import { unlikeTariffReply } from './dispatch.mjs';
 import { cleanGazetteTitle, missingKind, ORIGIN_LABEL } from './parse.mjs';
 import { L, md, toText } from './render.mjs';
 
@@ -74,8 +75,11 @@ function prefState(p) {
   return 'null';
 }
 
-/** Verdict history as one small line, or null when nobody has confirmed anything yet (R18). */
-export function confirmFooter(c) {
+/**
+ * Verdict history as one small line, or null when nobody has confirmed anything yet (R18). `prompt: false` drops the
+ * "trả lời đúng/sai" invitation, for a reply that puts no code on the table to confirm.
+ */
+export function confirmFooter(c, { prompt = true } = {}) {
   if (!c || !(c.correct || c.wrong || c.unsure)) return null;
   const recent = Array.isArray(c.recent) ? c.recent : [];
   const lastOf = (v) => recent.find((r) => r.verdict === v);
@@ -91,7 +95,7 @@ export function confirmFooter(c) {
   }
   if (c.unsure) parts.push([`chưa chắc ${c.unsure} lần`]);
   parts[0][0] = parts[0][0][0].toUpperCase() + parts[0][0].slice(1);
-  return L([...parts.flatMap((p, k) => (k ? [' · ', p] : [p])), ' — trả lời "đúng"/"sai" để cập nhật.'], 'note');
+  return L([...parts.flatMap((p, k) => (k ? [' · ', p] : [p])), prompt ? ' — trả lời "đúng"/"sai" để cập nhật.' : '.'], 'note');
 }
 
 /**
@@ -103,10 +107,11 @@ export function confirmFooter(c) {
  * @param {{dotted: string, origin: string|null, date: string}} q
  * @param {object} r         TariffResponse
  * @param {object|null} confirm  verdict history from /tariff/confirmations
- * @param {{showFooter?: boolean, candidate?: boolean, refBase?: number}} opts  candidate: the code is not settled (R2);
- *   refBase: [n] start after it, for a block printed under sources already numbered from [1] (R10)
+ * @param {{showFooter?: boolean, candidate?: boolean, refBase?: number, verdictPrompt?: boolean}} opts  candidate: the code
+ *   is not settled (R2); refBase: [n] start after it, for a block printed under sources already numbered from [1] (R10);
+ *   verdictPrompt: false keeps the verdict history without its "trả lời đúng/sai" (a composed reply, plan 08 §6.3)
  */
-export function formatAnswer(q, r, confirm, { showFooter = true, candidate = false, refBase = 0 } = {}) {
+export function formatAnswer(q, r, confirm, { showFooter = true, candidate = false, refBase = 0, verdictPrompt = true } = {}) {
   const origin = r.origin ?? q.origin ?? null;
   const name = origin ? (ORIGIN_LABEL[origin] ?? origin) : null;
   const verified = Boolean(r.ftaMembership);
@@ -246,7 +251,7 @@ export function formatAnswer(q, r, confirm, { showFooter = true, candidate = fal
   ];
   lines.push(L([sources.join(' · ')], 'note'));
 
-  const history = confirmFooter(confirm);
+  const history = confirmFooter(confirm, { prompt: verdictPrompt });
   if (history) {
     lines.push(history);
   } else if (showFooter) {
@@ -309,9 +314,9 @@ export function excerpt(raw, min = 140, max = 480) {
 }
 
 /**
- * "Nguồn:" block, small italic. items: { n, label, note?, quote?, cut?, url? }. A standing note repeated on every source
+ * "Nguồn:" block, small italic. items: { n, label, note?, quote?, cut?, url?, auto? }. A standing note repeated on every source
  * ("tài liệu hướng dẫn áp dụng…" three times) is printed once, then "như [n]". Links are de-duplicated per document and
- * capped at three.
+ * capped at three. `auto`: an evidence row extracted by machine that no person has checked yet (R18).
  */
 export function sourceLines(items) {
   if (!items.length) return [];
@@ -321,7 +326,8 @@ export function sourceLines(items) {
     const same = firstWithNote.get(x.note);
     if (x.note && !same) firstWithNote.set(x.note, x.n);
     const note = !x.note ? '' : same ? ` (như [${same}])` : ` (${x.note})`;
-    return L([`[${x.n}] ${x.label}${note}${x.quote ? ` — “${x.quote}”${x.cut ? ' (trích đoạn đầu)' : ''}` : ''}`], 'note');
+    const auto = x.auto ? ' (trích tự động, chưa đối chiếu)' : '';
+    return L([`[${x.n}] ${x.label}${note}${auto}${x.quote ? ` — “${x.quote}”${x.cut ? ' (trích đoạn đầu)' : ''}` : ''}`], 'note');
   };
   return [
     L(['Nguồn:'], 'note'),
@@ -394,20 +400,33 @@ const WARNING = {
   old_catalog: 'Mã nêu trong công văn cũ theo danh mục cũ — đối chiếu Danh mục hiện hành trước khi khai.',
 };
 
+/** Every sentence cut and sources left (§4.1 "chỉ trả nguồn, kèm một câu thật"): the one sentence, written here. */
+const NO_PROSE = 'Mình chưa viết được câu trả lời dẫn đủ nguồn; dưới đây là các nguồn liên quan nhất để bạn đối chiếu.';
+
 /**
  * A composed answer (plan 08 §5). Only the prose is model text, through md(); every other line is written here from
  * response fields: the user's code against the candidates, the candidates, the tariff block, red and orange lines, sources.
  *
  * @param {object} res  POST /answer response; `depth` is the walkthrough's ('brief' | 'full')
- * @param {{tariffLines?: Array<{q: object, tariff: object, confirm?: object|null}>}} opts  /tariff lookups the bot made:
- *   the code asked about in mixed mode, the walkthrough's tariff_ref codes in hs mode
+ * @param {{tariffLines?: Array<{q: object, tariff: object, confirm?: object|null}>, showFooter?: boolean}} opts  /tariff
+ *   lookups the bot made: the code asked about in mixed mode, the walkthrough's tariff_ref codes in hs mode, the rate asked
+ *   for in tariff mode (owner decision Q1), whose block alone keeps the first-lookup invitation (`showFooter`, D3b)
  */
-export function formatAnswerMd(res, { tariffLines = [] } = {}) {
+export function formatAnswerMd(res, { tariffLines = [], showFooter = false } = {}) {
   const cites = res.citations ?? [];
   // A candidate with no [n] has nothing standing behind it (R2), and would print "· " with nothing after.
   const cands = (res.candidates ?? []).filter((c) => c.evidence?.length).slice(0, 3);
   const hs = res.mode === 'hs';
-  const prose = md(res.answerMd);
+  const rate = res.mode === 'tariff';
+  const written = Boolean(String(res.answerMd ?? '').trim());
+  // Reworded as rendered: "Hàng hóa có **mã HS X**" reads as the tariff lead once md() drops the asterisks (§6.3). A reworded
+  // line loses its bold and italic.
+  const unlike = (ln) => {
+    const said = toText([ln]);
+    const reworded = unlikeTariffReply(said);
+    return reworded === said ? ln : L([reworded], ...(ln.marks ?? []));
+  };
+  const prose = written ? md(res.answerMd).map(unlike) : cites.length ? [L([NO_PROSE])] : [];
   const lines = [...prose, L([])];
 
   // Never orange: the user's code outside the candidates is a comparison, not a finding (R4). Only the two sentences
@@ -435,17 +454,23 @@ export function formatAnswerMd(res, { tariffLines = [] } = {}) {
     if (cands.length >= 2 && !/xác định trước/i.test(toText(prose))) lines.push(L([ADVANCE_RULING], 'note'));
   }
 
-  // D3(a): a candidate's rates only under a full walkthrough, for at most two codes, never green (R2).
-  const blocks = hs ? (res.depth === 'full' ? tariffLines.slice(0, 2) : []) : res.mode === 'mixed' ? tariffLines : [];
+  // D3(a): a candidate's rates only under a full walkthrough, for at most two codes, never green (R2). A rate question
+  // (owner decision Q1) prints its own lookup under the prose.
+  const blocks = hs ? (res.depth === 'full' ? tariffLines.slice(0, 2) : []) : res.mode === 'mixed' || rate ? tariffLines : [];
   // A block's [n] continue after the sources, so "[1]" is never both a decree and an Explanatory Note (R10).
   let refBase = Math.max(0, ...cites.map((c) => c.n ?? 0));
   for (const t of blocks) {
-    // A verdict history ends in "trả lời đúng/sai"; after a composed hs reply no code is on the table to confirm (§6.3).
-    const block = formatAnswer(t.q, t.tariff, hs ? null : (t.confirm ?? null), { showFooter: false, candidate: hs, refBase });
+    // After a composed reply no code is on the table to confirm (§6.3): mixed keeps the history of the code asked about
+    // (R18) without its "trả lời đúng/sai"; a candidate's history is not printed at all. A rate question IS the lookup.
+    const opts = { showFooter: rate && showFooter, candidate: hs, refBase, verdictPrompt: rate };
+    const block = formatAnswer(t.q, t.tariff, hs ? null : (t.confirm ?? null), opts);
     // Every [k] a block prints is one of its refs: the highest is where the next block starts.
     refBase = Math.max(refBase, ...[...toText(block).matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])));
-    // Mixed: the heading shares the block's first paragraph, so render never sends the rates without it.
-    lines.push(L([]), ...(hs ? [] : [L([MIXED_TARIFF])]), ...block);
+    // Mixed: the heading opens the lead's own line ("Thuế của mã trong câu hỏi: hàng hóa có mã HS …"). A block longer than a
+    // message is split line by line, and a heading on a line of its own ended one message while the bare lead opened the next.
+    const [lead, ...rest] = block;
+    const headed = () => L([`${MIXED_TARIFF} `, ...lead.segs.map((s, k) => (k || typeof s !== 'string' ? s : s[0].toLowerCase() + s.slice(1)))], ...(lead.marks ?? []));
+    lines.push(L([]), ...(res.mode === 'mixed' ? [headed(), ...rest] : block));
   }
   if (hs && cands.length && !blocks.length) lines.push(L([TARIFF_HINT], 'note'));
 
@@ -463,10 +488,14 @@ export function formatAnswerMd(res, { tariffLines = [] } = {}) {
         // The API keeps only quotes found verbatim in the body; 159 leaves room for the ellipsis.
         quote: c.quotes?.length ? cleanGazetteTitle('', c.quotes[0], 159) : '',
         url: c.url,
+        // Owner decision 2026-09-15: an evidence row (Explanatory Note, SEN, ruling, annex table…) nobody checked says so on its
+        // own source line, never in orange; a statute clause keeps unverifiedLines above.
+        auto: Boolean(c.kind) && c.verification === 'auto_unverified',
       })),
     ),
   );
-  if (res.cut > 0) lines.push(L(['Một phần câu trả lời bị lược vì không dẫn được nguồn.'], 'note'));
+  // All of it cut: NO_PROSE above already says so, and "một phần" would be false.
+  if (res.cut > 0 && written) lines.push(L(['Một phần câu trả lời bị lược vì không dẫn được nguồn.'], 'note'));
   // Two tariff blocks carry the same scope warning; render would merge it into one orange line saying it twice.
   const seen = new Set();
   return lines.filter((l) => !l.marks?.includes('warn') || (!seen.has(toText([l])) && seen.add(toText([l]))));
@@ -565,8 +594,8 @@ export const CAPABILITIES = [
   L([['Ví dụ: "thuế nhập khẩu 8481.80.99 xuất xứ Trung Quốc"', 'i']]),
 ];
 
-/** The router's free reply (intent general): gated like any LLM prose, then md() on the original text. */
-export function formatGeneral(reply) {
+/** The router's free reply (intent general): gated like any LLM prose, then md() on the original text; `fallback` when it fails. */
+export function formatGeneral(reply, fallback = CAPABILITIES) {
   // sanitizeLead collapses whitespace, so it is only the gate; md() reads the original line breaks.
-  return sanitizeLead(reply, '', 900) ? md(String(reply).slice(0, 900)) : CAPABILITIES;
+  return sanitizeLead(reply, '', 900) ? md(String(reply).slice(0, 900)) : fallback;
 }

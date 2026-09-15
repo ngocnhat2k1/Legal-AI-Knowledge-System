@@ -23,8 +23,8 @@ import {
 import { stampTariff } from './conversation.mjs';
 import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, rulingLine, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
-import { CODE_MARK, codebook } from './dispatch.mjs';
-import { citationFrom, cleanGazetteTitle, detectOrigin, HS_RE, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
+import { CODE_MARK, codebook, ruling } from './dispatch.mjs';
+import { citationFrom, cleanGazetteTitle, detectOrigin, keywordFrom, missingKind, ORIGIN_LABEL, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
 import { L } from './render.mjs';
 import { claudeVision } from './router.mjs';
 
@@ -57,6 +57,7 @@ export async function answerByHs(q, { showFooter = true } = {}) {
     text: formatAnswer(q, data, confirm, { showFooter }),
     topic: 'tariff',
     tariff: stampTariff({ hs: q.hs, dotted: q.dotted, origin: q.origin, date: q.date, snapshot: data }),
+    confirm, // for a caller that prints this lookup under prose (formatAnswerMd tariff mode)
   };
 }
 
@@ -110,7 +111,7 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   // Chữ ký sản phẩm để (a) tra ruling đã xác nhận, (b) đính kèm khi có đính chính sau này.
   const productKw = (clues?.keywords?.length ? clues.keywords : keywords).filter((k) => k && k.length >= 2).slice(0, 6);
   // `note` is LLM text: it passes the prose gate before it is shown or stored; rejected → keywords.
-  const desc = (sanitizeLead(clues?.note, '') || productKw.join(', ') || text).replace(/\s+/g, ' ').trim().slice(0, 300);
+  const desc = (sanitizeLead(clues?.note, '') || productKw.join(', ')).replace(/\s+/g, ' ').trim().slice(0, 300);
 
   // Một ÁP MÃ đã được con người xác nhận cho hàng tương tự > phỏng đoán của LLM (verify-on-use).
   // Ngưỡng thích nghi: cụm nhiều token cần ≥2 token khớp (chống một từ chung promote nhầm);
@@ -139,6 +140,8 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   const borderline = hintGroups.length ? new Set(hintGroups.slice(0, 2)).size >= 2 : reps.length >= 2;
 
   const top = cands[0];
+  // Three candidates side by side, none looking settled: no FTA block, no rate lead of its own.
+  const top3 = [top, ...reps.filter((c) => c.hs !== top.hs).slice(0, 2)];
   const full = await lookupFull(top.hsDotted, origin, date);
   const confirm = full ? await confirmations(top.hsDotted, origin) : null;
   // /tariff/search prices MFN at Postgres CURRENT_DATE (UTC): print it only when that is the lookup date (R8).
@@ -156,8 +159,6 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   }
 
   if (borderline && !citedRuling) {
-    // Three candidates side by side, none looking settled: no FTA block, no rate lead of its own.
-    const top3 = [top, ...reps.filter((c) => c.hs !== top.hs).slice(0, 2)];
     lines.push(
       L(['Mặt hàng có thể thuộc nhiều nhóm — cần bạn hoặc chuyên viên chốt mã (kèm số công văn nếu có) trước khi khai.'], 'warn'),
       ...top3.map((c) => L([[c.hsDotted, 'b'], ' · ', [cleanGazetteTitle('', c.heading || tail(c), 50), 'i'], ' · MFN ', [mfnOf(c), 'b']], 'ul')),
@@ -189,10 +190,14 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
     );
   }
 
+  // Three codes side by side are candidates, not a lookup: a "đúng" names no code, and "HS đúng là <the second>" must not record the
+  // first as wrong (round 4).
   const tariff =
-    full || citedRuling
-      ? stampTariff({ hs: top.hsDotted.replace(/\./g, ''), dotted: top.hsDotted, origin, date, snapshot: full || null, desc, keywords: productKw })
-      : null;
+    borderline && !citedRuling
+      ? stampTariff({ hs: null, candidates: top3.map((c) => c.hsDotted), desc, keywords: productKw })
+      : full || citedRuling
+        ? stampTariff({ hs: top.hsDotted.replace(/\./g, ''), dotted: top.hsDotted, origin, date, snapshot: full || null, desc, keywords: productKw })
+        : null;
   return { text: withLead(sanitizeLead(clues?.lead, ''), lines), topic: 'tariff', tariff };
 }
 
@@ -349,7 +354,7 @@ export async function answerLegal(query, { asOf, doc, article, clause, lead } = 
  * `pendingIngest` is what lets the next turn act on "nạp" — the offer and the thing
  * being offered have to survive between messages, which is what conversation memory is for.
  */
-function missingDocAnswer(query, label, apiAnswer, asOf) {
+export function missingDocAnswer(query, label, apiAnswer, asOf) {
   // A catalogue hit equal to the number asked for IS that document: offer it, never list it as another one.
   const { kind, matches } = missingKind(label, apiAnswer?.gazetteMatches ?? [], apiAnswer?.gazetteMatchKind ?? 'none');
   // Only an EXACT catalogue hit may be offered for ingest. A near-miss by number is a
@@ -388,11 +393,14 @@ export async function handleConfirm(tariff, verdict, senderName) {
     staffName: senderName,
     snapshot: tariff.snapshot,
   });
-  if (!ok) return { text: 'Ghi nhận xác nhận bị lỗi, thử lại sau nhé.', topic: 'tariff' };
+  // Sending the same word again writes it; the opposite word, or "ok" as thanks, must not (R13).
+  if (!ok) return { text: 'Ghi nhận xác nhận bị lỗi, thử lại sau nhé.', topic: 'tariff', tariff: { ...tariff, open: verdict } };
   const label = verdict === 'correct' ? 'đúng' : verdict === 'wrong' ? 'sai' : 'chưa chắc';
   return {
     text: [L(['Đã ghi nhận ', [label, 'b'], ' cho mã ', [tariff.dotted, 'b'], ` (${tariff.origin ? `xuất xứ ${tariff.origin}, ` : ''}ngày ${dmy(tariff.date)}). Cảm ơn ${senderName}.`])],
     topic: 'tariff',
+    // Ruled: no second verdict on this table, quoting the lookup or after an offer (R13).
+    tariff: { ...tariff, open: false, ruled: true },
   };
 }
 
@@ -406,9 +414,12 @@ export async function handleConfirm(tariff, verdict, senderName) {
  */
 export async function handleCorrection(tariff, text, senderName, quote) {
   // Mã CŨ (bị coi là sai): ưu tiên kết quả đã nhớ; nếu hết hạn thì lấy lại từ tin được quote.
+  // After a composed hs reply there is none: its codes are candidates or the user's own, and neither is ever recorded as
+  // wrong (plan 08 §6.3).
+  const candidates = !tariff?.hs && Boolean(tariff?.candidates?.length);
   const old = tariff?.hs
     ? { hs: tariff.hs, dotted: tariff.dotted, origin: tariff.origin, date: tariff.date, snapshot: tariff.snapshot }
-    : parseQuotedTariff(quote?.msg);
+    : candidates ? null : parseQuotedTariff(quote?.msg);
   const fix = parseQuery(text); // mã đúng người dùng đưa ra (nếu có)
   const now = today();
   // Mô tả hàng đã lưu từ lần phân loại trước — để đính vào bản ghi 'correct' cho mã đúng,
@@ -419,55 +430,129 @@ export async function handleCorrection(tariff, text, senderName, quote) {
   // (có thể chứa tên/SĐT/số lô của khách) vì note bị khớp mờ + echo chéo ngữ cảnh.
   const rulingNote = [prodDesc, citationFrom(text)].filter(Boolean).join(' | ').slice(0, 300) || null;
 
-  // The same code confirms only after a confirming word ("đúng là 8481.80.99"): "8481.80.99 có sai không" names it too,
+  // The same code confirms only as the ledger's form ("HS đúng là 8481.80.99"): "8481.80.99 có sai không" names it too,
   // and is a doubt, not a ruling (R13). Unclear → ask, write nothing.
-  const lower = String(text || '').toLowerCase().normalize('NFC');
-  const cued = /(đúng là|dung la|mã đúng|ma dung|hs đúng|hs dung|chính xác là|chuẩn là)\s*(là|:)?\s*(mã\s*)?$/.test(lower.slice(0, Math.max(0, lower.search(HS_RE))));
+  const cued = Boolean(ruling(text)?.coded);
   if (fix && old?.hs && fix.hs === old.hs && !cued) {
     return {
       text: [L(['Bạn muốn xác nhận mã ', [old.dotted, 'b'], ' là đúng, hay đang hỏi mã này có hợp với hàng không? Nhắn "đúng" để xác nhận, hoặc mô tả hàng để mình đối chiếu nhé.'])],
       topic: 'tariff',
     };
   }
-  // "đúng là <mã cũ>" = XÁC NHẬN (người GÕ MÃ) → ghi correct KÈM mô tả để tra lại được.
-  if (fix && old?.hs && fix.hs === old.hs) {
-    await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || now, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null });
+  // The origin a ruling names is the origin of the goods ruled on, and later staff read confirmations by code and origin (R18):
+  // "HS đúng là 8481.80.99 xuất xứ Nhật Bản" after the TQ lookup wrote CN, after a lookup with no origin none. The code in memory
+  // is recorded only when its lookup had that origin: look that origin up first.
+  const origin = detectOrigin(text);
+  if (old?.hs && origin && origin !== (old.origin || null)) {
+    const country = ORIGIN_LABEL[origin] ?? origin;
+    const looked = old.origin ? `với xuất xứ ${ORIGIN_LABEL[old.origin] ?? old.origin}` : 'không kèm xuất xứ';
     return {
-      text: [L(['Đã xác nhận mã ', [old.dotted, 'b'], `${old.origin ? ` (xuất xứ ${old.origin})` : ''} là đúng. Cảm ơn ${senderName}.`])],
+      text: [L(['Mình chưa ghi nhận gì: mã ', [old.dotted, 'b'], ` vừa tra ${looked}, còn tin của bạn nêu xuất xứ ${country}. Bạn tra với xuất xứ đó trước (nhắn "${old.dotted} xuất xứ ${country}"), rồi nhắn lại nhé.`])],
       topic: 'tariff',
-      tariff: tariff?.hs ? stampTariff({ ...old, desc: prodDesc || undefined, keywords: prevKw }) : null,
     };
   }
 
-  if (old?.hs) {
-    await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || now, verdict: 'wrong', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null });
+  // A reply never says a verdict was recorded unless the write succeeded (R13); a failed one keeps memory (no `tariff`
+  // key), so the same message can be sent again.
+  const failed = { text: 'Ghi nhận bị lỗi, bạn thử lại sau nhé.', topic: 'tariff' };
+  const wrong = () => postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || now, verdict: 'wrong', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null });
+
+  // "đúng là <mã cũ>" = XÁC NHẬN (người GÕ MÃ) → ghi correct KÈM mô tả để tra lại được.
+  if (fix && old?.hs && fix.hs === old.hs) {
+    if (!(await postConfirm({ hs: old.hs, origin: old.origin || null, date: old.date || now, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: old.snapshot || null }))) return failed;
+    return {
+      text: [L(['Đã xác nhận mã ', [old.dotted, 'b'], `${old.origin ? ` (xuất xứ ${old.origin})` : ''} là đúng. Cảm ơn ${senderName}.`])],
+      topic: 'tariff',
+      // An acknowledgement is not the lookup: a "đúng"/"ok" after it thanks the reply, and the table takes no second ruling.
+      tariff: tariff?.hs ? { ...stampTariff({ ...old, desc: prodDesc || undefined, keywords: prevKw }), open: false, ruled: true } : null,
+    };
   }
 
   if (!fix) {
+    if (!old?.hs || !(await wrong())) return tariff?.hs ? { ...failed, tariff: { ...tariff, open: 'wrong' } } : failed;
     return {
-      text: [L(['Đã ghi nhận: mã ', old?.dotted ? [old.dotted, 'b'] : 'trước', ` chưa đúng (theo ${senderName}). Bạn gửi mã HS đúng, hoặc mô tả hay ảnh mặt hàng để mình tra lại nhé.`])],
+      text: [L(['Đã ghi nhận: mã ', [old.dotted, 'b'], ` chưa đúng (theo ${senderName}). Bạn gửi mã HS đúng, hoặc mô tả hay ảnh mặt hàng để mình tra lại nhé.`])],
       topic: 'tariff',
       tariff: null,
     };
   }
 
-  // Tra mã đúng. Xuất xứ chỉ lấy khi lời sửa nêu rõ (không kéo theo xuất xứ cũ có thể sai).
-  const origin = detectOrigin(text);
-  const head = L([`Đã ghi nhận đính chính từ ${senderName}: mã `, ...(old?.dotted ? [[old.dotted, 'b'], ' '] : []), 'chưa đúng, sửa thành ', [fix.dotted, 'b'], '.']);
-  const res = await tariffResponse(fix.hs, origin, fix.date);
-  if (!res.ok) {
-    const why = res.status === 404 ? 'không có trong dữ liệu đã nạp' : `lỗi ${res.status}`;
-    return { text: [head, L(['Nhưng mình chưa tra được thuế cho ', [fix.dotted, 'b'], ` (${why}). Bạn kiểm tra lại mã giúp mình nhé.`])], topic: 'tariff', tariff: null };
+  // Tra mã đúng TRƯỚC khi ghi: mã không tra được thì không ghi dòng nào, kể cả dòng 'wrong' của mã cũ, và nói rõ là chưa ghi.
+  // Xuất xứ chỉ lấy khi lời sửa nêu rõ (không kéo theo xuất xứ cũ có thể sai).
+  const res = await tariffResponse(fix.hs, origin, fix.date).catch(() => null);
+  if (!res?.ok) {
+    const why = res?.status === 404 ? 'không có trong dữ liệu đã nạp' : 'chưa gọi được dịch vụ tra cứu';
+    return { text: [L(['Mình chưa ghi nhận gì: chưa tra được mã ', [fix.dotted, 'b'], ` (${why}). Bạn kiểm tra lại mã rồi nhắn lại nhé.`])], topic: 'tariff' };
   }
   const data = await res.json();
   // Ghi mã ĐÚNG = 'correct' KÈM mô tả sản phẩm + số căn cứ (rulingNote, đã lọc PII) → tra lại được sau này.
-  await postConfirm({ hs: fix.hs, origin: origin || null, date: fix.date, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: data });
+  // 'correct' first: if it fails nothing is recorded and the same message can be sent again. A 'wrong' failing after it is said
+  // as it is, and memory goes, so a resend cannot record the new code twice (R13).
+  if (!(await postConfirm({ hs: fix.hs, origin: origin || null, date: fix.date, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: data }))) return failed;
+  if (old?.hs && !(await wrong())) {
+    return {
+      text: [L(['Đã ghi nhận mã ', [fix.dotted, 'b'], ` là đúng (theo ${senderName}), nhưng chưa ghi được mã `, [old.dotted, 'b'], ' là chưa đúng vì lỗi ghi sổ. Mình dừng ghi cho lượt này để khỏi ghi trùng.'])],
+      topic: 'tariff',
+      tariff: null,
+    };
+  }
+  const head = candidates
+    ? L(['Đã ghi nhận mã ', [fix.dotted, 'b'], ...(prodDesc ? [' cho ', [prodDesc, 'i']] : []), ` (theo ${senderName}).`])
+    : L([`Đã ghi nhận đính chính từ ${senderName}: mã `, ...(old?.dotted ? [[old.dotted, 'b'], ' '] : []), 'chưa đúng, sửa thành ', [fix.dotted, 'b'], '.']);
   const confirm = await confirmations(fix.hs, origin);
   return {
     text: [head, L([]), ...formatAnswer({ dotted: fix.dotted, origin, date: fix.date }, data, confirm)],
     topic: 'tariff',
-    tariff: stampTariff({ hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data, desc: prodDesc || undefined, keywords: prevKw }),
+    // The new code's block is shown, but its verdict was just recorded: a "đúng" after it thanks the reply (no second row).
+    tariff: { ...stampTariff({ hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data, desc: prodDesc || undefined, keywords: prevKw }), open: false, ruled: true },
   };
+}
+
+/**
+ * A plan read a verdict with no confirming cue ("63079090 mới đúng"): an offer, never a write (plan 08 §6.3). It spells out
+ * what would be recorded, so the ledger only gets a verdict the user typed on purpose. `fix`: the code in the message, or null.
+ */
+export async function codeOffer(tariff, fix) {
+  // A table whose ruling was recorded takes no second one (R13): it is not reopened, and "chưa ghi nhận gì" would be untrue.
+  if (tariff?.ruled) {
+    // A candidates table has no code of its own: its ruling was for the goods (round 8).
+    const ruled = tariff.dotted ? ['mã ', [tariff.dotted, 'b'], ' vừa rồi'] : ['hàng vừa hỏi'];
+    return { text: [L(['Mình đã ghi nhận phán quyết cho ', ...ruled, ' nên không ghi thêm. Muốn ghi nhận khác, bạn tra lại mã rồi nhắn "đúng", "sai" hoặc "HS đúng là <mã>".'])] };
+  }
+  const desc = String(tariff?.desc || '').replace(/\s+/g, ' ').trim();
+  const forDesc = desc ? [' cho ', [desc, 'i']] : [];
+  if (!fix) {
+    return {
+      text: [
+        L([
+          'Mình chưa ghi nhận gì. Muốn ghi nhận mã đúng', ...forDesc, ', nhắn "HS đúng là <mã>" (kèm số công văn nếu có)',
+          ...(tariff?.hs ? ['; mã ', [tariff.dotted, 'b'], ' vừa tra: đúng với lô hàng thì nhắn "đúng", chưa đúng thì nhắn "sai".'] : ['.']),
+        ]),
+      ],
+      // It asks "đúng"/"sai" about the lookup, so it leaves that lookup open to them; nextState closes every other offer (R13).
+      ...(tariff?.hs ? { tariff: { ...tariff, open: true } } : {}),
+    };
+  }
+  const row = (await searchByPrefix(fix.hs)).find((c) => c.hs === fix.hs);
+  const heading = row ? cleanGazetteTitle('', row.heading || tail(row), 50) : '';
+  const named = ['Mã ', [fix.dotted, 'b'], ...(heading ? [' (', [heading, 'i'], ')'] : [])];
+  const record = [...forDesc, `, nhắn "HS đúng là ${fix.dotted}". Cần thuế thì nhắn thêm xuất xứ.`];
+  const cands = tariff?.candidates ?? [];
+  // The API's test behind that reply's "nằm trong các nhóm dưới đây": a candidate under the code's heading, however deep.
+  const inside = cands.some((c) => String(c).replace(/\D/g, '').startsWith(grp4(fix.hs)));
+  // The candidates are named, so a quote of this offer shows which table it answers (dispatch.mjs fastPath).
+  const said = cands.length
+    ? [...named, ` ${inside ? 'nằm trong' : 'khác'} các nhóm ${cands.join(', ')} mình vừa nêu. Muốn mình ghi nhận mã này`, ...record]
+    : tariff?.hs === fix.hs
+      ? [...named, ' là mã vừa tra: đúng với lô hàng thì nhắn "đúng", chưa đúng thì nhắn "sai" hoặc "HS đúng là <mã>".']
+      : tariff?.hs
+        // "HS đúng là" on this thread also records the code just looked up as wrong: say so before it is sent.
+        ? [...named, ' khác mã ', [tariff.dotted, 'b'], ' vừa tra. Muốn ghi nhận ', [tariff.dotted, 'b'], ' chưa đúng và ', [fix.dotted, 'b'], ' là mã đúng', ...record]
+        : [...named, ': muốn mình ghi nhận mã này', ...record];
+  // The form this offer spells out must work when sent: the table stays open to "HS đúng là …" ('coded'), not to a bare
+  // "đúng"/"ok", which answers the offer. The same-code offer asks "đúng"/"sai" itself.
+  const reopen = tariff?.hs === fix.hs ? true : tariff?.hs || cands.length ? 'coded' : null;
+  return { text: [L(said)], ...(reopen ? { tariff: { ...tariff, open: reopen } } : {}) };
 }
 
 // --- Image --------------------------------------------------------------------
@@ -494,8 +579,9 @@ export async function answerImage(imageUrls, caption) {
         tariff: null,
       };
     }
-    // The note is LLM text: gate it here, so no fallback (keywords, desc, no-candidates line) can echo it (R1).
-    return await tariffByClues(clues, [caption, sanitizeLead(clues.note, '')].filter(Boolean).join(' '));
+    // The note is LLM text: gate it here, so no fallback (keywords, desc, no-candidates line) can echo it (R1). The caption
+    // goes masked too: with no vision keywords the search words, desc and ruling note come from this text (R4).
+    return await tariffByClues(clues, [captionForVision(caption), sanitizeLead(clues.note, '')].filter(Boolean).join(' '));
   } finally {
     try { unlinkSync(file); } catch { /* ignore */ }
   }

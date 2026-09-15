@@ -1,7 +1,7 @@
 ---
 type: doc
 status: active
-updated: 2026-08-13
+updated: 2026-09-15
 related:
   - zalo-bot-image-and-quote-context.md
   - ../architecture-decisions/2026-07-17-no-llm-on-tariff-numbers.md
@@ -109,6 +109,125 @@ với hàng không**, và bot đã trả MFN + FTA vì mọi tin có mã 8 số 
 - Câu hỏi giải nghĩa mã/nhóm, chú giải, GRI thuộc intent `legal`. `/legal` giữ luôn Chú giải chi tiết của
   nhóm được nêu và chú giải chương của nó (`headingSections`), vì "3005.10.10" không khớp tiêu đề
   "nhóm 30.05" theo cả từ khoá lẫn vector — mô hình đã từ chối trong khi chú giải nằm sẵn trong kho.
+
+## Luồng `POST /answer` và bộ nhớ ứng viên (kế hoạch 08, Việc 12)
+
+Từ Việc 12, bot không còn gọi `route()` cho tin chữ. Luồng đầy đủ ở
+[kế hoạch 08 §2.1](../planning/08-answer-path-tasks.md); phần liên quan tới bộ nhớ:
+
+- **Bot gửi ngữ cảnh, API che mã.** Bước kế hoạch nhận `context = {topic, state, turns}` thô; API che mọi mã trước
+  khi dựng prompt (R4). Kế hoạch bot tự dựng (tra thuế trần, tra thuế theo kế hoạch) chỉ có
+  `{intent: 'tariff', origin, date}` — không `question`, không mã. "còn từ Nhật thì sao" (`reuseLastHs`) đi cùng đường văn xuôi +
+  khối: kế hoạch `{intent: 'tariff', reuseLastHs: true, origin, date}` kèm `context`, API lấy `state.tariff.dotted` làm khoá;
+  khối thuế tra mã đó với xuất xứ mới, `/answer` không trả lời thì khối đi một mình.
+- **`state.tariff` sau câu soạn chế độ hs** = `{hs: null, candidates: ['30.05', …], desc, keywords, at}`. `hs: null`
+  nên `tariffFresh` là false: một chữ "đúng" không ghi gì, vì không có kết quả tra nào đang chờ xác nhận.
+  `desc` = `plan.goods.facts` (API đã lọc số, serial, model). Không có ứng viên nào thì `state.tariff = null`.
+- **`candidatesFresh`** (`loadContext`): `hs` null, `candidates` không rỗng, còn trong `TARIFF_TTL_MS`. Khi đó
+  `ctx.tariff = state.tariff`, để `handleCorrection` giữ được `desc` cho note của phán quyết.
+- **`state.legal` sau câu soạn legal/status/mixed** = `{question, asOf, citations ≤ 5 {label, kind, instrument,
+  documentNumber}, missingDoc: null, pendingIngest: null}`. Mỗi citation mang thêm `provisionLabel` = `label`, cầu tạm cho
+  tới khi bước kế hoạch của API đọc `label` (hàng 19). Văn bản kho không có vẫn đi `missingDocAnswer` (lưu
+  `query` + `pendingIngest`).
+- **`state.answer` sau mọi câu soạn** = `{mode, question, goods: {facts}, at}` — lượt trước cho câu tinh chỉnh.
+  `question` là câu đã che của kế hoạch, bỏ cả nhãn `[mã n]`, mọi dãy 6 tới 10 chữ số liền ("mã hs 848180", gõ thừa một số)
+  và mọi mã 4-2-2 nối gạch ("8481-80-99", trừ ngày ISO) mà mặt nạ API bỏ sót; `goods.facts` và `keywords` lọc y như vậy. **Không mã người dùng nào vào `state`.** Một câu trả lời
+  đặt `topic` mà không soạn (tra thuế, văn bản thiếu, đính chính…) xoá `state.answer`: refine chỉ trỏ về câu soạn ngay
+  trước. Refine gửi kế hoạch nguyên vẹn, không `forceIntent`: API tự đổi sang `state.answer.mode` và giữ câu hỏi trước.
+- `index.mjs` và `dry-run.mjs` ghi state qua `nextState(state, result)`: thiếu khoá `tariff`/`legal`/`answer` =
+  giữ nguyên, `null` = xoá.
+
+**Sổ phán quyết trên luồng ứng viên (R13, §6.3).**
+
+| Tin | Kết quả |
+|---|---|
+| "HS đúng là 8422.90.90" (cả tin, ngay sau câu ứng viên) | `fastPath` → `handleCorrection`: tra mã trước, rồi đúng một dòng `correct`, note = `desc` + số công văn; không dòng `wrong`, không đọc "mã cũ" từ quote. Tra không được hoặc ghi lỗi: không ghi, không nói "Đã ghi nhận", giữ bộ nhớ để gửi lại |
+| "sai rồi, không phải nhóm này" | không phải dạng nào của văn phạm → bước kế hoạch; `refine` hoặc `correction` không kèm mã sau ứng viên → soạn lại `hs`, không ghi |
+| "63079090 mới đúng" (kế hoạch `correction`) | `codeOffer`: một câu mời nêu các ứng viên và lệnh "HS đúng là …", không ghi; gửi đúng lệnh đó thì ghi |
+| "8481.80.99 có sai không ạ" | câu hỏi → `hs`; chưa có mô tả hàng thì hỏi mô tả (hàng 14), không ghi |
+
+Kế hoạch `confirm`/`correction` không bao giờ tự ghi sổ. Sổ chỉ được ghi từ một **văn phạm đóng** ở `fastPath` (`ruling` trong
+dispatch.mjs): cả tin phải là một trong ba dạng dưới đây, gộp khoảng trắng, cho phép một tiểu từ lễ phép cuối tin (ạ, a, nhé, nhe,
+nha, nhá, bạn, ban) và dấu `.`/`!`. **Đọc đúng như gõ**: tin có một dấu nào thì phải khớp dạng có dấu, chỉ tin không dấu nào ("dung
+roi") mới khớp dạng bỏ dấu; bỏ dấu cả tin có dấu từng biến "dùng rồi", "không dùng", "sài rồi", "sai á", "sai
+nhẹ" thành phán quyết. Dạng bỏ dấu nhận ít hơn: tiểu từ cuối chỉ "ban" (không "a": "dung a", "sai a" có thể là "đúng à?", "sai à?";
+không "nhe"/"nha": "dung nhe" có thể là "dùng nhé"); không có "khong/ko/k/chua dung" (có thể là "không dùng", "chưa dùng") hay "k
+chac"; chủ ngữ phải có danh từ ("ma nay sai" ghi, "nay sai", "do sai" trơn thì không); và **không có dạng có mã**: "hs dung la X", "ma
+dung la X" có thể là "HS dùng là X", "mã dùng là X" (round 8). Lời mời luôn viết lệnh có dấu ("HS đúng là <mã>"), gửi đúng như lời
+mời thì ghi được. Có `?` ở bất cứ đâu, hay gõ "à"/"á"/"hả", thì không ghi. Không đoán ý từ câu
+dài hơn: mỗi vòng review heuristic cũ đều tìm ra một cách nói nghi ngờ mới vẫn ghi sổ ("mã đúng là X thì thuế bao nhiêu", "… thì
+phải", "… hay sao ấy", "sai rồi, sao lại ra mã này", "đúng?"). Câu khác đi bước kế hoạch, và lời mời ở đó nói đúng lệnh cần gửi.
+Bỏ sót một phán quyết tốn một lượt nhắn lại; ghi nhầm một câu nghi ngờ thì nằm lại trong sổ cho người sau đọc (R18).
+Chặn theo số công văn chỉ bắt mã nước viết **in hoa**, vì `detectOrigin` chỉ đọc mã nước in hoa: "theo CV 12/hq-cn" vẫn ghi, với xuất xứ rỗng — hướng nào cũng an toàn.
+
+| Dạng (cả tin) | Ghi | Khi nào |
+|---|---|---|
+| Một từ: đúng (rồi), chuẩn, chính xác · sai (rồi), không đúng · không chắc ("rồi" gõ "r", "không" gõ "ko"/"k"). Không dấu: dung (roi), chuan, chinh xac · sai (roi) · khong chac, ko chac (không "k chac") | `handleConfirm` | bàn thuế còn mới, mở, chưa ghi phán quyết (câu ngay trước gửi cho chính người này là câu tra); có quote thì quote phải là chính câu tra đó |
+| ((mã / mã HS / HS / code / kết quả) (này / đó / vừa tra)? · này · đó)? + sai (rồi) · không đúng · chưa đúng. Không dấu: ((ma / ma hs / hs / code / ket qua) (nay / do / vua tra)?)? + sai (roi); "nay sai", "do sai" trơn không ghi. "nhầm mã (rồi)" và "vừa tra sai" (không chủ ngữ) không ghi: thường là tự nhận gõ nhầm | `handleCorrection`, dòng `wrong` | như dòng trên |
+| (sai (rồi),)? + HS / mã / mã HS / code (HS)? + đúng / chuẩn / chính xác (phải)? + là / `:` + **một** mã; sau mã chỉ "xuất xứ <nước>" và "(theo / căn cứ) CV / công văn / QĐ / TB <số>". Chỉ dạng có dấu: "hs dung la X" không ghi | `handleCorrection`: `correct` mã mới trước, rồi `wrong` mã đang nhớ | bàn thuế: không quote thì câu trước là câu tra hoặc lời mời nêu lệnh này; quote thì chỉ câu tra đó (quote lời mời không bao giờ ghi). Xuất xứ nêu trong tin phải là xuất xứ của lượt tra đang nhớ, không thì không ghi và bảo tra xuất xứ đó trước. Luồng ứng viên: chỉ `correct`, chỉ khi không quote và câu trước là câu ứng viên hoặc lời mời |
+
+**Ô "xuất xứ <nước>"** (`COUNTRY`, dispatch.mjs) chỉ nhận đúng các cách viết `detectOrigin` (parse.mjs) đọc được, vì
+`handleCorrection` đối chiếu xuất xứ bằng hàm đó: một cách viết nó không đọc ("xuất xứ jp", "xuất xứ my") từng bỏ qua phép đối chiếu
+và ghi dưới xuất xứ của lượt tra (round 6). Các cách viết (dạng có mã chỉ nhận tin có dấu): trung quốc, nhật bản, nhật, hàn quốc, thái
+lan, mã lai, châu âu, ấn độ, anh quốc, tq, china, japan, korea, australia, new zealand, thailand, malaysia, singapore, indonesia,
+philippines, germany, india; mã nước chỉ khi gõ **chữ hoa** (TQ, CN, JP, KR, AU, NZ, TH, MY, SG, ID, PH, DE, EU, GB, UK, US, VN). Một
+spec đọc từng cách viết bằng `detectOrigin`, nên hai danh sách không lệch nhau được. Thêm nữa, `ruling` chỉ nhận **một** ô xuất xứ, và
+cả tin đúng như gõ (chưa chuẩn hoá: gõ Unicode tổ hợp thì `detectOrigin` không đọc ra) phải đọc ra chính xuất xứ của ô đó, không xuất
+xứ nào khác (số công văn "12/tq", hai ô "xuất xứ Nhật Bản, xuất xứ Trung Quốc"): không thì không ghi. **Tin không có ô xuất xứ thì cả
+tin không được đọc ra xuất xứ nào**: `handleCorrection` đọc xuất xứ từ cả tin, nên số công văn "CV 12/HQ-CN", "TB 12/TB-TH" (CN, TH)
+trên bàn ứng viên hay bàn ảnh, nơi không có xuất xứ lượt tra để đối chiếu, từng thành xuất xứ của dòng `correct` (round 8). Tin như vậy
+không ghi: đi bước kế hoạch và ra lời mời.
+
+"ok", "oke", "okay", "okie" không phải phán quyết: ở đâu cũng là "đã xem" (câu `AGREED`, không qua bước kế hoạch). Từ đồng ý thường
+("chuẩn rồi", "đúng vậy", "chính xác rồi"; `plainVerdict`, chỉ định tuyến) sau câu không phải kết quả tra cũng là `AGREED`, không soạn
+lại câu cũ; trên kết quả tra còn mới, mọi từ phán quyết mà sổ không ghi ("chuẩn rồi", "chưa chắc", "đúng" khi bàn đã đóng) ra lời mời
+nêu mã vừa tra và lệnh "đúng"/"sai"/"HS đúng là <mã>".
+
+- **Bàn mở, bàn đóng.** `stampTariff` đặt `state.tariff.open = true` ở câu tra thuế và câu ứng viên; `nextState` đóng lại
+  (`open: false`, giữ bộ nhớ) ở mọi câu trả lời không mang khoá `tariff`: NEEDS_CODE, NEEDS_GOODS, NOT_READ, câu soạn không
+  ra ứng viên, câu ghi nhận, câu báo lỗi. Câu đính chính vừa ghi in khối thuế của mã mới nhưng cũng đóng bàn: "đúng" sau nó là
+  cảm ơn, không thành dòng thứ hai. Lời mời hỏi "đúng"/"sai" về chính mã vừa tra (`codeOffer` cùng mã hoặc không mã) mở lại
+  (`open: true`). Lời mời về mã khác, hay trên luồng ứng viên, chỉ mở cho dạng có mã (`open: 'coded'`): gửi đúng lệnh nó nêu
+  thì ghi được, còn "đúng"/"ok" (trả lời lời mời) thì không. Ghi sổ lỗi chỉ để ngỏ đúng phán quyết vừa lỗi (`open: 'wrong'`).
+- **Bàn đã ghi phán quyết thì đóng hẳn** (`ruled: true`, đặt khi `handleConfirm` hay `handleCorrection` ghi được): không nhận
+  phán quyết thứ hai, quote câu tra hay không; lời mời sau đó không mở lại và nói đã ghi rồi. Lượt tra mới (`stampTariff`) mới nhận lại.
+  **Lưu bộ nhớ lỗi ở bất cứ câu nào** (`saveContext` trả null) thì bộ nhớ vẫn giữ bàn của câu trước, còn mở, không phải câu trên màn
+  hình (một lượt tra khác, một câu pháp luật): `messageHandler` xoá tin cuối của bot khỏi `lastAnswered`, nên đường không quote đóng
+  và phán quyết không quote ra lời mời (round 8). Câu `confirm`/`correction` đã ghi sổ (trả `ruled`, hoặc `tariff: null` sau "mã này
+  sai" hay đính chính ghi được một nửa) thì bộ nhớ còn thấy bàn chưa ghi: `messageHandler` nhớ thêm trong RAM bàn đó (khoá
+  luồng:người:mã hoặc các ứng viên:xuất xứ:ngày), lượt sau nạp bộ nhớ thì đặt `ruled: true` cho bàn ấy, nên không ghi dòng thứ hai và
+  lời mời nói đã ghi rồi (bàn ứng viên không có mã: "cho hàng vừa hỏi"). Khởi động lại thì quên. Vì khoá không có giờ tra, tra lại đúng
+  mã, xuất xứ, ngày đó trong cùng tiến trình cũng không nhận phán quyết nữa (bỏ sót, không ghi nhầm).
+- **Tin cuối của bot trong luồng phải gửi cho chính người này** thì dạng không quote mới ghi. `messageHandler` (index.mjs) nhớ
+  trong RAM mỗi luồng tin cuối của bot trả lời ai (câu trả lời, lời báo đã hiểu, "đang xem ảnh", báo lỗi; báo cáo nạp văn bản
+  xoá); trong nhóm tin đó có thể trả lời đồng nghiệp, và "chuẩn" khi ấy trả lời tin đó. Khởi động lại thì quên, tức là chỉ đóng:
+  "đúng" đầu tiên ra lời mời, gửi lại thì ghi. Quote câu tra của mình vẫn ghi.
+- **Tin của một người trong một luồng xử lý lần lượt** (`inTurn`): câu soạn gửi lời báo đã hiểu câu hỏi khoảng một phút trước câu
+  trả lời, bộ nhớ chỉ lưu sau câu trả lời, nên "đúng rồi" trả lời lời báo từng được đọc với lượt tra phía trên và ghi sổ.
+- **Ảnh không phải câu tra.** Tin có ảnh hay trả lời một ảnh mà cả tin là dạng phán quyết: lời mời nêu kết quả đang nhớ, không ghi,
+  không chạy lại vision. Câu trả lời ảnh ranh giới (ba mã ngang nhau) là bàn ứng viên (`hs: null`, `candidates` là ba mã 8 số):
+  "đúng" không ghi, "HS đúng là <mã>" chỉ ghi `correct` cho mã đó.
+- **Quote là kết quả trên bàn chỉ khi nó cho thấy đúng lượt tra đang nhớ.** Quote phải có dòng dẫn khối thuế ("Hàng hóa có mã
+  HS X…", "Đối với hàng hóa có mã HS X…") với X là mã đang nhớ, đọc từ chính dòng đó. Dòng đó nêu đúng xuất xứ đang nhớ, và
+  không nêu xuất xứ nào khi bộ nhớ không có. Quote phải có dòng "Tra theo ngày …" khớp ngày bộ nhớ: phần 1 của một câu tra dài không
+  có dòng ngày, và phần 1 của lượt tra cũ cùng mã, cùng xuất xứ đọc y như hôm nay. Không có dòng ghi nhận ("Đã ghi nhận…", "Đã xác
+  nhận mã…"). Mọi quote khác (câu ghi nhận, câu soạn, câu ứng viên, lời mời, lượt tra cũ hơn hay khác xuất xứ, tin không mã của một
+  câu dài, tin của người khác) thì không ghi gì: lời mời không nêu xuất xứ, ngày hay của ai, và hàng tương tự có cùng các nhóm ứng viên.
+- Hai dạng không mã cần bàn còn mới (2 giờ), kể cả khi quote đúng câu tra. Dạng có mã quote đúng câu tra thì ghi được cả khi
+  bộ nhớ đã cũ: mã cũ đọc từ quote. Tra 404 hay sau ứng viên (không `hs`) thì quote không bao giờ tự đứng làm kết quả.
+- `readsAsQuestion` chỉ còn định tuyến (kế hoạch confirm/correction trên một câu hỏi thì soạn hs), không mở hay chặn đường
+  ghi nào.
+- `tariffReply` chỉ nhận dòng bot tự viết (câu dẫn khối thuế, câu ghi nhận), không nhận "MFN"/"Cảm ơn"/"bạn nêu". Văn xuôi
+  soạn có thể chép câu dẫn ("Hàng hóa có mã HS 6506.10.10 thuộc danh mục…" khi mã chủ đề được mở cho bước soạn), kể cả có
+  markdown chen giữa ("Hàng hóa có **mã HS X**"), nên `formatAnswerMd` đổi các câu mở đó **trên dòng đã qua `md()`**, giữ
+  nghĩa ("Hàng có mã HS", "Có ghi nhận"; dòng bị đổi mất đậm/nghiêng), và đổi ngoặc thẳng của `"HS đúng là …"` thành ngoặc
+  cong: không tin nào của câu soạn khớp `tariffReply` hay `offerReply`, ở chế độ nào và tách tin ở đâu cũng vậy. Lời báo đã
+  hiểu câu hỏi (`ack`, chữ mô hình) cũng qua `unlikeTariffReply` trước khi gửi. Ở chế độ mixed, tiêu đề "Thuế của mã trong
+  câu hỏi:" mở chính dòng câu dẫn khối thuế ("Thuế của mã trong câu hỏi: hàng hóa có mã HS …"): khối dài hơn một tin (một biểu
+  by_subline 70 dòng) bị tách từng dòng, và tiêu đề đứng riêng một dòng từng nằm cuối tin này trong khi câu dẫn trần mở tin sau.
+- Đính chính kèm mã mới ghi `correct` cho mã mới trước, rồi `wrong` cho mã cũ. `correct` lỗi thì không ghi gì, giữ bộ nhớ để
+  gửi lại; `wrong` lỗi sau đó thì nói rõ đã ghi được gì, bỏ bộ nhớ để gửi lại không ghi trùng.
+- Lời mời nạp văn bản chỉ nhận "có"/"nạp" khi chủ đề còn là pháp luật.
 
 ## Lời dẫn tự nhiên — cưỡng chế bằng code, không bằng lời dặn
 

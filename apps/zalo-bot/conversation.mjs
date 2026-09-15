@@ -21,19 +21,42 @@ export async function loadContext(threadId, userId) {
   const view = await loadConversation(threadId, userId);
   const tariff = view.state?.tariff ?? null;
   const at = tariff?.at ? Date.parse(tariff.at) : NaN;
-  const tariffFresh = Boolean(tariff?.hs) && Number.isFinite(at) && Date.now() - at <= TARIFF_TTL_MS;
+  const fresh = Number.isFinite(at) && Date.now() - at <= TARIFF_TTL_MS;
+  const tariffFresh = Boolean(tariff?.hs) && fresh;
+  // The headings of a composed hs reply (plan 08 §6.1): no code on the table to confirm, but "HS đúng là …" may record one
+  // for the goods described, so the correction keeps `desc` for its note.
+  const candidatesFresh = !tariff?.hs && Boolean(tariff?.candidates?.length) && fresh;
   return {
     topic: view.topic ?? null,
     state: view.state ?? {},
     turns: view.turns ?? [],
     tariffFresh,
-    tariff: tariffFresh ? tariff : null,
+    candidatesFresh,
+    tariff: tariffFresh || candidatesFresh ? tariff : null,
     legal: view.state?.legal ?? null,
   };
 }
 
-/** Stamp a tariff result with the time it was produced, so freshness is about IT, not the chat. */
-export const stampTariff = (lookup) => (lookup ? { ...lookup, at: new Date().toISOString() } : null);
+/**
+ * Stamp a tariff result with the time it was produced, so freshness is about IT, not the chat. `open`: this reply shows the
+ * lookup, so a "đúng"/"sai" right after it answers it (fastPath). A new stamp starts without `ruled`, which a recorded ruling sets
+ * (answer.mjs) to close that table for good.
+ */
+export const stampTariff = (lookup) => (lookup ? { ...lookup, at: new Date().toISOString(), open: true } : null);
+
+/**
+ * The state a reply leaves: `tariff`/`legal`/`answer` absent from the result = keep that memory, null = clear it. A reply
+ * that sets a topic without composing clears `answer`: a refine points at the last composed reply, never one further back.
+ * A reply that leaves `tariff` out keeps the lookup but closes it to a ruling with no code: an "ok" or "đúng" after NEEDS_CODE,
+ * an offer about another code or "Đã ghi nhận sai…" answers that reply, not the rates further up (R13).
+ */
+export function nextState(state, result) {
+  const next = { ...(state || {}) };
+  if ('topic' in result && !('answer' in result)) next.answer = null;
+  for (const k of ['tariff', 'legal', 'answer']) if (k in result) next[k] = result[k];
+  if (!('tariff' in result) && next.tariff?.open) next.tariff = { ...next.tariff, open: false };
+  return next;
+}
 
 /**
  * Persist the exchange. `topic`/`state` follow the API's convention: leave a field out

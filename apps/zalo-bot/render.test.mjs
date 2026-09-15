@@ -10,8 +10,8 @@ import { test } from 'node:test';
 
 import { TextStyle } from 'zca-js';
 
-import { tariffReply } from './dispatch.mjs';
-import { formatAnswerMd } from './format.mjs';
+import { offerReply, tariffReply } from './dispatch.mjs';
+import { formatAnswer, formatAnswerMd } from './format.mjs';
 import { L, md, render, ST, toText } from './render.mjs';
 
 const texts = (p, st) => p.styles.filter((s) => s.st === st).map((s) => p.msg.slice(s.start, s.start + s.len));
@@ -268,6 +268,68 @@ test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp 
   }
 });
 
+test('bất biến R13 mixed: khối by_subline 70 dòng dài hơn một tin, tách ở đâu cũng không tin nào khớp tariffReply hay mở dòng bằng câu dẫn khối thuế', () => {
+  const base = lookup('8481.80.99');
+  const acfta = base.tariff.import.preferential[0];
+  const sublines = Array.from({ length: 70 }, (_, i) => ({
+    codeDotted: `8481.80.99.${String(i).padStart(2, '0')}`, desc: 'Loại khác, bằng thép không gỉ, dùng cho đường ống', percent: '5', type: 'ad_valorem', originExcluded: null,
+  }));
+  const huge = { ...base, tariff: { ...base.tariff, import: { ...base.tariff.import, preferential: [{ ...acfta, type: 'by_subline', rate: null, originEligible: null, originExcluded: null, sublines }] } } };
+  const sentence = 'Van thuộc danh mục phải kiểm tra chuyên ngành trước khi thông quan theo quy định hiện hành [1]. ';
+  const res = { ...HS_PHOTO, mode: 'mixed', userCodes: [], candidates: [] };
+  // Re-review round 3 (D05): the block's first paragraph outgrew a message, render split it line by line, and the heading ended
+  // one message while the bare lead opened the next.
+  for (let chars = 1; chars <= 1800; chars++) {
+    const answerMd = sentence.repeat(Math.ceil(chars / sentence.length)).slice(0, chars);
+    for (const msg of render(formatAnswerMd({ ...res, answerMd }, { tariffLines: [huge] })).map((p) => p.msg)) {
+      assert.equal(tariffReply(msg), false, `+${chars}: ${msg.slice(0, 120)}`);
+      assert.doesNotMatch(msg, /^(?:Đối với h|H)àng hóa có mã HS/m, `+${chars}`);
+    }
+  }
+});
+
+test('bất biến R13: câu pháp luật, tình trạng và hs không ứng viên có "Cảm ơn"/"MFN"/"bạn nêu" hay mở dòng bằng câu dẫn khối thuế không khớp tariffReply, tách tin ở đâu cũng vậy; khối thuế thật vẫn khớp', () => {
+  // Re-review 2026-09-15: a subject code is unmasked into the compose prompt, so prose can open a line with the tariff lead.
+  // Re-review round 2: markdown inside an opener ("Hàng hóa có **mã HS …**") went through the reword, then md() dropped the
+  // asterisks; an offer's wording ('nhắn "HS đúng là …"') would let a coded ruling quoting the reply write too.
+  const lead = [
+    'Hàng hóa có mã HS 8481.80.99 thuộc danh mục phải kiểm tra chất lượng trước thông quan [1].',
+    'Đối với hàng hóa có mã HS 8481.80.99 có xuất xứ Trung Quốc, hồ sơ cần C/O mẫu E [1].',
+    'Đã xác nhận mã 8481.80.99 cho hàng tương tự.',
+    'Đã ghi nhận sai cho mã 8481.80.99 trước đây [1].',
+    'Hàng hóa có **mã HS 8481.80.99** thuộc danh mục kiểm tra chuyên ngành [1].',
+    '**Hàng hóa** có mã HS 8481.80.99 thuộc danh mục kiểm tra chuyên ngành [1].',
+    '*Đối với hàng hóa có mã HS* 8481.80.99, hồ sơ cần C/O mẫu E [1].',
+    'Đã xác nhận mã **8481.80.99** cho hàng tương tự trong danh mục [1].',
+    'Đã **ghi nhận** sai cho mã 8481.80.99 trước đây [1].',
+    'Muốn đổi mã thì nhắn "HS đúng là 8481.80.99" kèm công văn [1].',
+    '- Nếu cần, nhắn **"HS đúng là <mã>"** [1].',
+  ];
+  const prose = `Cảm ơn bạn đã mô tả thêm. Thuế MFN không đổi theo mô tả; mã bạn nêu cần đối chiếu chú giải [1].\n${lead.join('\n')}`;
+  const noCands = { ...HS_PHOTO, candidates: [], userCodes: [{ ...HS_PHOTO.userCodes[0], exists: false, inCandidates: false }] };
+  const legal = {
+    ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [],
+    citations: [cite(1, { kind: null, label: 'Khoản 1 Điều 9 VB-A', documentNumber: 'VB-A', note: null, quotes: ['Mũ bảo hiểm mã 6506.10.10 thuộc danh mục hàng hóa kiểm tra chuyên ngành.'] })],
+  };
+  const modes = { noCands, legal, status: { ...legal, mode: 'status' } };
+  const noTariffReply = (answerMd, label) => {
+    for (const [name, res] of Object.entries(modes)) {
+      for (const msg of render(formatAnswerMd({ ...res, answerMd })).map((p) => p.msg)) {
+        assert.equal(tariffReply(msg), false, `${name} ${label}: ${msg.slice(0, 120)}`);
+        assert.equal(offerReply(msg), false, `lời mời ${name} ${label}: ${msg.slice(0, 120)}`);
+      }
+    }
+  };
+  const filler = 'Văn bản này quy định hồ sơ, thủ tục và thời hạn kiểm tra đối với hàng hóa nhập khẩu [1]. ';
+  const fill = (chars) => filler.repeat(Math.ceil(chars / filler.length)).slice(0, chars);
+  for (let chars = 0; chars <= 4000; chars += 50) noTariffReply(`${prose}\n\n${fill(chars)}\n${lead.join('\n')}`, `+${chars}`);
+  // One paragraph longer than a message is cut at a space, so a message may open mid-sentence: every cut near the budget.
+  for (let chars = 1400; chars <= 1850; chars++) noTariffReply(`${fill(chars)} ${lead.join(' ')}`, `một đoạn +${chars}`);
+  const { q, tariff } = lookup('8481.80.99');
+  const [rate] = render([...md('Mã bạn nêu là van; mức FTA chỉ áp khi có C/O đúng form.'), L([]), ...formatAnswer(q, tariff, null)]);
+  assert.equal(tariffReply(rate.msg), true, rate.msg.slice(0, 120));
+});
+
 test('formatAnswerMd: ứng viên thiếu [n] bị bỏ, không làm hỏng cả câu trả lời (R2)', () => {
   const candidates = [{ ...HS_PHOTO.candidates[0], evidence: undefined }, { ...HS_PHOTO.candidates[1], evidence: [] }, { hs: '33.07', level: 4, title: 'Chế phẩm dùng trước, trong hoặc sau khi cạo', evidence: [2] }];
   const rows = rowsOf(formatAnswerMd({ ...HS_PHOTO, candidates }));
@@ -352,17 +414,61 @@ test('formatAnswerMd: văn bản bot tự nạp, cảnh báo của API và dòng
   assert.ok(orange[0].includes('Biểu thuế trong kho') && orange[0].includes('chưa có hiệu lực'), orange[0]);
   assert.ok(rowsOf(lines).some((l) => l.startsWith('Tra theo ngày 14/09/2026')), 'khối thuế mixed giữ ngày và nghị định (R7)');
   assert.ok(!toText(lines).includes('trả lời "đúng"'));
+  const confirm = { correct: 2, wrong: 0, unsure: 0, recent: [{ verdict: 'correct', staffName: 'Chuyên Viên A' }] };
+  const history = rowsOf(formatAnswerMd(res, { tariffLines: [{ ...lookup('3005.10.10'), confirm }] }));
+  assert.ok(history.includes('Đã xác nhận đúng 2 lần (gần nhất: Chuyên Viên A).'), 'mixed giữ lịch sử xác nhận của mã được hỏi (R18)');
+  assert.ok(!history.some((l) => l.includes('trả lời "đúng"')), 'câu soạn không mời "đúng"/"sai": không mã nào đang chờ xác nhận');
 });
 
-test('formatAnswerMd nguồn: nhãn thẩm quyền một lần rồi "như [1]", quote ≤ 160 ký tự, nhãn EN giữ "(có thể gồm cả nhóm …)"', () => {
+test('formatAnswerMd nguồn: nhãn thẩm quyền một lần rồi "như [1]", quote ≤ 160 ký tự, nhãn EN giữ "(có thể gồm cả nhóm …)"; bằng chứng trích tự động ghi nhỏ trên dòng nguồn (R18)', () => {
+  const AUTO = ' (trích tự động, chưa đối chiếu)';
   const rows = rowsOf(formatAnswerMd(HS_PHOTO));
   const src = (n) => rows.find((l) => l.startsWith(`[${n}] `));
   assert.equal(rows.filter((l) => l.includes(EN_NOTE)).length, 1);
-  assert.ok(src(1).startsWith(`[1] Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05 (${EN_NOTE}) — “`), src(1));
-  assert.ok(src(2).startsWith('[2] Chú giải Chương 30 — “'), src(2));
-  assert.ok(src(3).startsWith('[3] Chú giải chi tiết HS 2022 · Chương 38 · nhóm 38.24 (có thể gồm cả nhóm 38.23) (như [1]) — “'), src(3));
+  assert.ok(src(1).startsWith(`[1] Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05 (${EN_NOTE})${AUTO} — “`), src(1));
+  assert.ok(src(2).startsWith(`[2] Chú giải Chương 30${AUTO} — “`), src(2));
+  assert.ok(src(3).startsWith(`[3] Chú giải chi tiết HS 2022 · Chương 38 · nhóm 38.24 (có thể gồm cả nhóm 38.23) (như [1])${AUTO} — “`), src(3));
   for (const n of [1, 2, 3]) assert.ok(src(n).match(/“(.*)”$/)[1].length <= 160, src(n));
   assert.ok(!rows.some((l) => l.includes('(trích đoạn đầu)')));
+  // Owner decision 2026-09-15: an evidence row a person checked carries nothing; neither does a statute clause, whose standing
+  // stays the orange "bot tự nạp" line. The evidence mark is never orange.
+  const checked = rowsOf(formatAnswerMd({ ...HS_PHOTO, citations: HS_PHOTO.citations.map((c) => ({ ...c, verification: 'verified' })) }));
+  assert.ok(!checked.some((l) => l.includes(AUTO)), checked.join('\n'));
+  const clause = cite(4, { kind: null, label: 'Khoản 1 Điều 9 VB-A', documentNumber: 'VB-A', note: null, quotes: ['Hàng hóa nhập khẩu để gia công được miễn thuế nhập khẩu.'] });
+  const legal = formatAnswerMd({ ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [], citations: [...HS_PHOTO.citations, clause] });
+  assert.ok(rowsOf(legal).find((l) => l.startsWith('[4] ')).startsWith('[4] Khoản 1 Điều 9 VB-A — “'));
+  const orange = all(legal, ST.orange);
+  assert.equal(orange.length, 1);
+  assert.ok(orange[0].startsWith('VB-A do bot tự nạp') && !orange[0].includes('trích tự động'), orange[0]);
+});
+
+test('formatAnswerMd tariff (Q1): văn xuôi và khối thuế dựng một lần: [k] không trùng, cảnh báo của khối nằm dưới văn xuôi, còn lời mời đúng/sai, vẫn là câu tra thuế', () => {
+  const res = {
+    ...HS_PHOTO, mode: 'tariff', userCodes: [], candidates: [], warnings: ['upcoming'],
+    answerMd: 'Mức ưu đãi theo ACFTA chỉ áp khi hàng có C/O form E hợp lệ [1].',
+    citations: [cite(1, { kind: null, label: 'Điều 5 Nghị định 26/2023/NĐ-CP', documentNumber: '26/2023/NĐ-CP', authority: 'binding', note: null, verification: 'verified', quotes: ['Hàng hóa có C/O hợp lệ được áp dụng thuế suất ưu đãi đặc biệt.'] })],
+  };
+  const lines = formatAnswerMd(res, { tariffLines: [lookup('8481.80.99')], showFooter: true });
+  const rows = rowsOf(lines);
+  const labels = rows.flatMap((l) => (l.startsWith('Tra theo ngày') ? [...l.matchAll(/\[(\d+)\] /g)].map((m) => m[1]) : (l.match(/^\[(\d+)\] /) ?? []).slice(1)));
+  assert.deepEqual(labels, [...new Set(labels)], labels.join(','));
+  assert.ok(labels.length >= 3, labels.join(','));
+  const parts = render(lines);
+  const [orange] = parts.flatMap((p) => texts(p, ST.orange));
+  assert.ok(orange.includes('Biểu thuế trong kho') && orange.includes('chưa có hiệu lực'), orange);
+  const msg = parts.map((p) => p.msg).join('\n');
+  const at = (s) => msg.indexOf(s);
+  assert.ok(at('Mức ưu đãi theo ACFTA') < at('Đối với hàng hóa có mã HS 8481.80.99') && at('Đối với hàng hóa') < at(orange) && at(orange) < at('Nguồn:'), msg);
+  assert.ok(rows.some((l) => l.includes('trả lời "đúng"')), 'tra thuế thật: lời mời đúng/sai ở lượt tra đầu');
+  assert.equal(tariffReply(parts[0].msg), true);
+});
+
+test('formatAnswerMd: văn xuôi bị lược hết mà còn nguồn thì mở bằng một câu do code viết, không nói "Một phần"; không nguồn thì để trống', () => {
+  const res = { ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [], answerMd: '', cut: 2 };
+  const rows = rowsOf(formatAnswerMd(res));
+  assert.match(rows[0], /^Mình chưa viết được câu trả lời/);
+  assert.ok(!rows.includes(CUT));
+  assert.equal(toText(formatAnswerMd({ ...res, citations: [] })).trim(), '', 'bot nói thật thay cho một dòng "bị lược" đứng một mình');
 });
 
 test('formatAnswerMd: cut > 0 thêm đúng một dòng "bị lược"', () => {
