@@ -64,6 +64,7 @@ export function buildPrompt(query: string, asOf: string, sources: PromptSource[]
     '- In **đậm** thuật ngữ, số hiệu, điều khoản, thời hạn then chốt. Dùng "- " đầu dòng CHỈ khi liệt kê các trường hợp hoặc điều kiện song song.',
     '- Đặt [n] ngay sau câu dựa vào nguồn số n; mỗi nguồn một dấu, ví dụ [1] [2].',
     '- Mọi con số, ngày, thời hạn, số hiệu, mã HS chép ĐÚNG cách nguồn viết, trong câu có [n] của nguồn đó.',
+    '- Số tiền, phần trăm, ngày, thời hạn giữ nguyên cách nguồn viết, không quy đổi đơn vị: nguồn ghi 20.000.000 đồng thì không viết 20 triệu đồng.',
     '- KHÔNG màu, emoji, HTML, bảng, lời chào, lời mời hỏi thêm. Chỉ dùng "## " khi câu trả lời dài hơn 3 đoạn.',
     '',
     'Trả về JSON MỘT dòng, không kèm giải thích. Xuống dòng trong câu trả lời viết là \\n bên trong chuỗi JSON:',

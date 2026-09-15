@@ -47,7 +47,7 @@ export const statedIn = (text: string, fact: string): boolean => {
 export const expandMarkers = (answer: string, k: number): string =>
   answer
     .replace(/\[(\d+(?:\s*,\s*\d+)+)\]/g, (_, list: string) => list.split(',').map((n) => `[${n.trim()}]`).join(' '))
-    .replace(/\s*\[(\d+)\]/g, (m, n: string) => (Number(n) >= 1 && Number(n) <= k ? m : ''));
+    .replace(/(?<!\s)\s*\[(\d+)\]/g, (m, n: string) => (Number(n) >= 1 && Number(n) <= k ? m : ''));
 
 const LIST_MARKER = /^\s*(?:[-*•]|\d+[.)])(?=\s)/;
 
@@ -61,18 +61,40 @@ export const cutPieces = (pieces: string[], drop: (piece: string) => boolean): s
     .join('')
     .replace(/^[ \t]*(?:[-*•]|\d+[.)])[ \t]*(?:\n|$)/gm, '');
 
+const UNIT = '(?:triệu|tỷ|nghìn|ngàn)';
+const CURRENCY = '(?:đồng|VND|USD|đ)(?![\\p{L}\\d])';
+/** After a unit word: markdown or punctuation, then a word that is no currency. */
+const THEN_WORD = `[\\s*/()\\-–,]{0,8}(?!${CURRENCY})\\p{L}`;
+/**
+ * An amount, shared with the answer guards' G1: a currency, or one or two of "triệu/tỷ/nghìn/ngàn" before a currency or no
+ * word at all: "20 triệu đồng", "7 nghìn tỷ đồng", "Phạt **20 triệu** đồng", "1 tỷ". A count stands before a word, through
+ * markdown, "/", "(", "," or a dash to the range's own count: "1 tỷ CFU", "**1 tỷ** CFU", "1 tỷ/gói", "1 triệu (IU)",
+ * "1 tỷ-10 tỷ CFU", "2 nghìn, tùy".
+ * Known ceilings, each read as a count: a per-unit amount ("20 triệu/lần"); a unit word before "(" or ", " and a word
+ * ("Phạt 50 triệu (đối với cá nhân)", "Phạt tối đa 1 tỷ, đối với tổ chức gấp đôi", "Phạt **20 triệu**, tịch thu"); and
+ * "đô", which is no currency ("Phạt 20 triệu đô"). In the legal path "20 triệu đồng" against a source's "20.000.000 đồng"
+ * empties the answer: both prompts tell the model to copy figures as the source writes them.
+ * Not global: `test` keeps no lastIndex; numberMarkers builds its own global copy.
+ */
+export const AMOUNT = new RegExp(
+  `\\d(?<!\\d[.,]*\\d)[\\d.,]*\\s*(?:${UNIT}(?:\\s{1,8}${UNIT})?(?:\\s{1,8}${CURRENCY}|(?!${THEN_WORD})(?![\\s*]{0,8}[-–][\\s*]{0,8}\\d[\\d.,]{0,20}\\s{0,8}${UNIT}${THEN_WORD}))|USD|VND|đồng|đ)(?![\\p{L}\\d])`,
+  'iu',
+);
+
 /**
  * Facts a sentence may state only when its own [n] source contains them. `exempt`: the user may have written it — with
  * `opts`, a `label` fact only as written (a document number by its number/year), never by stray digit groups.
  * `label`: with `opts.labels` it may also stand in the label of [n] — a label is data, not model text (plan 08 §2.5).
+ * A number is read from its first digit ("(?<!\d)", "\d(?<!\d[.,]*\d)"): the same matches, without rescanning a run of
+ * digits from each of its digits (POST /answer checks model prose inside the event loop).
  */
 const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean; label?: true }> = [
-  { re: /\d+(?:[.,]\d+)?\s*%/g, exempt: false, fatal: true },
-  { re: /\d[\d.,]*\s*(?:USD|VND|đồng|đ)(?![\p{L}\d])/giu, exempt: false, fatal: true },
+  { re: /(?<!\d)\d+(?:[.,]\d+)?\s*%/g, exempt: false, fatal: true },
+  { re: new RegExp(AMOUNT.source, 'giu'), exempt: false, fatal: true },
   { re: /\d{1,2}\/\d{1,2}\/\d{4}/g, exempt: true, fatal: false },
-  { re: /\d+\s*(?:ngày|tháng)(?![\p{L}])/giu, exempt: false, fatal: false },
+  { re: /(?<!\d)\d+\s*(?:ngày|tháng)(?![\p{L}])/giu, exempt: false, fatal: false },
   // The tail stops at emphasis, quotes and brackets: `**08/2015/NĐ-CP**` and `“…”[1]` must still anchor.
-  { re: /\d{1,4}\/(?:\d{4}|VBHN)[^\s,;)*"'“”‘’[\]]*/gi, exempt: true, fatal: false, label: true },
+  { re: /\d{1,4}\/(?:\d{4}|VBHN)[^\s,;)*"'“”‘’[\]]{0,40}/gi, exempt: true, fatal: false, label: true },
   { re: /\d{4}(?:\.\d{2}){1,2}/g, exempt: true, fatal: false, label: true },
 ];
 
@@ -137,27 +159,33 @@ export function numberMarkers(
   const sentences = text.split(/(?<=[.?!;])(?= )|(?<=\n)/);
   const out: string[] = [];
   const cut: string[] = [];
+  // Normalised once, not per sentence and marker: a quote can be a whole section, a sentence can carry many markers.
+  const [normSources, normLabels] = [sources.map(norm), (opts?.labels ?? []).map(norm)];
   for (const s of sentences) {
-    const marks = [...s.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
+    const marks = [...new Set([...s.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])))];
     const ids = marks.length ? marks : validCited;
-    const hay = ids.map((n) => norm(sources[n - 1] ?? ''));
-    const labels = ids.map((n) => norm(opts?.labels[n - 1] ?? ''));
+    const hay = ids.map((n) => normSources[n - 1] ?? '');
+    const labels = ids.map((n) => normLabels[n - 1] ?? '');
     let anchored = true;
     for (const { re, exempt, fatal, label } of facts) {
       for (const [fact] of s.matchAll(re)) {
-        const f = norm(fact.replace(/[.:]+$/, ''));
+        // Trimmed by index: `[.:]+$` would rescan a run of dots from each of its positions.
+        let end = fact.length;
+        while (end > 0 && (fact[end - 1] === '.' || fact[end - 1] === ':')) end--;
+        const f = norm(fact.slice(0, end));
         if (hay.some((h) => figureIn(h, f)) || (label && labels.some((h) => figureIn(h, f))) || (exempt && userWrote(fact, f, label))) continue;
         if (fatal) return { answer: '', order: [] };
         anchored = false;
       }
     }
     if (anchored || opts?.cut) out.push(s);
-    else out.push(s.replace(/\s*\[\d+\]/g, '').replace(/\*\*/g, ''));
+    else out.push(s.replace(/(?<!\s)\s*\[\d+\]/g, '').replace(/\*\*/g, ''));
     if (!anchored && opts?.cut) cut.push(s.trim());
   }
 
   const order: number[] = [];
-  const renumbered = (opts?.cut ? cutPieces(out, (s) => cut.includes(s.trim())) : out.join(''))
+  const cutSet = new Set(cut);
+  const renumbered = (opts?.cut ? cutPieces(out, (s) => cutSet.has(s.trim())) : out.join(''))
     .replace(/\[(\d+)\]/g, (_, n: string) => {
       const at = order.indexOf(Number(n));
       if (at >= 0) return `[${at + 1}]`;

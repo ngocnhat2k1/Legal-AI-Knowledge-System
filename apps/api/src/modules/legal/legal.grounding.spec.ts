@@ -1,4 +1,4 @@
-import { dropInForceClaims, numberMarkers } from './legal.grounding';
+import { AMOUNT, dropInForceClaims, numberMarkers } from './legal.grounding';
 
 describe('dropInForceClaims — an instrument the data says has ended is never called in force (R8)', () => {
   const expired = ['43/2017/NĐ-CP'];
@@ -78,6 +78,27 @@ describe('numberMarkers — [n] points at citations[n-1], and the numbers beside
     expect(numberMarkers('Thuế suất **0%** [1].', [1], src, '').answer).toBe('');
     expect(numberMarkers('Phạt **1.000.000 đồng** [1].', [1], src, '').answer).toBe('');
     expect(numberMarkers('Nộp trong **30 ngày** [1].', [1], src, '').answer).toBe('Nộp trong 30 ngày.');
+  });
+
+  it('reads an amount with a unit word as an amount: "20 triệu đồng", "1 tỷ", "500 nghìn đồng", "7 nghìn tỷ đồng"', () => {
+    const src = ['Điều 1\nPhạt tiền từ 20 triệu đồng'];
+    expect(numberMarkers('Phạt **20 triệu đồng** [1].', [1], src, '').answer).toBe('Phạt **20 triệu đồng** [1].');
+    for (const s of ['Phạt 30 triệu đồng [1].', 'Phạt 1 tỷ [1].', 'Phạt 500 nghìn đồng [1].', 'Doanh thu 7 nghìn tỷ đồng [1].', 'Doanh thu 7 nghìn tỷ [1].']) {
+      expect(numberMarkers(s, [1], src, '').answer).toBe('');
+    }
+    // A count is no amount; a paraphrase of "20.000.000 đồng" is one, against the prompt's "copy figures as written".
+    expect(numberMarkers('Men vi sinh chứa 1 tỷ CFU mỗi gói [1]. Lô gồm 20 nghìn miếng [1].', [1], src, '').answer).toBe('Men vi sinh chứa 1 tỷ CFU mỗi gói [1]. Lô gồm 20 nghìn miếng [1].');
+    expect(numberMarkers('Phạt từ 20 triệu đồng [1].', [1], ['Điều 8\nPhạt tiền từ 20.000.000 đồng'], '').answer).toBe('');
+    // Markdown or punctuation after the unit word: still a count before a word, still an amount before a currency.
+    const counts = 'Chứa **1 tỷ** CFU [1]. Chứa 1 tỷ/gói CFU [1]. Chứa 1 triệu (IU) [1]. Chứa 1 tỷ-10 tỷ CFU [1]. Khoảng 2 nghìn, tùy cách đếm [1].';
+    expect(numberMarkers(counts, [1], src, '').answer).toBe(counts);
+    expect(numberMarkers('Phạt **20 triệu** đồng [1].', [1], src, '').answer).toBe('Phạt **20 triệu** đồng [1].');
+    expect(numberMarkers('Phạt **30 triệu** đồng [1].', [1], src, '').answer).toBe('');
+  });
+
+  it('shares AMOUNT without the global flag: test keeps no state between calls', () => {
+    expect(AMOUNT.global).toBe(false);
+    expect([AMOUNT.test('Phạt 20 triệu đồng'), AMOUNT.test('Phạt 20 triệu đồng')]).toEqual([true, true]);
   });
 
   it('reads a leading zero as the same document number', () => {
