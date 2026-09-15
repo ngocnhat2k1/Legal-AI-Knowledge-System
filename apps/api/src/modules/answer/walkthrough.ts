@@ -20,8 +20,8 @@ export { validateWalkthrough, walkthroughSchema } from './walkthrough.checks';
 
 const WALK = `Một đồng nghiệp hỏi qua Zalo về phân loại hàng hóa. Hãy chỉ cho họ như người đi trước chỉ người mới: trả lời câu hỏi và cho thấy lập luận đi thế nào. Chỉ dựa trên ĐỀ BÀI và bằng chứng bên dưới; người chốt mã là họ.
 
-Mỗi mục dưới đây là một phần tử của sections, gắn đúng key của nó. Viết đủ cả chín mục theo thứ tự này; mục nào chưa có gì để nói thì nói thẳng là chưa có (\"Chưa có nhóm nào phải loại trừ\"), đừng bỏ trống và đừng gộp sang mục khác.
-- facts, nature: dữ kiện nào của hàng quyết định; chỉ dùng đặc điểm người hỏi đã viết, thiếu thì nói thiếu.
+Mỗi mục dưới đây là một phần tử của sections, gắn đúng key của nó. Viết đủ cả tám mục theo thứ tự này; mục nào chưa có gì để nói thì nói thẳng là chưa có (\"Chưa có nhóm nào phải loại trừ\"), đừng bỏ trống và đừng gộp sang mục khác.
+- nature: dữ kiện nào của hàng quyết định; chỉ dùng đặc điểm người hỏi đã viết, thiếu thì nói thiếu; số đo, điện áp, khối lượng do hệ thống in, đừng nhắc lại.
 - candidates, exclusions: nhóm nào hợp hay bị loại, theo câu chữ nhóm và chú giải nào.
 - gir: quy tắc nào đã dùng cho hàng này, dẫn dòng GRI.
 - levels: phân nhóm nào trong LINES còn đứng, vì dữ kiện nào.
@@ -35,7 +35,7 @@ const DEPTH: Record<ClassifyInput['depth'], string> = {
   // 300 words asked came back as 526 in 103 s on crimper, 220 words with quotes in 107 s (2026-09-15); the model overshoots
   // word caps by 30–75%, and quotes add length.
   full:
-    'Độ sâu full: viết đủ chín mục, mỗi mục một phần tử riêng của sections, đúng thứ tự facts, nature, candidates, exclusions, gir, levels, explanation, risk, conclusion. Không gộp mục, không bỏ mục nào, không tự viết dòng "## ": hệ thống in tiêu đề của từng mục. Mỗi mục 2–4 câu, khoảng 40–55 từ; cả bài khoảng 420 từ kể cả phần chép nguyên văn. facts chỉ chép lại dữ kiện người hỏi đã cho, không thêm dữ kiện nào. levels liệt kê chương, nhóm, phân nhóm và mã của nhóm đứng nhất, mỗi cấp một gạch đầu dòng, câu chữ chép từ LINES. Thuế nhiều nhất một câu, chỉ khi có DÒNG THUẾ: loại thuế nào áp khi nào, C/O hay tên biểu chỉ khi dòng đó nêu; không nêu số, số hiệu văn bản hay mã, không đoán xuất xứ.',
+    'Độ sâu full: viết đủ tám mục, mỗi mục một phần tử riêng của sections, đúng thứ tự nature, candidates, exclusions, gir, levels, explanation, risk, conclusion. Phần thông tin hàng hóa do hệ thống in từ dữ kiện người hỏi đã viết, đừng chép lại. Không gộp mục, không bỏ mục nào, không tự viết dòng "## ": hệ thống in tiêu đề của từng mục. Mỗi mục 2–4 câu, khoảng 40–55 từ; cả bài khoảng 420 từ kể cả phần chép nguyên văn. levels liệt kê chương, nhóm, phân nhóm và mã của nhóm đứng nhất, mỗi cấp một gạch đầu dòng, câu chữ chép từ LINES. Thuế nhiều nhất một câu, chỉ khi có DÒNG THUẾ: loại thuế nào áp khi nào, C/O hay tên biểu chỉ khi dòng đó nêu; không nêu số, số hiệu văn bản hay mã, không đoán xuất xứ.',
 };
 
 // Citations are [#id] with a quote in the same sentence: numbering left to the model ran on across sections and its cite_ids
@@ -62,7 +62,7 @@ JSON:
 - deciding_facts ≤3, missing_facts ≤3, mỗi mục ≤12 từ.
 - tariff_ref: mã trong DÒNG THUẾ thuộc nhóm ở kết luận; không có DÒNG THUẾ thì [].
 Chỉ trả một dòng JSON; cite_ids là số nguyên, deciding_facts và missing_facts là mảng; xuống dòng trong markdown viết \\n:
-{"sections":[{"key":"facts|nature|candidates|exclusions|gir|levels|explanation|risk|conclusion","markdown":"…"}],"candidates":[{"heading":"00.00","assessment":"phu_hop|co_the_neu|loai|chua_du_du_kien","deciding_facts":["…"],"cite_ids":[0]}],"conclusion":{"headings":["00.00"],"needs_advance_ruling":false,"missing_facts":["…"]},"tariff_ref":["0000.00.00"]}`;
+{"sections":[{"key":"nature|candidates|exclusions|gir|levels|explanation|risk|conclusion","markdown":"…"}],"candidates":[{"heading":"00.00","assessment":"phu_hop|co_the_neu|loai|chua_du_du_kien","deciding_facts":["…"],"cite_ids":[0]}],"conclusion":{"headings":["00.00"],"needs_advance_ruling":false,"missing_facts":["…"]},"tariff_ref":["0000.00.00"]}`;
 
 const STANDING: Record<Authority, string> = {
   binding: 'ràng buộc',

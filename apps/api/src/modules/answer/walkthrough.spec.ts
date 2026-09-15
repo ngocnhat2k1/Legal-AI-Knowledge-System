@@ -115,18 +115,22 @@ describe('buildWalkthroughPrompt', () => {
     const brief = buildWalkthroughPrompt({ ...input, depth: 'brief' });
     expect(brief).toContain('Độ sâu brief: tối đa khoảng 170 từ');
     expect(brief).not.toContain('Độ sâu full');
-    expect(prompt).toContain('Độ sâu full: viết đủ chín mục');
+    expect(prompt).toContain('Độ sâu full: viết đủ tám mục');
     expect(prompt).not.toContain('Độ sâu brief');
   });
 
   // The owner wants the sectioned report their sample document is made of, so the nine keys ARE the outline. The prompt
   // used to say the opposite ("đó không phải dàn bài … không có gì để nói thì bỏ") and the model dropped up to five
   // sections of ten on a live question (2026-09-15); the runner's titles then printed a report starting at II.2.
-  it('full asks for all nine sections, in order, merged into nothing and headed by nothing', () => {
-    expect(prompt).toContain('Viết đủ cả chín mục theo thứ tự này');
+  it('full asks for all eight model sections, in order, merged into nothing and headed by nothing', () => {
+    expect(prompt).toContain('Viết đủ cả tám mục theo thứ tự này');
     expect(prompt).toContain('đừng bỏ trống và đừng gộp sang mục khác');
     expect(prompt).toContain('Không gộp mục, không bỏ mục nào, không tự viết dòng');
-    expect(prompt).toContain('facts, nature, candidates, exclusions, gir, levels, explanation, risk, conclusion');
+    expect(prompt).toContain('nature, candidates, exclusions, gir, levels, explanation, risk, conclusion');
+    // THÔNG TIN HÀNG HÓA is the system's: it restates the asker's own measurements, and G1 cut every sentence of it as
+    // a number no quote backs — as the first section, that dropped the whole answer (2026-09-15).
+    expect(prompt).toContain('Phần thông tin hàng hóa do hệ thống in từ dữ kiện người hỏi đã viết, đừng chép lại');
+    expect(prompt).not.toMatch(/"key":"facts\|/);
     expect(prompt).not.toContain('đó không phải dàn bài');
     // brief is still the short continuous answer: one message, no headings, no outline.
     expect(buildWalkthroughPrompt({ ...input, depth: 'brief' })).toContain('Độ sâu brief: tối đa khoảng 170 từ');
