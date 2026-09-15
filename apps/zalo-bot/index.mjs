@@ -24,7 +24,7 @@ import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 import { answerByHs, answerImage, codeOffer, handleConfirm, handleCorrection, missingDocAnswer } from './answer.mjs';
 import { ackIngestReports, answer, confirmations, ingestReports, legalProvision, lookupFull, requestIngest, verifyDocument } from './api.mjs';
 import { loadContext, nextState, saveContext, stampTariff } from './conversation.mjs';
-import { confirmVerdict, fastPath, fold, guardIntent, isBareLookup, isOkay, parseVerifyDocCommand, readsAsQuestion, unlikeTariffReply } from './dispatch.mjs';
+import { fastPath, fold, guardIntent, isBareLookup, isOkay, parseVerifyDocCommand, plainVerdict, readsAsQuestion, unlikeTariffReply } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
 import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatProvisions, sanitizeLead } from './format.mjs';
 import { parseQuery, stripMentions, todayVN } from './parse.mjs';
@@ -158,7 +158,7 @@ async function rateWithProse(q, body, showFooter, plan = {}) {
  * trả lời cũ của bot luôn chứa mã HS, nên nếu cho regex soi cả ngữ cảnh thì một câu hỏi pháp luật reply vào tin có
  * "8481.10.11" sẽ bị bắt nhầm thành tra thuế.
  */
-export async function respond({ text, image, quote, ctx, senderName, threadId, userId, notify }) {
+export async function respond({ text, image, quote, ctx, senderName, threadId, userId, notify, lastReplyElsewhere = false }) {
   const quoteText = String(quote?.msg || '');
   const quoted = quoteText || null;
   const deadlineAt = new Date(Date.now() + ANSWER_BUDGET_MS).toISOString();
@@ -188,6 +188,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     candidatesFresh: ctx.candidatesFresh,
     table: ctx.state?.tariff ?? null,
     pendingIngest: Boolean(pending),
+    lastReplyElsewhere,
   });
   if (fast?.action === 'ingest') {
     const q = await requestIngest({ number: pending.number, requestedBy: senderName, threadId, userId });
@@ -204,6 +205,8 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   if (fast?.action === 'greeting') return { text: CAPABILITIES, topic: 'general', intent: 'general' };
   if (fast?.action === 'confirm') return { ...(await handleConfirm(ctx.tariff, fast.verdict, senderName)), intent: 'confirm' };
   if (fast?.action === 'correction') return { ...(await handleCorrection(ctx.tariff, text, senderName, quote)), intent: 'correction' };
+  // Phán quyết trên ảnh (trả lời ảnh, hay chú thích ảnh mới): lời mời nêu kết quả đang nhớ, không ghi, không chạy lại vision (R13).
+  if (fast?.action === 'offer') return { ...(await codeOffer(ctx.tariff, null)), intent: 'confirm' };
 
   // 2. Ảnh: vision nhận diện mặt hàng rồi đi tiếp đường tra thuế tất định.
   if (image) return { ...(await answerImage(image.imageUrls, text)), intent: 'tariff' };
@@ -215,8 +218,14 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   if (direct && isBareLookup(text)) {
     return { ...(await rateWithProse(direct, { q: text, quote: quoted, deadlineAt }, !ctx.tariffFresh)), intent: 'tariff' };
   }
-  // "ok" ở đâu cũng là "đã xem"; "đúng" sau bất cứ gì không phải kết quả tra thuế là đồng ý: không có gì để ghi, không soạn lại câu cũ.
-  if (isOkay(text) || (confirmVerdict(text) === 'correct' && ctx.topic !== 'tariff')) return { text: AGREED, intent: 'general' };
+  // "ok" ở đâu cũng là "đã xem"; "đúng", "chuẩn rồi" sau bất cứ gì không phải kết quả tra thuế là đồng ý: không có gì để ghi, không
+  // soạn lại câu cũ.
+  const verdictWord = plainVerdict(text);
+  if (isOkay(text) || (verdictWord === 'correct' && ctx.topic !== 'tariff')) return { text: AGREED, intent: 'general' };
+  // Trên kết quả tra còn mới, từ phán quyết mà sổ không ghi ("chuẩn rồi", "chưa chắc", hay "đúng" khi bàn đã đóng): lời mời nêu mã
+  // vừa tra và đúng lệnh cần gửi, không ghi (R13). Chỉ khi không quote: quote một lượt tra cũ hay một câu soạn thì từ đó trả lời tin
+  // được quote, không phải mã đang nhớ.
+  if (verdictWord && !quoteText && ctx.topic === 'tariff' && ctx.tariffFresh) return { ...(await codeOffer(ctx.tariff, null)), intent: 'confirm' };
   // POST /answer từ chối câu quá 2.000 ký tự: "thử lại sau" không bao giờ giúp được.
   if (text.length > 2000) return { text: TOO_LONG, intent: 'general' };
 
@@ -248,7 +257,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     return { ...missingDocAnswer(asked(plan), res.missingDoc, res, res.asOf ?? plan.date), intent: 'legal' };
   }
   // No usable reply ("đúng" after the lookup expired, a refine with nothing to refine): one short line, never the capabilities.
-  if (intent === 'general') return { text: formatGeneral(plan.reply, confirmVerdict(text) ? AGREED : UNCLEAR), topic: 'general', intent };
+  if (intent === 'general') return { text: formatGeneral(plan.reply, verdictWord ? AGREED : UNCLEAR), topic: 'general', intent };
   // Phán quyết không có cue tường minh ("63079090 mới đúng"): một lời mời, không ghi sổ. Cue tường minh đã đi bước 1 (§6.3).
   if (intent === 'confirm' || intent === 'correction') return { ...(await codeOffer(ctx.tariff, direct)), intent };
   if (intent === 'tariff') {
@@ -323,18 +332,28 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
 }
 
 // --- Main -------------------------------------------------------------------
-async function main() {
-  const api = await connect();
-  let myId = '';
-  try {
-    const own = await api.getOwnId();
-    myId = String(own?.uid ?? own ?? '');
-  } catch {
-    /* không lấy được uid → group vẫn lọc theo tên d/dName không có; sẽ yêu cầu tag */
-  }
-  console.log(`[zalo] đăng nhập OK${myId ? ` (id ${myId})` : ''}. API=${API}. Group: chỉ trả lời khi được @tag. Allowlist=${ALLOWED.length ? ALLOWED.join(',') : '(mở)'}`);
 
-  api.listener.on('message', async (msg) => {
+/** The user each thread's last bot message answered. In memory: a restart forgets, and forgetting only closes the no-quote path. */
+const lastAnswered = new Map();
+const queues = new Map();
+
+/** Run `task` once the task queued before it under `key` has settled. */
+export function inTurn(key, task) {
+  const run = (queues.get(key) ?? Promise.resolve()).then(task);
+  const settled = run.catch(() => {});
+  queues.set(key, settled);
+  settled.then(() => queues.get(key) === settled && queues.delete(key));
+  return run;
+}
+
+/**
+ * The Zalo message listener. A user's messages in a thread are handled one after another: a compose sends its notice about a
+ * minute before its reply and memory is saved only after the reply, so a "đúng rồi" answering the notice was read against the
+ * lookup two messages up and written (R13). Queued, it is read once the composed reply is saved. Every message sent records whom
+ * it answered: in a group the bot's last message may answer a colleague, and a ruling with no quote answers that message.
+ */
+export function messageHandler(api, myId = '') {
+  const handle = async (msg) => {
     try {
       if (msg.isSelf) return;
       if (ALLOWED.length && !ALLOWED.includes(msg.threadId)) return;
@@ -366,22 +385,27 @@ async function main() {
       const userId = String(msg.data?.uidFrom || '');
       const senderName = (msg.data?.dName || '').trim() || 'bạn';
       const ctx = await loadContext(msg.threadId, userId);
+      const lastReplyElsewhere = lastAnswered.get(msg.threadId) !== userId;
+      const send = (content) => {
+        lastAnswered.set(msg.threadId, userId);
+        return api.sendMessage(content, msg.threadId, msg.type);
+      };
 
       // Vision mất ~15-30s: báo ngay để người dùng không tưởng bot treo.
       if (image) {
-        await api.sendMessage({ ...wire(render('Mình đang xem ảnh, bạn chờ khoảng 20 giây nhé.')[0]), quote: msg.data }, msg.threadId, msg.type).catch(() => {});
+        await send({ ...wire(render('Mình đang xem ảnh, bạn chờ khoảng 20 giây nhé.')[0]), quote: msg.data }).catch(() => {});
       }
 
       // A long answer path (code check) says it is working, as the image path does.
-      const notify = (t) => api.sendMessage({ ...wire(render(t)[0]), quote: msg.data }, msg.threadId, msg.type).catch(() => {});
-      const result = await respond({ text, image, quote: msg.data?.quote, ctx, senderName, threadId: msg.threadId, userId, notify });
+      const notify = (t) => send({ ...wire(render(t)[0]), quote: msg.data }).catch(() => {});
+      const result = await respond({ text, image, quote: msg.data?.quote, ctx, senderName, threadId: msg.threadId, userId, notify, lastReplyElsewhere });
       if (process.env.BOT_DEBUG) {
         console.log(`[zalo] topic=${ctx.topic ?? '-'} tariffFresh=${ctx.tariffFresh} → intent=${result.intent}`);
       }
       // Only the first part quotes the question. Memory is saved right after it, so a later part
       // failing never costs the "đúng"/"sai" that follows (tariffFresh).
       const parts = render(result.text);
-      await api.sendMessage({ ...wire(parts[0]), quote: msg.data }, msg.threadId, msg.type);
+      await send({ ...wire(parts[0]), quote: msg.data });
 
       // Ghi nhớ SAU khi đã trả lời — lỗi lưu trí nhớ không được làm mất câu trả lời.
       // `tariff`/`legal`/`answer` vắng mặt = giữ nguyên phần trí nhớ đó; null = xoá (không còn gì để trỏ tới).
@@ -398,17 +422,33 @@ async function main() {
       });
       for (const p of parts.slice(1)) {
         // Part 1 is delivered and remembered: a later failure only logs, never sends the generic error.
-        await api.sendMessage(wire(p), msg.threadId, msg.type).catch((e) => console.warn('[zalo] send part failed:', e?.message));
+        await send(wire(p)).catch((e) => console.warn('[zalo] send part failed:', e?.message));
       }
     } catch (e) {
       console.error('[zalo] lỗi xử lý tin:', e?.message);
+      lastAnswered.delete(msg.threadId);
       try {
         await api.sendMessage(wire(render('Xin lỗi, có lỗi khi tra cứu. Thử lại sau.')[0]), msg.threadId, msg.type);
       } catch {
         /* ignore */
       }
     }
-  });
+  };
+  return (msg) => inTurn(`${msg.threadId}:${msg.data?.uidFrom ?? ''}`, () => handle(msg));
+}
+
+async function main() {
+  const api = await connect();
+  let myId = '';
+  try {
+    const own = await api.getOwnId();
+    myId = String(own?.uid ?? own ?? '');
+  } catch {
+    /* không lấy được uid → group vẫn lọc theo tên d/dName không có; sẽ yêu cầu tag */
+  }
+  console.log(`[zalo] đăng nhập OK${myId ? ` (id ${myId})` : ''}. API=${API}. Group: chỉ trả lời khi được @tag. Allowlist=${ALLOWED.length ? ALLOWED.join(',') : '(mở)'}`);
+
+  api.listener.on('message', messageHandler(api, myId));
 
   // Ingest takes minutes, long past the message that asked for it, so the outcome comes
   // home on its own. Acknowledge only AFTER the message is sent: re-reporting once is a
@@ -419,6 +459,7 @@ async function main() {
       const delivered = [];
       for (const r of reports) {
         if (!r.threadId) { delivered.push(r.id); continue; }
+        lastAnswered.delete(r.threadId); // a report answers nobody's ruling
         // The queue row does not record whether the thread was a group or a 1-1 chat,
         // so try both rather than adding a column for it — a wrong ThreadType is the
         // only way this send fails, and one retry costs nothing.

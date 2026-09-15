@@ -39,7 +39,8 @@ export async function loadContext(threadId, userId) {
 
 /**
  * Stamp a tariff result with the time it was produced, so freshness is about IT, not the chat. `open`: this reply shows the
- * lookup, so a "đúng"/"sai" right after it answers it (fastPath).
+ * lookup, so a "đúng"/"sai" right after it answers it (fastPath). A new stamp starts without `ruled`, which a recorded ruling sets
+ * (answer.mjs) to close that table for good.
  */
 export const stampTariff = (lookup) => (lookup ? { ...lookup, at: new Date().toISOString(), open: true } : null);
 

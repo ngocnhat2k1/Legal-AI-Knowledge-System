@@ -24,7 +24,7 @@ import { stampTariff } from './conversation.mjs';
 import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, rulingLine, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
 import { CODE_MARK, codebook, ruling } from './dispatch.mjs';
-import { citationFrom, cleanGazetteTitle, detectOrigin, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
+import { citationFrom, cleanGazetteTitle, detectOrigin, keywordFrom, missingKind, ORIGIN_LABEL, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
 import { L } from './render.mjs';
 import { claudeVision } from './router.mjs';
 
@@ -140,6 +140,8 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   const borderline = hintGroups.length ? new Set(hintGroups.slice(0, 2)).size >= 2 : reps.length >= 2;
 
   const top = cands[0];
+  // Three candidates side by side, none looking settled: no FTA block, no rate lead of its own.
+  const top3 = [top, ...reps.filter((c) => c.hs !== top.hs).slice(0, 2)];
   const full = await lookupFull(top.hsDotted, origin, date);
   const confirm = full ? await confirmations(top.hsDotted, origin) : null;
   // /tariff/search prices MFN at Postgres CURRENT_DATE (UTC): print it only when that is the lookup date (R8).
@@ -157,8 +159,6 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   }
 
   if (borderline && !citedRuling) {
-    // Three candidates side by side, none looking settled: no FTA block, no rate lead of its own.
-    const top3 = [top, ...reps.filter((c) => c.hs !== top.hs).slice(0, 2)];
     lines.push(
       L(['Mặt hàng có thể thuộc nhiều nhóm — cần bạn hoặc chuyên viên chốt mã (kèm số công văn nếu có) trước khi khai.'], 'warn'),
       ...top3.map((c) => L([[c.hsDotted, 'b'], ' · ', [cleanGazetteTitle('', c.heading || tail(c), 50), 'i'], ' · MFN ', [mfnOf(c), 'b']], 'ul')),
@@ -190,10 +190,14 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
     );
   }
 
+  // Three codes side by side are candidates, not a lookup: a "đúng" names no code, and "HS đúng là <the second>" must not record the
+  // first as wrong (round 4).
   const tariff =
-    full || citedRuling
-      ? stampTariff({ hs: top.hsDotted.replace(/\./g, ''), dotted: top.hsDotted, origin, date, snapshot: full || null, desc, keywords: productKw })
-      : null;
+    borderline && !citedRuling
+      ? stampTariff({ hs: null, candidates: top3.map((c) => c.hsDotted), desc, keywords: productKw })
+      : full || citedRuling
+        ? stampTariff({ hs: top.hsDotted.replace(/\./g, ''), dotted: top.hsDotted, origin, date, snapshot: full || null, desc, keywords: productKw })
+        : null;
   return { text: withLead(sanitizeLead(clues?.lead, ''), lines), topic: 'tariff', tariff };
 }
 
@@ -395,6 +399,8 @@ export async function handleConfirm(tariff, verdict, senderName) {
   return {
     text: [L(['Đã ghi nhận ', [label, 'b'], ' cho mã ', [tariff.dotted, 'b'], ` (${tariff.origin ? `xuất xứ ${tariff.origin}, ` : ''}ngày ${dmy(tariff.date)}). Cảm ơn ${senderName}.`])],
     topic: 'tariff',
+    // Ruled: no second verdict on this table, quoting the lookup or after an offer (R13).
+    tariff: { ...tariff, open: false, ruled: true },
   };
 }
 
@@ -433,6 +439,19 @@ export async function handleCorrection(tariff, text, senderName, quote) {
       topic: 'tariff',
     };
   }
+  // The origin a ruling names is the origin of the goods ruled on, and later staff read confirmations by code and origin (R18):
+  // "HS đúng là 8481.80.99 xuất xứ Nhật Bản" after the TQ lookup wrote CN, after a lookup with no origin none. The code in memory
+  // is recorded only when its lookup had that origin: look that origin up first.
+  const origin = detectOrigin(text);
+  if (old?.hs && origin && origin !== (old.origin || null)) {
+    const country = ORIGIN_LABEL[origin] ?? origin;
+    const looked = old.origin ? `với xuất xứ ${ORIGIN_LABEL[old.origin] ?? old.origin}` : 'không kèm xuất xứ';
+    return {
+      text: [L(['Mình chưa ghi nhận gì: mã ', [old.dotted, 'b'], ` vừa tra ${looked}, còn tin của bạn nêu xuất xứ ${country}. Bạn tra với xuất xứ đó trước (nhắn "${old.dotted} xuất xứ ${country}"), rồi nhắn lại nhé.`])],
+      topic: 'tariff',
+    };
+  }
+
   // A reply never says a verdict was recorded unless the write succeeded (R13); a failed one keeps memory (no `tariff`
   // key), so the same message can be sent again.
   const failed = { text: 'Ghi nhận bị lỗi, bạn thử lại sau nhé.', topic: 'tariff' };
@@ -444,8 +463,8 @@ export async function handleCorrection(tariff, text, senderName, quote) {
     return {
       text: [L(['Đã xác nhận mã ', [old.dotted, 'b'], `${old.origin ? ` (xuất xứ ${old.origin})` : ''} là đúng. Cảm ơn ${senderName}.`])],
       topic: 'tariff',
-      // An acknowledgement is not the lookup: a "đúng"/"ok" after it thanks the reply.
-      tariff: tariff?.hs ? { ...stampTariff({ ...old, desc: prodDesc || undefined, keywords: prevKw }), open: false } : null,
+      // An acknowledgement is not the lookup: a "đúng"/"ok" after it thanks the reply, and the table takes no second ruling.
+      tariff: tariff?.hs ? { ...stampTariff({ ...old, desc: prodDesc || undefined, keywords: prevKw }), open: false, ruled: true } : null,
     };
   }
 
@@ -460,7 +479,6 @@ export async function handleCorrection(tariff, text, senderName, quote) {
 
   // Tra mã đúng TRƯỚC khi ghi: mã không tra được thì không ghi dòng nào, kể cả dòng 'wrong' của mã cũ, và nói rõ là chưa ghi.
   // Xuất xứ chỉ lấy khi lời sửa nêu rõ (không kéo theo xuất xứ cũ có thể sai).
-  const origin = detectOrigin(text);
   const res = await tariffResponse(fix.hs, origin, fix.date).catch(() => null);
   if (!res?.ok) {
     const why = res?.status === 404 ? 'không có trong dữ liệu đã nạp' : 'chưa gọi được dịch vụ tra cứu';
@@ -486,7 +504,7 @@ export async function handleCorrection(tariff, text, senderName, quote) {
     text: [head, L([]), ...formatAnswer({ dotted: fix.dotted, origin, date: fix.date }, data, confirm)],
     topic: 'tariff',
     // The new code's block is shown, but its verdict was just recorded: a "đúng" after it thanks the reply (no second row).
-    tariff: { ...stampTariff({ hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data, desc: prodDesc || undefined, keywords: prevKw }), open: false },
+    tariff: { ...stampTariff({ hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data, desc: prodDesc || undefined, keywords: prevKw }), open: false, ruled: true },
   };
 }
 
@@ -495,6 +513,10 @@ export async function handleCorrection(tariff, text, senderName, quote) {
  * what would be recorded, so the ledger only gets a verdict the user typed on purpose. `fix`: the code in the message, or null.
  */
 export async function codeOffer(tariff, fix) {
+  // A table whose ruling was recorded takes no second one (R13): it is not reopened, and "chưa ghi nhận gì" would be untrue.
+  if (tariff?.ruled) {
+    return { text: [L(['Mình đã ghi nhận phán quyết cho mã ', [tariff.dotted, 'b'], ' vừa rồi nên không ghi thêm. Muốn ghi nhận khác, bạn tra lại mã rồi nhắn "đúng", "sai" hoặc "HS đúng là <mã>".'])] };
+  }
   const desc = String(tariff?.desc || '').replace(/\s+/g, ' ').trim();
   const forDesc = desc ? [' cho ', [desc, 'i']] : [];
   if (!fix) {
