@@ -167,6 +167,16 @@ const EN_NOTE = 'tài liệu hướng dẫn áp dụng của cơ quan hải quan
 const R5 = 'Hàng khó chốt thì có thể đề nghị hải quan xác định trước mã số.';
 const HINT = 'Cần xem thuế của mã nào thì nhắn mã đó kèm xuất xứ.';
 const CUT = 'Một phần câu trả lời bị lược vì không dẫn được nguồn.';
+
+// coverage 'none' is what the API sets when §4.1 dropped every sentence the model wrote; the prose that is left is the
+// goods section code writes, so "một phần" would be false. `written` used to carry this and stopped when the dropped
+// path began keeping code's sections (2026-09-15).
+test('the trimming note never says "một phần" when none of the prose stood', () => {
+  const some = formatAnswerMd({ ...HS_PHOTO, cut: 2, coverage: 'partial', answerMd: '## I. THÔNG TIN HÀNG HÓA\nBạn đã cho biết:\n- thép' });
+  assert.ok(toText(some).includes(CUT), 'a partly cut answer still says a part was trimmed');
+  const none = formatAnswerMd({ ...HS_PHOTO, cut: 2, coverage: 'none', answerMd: '## I. THÔNG TIN HÀNG HÓA\nBạn đã cho biết:\n- thép' });
+  assert.ok(!toText(none).includes(CUT), toText(none));
+});
 const cite = (n, over) => ({
   n, key: `e:${n}`, kind: 'en', label: '', instrument: 'CV 1810/TCHQ-TXNK', hsHeading: null, quotes: [], authority: 'authoritative',
   note: EN_NOTE, verification: 'auto_unverified', window: 'current', expired: null, effectiveness: 'con_hieu_luc',

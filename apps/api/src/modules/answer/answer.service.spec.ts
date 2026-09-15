@@ -7,7 +7,7 @@ import type { ClaudeOpts } from './claude';
 import { SYSTEM } from './compose';
 import { userCodesIn } from './guards';
 import { PLAN_SYSTEM } from './plan';
-import { SECTION_TITLES, WALKTHROUGH_SYSTEM } from './walkthrough.run';
+import { CUT_ALL, SECTION_TITLES, WALKTHROUGH_SYSTEM } from './walkthrough.run';
 
 // Every message below is written for the test; none is a real user's.
 
@@ -549,8 +549,28 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     // 25 s left: enough for the walkthrough, never enough for the repair pass.
     const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS });
     const res = await svc.answer({ ...PHOTO_BODY, deadlineAt: Date.now() + 25_000 });
-    expect(res).toMatchObject({ mode: 'hs', answerMd: '', reason: 'compose_failed' });
+    // The model gave nothing usable, so nothing of its prose may appear — but the asker still gets what code knows:
+    // the goods they described and what is still open (owner decision 2026-09-15).
+    expect(res).toMatchObject({ mode: 'hs', reason: 'compose_failed' });
+    expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
+    expect(res.answerMd).toContain('Mình chưa kịp viết phần lập luận');
+    expect(res.answerMd).not.toContain('## II.');
     expect(res.citations.map((c) => c.n)).toEqual([1]);
+  });
+
+  // The bot spends one /answer call planning before this one, so the second call never sees the whole compose cap:
+  // gating full on the cap made it unreachable through the bot, which is how full went unused until 2026-09-15. The
+  // gate is full's own slowest measured run plus a little, so a turn with room for it gets it.
+  it('full needs room for its own slow tail, not the whole compose cap', async () => {
+    const ask = async (left: number) => {
+      const { svc, prompts } = setup({ plan: PHOTO_PLAN, walks: [PHOTO_WALK], sources: [EN3005], hsRows: HS_ROWS });
+      await svc.answer({ ...PHOTO_BODY, deadlineAt: Date.now() + left });
+      return prompts(WALKTHROUGH_SYSTEM)[0]!.prompt;
+    };
+    // A bot turn that spent ~30 s planning still reaches full.
+    expect(await ask(120_000)).toContain('Độ sâu full');
+    // Below full's measured tail it is brief, which still prints every section title.
+    expect(await ask(112_000)).toContain('Độ sâu brief');
   });
 
   it('a deadline too short for the full walkthrough asks for brief, looks no rate up, and points at no block', async () => {
@@ -568,7 +588,9 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
       run.mockResolvedValueOnce({ text: JSON.stringify(PHOTO_PLAN), isError: false, durationMs: 1 }).mockResolvedValueOnce(reply as never);
       const res = await svc.answer(PHOTO_BODY);
       expect(prompts(SYSTEM)).toHaveLength(0);
-      expect(res).toMatchObject({ mode: 'hs', answerMd: '', calls: 2, reason: 'compose_failed' });
+      expect(res).toMatchObject({ mode: 'hs', calls: 2, reason: 'compose_failed' });
+      expect(res.answerMd).toContain('Mình chưa kịp viết phần lập luận');
+      expect(res.answerMd).not.toContain('## II.');
       expect(res.citations.map((c) => c.n)).toEqual([1]);
     }
   });
@@ -605,7 +627,12 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
       const { svc, prompts } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS });
       const res = await svc.answer({ ...PHOTO_BODY, deadlineAt: Date.now() + 25_000 });
       expect(prompts(undefined)).toHaveLength(0);
-      expect(res).toMatchObject({ mode: 'hs', answerMd: '', coverage: 'none', tariffRef: [] });
+      expect(res).toMatchObject({ mode: 'hs', coverage: 'none', tariffRef: [] });
+      // §4.1 doubts the model's prose, not the sections code writes from the planner's own reading.
+      expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
+      expect(res.answerMd).not.toContain('## II.');
+      // And it says the reasoning is gone: without this the reply reads as a finished report with no reasoning in it.
+      expect(res.answerMd).toContain(CUT_ALL);
     }
   });
 
@@ -649,7 +676,9 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     };
     const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
     const res = await svc.answer({ q: 'miếng dán bàn chân ngải cứu thì khai nhóm nào' });
-    expect(res).toMatchObject({ depth: 'full', answerMd: '', tariffRef: [] });
+    expect(res).toMatchObject({ depth: 'full', tariffRef: [] });
+    expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
+    expect(res.answerMd).not.toContain('## II.');
     expect(res.citations.map((c) => c.n)).toEqual([1]);
   });
 

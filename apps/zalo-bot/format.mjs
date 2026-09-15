@@ -444,8 +444,10 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false } = {
       })),
     ),
   );
-  // All of it cut: NO_PROSE above already says so, and "một phần" would be false.
-  if (res.cut > 0 && written) lines.push(L(['Một phần câu trả lời bị lược vì không dẫn được nguồn.'], 'note'));
+  // All of it cut: the API says so in the answer itself (CUT_ALL) or through NO_PROSE above, and "một phần" would be
+  // false. `written` stopped meaning "some prose stood" when a dropped walkthrough began keeping code's own sections;
+  // coverage 'none' is what the API sets exactly then.
+  if (res.cut > 0 && written && res.coverage !== 'none') lines.push(L(['Một phần câu trả lời bị lược vì không dẫn được nguồn.'], 'note'));
   // Two tariff blocks carry the same scope warning; render would merge it into one orange line saying it twice.
   const seen = new Set();
   return lines.filter((l) => !l.marks?.includes('warn') || (!seen.has(toText([l])) && seen.add(toText([l]))));

@@ -94,8 +94,12 @@ async function connect() {
   }
 }
 
-/** Plan 08 §2.3: a reply is due 120 s after the message arrived; the API holds its steps to `deadlineAt`. */
-const ANSWER_BUDGET_MS = 120_000;
+/**
+ * Plan 08 §2.3: a reply is due this long after the message arrived; the API holds its steps to `deadlineAt`. Raised from
+ * 120 s (owner, 2026-09-15): the nine-section walkthrough ran 51 s, 57 s and 110 s on the same question, and the run over
+ * the old cap lost every sentence it had written. The slow tail is what this covers, not the normal turn.
+ */
+const ANSWER_BUDGET_MS = 150_000;
 const NOT_READ = 'Mình chưa đọc được câu hỏi lúc này, bạn thử lại sau ít phút nhé.';
 const NOT_COMPOSED = 'Mình chưa soạn được câu trả lời lúc này, bạn thử lại sau ít phút nhé.';
 const NEEDS_GOODS = 'Để xem mã bạn nêu có hợp không, mình cần biết hàng là gì: bạn mô tả giúp mình chất liệu, công dụng và cách trình bày của hàng nhé.';

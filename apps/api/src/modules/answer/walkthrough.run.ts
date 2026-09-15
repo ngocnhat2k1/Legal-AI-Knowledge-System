@@ -382,6 +382,20 @@ export function factsBlock(goods: { facts: string[]; missing: string[] }): strin
 }
 
 /**
+ * What the reply says when the walkthrough itself never finished: the goods section alone, under one line saying the
+ * reasoning is missing. Nothing here is the model's, so it costs no time and cannot be wrong — and it is what R3/R5 want
+ * said anyway. Empty when the planner read no goods at all, and then the bot prints its sources as before.
+ */
+export const UNFINISHED = 'Mình chưa kịp viết phần lập luận cho câu này. Bạn nhắn lại để mình đọc chú giải kỹ hơn nhé.';
+/** The model DID write the reasoning here; every sentence of it failed the guards, so the wording differs from UNFINISHED. */
+export const CUT_ALL = 'Phần lập luận mình viết không dẫn đủ nguồn nên đã bị lược hết; ở trên chỉ là dữ kiện bạn nêu. Bạn nhắn lại để mình đọc chú giải kỹ hơn nhé.';
+
+export function unfinished(goods: { facts: string[]; missing: string[] }): string {
+  const facts = factsBlock(goods);
+  return facts ? `${flatten([], '', facts)}\n\n${UNFINISHED}` : '';
+}
+
+/**
  * The CHÍNH SÁCH CHUYÊN NGÀNH section, written here and never by the model (plan 08 §0; R12, R18). Each listing is its own
  * line with the entry verbatim; the rest are grouped, and a list the corpus does not hold reads "chưa nạp" — saying "Không"
  * about a list nobody checked is the failure this block exists to make impossible.
