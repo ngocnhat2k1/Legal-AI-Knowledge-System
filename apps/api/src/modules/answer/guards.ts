@@ -287,11 +287,19 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
     return marks.length ? marks : cited;
   };
   // A span is normalised once and what each body holds is remembered for the call (the rates and settling passes read the
-  // same spans); only the first 20 spans of a sentence are read as wording, the rest as written, which fails closed.
+  // same spans). Only the first 20 spans of a sentence are read as wording, and the whole call makes at most 40 lookups of
+  // a span in a body, over 2,000,000 body characters in all: past either, a span is read as written, which fails closed,
+  // and is not remembered. The counts only grow, so the settling pass refuses what the rates pass refused and they agree.
   const held = new Map<string, boolean>();
+  let [lookups, searched] = [0, 0];
   const heldIn = (n: number, q: string): boolean => {
     const key = `${n}\n${q}`;
-    if (!held.has(key)) held.set(key, holds(q, bodyOf(n)));
+    if (held.has(key)) return held.get(key)!;
+    const body = bodyOf(n);
+    lookups += 1;
+    searched += body.length;
+    if (lookups > 40 || searched > 2_000_000) return false;
+    held.set(key, holds(q, body));
     return held.get(key)!;
   };
   const unquoted = (s: string): string => {

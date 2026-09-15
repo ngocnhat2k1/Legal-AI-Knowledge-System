@@ -22,7 +22,7 @@ describe('compose prompts (plan 08 §3)', () => {
     expect(SYSTEM).toContain('QUY ƯỚC ĐỌC BẰNG CHỨNG');
     expect(SYSTEM).toContain('Thứ tự GRI bắt buộc');
     expect(SYSTEM).toContain('Không bao giờ viết thuế suất, phần trăm, số tiền');
-    // A figure written differently from its source ("20 triệu đồng" for "20.000.000 đồng") is one no quote holds (R10).
+    // A date or duration written differently from its source ("1 tháng" for "30 ngày") is one no quote holds (R10).
     expect(SYSTEM).toContain('không quy đổi đơn vị');
     expect(SYSTEM).not.toContain('ngải cứu');
   });

@@ -52,12 +52,18 @@ describe('ratesInProse — rates live in the code-built block, never in prose (o
       'Mỗi gói chứa từ 1 tỷ-10 tỷ CFU [1].',
       'Mỗi gói chứa 1 tỷ – 10 tỷ CFU [1].',
       'Nhóm 38.24 có khoảng 2 nghìn, tùy cách đếm [2].',
-      // Known ceiling: a per-unit amount reads as a count.
+      'Men vi sinh chứa 1 nghìn tỷ CFU [1].',
+      // Known ceilings (AMOUNT): a per-unit amount, a unit word before "(" or ", " and a word, and "đô" read as counts.
       'Phạt 20 triệu/lần vi phạm.',
+      'Phạt 50 triệu (đối với cá nhân).',
+      'Phạt tối đa 1 tỷ, đối với tổ chức gấp đôi.',
+      'Phạt 20 triệu đô.',
     ];
     const amounts = [
       'Phạt **20 triệu** đồng [1].',
       'Mức phạt 20 triệu đồng.',
+      'Doanh thu 7 nghìn tỷ đồng [1].',
+      'Doanh thu 7 nghìn tỷ.',
       'Mức 1 tỷ VND.',
       'Phạt **1 tỷ**.',
       'Phạt 20 triệu - 30 triệu đồng.',
@@ -447,6 +453,25 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     expect(verify(draft(spans(20), [rate]), [note], ctx()).violations).toContainEqual(expect.objectContaining({ rule: 'G1', sentence: spans(20) }));
   });
 
+  it('G1, G4: a verify call looks up at most 40 quoted spans, 2,000,000 body characters in all; past that a span is read as written', () => {
+    const body = 'Hàng chứa trên 50% tính theo trọng lượng là dược chất. Chế phẩm không chứa dược chất thì phải xét vào nhóm 38.24.';
+    const cite = [{ n: 1, quotes: ['trên 50% tính theo trọng lượng', 'chế phẩm không chứa dược chất thì phải xét vào nhóm 38.24'] }];
+    const rate = 'Chú giải chỉ nhận hàng chứa “trên 50% tính theo trọng lượng” là dược chất [1].';
+    const settle = 'Chú giải viết “chế phẩm không chứa dược chất thì phải xét vào nhóm 38.24” [1].';
+    const fillers = (k: number) => Array.from({ length: k }, (_, i) => `Chú giải không ghi “câu mẫu số ${i} không có trong chú giải” [1]. `).join('');
+    const rules = (k: number, note: Source) => verify(draft(`${fillers(k)}${rate} ${settle}`, cite), [note], ctx()).violations.map((v) => [v.rule, v.sentence]);
+    const small = source({ kind: 'hs_note', label: 'Chú giải Chương 30', body });
+    // Spans each distinct: the rates pass looks up 40 and refuses the rest, and the settling pass refuses the same ones.
+    expect(rules(38, small)).toEqual([]);
+    expect(rules(39, small)).toEqual([['G4', settle]]);
+    expect(rules(40, small)).toEqual([['G1', rate], ['G4', settle]]);
+    // A body of 600,000 characters: three lookups fit in 2,000,000 characters, a fourth does not.
+    const large = { ...small, body: `${'đoạn đệm. '.repeat(60_000)}${body}` };
+    expect(rules(1, large)).toEqual([]);
+    expect(rules(2, large)).toEqual([['G4', settle]]);
+    expect(rules(3, large)).toEqual([['G1', rate], ['G4', settle]]);
+  });
+
   it('G4: two candidates with no missing fact is a violation for repair only', () => {
     const d = draft('Hai hướng [1] [2].', [q1, q2], { candidates: [{ hs: '30.05', evidence: [1] }, { hs: '38.24', evidence: [2] }] });
     const r = verify(d, [en3005, en3824], ctx());
@@ -569,68 +594,73 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
   });
 });
 
-describe('guards run on every answer in the event loop: linear on 10,000-character adversarial prose', () => {
-  const N = 10_000;
-  const fill = (unit: string, n = N): string => unit.repeat(Math.ceil(n / unit.length)).slice(0, n);
-  const numbered = (unit: (i: number) => string, n = N): string => {
+describe('guards run on every answer in the event loop: linear in the length of adversarial prose', () => {
+  const numbered = (unit: (i: number) => string, n: number): string => {
     let s = '';
     for (let i = 0; s.length < n; i++) s += unit(i);
     return s.slice(0, n);
   };
-  const [spaces, stars] = [' '.repeat(N), '*'.repeat(N)];
   // Three criteria bodies of 80,000 characters, as long as a whole Chapter note.
   const bodies = [0, 1, 2].map((k) => numbered((i) => `đoạn ${k}-${i} chú giải chương 38 chế phẩm hóa chất. `, 80_000));
-  const inputs = [
-    // Runs of digits, spaces and line breaks.
-    fill('1'),
-    fill('1.'),
-    `${fill('1', N / 2)}${' '.repeat(N / 2)}triệu x`,
-    `x${spaces}x`,
-    `x${'\n'.repeat(N)}x`,
-    fill('1. \n'),
-    fill(' 1.'),
-    // Stars, list and heading markers before spaces, a verdict label before stars.
-    stars,
-    ...['*', '#', '>', '•', '-'].map((m) => `${m}${spaces}x 38.24`),
-    `**Kết luận:**${stars} x 38.24`,
-    `Kết luận:${fill('* ')} 38.24`,
-    `Kết luận${fill(' :')} 38.24`,
-    fill('Kết luận: 38.24 '),
-    // Settling verbs and what negates them, repeated.
-    `38.24 ${fill('để phải ')}`,
-    `38.24 ${fill('phải ')}x`,
-    `x${spaces}để phải xét 38.24`,
-    `38.24 không${spaces}chốt 38.24`,
-    `38.24 không${fill(' thể')} chốt 38.24`,
-    // Conditions: many khi/nếu/thì, one spread by spaces, what is not known before a hedged or listed verb.
-    `38.24 ${fill('khi ')}phải xét 38.24`,
-    fill('khi nếu thì '),
-    `Khi chưa rõ${spaces}thì phải xét 38.24`,
-    fill('Nếu chưa rõ công dụng thì chưa nên vội chốt 38.24 '),
-    fill('nếu chưa rõ thì phải xét 38.24 và 30.05, '),
-    // Markers, headings, the user's code placed again and again, many sentences.
-    fill(' [1]'),
-    fill('[1, 2] '),
-    fill('38.24 [1] '),
-    fill('38.24, '),
-    fill('3005.10.10 thuộc mã '),
-    fill('Phải xét 38.24. '),
-    // What a quote is trimmed of, dots, quoted spans in any marks, a document number before a run of dots.
-    `x${fill('“”‘’…-,;:')}x`,
-    `x${'.'.repeat(N)}x`,
-    fill('. '),
-    fill('“bông, gạc, băng đã thấm tẩm dược chất” '),
-    numbered((i) => `“mẫu câu không có trong thân ${i}” `),
-    fill('“"'),
-    fill(`“${'a'.repeat(299)}`),
-    fill('thuế '),
-    `Theo 31/2022${'.'.repeat(N)}x [1].`,
-    `Số 12/2024${fill('.:')}x [1]`,
-    // Placements of codes other than the user's, or of its heading after the code, and alternating rate sentences.
-    fill('vào mã 1234 '),
-    `Mã 3005.10.10 ${fill('áp mã 30.05 ')}`,
-    fill('1 đ. a b. '),
-  ];
+  /** The adversarial inputs at about N characters, each built by repeating its unit. */
+  const inputsAt = (N: number): string[] => {
+    const fill = (unit: string, n = N): string => unit.repeat(Math.ceil(n / unit.length)).slice(0, n);
+    const [spaces, stars] = [' '.repeat(N), '*'.repeat(N)];
+    return [
+      // Runs of digits, spaces and line breaks.
+      fill('1'),
+      fill('1.'),
+      `${fill('1', N / 2)}${' '.repeat(N / 2)}triệu x`,
+      `${fill('1', N / 2)}${' '.repeat(N / 2)}nghìn tỷ x`,
+      fill('1 nghìn tỷ '),
+      `x${spaces}x`,
+      `x${'\n'.repeat(N)}x`,
+      fill('1. \n'),
+      fill(' 1.'),
+      // Stars, list and heading markers before spaces, a verdict label before stars.
+      stars,
+      ...['*', '#', '>', '•', '-'].map((m) => `${m}${spaces}x 38.24`),
+      `**Kết luận:**${stars} x 38.24`,
+      `Kết luận:${fill('* ')} 38.24`,
+      `Kết luận${fill(' :')} 38.24`,
+      fill('Kết luận: 38.24 '),
+      // Settling verbs and what negates them, repeated.
+      `38.24 ${fill('để phải ')}`,
+      `38.24 ${fill('phải ')}x`,
+      `x${spaces}để phải xét 38.24`,
+      `38.24 không${spaces}chốt 38.24`,
+      `38.24 không${fill(' thể')} chốt 38.24`,
+      // Conditions: many khi/nếu/thì, one spread by spaces, what is not known before a hedged or listed verb.
+      `38.24 ${fill('khi ')}phải xét 38.24`,
+      fill('khi nếu thì '),
+      `Khi chưa rõ${spaces}thì phải xét 38.24`,
+      fill('Nếu chưa rõ công dụng thì chưa nên vội chốt 38.24 '),
+      fill('nếu chưa rõ thì phải xét 38.24 và 30.05, '),
+      // Markers, headings, the user's code placed again and again, many sentences.
+      fill(' [1]'),
+      fill('[1, 2] '),
+      fill('38.24 [1] '),
+      fill('38.24, '),
+      fill('3005.10.10 thuộc mã '),
+      fill('Phải xét 38.24. '),
+      // What a quote is trimmed of, dots, quoted spans in any marks, a document number before a run of dots.
+      `x${fill('“”‘’…-,;:')}x`,
+      `x${'.'.repeat(N)}x`,
+      fill('. '),
+      fill('“bông, gạc, băng đã thấm tẩm dược chất” '),
+      numbered((i) => `“mẫu câu không có trong thân ${i}” `, N),
+      numbered((i) => `Chú giải ghi “mẫu câu không có trong thân ${i}” [1]. `, N),
+      fill('“"'),
+      fill(`“${'a'.repeat(299)}`),
+      fill('thuế '),
+      `Theo 31/2022${'.'.repeat(N)}x [1].`,
+      `Số 12/2024${fill('.:')}x [1]`,
+      // Placements of codes other than the user's, or of its heading after the code, and alternating rate sentences.
+      fill('vào mã 1234 '),
+      `Mã 3005.10.10 ${fill('áp mã 30.05 ')}`,
+      fill('1 đ. a b. '),
+    ];
+  };
   const subject = ctx({ userText: '3005.10.10 gồm những hàng gì', codeRole: 'subject', userCodes: ['3005.10.10'] });
   const guards: Array<[string, (s: string) => unknown]> = [
     ['splitSentences', (s) => splitSentences(s)],
@@ -655,18 +685,33 @@ describe('guards run on every answer in the event loop: linear on 10,000-charact
     ['numberMarkers', (s) => [numberMarkers(s, [1], [s], s), numberMarkers(s, [1], [s], s, { cut: true, labels: [s] })]],
   ];
 
-  // Best of three: another jest worker or a GC pause can stall one call past 50 ms, never all three, while a quadratic
-  // pattern takes 50 ms to seconds on every call at this length.
   const ms = (f: () => unknown): number => {
     const t = performance.now();
     f();
     return performance.now() - t;
   };
-  it.each(guards)('%s takes under 50 ms on each input', (_, guard) => {
+  const [at10k, at20k] = [inputsAt(10_000), inputsAt(20_000)];
+  const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[xs.length >> 1]!;
+  // Growth, not a wall-clock budget: under full jest the CPU is shared and a thread can move to a slower core for seconds.
+  // A best-of-three per length failed there twice (10 → 44 ms, 7 → 21 ms) on "38.24 để phải …", which alone takes 5.4 →
+  // 11 ms and doubles exactly up to 80,000 characters. Doubling the prose doubles a linear guard's time and quadruples a
+  // quadratic one's, so each input runs at 10,000 then at once 20,000 characters, up to five pairs, and the median ratio
+  // of the pairs must stay under 3: a slowdown skews only the pairs it overlaps. Under 5 ms at both lengths (best runs)
+  // passes too. The first super-linear input ends the test; a run over 1,000 ms at 20,000 characters, a hang, at once.
+  it.each(guards)('%s grows linearly with the length of each input', (_, guard) => {
     guard('Nếu chưa rõ công dụng thì phải xét 38.24 [1].');
-    const slow = inputs
-      .map((s) => [JSON.stringify(s.slice(0, 24)), Math.round(Math.min(ms(() => guard(s)), ms(() => guard(s)), ms(() => guard(s))))] as const)
-      .filter(([, t]) => t >= 50);
-    expect(slow).toEqual([]);
+    for (const [i, small] of at10k.entries()) {
+      const [t10, t20]: number[][] = [[], []];
+      const fast = (): boolean => Math.min(...t10) < 5 && Math.min(...t20) < 5;
+      const ratios = (): number[] => t20.map((t, k) => t / t10[k]!);
+      for (let k = 0; k < 5; k++) {
+        t10.push(ms(() => guard(small)));
+        t20.push(ms(() => guard(at20k[i]!)));
+        // Three passing pairs already fix the verdict of five.
+        if (t20[k]! >= 1000 || (k >= 2 && (fast() || ratios().filter((r) => r < 3).length >= 3))) break;
+      }
+      const linear = Math.max(...t20) < 1000 && (fast() || median(ratios()) < 3);
+      expect(linear ? [] : [JSON.stringify(small.slice(0, 24)), Math.round(Math.min(...t10)), Math.round(Math.min(...t20)), +median(ratios()).toFixed(1)]).toEqual([]);
+    }
   }, 300_000);
 });

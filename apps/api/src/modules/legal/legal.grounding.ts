@@ -66,15 +66,18 @@ const CURRENCY = '(?:đồng|VND|USD|đ)(?![\\p{L}\\d])';
 /** After a unit word: markdown or punctuation, then a word that is no currency. */
 const THEN_WORD = `[\\s*/()\\-–,]{0,8}(?!${CURRENCY})\\p{L}`;
 /**
- * An amount, shared with the answer guards' G1: a currency, or "triệu/tỷ/nghìn/ngàn" before a currency or no word at all:
- * "20 triệu đồng", "Phạt **20 triệu** đồng", "1 tỷ". A count stands before a word, through markdown, "/", "(", "," or a
- * dash to the range's own count: "1 tỷ CFU", "**1 tỷ** CFU", "1 tỷ/gói", "1 triệu (IU)", "1 tỷ-10 tỷ CFU", "2 nghìn, tùy".
- * Known ceiling: a per-unit amount ("20 triệu/lần") reads as a count. In the legal path "20 triệu đồng" against a
- * source's "20.000.000 đồng" empties the answer: both prompts tell the model to copy figures as the source writes them.
+ * An amount, shared with the answer guards' G1: a currency, or one or two of "triệu/tỷ/nghìn/ngàn" before a currency or no
+ * word at all: "20 triệu đồng", "7 nghìn tỷ đồng", "Phạt **20 triệu** đồng", "1 tỷ". A count stands before a word, through
+ * markdown, "/", "(", "," or a dash to the range's own count: "1 tỷ CFU", "**1 tỷ** CFU", "1 tỷ/gói", "1 triệu (IU)",
+ * "1 tỷ-10 tỷ CFU", "2 nghìn, tùy".
+ * Known ceilings, each read as a count: a per-unit amount ("20 triệu/lần"); a unit word before "(" or ", " and a word
+ * ("Phạt 50 triệu (đối với cá nhân)", "Phạt tối đa 1 tỷ, đối với tổ chức gấp đôi", "Phạt **20 triệu**, tịch thu"); and
+ * "đô", which is no currency ("Phạt 20 triệu đô"). In the legal path "20 triệu đồng" against a source's "20.000.000 đồng"
+ * empties the answer: both prompts tell the model to copy figures as the source writes them.
  * Not global: `test` keeps no lastIndex; numberMarkers builds its own global copy.
  */
 export const AMOUNT = new RegExp(
-  `\\d(?<!\\d[.,]*\\d)[\\d.,]*\\s*(?:${UNIT}(?:\\s{1,8}${CURRENCY}|(?!${THEN_WORD})(?![\\s*]{0,8}[-–][\\s*]{0,8}\\d[\\d.,]{0,20}\\s{0,8}${UNIT}${THEN_WORD}))|USD|VND|đồng|đ)(?![\\p{L}\\d])`,
+  `\\d(?<!\\d[.,]*\\d)[\\d.,]*\\s*(?:${UNIT}(?:\\s{1,8}${UNIT})?(?:\\s{1,8}${CURRENCY}|(?!${THEN_WORD})(?![\\s*]{0,8}[-–][\\s*]{0,8}\\d[\\d.,]{0,20}\\s{0,8}${UNIT}${THEN_WORD}))|USD|VND|đồng|đ)(?![\\p{L}\\d])`,
   'iu',
 );
 
