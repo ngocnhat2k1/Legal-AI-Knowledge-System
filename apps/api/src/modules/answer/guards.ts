@@ -3,7 +3,7 @@
  * the model is told in the prompt is also checked here, because a rule held only by prompt wording is not held (ADR
  * 2026-08-14). The sentence-level anchoring of numbers to their own citation stays in legal.grounding.ts numberMarkers.
  */
-import { cutPieces, dropInForceClaims, numberMarkers } from '../legal/legal.grounding';
+import { AMOUNT, cutPieces, dropInForceClaims, numberMarkers } from '../legal/legal.grounding';
 import type { Violation } from './types';
 
 const SENTENCE_END = /(?<=[.?!;])(?= )|(?<=\n)/;
@@ -18,7 +18,8 @@ export const splitSentences = (text: string): string[] =>
 // Guards run on every answer inside the API event loop, so every pattern here stays linear on 10,000 characters of
 // adversarial prose (guards.spec.ts times them): a number is read from its first digit only ("(?<!\d)", "\d(?<!\d[.,]*\d)"),
 // lookbehinds and spans are bounded, and no two adjacent quantifiers share a character.
-const RATE = /(?<!\d)\d+(?:[.,]\d+)?\s*%|(?<![\p{L}])phần trăm(?![\p{L}])|\d(?<!\d[.,]*\d)[\d.,]*\s*(?:USD|VND|đồng|đ)(?![\p{L}\d])/iu;
+// The amount pattern is numberMarkers' own (AMOUNT), so a figure G1 flags is one G3 must anchor.
+const RATE = new RegExp(`(?<!\\d)\\d+(?:[.,]\\d+)?\\s*%|(?<![\\p{L}])phần trăm(?![\\p{L}])|${AMOUNT.source}`, 'iu');
 
 /**
  * Sentences stating a rate or an amount. Rates never appear in prose: the reply prints them in a block built from /tariff

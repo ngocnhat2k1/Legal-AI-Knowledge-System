@@ -68,9 +68,12 @@ export const cutPieces = (pieces: string[], drop: (piece: string) => boolean): s
  * A number is read from its first digit ("(?<!\d)", "\d(?<!\d[.,]*\d)"): the same matches, without rescanning a run of
  * digits from each of its digits (POST /answer checks model prose inside the event loop).
  */
+/** An amount, shared with the answer guards' G1: a currency, or "triệu/tỷ/nghìn/ngàn" (+ "đồng/VND"): "20 triệu đồng", "1 tỷ". */
+export const AMOUNT = /\d(?<!\d[.,]*\d)[\d.,]*\s*(?:(?:triệu|tỷ|nghìn|ngàn)(?:\s+(?:đồng|VND))?|USD|VND|đồng|đ)(?![\p{L}\d])/giu;
+
 const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean; label?: true }> = [
   { re: /(?<!\d)\d+(?:[.,]\d+)?\s*%/g, exempt: false, fatal: true },
-  { re: /\d(?<!\d[.,]*\d)[\d.,]*\s*(?:USD|VND|đồng|đ)(?![\p{L}\d])/giu, exempt: false, fatal: true },
+  { re: AMOUNT, exempt: false, fatal: true },
   { re: /\d{1,2}\/\d{1,2}\/\d{4}/g, exempt: true, fatal: false },
   { re: /(?<!\d)\d+\s*(?:ngày|tháng)(?![\p{L}])/giu, exempt: false, fatal: false },
   // The tail stops at emphasis, quotes and brackets: `**08/2015/NĐ-CP**` and `“…”[1]` must still anchor.

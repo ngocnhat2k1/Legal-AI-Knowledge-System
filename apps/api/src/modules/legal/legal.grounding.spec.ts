@@ -80,6 +80,12 @@ describe('numberMarkers — [n] points at citations[n-1], and the numbers beside
     expect(numberMarkers('Nộp trong **30 ngày** [1].', [1], src, '').answer).toBe('Nộp trong 30 ngày.');
   });
 
+  it('reads an amount with a unit word as an amount: "20 triệu đồng", "1 tỷ", "500 nghìn đồng"', () => {
+    const src = ['Điều 1\nPhạt tiền từ 20 triệu đồng'];
+    expect(numberMarkers('Phạt **20 triệu đồng** [1].', [1], src, '').answer).toBe('Phạt **20 triệu đồng** [1].');
+    for (const s of ['Phạt 30 triệu đồng [1].', 'Phạt 1 tỷ [1].', 'Phạt 500 nghìn đồng [1].']) expect(numberMarkers(s, [1], src, '').answer).toBe('');
+  });
+
   it('reads a leading zero as the same document number', () => {
     expect(numberMarkers('Theo **08/2015/NĐ-CP** [1].', [1], ['Điều 1 Nghị định 8/2015/NĐ-CP\nx'], '').answer).toBe('Theo **08/2015/NĐ-CP** [1].');
   });

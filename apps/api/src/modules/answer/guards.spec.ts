@@ -23,6 +23,11 @@ describe('ratesInProse — rates live in the code-built block, never in prose (o
     ]);
   });
 
+  it('flags an amount with a unit word between the number and the currency', () => {
+    const prose = 'Phạt 20 triệu đồng [1]. Mức 1 tỷ. Phí 500 nghìn đồng. Phạt 1,5 tỷ VND. Hàng có 20 thành phần. Tỷ lệ dược chất cao.';
+    expect(ratesInProse(prose)).toEqual(['Phạt 20 triệu đồng [1].', 'Mức 1 tỷ.', 'Phí 500 nghìn đồng.', 'Phạt 1,5 tỷ VND.']);
+  });
+
   it('leaves provisions, durations, codes and dates alone', () => {
     expect(ratesInProse('Theo Điều 8 khoản 2 [1], trong 30 ngày kể từ 15/07/2023, mã 3005.10.10 thuộc nhóm 30.05.')).toEqual([]);
   });
