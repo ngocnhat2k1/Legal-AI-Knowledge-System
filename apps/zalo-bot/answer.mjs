@@ -23,7 +23,7 @@ import {
 import { stampTariff } from './conversation.mjs';
 import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, rulingLine, sanitizeLead, withLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
-import { CODE_MARK, codebook, confirmingCue } from './dispatch.mjs';
+import { CODE_MARK, codebook, ruling } from './dispatch.mjs';
 import { citationFrom, cleanGazetteTitle, detectOrigin, keywordFrom, missingKind, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
 import { L } from './render.mjs';
 import { claudeVision } from './router.mjs';
@@ -424,9 +424,9 @@ export async function handleCorrection(tariff, text, senderName, quote) {
   // (có thể chứa tên/SĐT/số lô của khách) vì note bị khớp mờ + echo chéo ngữ cảnh.
   const rulingNote = [prodDesc, citationFrom(text)].filter(Boolean).join(' | ').slice(0, 300) || null;
 
-  // The same code confirms only after a confirming word ("đúng là 8481.80.99"): "8481.80.99 có sai không" names it too,
+  // The same code confirms only as the ledger's form ("HS đúng là 8481.80.99"): "8481.80.99 có sai không" names it too,
   // and is a doubt, not a ruling (R13). Unclear → ask, write nothing.
-  const cued = confirmingCue(text);
+  const cued = Boolean(ruling(text)?.coded);
   if (fix && old?.hs && fix.hs === old.hs && !cued) {
     return {
       text: [L(['Bạn muốn xác nhận mã ', [old.dotted, 'b'], ' là đúng, hay đang hỏi mã này có hợp với hàng không? Nhắn "đúng" để xác nhận, hoặc mô tả hàng để mình đối chiếu nhé.'])],
@@ -485,7 +485,8 @@ export async function handleCorrection(tariff, text, senderName, quote) {
   return {
     text: [head, L([]), ...formatAnswer({ dotted: fix.dotted, origin, date: fix.date }, data, confirm)],
     topic: 'tariff',
-    tariff: stampTariff({ hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data, desc: prodDesc || undefined, keywords: prevKw }),
+    // The new code's block is shown, but its verdict was just recorded: a "đúng" after it thanks the reply (no second row).
+    tariff: { ...stampTariff({ hs: fix.hs, dotted: fix.dotted, origin, date: fix.date, snapshot: data, desc: prodDesc || undefined, keywords: prevKw }), open: false },
   };
 }
 
@@ -515,15 +516,19 @@ export async function codeOffer(tariff, fix) {
   const cands = tariff?.candidates ?? [];
   // The API's test behind that reply's "nằm trong các nhóm dưới đây": a candidate under the code's heading, however deep.
   const inside = cands.some((c) => String(c).replace(/\D/g, '').startsWith(grp4(fix.hs)));
+  // The candidates are named, so a quote of this offer shows which table it answers (dispatch.mjs fastPath).
   const said = cands.length
-    ? [...named, ` ${inside ? 'nằm trong' : 'khác'} các nhóm mình vừa nêu. Muốn mình ghi nhận mã này`, ...record]
+    ? [...named, ` ${inside ? 'nằm trong' : 'khác'} các nhóm ${cands.join(', ')} mình vừa nêu. Muốn mình ghi nhận mã này`, ...record]
     : tariff?.hs === fix.hs
       ? [...named, ' là mã vừa tra: đúng với lô hàng thì nhắn "đúng", chưa đúng thì nhắn "sai" hoặc "HS đúng là <mã>".']
       : tariff?.hs
         // "HS đúng là" on this thread also records the code just looked up as wrong: say so before it is sent.
         ? [...named, ' khác mã ', [tariff.dotted, 'b'], ' vừa tra. Muốn ghi nhận ', [tariff.dotted, 'b'], ' chưa đúng và ', [fix.dotted, 'b'], ' là mã đúng', ...record]
         : [...named, ': muốn mình ghi nhận mã này', ...record];
-  return { text: [L(said)], ...(tariff?.hs === fix.hs ? { tariff: { ...tariff, open: true } } : {}) };
+  // The form this offer spells out must work when sent: the table stays open to "HS đúng là …" ('coded'), not to a bare
+  // "đúng"/"ok", which answers the offer. The same-code offer asks "đúng"/"sai" itself.
+  const reopen = tariff?.hs === fix.hs ? true : tariff?.hs || cands.length ? 'coded' : null;
+  return { text: [L(said)], ...(reopen ? { tariff: { ...tariff, open: reopen } } : {}) };
 }
 
 // --- Image --------------------------------------------------------------------
