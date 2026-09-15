@@ -233,6 +233,12 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
     - Sổ phán quyết chỉ ghi từ danh sách lệnh đóng; số hiệu công văn đọc ra mã nước thì không ghi; lưu bộ nhớ lỗi thì đóng bảng.
     - Trên `main`: jest chức năng 365, bot 146, `tsc` sạch.
   - **Đang chạy:** Việc 13 (xoá lớp câu mẫu, agent riêng) và vòng che mã tuyến tính. Test thời gian chạy sau, khi máy rảnh để đo đúng.
+  - **Đã gộp `21d52a1`: `plan08/api-mask-minors`** (gồm bản sửa ReDoS cubic của GAP). Rà lại đạt ở `5f504e3`.
+    - Callback của `maskCodes` đã tuyến tính (lookbehind sticky thay cho cắt chuỗi, Map chỉ số mã, Set nhóm 4 số). Kết quả che mã giống hệt bản trước: battery/probe byte-identical, 300.000 câu sinh ngẫu nhiên không lệch.
+    - Test tăng trưởng chứng minh bắt được 3 biến thể bậc hai.
+    - Trên `main`: jest chức năng 367, bot 146, `tsc` sạch.
+  - **Việc 13 xong, chờ rà:** nhánh `plan08/viec13-delete-templates` (`0016e0d`), bot 3.279 → 2.861 dòng, test 146 → 137, grep sạch. `captionForVision` giữ bản che mã riêng để ảnh không lọt mã (R4).
+  - **Đang chạy `plan08/timing-growth`:** gộp hai test thời gian về một helper chung, hiệu chỉnh trên máy có tải, yêu cầu full jest xanh 10 lần và vẫn bắt được code bậc hai. Đây là việc cuối chặn push.
   - **CHẶN PUSH — ReDoS có sẵn trên `main` (`451809c`):** GAP trong lookbehind từ khoá của `maskCodes` có ba `\s*` liền nhau. Số đo: 800 dấu cách mất 410 ms, 10k dấu cách + một chữ số treo nhiều giờ; trần q 2000 ký tự vẫn tốn vài giây mỗi tin. Đã sửa ở `plan08/api-mask-minors` (`3e94301`), nên nhánh này phải gộp trước khi push.
     - Vòng 2 (`addb765`): dấu gạch chỉ được nằm giữa mọi cặp số, nên khoảng năm/số lượng/số hiệu tiêu chuẩn không bị che.
     - Rà lại chưa đạt, 1 major (lọt R4 mới): `JOINED` đặt `NOT_HEADING` trong mục danh sách, nên danh sách dừng ở số tiền/năm và mã phía sau không được che. Đang sửa bằng cách kiểm từng mục trong callback.
