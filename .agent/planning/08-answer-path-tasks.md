@@ -40,6 +40,8 @@ Chủ dự án trả lời ba câu hỏi ngay trong phiên (không đợi Việc
 
 Mặc định còn lại giữ như §11: D3 (a) không in MFN của ứng viên, (b) một câu mời nhỏ ở lượt tra đầu; D5 có sau khi duyệt trên Zalo; D6 chỉ khi Việc 14 không đạt. **D4 đổi: không commit câu hỏi thật vào repo public** — `real-questions.json` nằm ở `.agent/local/` (gitignore), test dùng câu viết lại không có dữ liệu người dùng.
 
+**Tạm bỏ nguồn 128/2020/NĐ-CP và 102/2021/NĐ-CP (2026-09-15, `0385a47`).** NĐ 169/2026/NĐ-CP (hiệu lực 01/07/2026, khoản 2 Điều 38) chấm dứt toàn bộ 128/2020 và Điều 2 của 102/2021, nhưng kho vẫn ghi 128/2020 còn hiệu lực và chưa có 169/2026. `POST /answer` bỏ mọi nguồn của hai văn bản, trừ dòng `status`, trước compose, trần 12 nguồn và câu chỉ trả nguồn; `GET /legal` không đổi. Ghi chú chép lại bảng phạt cũ không mang số hiệu nên vẫn lọt, bản xuất lại ghi chú sửa chúng. **Gỡ khi** đã seed dòng status của 169/2026 (quan hệ chấm dứt với 128/2020 và 102/2021, hoặc `effective_to` của 128/2020) và các khoản của 169/2026.
+
 **Chia việc với phiên c8 (chế độ hướng dẫn phân loại).**
 - c8 viết `apps/api/src/modules/answer/walkthrough.ts` (+ spec) và `policy.ts` (+ spec), cùng dữ liệu `db/seed/data/legal/*`, `research/inbox-loader/*`, phần EN/SEN/rulings của `db/seed/evidence-build.ts`. Phiên này làm mọi thứ còn lại của kế hoạch.
 - **Chế độ `hs` của compose = walkthrough của c8** khi file đó có mặt (`buildWalkthroughPrompt`, `walkthroughSchema`, `validateWalkthrough`; hợp đồng ở `answer/types.ts`: `ClassifyInput` không chứa mã người dùng, `WalkthroughOutput` có `candidates[{heading, assessment, deciding_facts, cite_ids}]`, `conclusion{headings, needs_advance_ruling, missing_facts}`, `tariff_ref`). Đến lúc đó compose dùng prompt `CHẾ ĐỘ hs` ở §3.1. Runner ánh xạ `WalkthroughOutput` → `answerMd`/`candidates`/`missingFacts` của §2.4; `validateWalkthrough` chạy **sau** guards chung.
@@ -233,7 +235,7 @@ Kế hoạch không có `lead`, `note` hay `search_query`. Chữ duy nhất ngư
 Trả về:
 
 ```json
-{ "plan": {}, "codeRole": "none|premise|subject|key", "mode": "hs|legal|status|mixed|null",
+{ "plan": {}, "codeRole": "none|premise|subject|key", "mode": "hs|legal|status|mixed|tariff|null",
   "userCodes": [{ "code": "3005.10.10", "level": 8, "heading": "30.05", "exists": true, "inCandidates": true }],
   "ack": "…", "answerMd": "…[1]…",
   "citations": [{ "n": 1, "key": "e:812", "kind": "en", "label": "…", "instrument": "…", "hsHeading": "30.05",
@@ -244,8 +246,19 @@ Trả về:
   "warnings": ["unverified", "undetermined", "upcoming", "old_catalog"],
   "cut": 0, "repaired": false,
   "missingDoc": null, "gazetteMatchKind": "none", "gazetteMatches": [],
+  "tariff": null, "fallback": false, "reason": "no_sources|compose_failed|deadline|latch|null",
   "calls": 2, "timingMs": { "plan": 0, "retrieve": 0, "compose": 0, "verify": 0, "repair": 0 } }
 ```
+
+- **`mode: "tariff"`:** kế hoạch `tariff` với mã vai `key`, hoặc mã trong state của câu tiếp nối (§6.2). API tra `/tariff`; compose chế độ `tariff` giải thích từ các dòng `statement` (Q1).
+- **`tariff`:** kết quả `/tariff` mà lượt `tariff`, hoặc `mixed` có vai `subject`, đã đọc, để bot in khối thuế mà không gọi lần hai. `null` khi không tra.
+- **`fallback`:** `true` khi `defaultPlan` thay cho bước kế hoạch (không có kết quả, timeout, `is_error`, không đọc được kế hoạch). `false` khi bước kế hoạch không chạy: bot gửi `plan`, kể cả `plan` không đọc được, hoặc `forceIntent` không kèm `plan`.
+- **`reason`:** vì sao một lượt đang đi tới compose không có văn xuôi.
+  - `no_sources`: `gather` không có nguồn (chế độ `tariff`: cũng không còn dòng thuế nào).
+  - `compose_failed`: compose trả null, `is_error` hoặc không đọc được bản nháp; bot in nguồn một mình.
+  - `deadline`: còn dưới 15 s cho compose; bot in nguồn một mình.
+  - `latch`: chốt R4 bỏ tin nhắn hoặc câu hỏi, không truy vấn nào chạy.
+  - `null` ở mọi lượt khác (`planOnly`, không có `mode`, `missingDoc`, không tra được thuế) và khi đã soạn văn xuôi, kể cả khi sau đó bị cắt hết.
 
 **Nguồn tái dùng (Việc 8).** `LegalService` tách thành:
 - `scope(query, doc)`: phần tìm văn bản và Công báo ở `legal.service.ts:147-225`;
@@ -256,8 +269,19 @@ Trả về:
 **`answer.service`:**
 - **Truy vấn:** `unique([plan.question, ...plan.queries]).slice(0, 3)`, chạy song song. Chỉ truy vấn đầu mang pin.
 - **Nhóm được ghim:**
-  - chế độ hs: `plan.hsHints` đổi thành tối đa 5 nhóm có chấm (giả thuyết mù) và `clauses: 0`, tức không lấy điều luật;
-  - vai subject: nhóm của chính mã.
+  - chế độ hs: `plan.hsHints` đổi thành tối đa 5 nhóm có chấm (giả thuyết mù), cộng nhóm 4 số của mã premise (D1: không nhãn, xếp theo số); `clauses: 0`, tức không lấy điều luật; `cases: true`; `sen: 2`, tức tối đa 2 dòng SEN mỗi nhóm, xếp theo chính nhóm (dòng nêu mã con nhỏ nhất trước, rồi id), nên mã người dùng không bao giờ chọn dòng SEN;
+  - vai subject: nhóm của chính mã, và mã 8 số của nó làm `hsCodes`.
+- **Trần và thứ tự ghim** (`gather`, chung cho `GET /legal`): tối đa 8 mục, theo thứ tự
+  1. dòng status của văn bản được nêu;
+  2. mục liệt kê đúng mã được hỏi;
+  3. EN;
+  4. chú giải chương, phần (`hs_note`, ràng buộc); trong đó chú giải của chương đứng trước mọi chú giải phân nhóm;
+  5. SEN (hướng dẫn);
+  6. case;
+  7. mục `hsCodeSections` còn lại.
+
+  Hệ quả, **chờ trưởng nhóm hoặc chủ dự án chốt**: `headingSections` trả tới số nhóm + 2 × số chương, nên khi các nhóm ứng viên trải từ 3 chương trở lên (ví dụ 30.05, 33.07, 38.24), EN và `hs_note` chiếm đủ 8 chỗ và không dòng SEN hay case nào được ghim. SEN và case chỉ được ghim khi EN và chú giải còn chừa chỗ, thường là tối đa 2 chương. Phương án nếu cần giữ SEN: chú giải chương, phần đứng trước SEN, còn chú giải phân nhóm lùi xuống sau SEN, trước case. Chưa ảnh hưởng thật: DB dev chưa có dòng SEN nào gắn nhóm, nhưng sẽ ảnh hưởng khi seed bằng chứng của c8 lên.
+- **Đúng mã trước tiền tố:** `hsCodeSections` (tối đa 3) xếp mục có `hs_codes` chứa đúng mã được hỏi (dạng có chấm, cùng độ dài) trước mục chỉ khớp tiền tố, rồi theo thẩm quyền, rồi id. Seed của c8 thêm cấp cha (`6506`, `6506.10`) vào `hs_codes`, nên nếu không xếp thế thì mục chỉ khớp tiền tố có thể chiếm hết 3 chỗ.
 - **Mã premise của người dùng không bao giờ thành pin** (D1).
 - **Gộp và cắt:** gộp theo `key`, mục ghim đứng trước, rồi xếp theo `bestDist`. Tối đa 12 nguồn và `ANSWER_PROMPT_CHARS`. Citation giữ nguyên thân để kiểm quote.
 
@@ -492,14 +516,20 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 
 1. **Che mã** bằng `maskCodes` trong `plan.ts`: port nguyên `HS_TOKEN`, `JOINED_HEADING` và `key` của `dispatch.mjs` ở `a37c663`.
    - Chuẩn hoá NFC trước.
-   - Che mọi cách viết mã 8 số, `dddd.dd(.dd)`, `dd.dd(.dd)` đứng riêng, và chữ số sau `nhóm (hàng)|mã (số)|hs (code)|chương` (có hoặc không có `:`).
-   - Không che: ngày, số tiền, giờ, năm, số hiệu văn bản.
+   - Che mọi cách viết mã 8 số, `dddd.dd(.dd)`, `dd.dd(.dd)` đứng riêng, và chữ số sau `nhóm (hàng)|mã (số)|hs (code)|chương`. Giữa từ khoá và chữ số được có "là", `:`, `-`, `=`, ngoặc kép (`"` hoặc `“`) hay ngoặc đơn: "mã hs là 848180", "mã hs “848180”", "mã hs (848180)".
+   - Sau từ khoá, một dãy số liền `\d{4}(\d{2}){0,2}` cũng là mã: "mã hs 848180", "hs 848180 dùng cho van được không" bị che, có trong `userCodes` ở dạng có chấm (`8481.80`), và chốt ở bước 4 bỏ phần nào còn viết nó. Sau `mã` hoặc `mã số`, 6 số liền cũng đọc là phân nhóm, kể cả số hồ sơ ("mã số 123456 của hồ sơ" → vai `premise`, kế hoạch `legal` thành `hs`): che thừa có chủ ý; chỉ xem lại nếu chủ dự án thấy câu hỏi số hồ sơ bị định tuyến sai khi thử trên Zalo.
+   - Dòng 10 số là mã 8 số đầu của nó khi viết có chấm hoặc cách (`8481.80.9910`, `8481 80 9910`, `8481.80.99.10`), hoặc viết liền ngay sau `hs`, `mã hs`, `hs code` ("mã hs 8481809910").
+   - Nhóm 4 số đứng trần, không có từ khoá, chỉ bị che khi một mã trong sổ (tin này hoặc phần đã che trước đó) bắt đầu bằng nó (`BARE_HEADING`: "thuộc 3005 hay 3824, mã 3005.10.10"), hoặc khi nó nối sau một mã đã che bằng `,`, `hay`, `hoặc`, `và`, `sang` (`JOINED_HEADING`, nhận cả phân nhóm 6 số liền: "mã hs 300510 hay 382490", "mã hs 848180, 848190"). Bốn số đứng một mình khác, như "năm 2026", giữ nguyên.
+   - Không bao giờ là mã: bốn số đầu `dd00`, `1906`–`1999`, `2010`–`2099`, vì không nhóm nào như vậy (chương 19 hết ở 1905, chương 20 hết ở 2009). Nên "HS 2022", "HS 2017", "mức phạt 20000000 đồng", ngày "20260915" giữ nguyên; "nhóm 2009", "chương 20" vẫn bị che. Trần: số tiền khác có dáng mã, như 12500000, vẫn bị che thừa.
+   - Không che: ngày, số tiền, giờ, năm, số hiệu văn bản ("Thông tư 36/2026").
+   - Dãy từ 9 chữ số liền trở lên, không đứng sau từ `hs`, thành `[số]` ("mã số thuế [số]", số điện thoại, "8481809910" gõ trần): không chữ số nào tới model, không thành mã, không có dòng `userCodes`.
+   - **Giới hạn biết trước (R4 còn hở):** 6 số liền không có từ khoá đứng ngay trước ("e khai 848180 được không"), hoặc từ khoá cách bởi chữ khác ("mã hs của hàng là 848180"), không bị che, `userCodes` rỗng, nên chốt không có gì để kiểm. Không nới thành "cách tối đa vài từ", vì như thế che thừa số hồ sơ. Theo dõi riêng.
    - Áp cho tin mới, quote, lượt cũ và dòng trạng thái.
 2. **`codeRole` do code quyết**, trên chữ đã gập dấu (NFD, bỏ dấu, đ→d):
 
    | Vai | Khi nào | Hệ quả |
    |---|---|---|
-   | `premise` | Có cue FIT: `(ma\|code\|hs)[^.?!]{0,40}(duoc\|dung\|sai\|phu hop\|ok\|chuan)\s*(khong\|ko\|k\|chua\|ha\|a\|nhi)`, `vi sao\|tai sao\|sao lai`, `(ap\|vao\|thuoc\|khai\|dung\|tham khao)\s+(ma\|nhom\|code)`. **Cũng là mặc định khi không có cue nào.** | Mã bị che ở mọi nơi; nhãn `[mã n]` bị bỏ trước compose. Kế hoạch `legal`, `status` hoặc `mixed` bị ép sang `hs`. |
+   | `premise` | Có cue FIT: `(ma\|code\|hs)[^.?!]{0,40}(duoc\|dung\|sai\|ok\|chuan\|hop)\s*(khong\|ko\|k\|chua\|ha\|a\|nhi)`, trong đó `hop` chỉ tính khi đứng sau `co\|phu\|thich\|nay` hoặc chính mã ("có hợp không", "mã này hợp không"; "trường hợp không có C/O" thì không), `vi sao\|tai sao\|sao lai`, `(ap\|vao\|thuoc\|khai\|dung\|tham khao)\s+(ma\|nhom\|code)`. **Cũng là mặc định khi không có cue nào.** | Mã bị che ở mọi nơi; nhãn `[mã n]` bị bỏ trước compose. Kế hoạch `legal`, `status` hoặc `mixed` bị ép sang `hs`. |
    | `subject` | Không có FIT, và có cue danh mục (`LEGAL_LIST_CUE` gập dấu ∪ `nhap khau duoc\|co can\|co phai`) hoặc cue giải nghĩa (`gom\|bao gom\|khac\|phan biet\|giai thich\|chu giai\|nghia la\|la gi\|nhung hang`) | Mã là khoá tra (`hsCodeSections`, `headingSections`), được viết nguyên văn trong câu hỏi. Chỉ hợp lệ với `legal`, `status`, `mixed`. |
    | `key` | Có cue thuế, không có FIT, danh mục hay giải nghĩa | Chỉ là khoá cho `answerByHs`, không vào prompt compose. Nếu kế hoạch không phải `tariff` thì xử như `premise`. |
    | `none` | Tin không có mã | — |
@@ -577,8 +607,14 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
   1. kế hoạch trả `refine`, `refines: true` và `goods` đã sửa;
   2. API chạy lại chế độ hs;
   3. compose nhận LƯỢT TRƯỚC và được dặn mở bằng một câu ghi nhận đính chính ("À, là hộp bằng vải — …").
-- **"nguyên văn điều đó":** `scope.article` lấy từ `state.legal.citations` → `legalProvision`.
-- **"còn từ Nhật thì sao":** `reuseLastHs` → `answerByHs`.
+- **"nguyên văn điều đó":** `scope.article` và `scope.doc` lấy từ `state.legal.citations` → `legalProvision`. Dòng trạng thái của prompt kế hoạch nêu nhãn nguồn (`label`, hoặc `provisionLabel` của state cũ), kèm số hiệu văn bản khi nhãn chưa có nó: "Điều 18 (08/2015/NĐ-CP)".
+  - `normalizePlan` giữ `scope.doc` khi số hiệu đó là `documentNumber` của một nguồn trong state (`citedDocs`), và trả đúng cách viết của state. Kế hoạch bot gửi lại cũng được đọc như vậy. Số hiệu không có trong chữ người dùng lẫn state thì vẫn bị bỏ: model chỉ nhận ra số hiệu, không tự đặt ra.
+  - Nhờ vậy, khi lượt trước trích hai văn bản, bot tra đúng văn bản người dùng nhắm tới chứ không lấy nguồn đầu tiên.
+- **"còn từ Nhật thì sao":** tin không nêu mã, kế hoạch `tariff` có `reuseLastHs` hoặc bot ép `forceIntent: "tariff"`.
+  - API lấy `state.tariff.dotted` (đủ 8 số) làm mã vai `key` để tra `/tariff`; xuất xứ và ngày theo kế hoạch.
+  - Chữ số của mã đó không vào prompt nào, kể cả đuôi dòng 10 số trong dòng thuế.
+  - Mã đó không thành dòng `userCodes`, vì người dùng không viết nó ở lượt này.
+  - `state.tariff.dotted` không đủ 8 số, hoặc kế hoạch tariff không reuse mà cũng không bị ép: chỉ trả kế hoạch như trước.
 - **Mục tiêu so sánh** chỉ lấy từ mã **có trong tin nhắn**, không bao giờ từ `ctx.tariff`. Vì vậy phát hiện "câu hỏi hợp nhóm chỉ nêu nhóm lại so mã vừa tra" không còn xảy ra.
 
 ### 6.3 Sổ `lookup_confirmation` (R13)

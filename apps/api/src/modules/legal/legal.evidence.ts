@@ -151,23 +151,26 @@ export async function namedStatus(db: Database, documentNumbers: string[], asOf:
 /**
  * Sections whose text carries an HS code the question names ("mũ bảo hiểm 6506.10.10 thuộc danh mục
  * nào") — the list that contains the code IS the answer, and the simple parser cannot match "6506.10.10" by
- * keyword. Binding sources first. A list entry covers its children ("2404.11" lists 2404.11.00), and a heading asked
- * finds its listed lines; entries shorter than four digits never match. Window rows (meta.part) are left to retrieval:
+ * keyword. A list entry covers its children ("2404.11" lists 2404.11.00), and a heading asked finds its listed lines;
+ * entries shorter than four digits never match. A section listing an asked code exactly (the dotted code itself, as
+ * gather's `naming` compares) comes first: hs_codes carry parent levels ('6506', '6506.10'), so sections matching only
+ * by prefix would otherwise fill the limit. Then binding sources first. Window rows (meta.part) are left to retrieval:
  * a pin returns the whole section. Classification cases list codes too, but enter by heading only (caseSections).
  */
 export async function hsCodeSections(db: Database, codes: string[], asOf: string, limit = 3): Promise<RetrievedEvidence[]> {
   if (!codes.length) return [];
   const d = sql`${asOf}::date`;
+  const asked = sql`ARRAY[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[]`;
   const rows = (await db.execute(sql`
     SELECT ${columns(d)}, 1::float8 AS score, NULL::float8 AS best_dist
     FROM evidence_section e
     WHERE e.meta->>'part' IS NULL AND e.meta->>'case_id' IS NULL AND ${valid(d)}
       AND EXISTS (
-        SELECT 1 FROM unnest(e.hs_codes) c, unnest(ARRAY[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[]) q
+        SELECT 1 FROM unnest(e.hs_codes) c, unnest(${asked}) q
         WHERE length(replace(c, '.', '')) >= 4
           AND (replace(q, '.', '') LIKE replace(c, '.', '') || '%' OR replace(c, '.', '') LIKE replace(q, '.', '') || '%')
       )
-    ORDER BY CASE e.authority WHEN 'binding' THEN 0 WHEN 'authoritative' THEN 1 WHEN 'administrative' THEN 2
+    ORDER BY NOT (e.hs_codes && ${asked}), CASE e.authority WHEN 'binding' THEN 0 WHEN 'authoritative' THEN 1 WHEN 'administrative' THEN 2
                               WHEN 'reference' THEN 3 ELSE 4 END, e.id
     LIMIT ${limit}
   `)) as unknown as Array<Record<string, unknown>>;
@@ -179,7 +182,9 @@ export async function hsCodeSections(db: Database, codes: string[], asOf: string
  * gồm những hàng gì, khác 3005.90 chỗ nào" names heading 30.05 only as digits, which neither branch matches to the
  * note titled "nhóm 30.05": the model abstained with that note in the table (observed 2026-09-14). The default limit
  * leaves room for one note per heading and two notes per chapter: a flat 6 cut the chapter notes of a four-heading
- * code check (review 2026-09-14 #6).
+ * code check (review 2026-09-14 #6). Every chapter's own note (exclusions, definitions: GRI 1) comes before any
+ * subheading note (GRI 6), so gather's pin cap cuts subheading notes first, not a later chapter's notes. The row type
+ * is only in the title.
  */
 export async function headingSections(db: Database, headings: string[], asOf: string, limit?: number): Promise<RetrievedEvidence[]> {
   if (!headings.length) return [];
@@ -192,10 +197,37 @@ export async function headingSections(db: Database, headings: string[], asOf: st
               OR jsonb_exists_any(coalesce(e.meta->'also_headings', '[]'::jsonb), ARRAY[${sql.join(headings.map((h) => sql`${h}`), sql`, `)}]::text[])))
            OR (e.kind = 'hs_note' AND e.hs_chapter IN ${inIds(chapters)}))
       AND e.meta->>'part' IS NULL AND ${valid(d)}
-    ORDER BY CASE e.kind WHEN 'en' THEN 0 ELSE 1 END, e.hs_heading, e.hs_chapter, e.id
+    ORDER BY CASE e.kind WHEN 'en' THEN 0 ELSE 1 END, e.hs_heading, (e.title LIKE 'Chú giải phân nhóm%'), e.hs_chapter, e.id
     LIMIT ${limit ?? headings.length + 2 * chapters.length}
   `)) as unknown as Array<Record<string, unknown>>;
   return rows.map(toEvidence);
+}
+
+/**
+ * The SEN rows filed under each heading asked (hs_heading or meta.also_headings), at most `perHeading` a heading, ranked by
+ * the heading alone: rows naming a code under it first, the smallest such code first, then id — a code the user wrote never
+ * picks them. A row filed under several headings comes back once.
+ */
+export async function senSections(db: Database, headings: string[], asOf: string, perHeading = 2): Promise<RetrievedEvidence[]> {
+  if (!headings.length) return [];
+  const d = sql`${asOf}::date`;
+  const rows = (await db.execute(sql`
+    SELECT * FROM (
+      SELECT ${columns(d)}, 1::float8 AS score, NULL::float8 AS best_dist, h.heading AS pin_heading,
+        row_number() OVER (PARTITION BY h.heading ORDER BY u.first_code NULLS LAST, e.id) AS rn
+      FROM unnest(ARRAY[${sql.join(headings.map((h) => sql`${h}`), sql`, `)}]::text[]) h(heading)
+      JOIN evidence_section e ON e.kind = 'sen'
+        AND (e.hs_heading = h.heading OR jsonb_exists(coalesce(e.meta->'also_headings', '[]'::jsonb), h.heading))
+      CROSS JOIN LATERAL (
+        SELECT min(replace(c, '.', '')) AS first_code FROM unnest(e.hs_codes) c
+        WHERE length(replace(c, '.', '')) > 4 AND replace(c, '.', '') LIKE replace(h.heading, '.', '') || '%'
+      ) u
+      WHERE e.meta->>'part' IS NULL AND ${valid(d)}
+    ) x
+    WHERE x.rn <= ${perHeading}
+    ORDER BY x.pin_heading, x.rn
+  `)) as unknown as Array<Record<string, unknown>>;
+  return rows.map(toEvidence).filter((e, i, a) => a.findIndex((x) => x.id === e.id) === i);
 }
 
 /**

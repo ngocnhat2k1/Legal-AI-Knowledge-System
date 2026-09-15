@@ -1,7 +1,7 @@
 import type { SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 
-import { caseSections, evidenceInstruments, evidenceRetrieve, headingSections, hsCodeSections, namedStatus, type RetrievedEvidence } from './legal.evidence';
+import { caseSections, evidenceInstruments, evidenceRetrieve, headingSections, hsCodeSections, namedStatus, type RetrievedEvidence, senSections } from './legal.evidence';
 import { LegalController } from './legal.controller';
 import { generate, type PromptSource } from './legal.generation';
 import { hybridRetrieve, type RetrievedArticle } from './legal.retrieval';
@@ -16,6 +16,7 @@ jest.mock('./legal.evidence', () => ({
   hsCodeSections: jest.fn(async () => []),
   headingSections: jest.fn(async () => []),
   caseSections: jest.fn(async () => []),
+  senSections: jest.fn(async () => []),
 }));
 
 const gazette = (number: string, docType: string) => ({ number, docType, title: `${number} — tiêu đề`, sourceUrl: 'https://congbao.chinhphu.vn/x', congbaoId: 1 });
@@ -64,6 +65,7 @@ describe('LegalService.ask — evidence sections (plan 05 milestone 3, first sli
     await svc().ask('Các nhóm ứng viên cần phân biệt: 38.24, 30.05, 85.09', '2026-09-14');
     expect((headingSections as jest.Mock).mock.calls.at(-1)![1]).toEqual(['38.24', '30.05', '85.09']);
     expect(caseSections).not.toHaveBeenCalled();
+    expect(senSections).not.toHaveBeenCalled();
   });
 
   it('builds the prompt text from the window that matched, keeping the whole parent as body and citation', () => {
@@ -350,6 +352,35 @@ describe('LegalService.scope and gather — the halves POST /answer calls (plan 
     expect(notes.params.at(-1)).toBe(10); // 4 headings + 2 × 3 chapters
   });
 
+  it('gather keeps at most 8 pins: status, sections naming an asked code, EN, chapter notes (binding) before SEN (guidance), cases, then the rest', async () => {
+    const pin = (id: number, kind: string, hsCodes: string[] = []) =>
+      ({
+        id, kind, instrument: 'x', authority: 'binding', title: `${kind} ${id}`, body: 'thân', documentNumber: null, effectiveFrom: null,
+        effectiveTo: null, effectiveness: 'con_hieu_luc', verification: 'verified', status: null, ends: [], window: 'current', score: 1,
+        bestDist: null, hsHeading: null, hsChapter: null, hsCodes, meta: {}, hitText: null,
+      }) as RetrievedEvidence;
+    (namedStatus as jest.Mock).mockResolvedValueOnce([pin(1, 'status')]);
+    (hsCodeSections as jest.Mock).mockResolvedValueOnce([pin(12, 'annex_table'), pin(2, 'annex_table', ['8481.80.99'])]);
+    (headingSections as jest.Mock).mockResolvedValueOnce([pin(3, 'en'), pin(4, 'en'), pin(7, 'hs_note'), pin(8, 'hs_note'), pin(9, 'hs_note')]);
+    (senSections as jest.Mock).mockResolvedValueOnce([pin(5, 'sen', ['8481.80.64']), pin(6, 'sen')]);
+    (caseSections as jest.Mock).mockResolvedValueOnce([pin(10, 'ruling'), pin(11, 'ruling')]);
+    const { sources } = await new LegalService({ execute: async () => [] } as never, embedding).gather('Van 8481.80.99 dùng cho gì', {
+      asOf: '2026-09-14', hsCodes: ['8481.80.99'], headings: ['84.81'], clauses: 0, cases: true, sen: 2,
+    });
+    expect(sources.map((s) => s.key)).toEqual(['e:1', 'e:2', 'e:3', 'e:4', 'e:7', 'e:8', 'e:9', 'e:5']);
+    // SEN is ranked by heading alone: no asked code reaches its query.
+    expect((senSections as jest.Mock).mock.calls.at(-1)!.slice(1)).toEqual([['84.81'], '2026-09-14', 2]);
+
+    // Headings in three chapters: EN and HS notes fill all 8 pins, so no SEN row or case is pinned (§2.4).
+    (headingSections as jest.Mock).mockResolvedValueOnce([20, 21, 22].map((id) => pin(id, 'en')).concat([23, 24, 25, 26, 27, 28].map((id) => pin(id, 'hs_note'))));
+    (senSections as jest.Mock).mockResolvedValueOnce([pin(29, 'sen'), pin(30, 'sen')]);
+    (caseSections as jest.Mock).mockResolvedValueOnce([pin(31, 'ruling')]);
+    const crowded = await new LegalService({ execute: async () => [] } as never, embedding).gather('Miếng dán ngải cứu thuộc nhóm nào', {
+      asOf: '2026-09-14', hsCodes: [], headings: ['30.05', '33.07', '38.24'], clauses: 0, cases: true, sen: 2,
+    });
+    expect(crowded.sources.map((s) => s.key)).toEqual(['e:20', 'e:21', 'e:22', 'e:23', 'e:24', 'e:25', 'e:26', 'e:27']);
+  });
+
   it('gather with clauses 0 searches no statute clauses', async () => {
     (hybridRetrieve as jest.Mock).mockClear();
     const res = await new LegalService({ execute: async () => [] } as never, embedding).gather('Căn cứ phân loại miếng dán', { asOf: '2026-09-14', clauses: 0 });
@@ -433,6 +464,33 @@ describe('legal.evidence SQL — cases out of ranking, a cap per heading, the ma
     expect(q.sql).toMatch(/x\.rn <= \$\d+/);
     expect(q.params.at(-1)).toBe(2);
     expect(q.sql).not.toContain('LIMIT');
+  });
+
+  it('hsCodeSections puts a row listing an asked code exactly before rows matching it only by prefix, then authority, then id', async () => {
+    const { db, queries } = capture();
+    await actual.hsCodeSections(db, ['6506.10.10', '8481.80.99'], '2026-09-14');
+    const q = queries[0]!;
+    // c8's seed lists parent levels ('6506', '6506.10'): a prefix-only row must not take one of the three slots first.
+    expect(q.sql).toMatch(/ORDER BY NOT \(e\.hs_codes && ARRAY\[\$\d+, \$\d+\]::text\[\]\), CASE e\.authority WHEN 'binding' THEN 0 .*? END, e\.id\s+LIMIT \$\d+/s);
+    expect(q.params.filter((p) => p === '6506.10.10')).toHaveLength(2);
+    expect(q.params.at(-1)).toBe(3);
+  });
+
+  it('headingSections puts every chapter\'s own note ahead of any subheading note, so a cut takes subheading notes first', async () => {
+    const { db, queries } = capture();
+    await actual.headingSections(db, ['38.24', '30.05', '85.09', '84.81'], '2026-09-14');
+    expect(queries[0]!.sql).toMatch(/ORDER BY CASE e\.kind WHEN 'en' THEN 0 ELSE 1 END, e\.hs_heading, \(e\.title LIKE 'Chú giải phân nhóm%'\), e\.hs_chapter, e\.id\s+LIMIT/);
+  });
+
+  it('senSections ranks each heading\'s SEN rows by the first code under it, then id, and returns a row filed under two headings once', async () => {
+    const { db, queries } = capture([{ id: 5, kind: 'sen', meta: {} }, { id: 5, kind: 'sen', meta: {} }, { id: 6, kind: 'sen', meta: {} }]);
+    const rows = await actual.senSections(db, ['39.01', '39.02'], '2026-09-14');
+    expect(rows.map((e) => e.id)).toEqual([5, 6]);
+    const q = queries[0]!;
+    expect(q.sql).toContain("e.kind = 'sen'");
+    expect(q.sql).toMatch(/PARTITION BY h\.heading ORDER BY u\.first_code NULLS LAST, e\.id/);
+    expect(q.params).toEqual(expect.arrayContaining(['39.01', '39.02']));
+    expect(q.params.at(-1)).toBe(2);
   });
 });
 

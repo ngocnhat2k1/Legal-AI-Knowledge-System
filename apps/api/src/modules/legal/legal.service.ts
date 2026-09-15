@@ -12,6 +12,7 @@ import {
   hsCodeSections,
   namedStatus,
   type RetrievedEvidence,
+  senSections,
   type StatusEnd,
 } from './legal.evidence';
 import { generate, type PromptSource } from './legal.generation';
@@ -34,6 +35,8 @@ const TOP_K = 6;
 const MAX_CITATIONS = 5;
 /** Evidence sections join the articles after them, never in place of one. */
 const EVIDENCE_K = 3;
+/** Pinned sections kept: GET /legal put twelve pins of up to 6,000 characters in one prompt, the shape that timed out at 100 s. */
+const MAX_PINS = 8;
 /**
  * Evidence relevance gate, measured 2026-09-14 on the seeded evidence layer (10 questions): the right sections sat at
  * cosine 0.27–0.41, the nearest section to an off-topic question at ≥ 0.57. Inside the domain distance alone cannot
@@ -96,9 +99,11 @@ export interface GatherOpts {
   clauses?: number;
   /**
    * Also pin the classification cases of `headings`. Off by default: GET /legal (the live bot's code check) must not
-   * grow its prompt when cases are seeded — pinned sources are never cut. POST /answer passes true.
+   * spend its pins on cases when they are seeded. POST /answer passes true.
    */
   cases?: boolean;
+  /** Most SEN rows pinned per heading of `headings`, ranked by heading alone (senSections); 0 (default) pins none. */
+  sen?: number;
 }
 
 /**
@@ -263,7 +268,7 @@ export class LegalService {
     const onlyEvidence = !documentIds.length && evidenceNumbers.length > 0;
     const hsCodes = opts.hsCodes ?? [...new Set(query.match(HS_CODE) ?? [])];
     const headings = articleProvisionIds.length ? [] : (opts.headings ?? namedHeadings(query));
-    const [all, evidence, named, byCode, byHeading, cases] = await Promise.all([
+    const [all, evidence, named, byCode, byHeading, cases, bySen] = await Promise.all([
       onlyEvidence || opts.clauses === 0
         ? Promise.resolve([] as RetrievedArticle[])
         : hybridRetrieve(this.db, { queryText: query, queryVec: vec, asOf, topK: TOP_K, documentIds, articleProvisionIds }),
@@ -274,6 +279,7 @@ export class LegalService {
       hsCodeSections(this.db, hsCodes, asOf),
       headingSections(this.db, headings, asOf),
       opts.cases ? caseSections(this.db, headings, asOf) : Promise.resolve([] as RetrievedEvidence[]),
+      opts.sen ? senSections(this.db, headings, asOf, opts.sen) : Promise.resolve([] as RetrievedEvidence[]),
     ]);
 
     // The relevance gate exists to stop the dense branch handing back its nearest
@@ -288,8 +294,20 @@ export class LegalService {
     const kept = (articleProvisionIds.length ? all : keepRelevant(all)).slice(0, clauses);
     const limit = Math.min(EVIDENCE_MAX_DIST, Math.min(...all.map((a) => a.bestDist ?? Infinity)) + EVIDENCE_MARGIN);
     // What the question names outright — a document's status row, a section listing its HS code — may be the whole
-    // answer ("replaced from 05/09/2026", "high-risk list of TT 36/2026"), so it is never cut.
-    const pinned = [...named, ...byCode, ...byHeading, ...cases].filter((e, i, a) => a.findIndex((x) => x.id === e.id) === i);
+    // answer ("replaced from 05/09/2026", "high-risk list of TT 36/2026"), so it leads the pins, which are cut at MAX_PINS.
+    // Chapter and section notes bind (GRI 1), so they go before SEN rows, which are guidance.
+    const naming = (e: RetrievedEvidence) => e.hsCodes.some((c) => hsCodes.includes(c));
+    const pinned = [
+      ...named,
+      ...byCode.filter(naming),
+      ...byHeading.filter((e) => e.kind === 'en'),
+      ...byHeading.filter((e) => e.kind !== 'en'),
+      ...bySen,
+      ...cases,
+      ...byCode.filter((e) => !naming(e)),
+    ]
+      .filter((e, i, a) => a.findIndex((x) => x.id === e.id) === i)
+      .slice(0, MAX_PINS);
     // Closest first: RRF lets a long section that merely repeats the query words outrank the right one.
     const ranked = (onlyEvidence ? evidence : evidence.filter((e) => e.bestDist != null && e.bestDist <= limit))
       .filter((e) => !pinned.some((p) => p.id === e.id))

@@ -11,6 +11,7 @@ import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/databa
 import { extractAsOf, isIsoDate, todayVN } from '../legal/legal.asof';
 import { expandMarkers } from '../legal/legal.grounding';
 import { AUTHORITY_NOTE, type DocScope, type GatherOpts, LegalService, type Source } from '../legal/legal.service';
+import { foldDocNumber } from '../legal/legal.scope';
 import { ConfirmationService } from '../tariff/confirmation.service';
 import { TariffService } from '../tariff/tariff.service';
 import type { RateView, TariffResponse } from '../tariff/tariff.types';
@@ -19,6 +20,7 @@ import { buildComposeInput, buildRepairPrompt, type ComposeMode, parseDraft, par
 import { type Source as GuardSource, quoteInBody, splitSentences, verify } from './guards';
 import {
   assertNoUserCodes,
+  citedDocs,
   CODE_MARK,
   type CodeRole,
   codeRole,
@@ -44,6 +46,15 @@ const MAX_Q_CHARS = 2000;
 /** The p95 gate of a composed turn (owner decision Q3): `deadlineAt` is clamped to it. */
 const BUDGET_MS = 120_000;
 const MAX_SOURCES = 12;
+/**
+ * NĐ 169/2026/NĐ-CP (in force 2026-07-01, khoản 2 Điều 38) ends 128/2020/NĐ-CP in full and Điều 2 of 102/2021/NĐ-CP, yet
+ * the corpus still holds 128/2020 as in force and no 169/2026: their clauses and evidence would state penalties no longer
+ * law. Their status rows stay because they carry no figure — but until relations name 169/2026 (or 128/2020's
+ * effective_to is set) the 128/2020 row still reads "còn hiệu lực", with no `expired` for G7 to check.
+ * Notes restating the old penalty table carry no document number and pass this filter; the re-exported notes fix them.
+ * ponytail: a hard drop, no historical exception; lift it once 169/2026's status rows and clauses are ingested.
+ */
+const ENDED_PENALTY_DOCS = ['128/2020/NĐ-CP', '102/2021/NĐ-CP'].map(foldDocNumber);
 const PROSE = ['hs', 'legal', 'status', 'mixed'];
 const LEGAL = ['legal', 'status', 'mixed'];
 
@@ -103,6 +114,10 @@ export interface AnswerResponse {
   gazetteMatches: DocScope['gazetteMatches'];
   /** The /tariff lookup a tariff or mixed answer reasoned over, so the bot prints its block without a second call. */
   tariff: TariffResponse | null;
+  /** defaultPlan stood in for the plan step (no result, timeout, is_error, no usable plan); false when no plan step ran. */
+  fallback: boolean;
+  /** Why a turn bound for compose has no prose; null for every other turn and once prose was composed, even if later cut. */
+  reason: 'no_sources' | 'compose_failed' | 'deadline' | 'latch' | null;
   calls: number;
   timingMs: Record<'plan' | 'retrieve' | 'compose' | 'verify' | 'repair', number>;
 }
@@ -153,9 +168,7 @@ export class AnswerService {
     const forced = INTENTS.includes(body.forceIntent as Intent) ? (body.forceIntent as Intent) : null;
     let plan: Plan;
     if (body.plan != null) {
-      const given = normalizePlan(body.plan, [q, quote ?? '', ...turns.filter((t) => t.role === 'user').map((t) => t.body)]);
-      fallback = !given;
-      const p = given ?? defaultPlan(q, topic);
+      const p = normalizePlan(body.plan, [q, quote ?? '', ...turns.filter((t) => t.role === 'user').map((t) => t.body)], citedDocs(state)) ?? defaultPlan(q, topic);
       // A plan from the client is text a prompt reads: every text of it masked again, so no raw code reaches a model (R4).
       // A partial plan (the bot's tariff branch) has no question: the masked message stands in.
       const mask = (s: string): string => maskCodes(s, codes).text;
@@ -189,6 +202,12 @@ export class AnswerService {
     // §4.2: a subject is only a lookup key for legal, status or mixed; a premise turns those into hs.
     if (role === 'subject' && !LEGAL.includes(intent)) role = 'premise';
     if (role === 'premise' && LEGAL.includes(intent)) intent = 'hs';
+    // "còn từ Nhật thì sao": a tariff turn naming no code, forced by the bot or reusing the last code, looks up the code the
+    // state holds — a key the user did not write this turn, so no userCodes line, and its digits reach no prompt (R4).
+    const reuses = intent === 'tariff' && role === 'none' && (forced === 'tariff' || plan.reuseLastHs);
+    const held = reuses && /^\d{4}\.\d{2}\.\d{2}$/.test(String(state.tariff?.dotted)) ? userCodes(state.tariff!.dotted!) : [];
+    if (held.length) role = 'key';
+    const keys = [...users, ...held];
     const mode: ComposeMode | null = PROSE.includes(intent) ? (intent as ComposeMode) : intent === 'tariff' && role === 'key' ? 'tariff' : null;
 
     const finish = async (part: Partial<AnswerResponse>, lines?: Map<string, string | null>): Promise<AnswerResponse> => {
@@ -224,13 +243,17 @@ export class AnswerService {
         gazetteMatchKind: 'none',
         gazetteMatches: [],
         tariff: null,
+        reason: null,
         ...part,
+        fallback,
         calls,
         timingMs,
       };
       // One line per turn and no user text in it (R14): dropped prompt parts by name only.
       this.log.log(
-        JSON.stringify({ mode, intent: plan.intent, codeRole: role, calls, sources: sourceCount, cut: res.cut, repaired: res.repaired, fallback, leakDrops, timingMs }),
+        JSON.stringify({
+          mode, intent: plan.intent, codeRole: role, calls, sources: sourceCount, cut: res.cut, repaired: res.repaired, fallback, reason: res.reason, leakDrops, timingMs,
+        }),
       );
       return res;
     };
@@ -239,7 +262,7 @@ export class AnswerService {
     if (!mode) return finish({}); // general, confirm, correction, a tariff question without a code: the bot's branches
 
     const asOf = isIsoDate(body.asOf) ? body.asOf : (extractAsOf(q) ?? todayVN());
-    const code8 = users.find((u) => u.level === 8);
+    const code8 = keys.find((u) => u.level === 8);
     const tariff =
       code8 && (mode === 'tariff' || (mode === 'mixed' && role === 'subject'))
         ? await timed('retrieve', () => this.lookup(digits(code8.code), plan.origin, plan.date ?? asOf))
@@ -284,13 +307,13 @@ export class AnswerService {
     ];
     if (role === 'premise' || role === 'key') {
       // What the model is told about the question and what retrieval runs on, never the evidence: D1 lets a premise heading's notes in.
-      const latch = assertNoUserCodes(parts, users, role);
+      const latch = assertNoUserCodes(parts, keys, role);
       parts = latch.parts;
       leakDrops.push(...latch.leakDrops);
     }
     const kept = (name: string): string[] => parts.filter((p) => p.name === name).map((p) => p.text);
     // Fail closed before retrieval: nothing is left to ask, and no query runs on the user's code.
-    if (!kept('message').length || !kept('question').length) return finish(common);
+    if (!kept('message').length || !kept('question').length) return finish({ ...common, reason: 'latch' });
 
     const queries = [...new Set([question, ...kept('queries')])].filter(Boolean).slice(0, 3);
     const ownHeadings = [...new Set(users.flatMap((u) => (u.heading ? [u.heading] : [])))];
@@ -299,7 +322,7 @@ export class AnswerService {
     const pins: GatherOpts =
       mode === 'hs'
         ? // Owner decision D1: a premise's own heading joins the blind hints unlabelled, in number order; its code never does.
-          { hsCodes: [], headings: [...new Set([...hints, ...(role === 'premise' ? ownHeadings : [])])].sort(), clauses: 0, cases: true }
+          { hsCodes: [], headings: [...new Set([...hints, ...(role === 'premise' ? ownHeadings : [])])].sort(), clauses: 0, cases: true, sen: 2 }
         : role === 'subject'
           ? { hsCodes: users.filter((u) => u.level === 8).map((u) => u.code), headings: ownHeadings, cases: false }
           : { hsCodes: [], headings: [], cases: false };
@@ -311,11 +334,12 @@ export class AnswerService {
     const seen = new Set<string>();
     const sources = gathered
       .flatMap((g) => g.sources)
+      .filter((s) => s.citation.kind === 'status' || !ENDED_PENALTY_DOCS.includes(foldDocNumber(s.citation.documentNumber)))
       .filter((s) => !seen.has(s.key) && Boolean(seen.add(s.key)))
       .slice(0, MAX_SOURCES);
     sourceCount = sources.length;
     // Tariff mode explains from the statements alone; with none left, the bot prints the rate block by itself (Q1).
-    if (!sources.length && (mode !== 'tariff' || !kept('tariffLines').length)) return finish(common);
+    if (!sources.length && (mode !== 'tariff' || !kept('tariffLines').length)) return finish({ ...common, reason: 'no_sources' });
     // Compose skipped or failed: the sources alone, so the bot still prints them and their end-of-force line from data
     // (§10 risk 1, G7). No prose cites them, so they claim no quote (R10).
     const warningsOf = (listed: typeof sources): string[] => [
@@ -327,7 +351,7 @@ export class AnswerService {
     const listed = sources.slice(0, 3);
     const sourcesOnly = { ...common, citations: listed.map((s, i) => citationOf(i + 1, s, [])), warnings: warningsOf(listed) };
     const timeoutMs = Math.min(100_000, deadline - Date.now() - 5_000);
-    if (timeoutMs < 15_000) return finish(sourcesOnly);
+    if (timeoutMs < 15_000) return finish({ ...sourcesOnly, reason: 'deadline' });
 
     const tariffMode = mode === 'tariff';
     const prompt = buildComposeInput({
@@ -355,7 +379,7 @@ export class AnswerService {
       }),
     );
     const parsed = reply && !reply.isError ? parseDraft(reply.text) : null;
-    if (!parsed) return finish(sourcesOnly);
+    if (!parsed) return finish({ ...sourcesOnly, reason: 'compose_failed' });
     // Markers as verify reads them ("[1, 2]" → "[1] [2]", one out of range gone), so the sentence verify names is the
     // draft's own for a repair and for the first-sentence rule.
     const draft = { ...parsed, answerMd: expandMarkers(parsed.answerMd, sources.length) };
@@ -393,7 +417,7 @@ export class AnswerService {
         // The latch before every spawn (§4.2 step 4): a sentence or quote copied from evidence may name the user's own code.
         // D1 lets its heading in, never a deeper code; such an item is not sent, and its sentence stays cut.
         if (role !== 'premise' && role !== 'key') return true;
-        const drops = assertNoUserCodes([{ name: 'repair', text: [it.sentence, ...it.quotes].join('\n') }], users.filter((u) => u.level > 4), 'key').leakDrops;
+        const drops = assertNoUserCodes([{ name: 'repair', text: [it.sentence, ...it.quotes].join('\n') }], keys.filter((u) => u.level > 4), 'key').leakDrops;
         leakDrops.push(...drops);
         return !drops.length;
       });

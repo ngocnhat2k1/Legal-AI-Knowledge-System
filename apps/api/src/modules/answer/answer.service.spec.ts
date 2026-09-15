@@ -176,8 +176,9 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     for (const t of OLD_TURNS) expect(compose!.prompt).not.toContain(t.body);
 
     const [first, ...others] = legal.gather.mock.calls.map(([, o]) => o);
-    expect(first).toMatchObject({ hsCodes: [], headings: ['30.04', '30.05', '33.07', '38.24'], clauses: 0, cases: true });
+    expect(first).toMatchObject({ hsCodes: [], headings: ['30.04', '30.05', '33.07', '38.24'], clauses: 0, cases: true, sen: 2 });
     for (const o of others) expect(o).toMatchObject({ hsCodes: [], headings: [], cases: false });
+    for (const o of others) expect(o.sen).toBeUndefined();
 
     expect(res.answerMd).toBe(PHOTO_DRAFT.answerMd);
     expect(res.candidates).toEqual([{ hs: '30.05', level: 4, title: HEADING_TEXT, evidence: [1] }]);
@@ -196,7 +197,8 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     expect(repair!.opts).toMatchObject({ model: 'sonnet', effort: 'low' });
 
     const bad = setup({ plan: LEGAL_PLAN, drafts: [MFN_DRAFT], repairs: [{ sentences: ['MFN vẫn là 0% [1].'] }], sources: [GUIDE] });
-    expect(await bad.svc.answer({ q: LEGAL_Q })).toMatchObject({ cut: 1, repaired: true, answerMd: '' });
+    // Prose was composed, then cut: no reason code.
+    expect(await bad.svc.answer({ q: LEGAL_Q })).toMatchObject({ cut: 1, repaired: true, answerMd: '', reason: null });
   });
 
   it('(f) under 30 s left after compose, no repair is asked', async () => {
@@ -210,7 +212,18 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const { svc, prompts } = setup({ plan: LEGAL_PLAN });
     const res = await svc.answer({ q: LEGAL_Q });
     expect(prompts(SYSTEM)).toHaveLength(0);
-    expect(res).toMatchObject({ coverage: 'none', answerMd: '', calls: 1 });
+    expect(res).toMatchObject({ coverage: 'none', answerMd: '', calls: 1, reason: 'no_sources' });
+  });
+
+  it('fallback is true only when defaultPlan stood in for the plan step', async () => {
+    // No model result, or a reply naming no known intent.
+    for (const plan of [undefined, { intent: 'check_code' }]) {
+      expect(await setup({ plan }).svc.answer({ q: LEGAL_Q, planOnly: true })).toMatchObject({ fallback: true, calls: 1 });
+    }
+    expect((await setup({ plan: LEGAL_PLAN }).svc.answer({ q: LEGAL_Q, planOnly: true })).fallback).toBe(false);
+    // The plan step never ran: a client plan, even one naming no known intent, and forceIntent without a plan.
+    expect((await setup().svc.answer({ q: LEGAL_Q, plan: { intent: 'check_code' }, planOnly: true })).fallback).toBe(false);
+    expect((await setup().svc.answer({ q: LEGAL_Q, forceIntent: 'legal', planOnly: true })).fallback).toBe(false);
   });
 
   it('(h) planOnly carries a missing document from scope', async () => {
@@ -292,8 +305,68 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const { svc, run } = setup({ drafts: [TARIFF_DRAFT], tariff: t });
     const res = await svc.answer({ q: 'thuế nk 8481.80.99 tq', plan: { intent: 'tariff', origin: 'CN' }, forceIntent: 'tariff' });
     expect(run).not.toHaveBeenCalled();
-    expect(res).toMatchObject({ mode: 'tariff', answerMd: '', calls: 0 });
+    expect(res).toMatchObject({ mode: 'tariff', answerMd: '', calls: 0, reason: 'no_sources' });
     expect(res.tariff).toBe(t);
+  });
+
+  it('a tariff follow-up naming no code looks up the state\'s code as a key: never prompted in any spelling, never a userCodes line (R4)', async () => {
+    const t = tariffOf([{ ...rate('AJCEP', 'ASEAN–Nhật Bản', 'Theo dòng 10 số: 8481.80.99.10 Van bi: 0%; 84818099 90 Loại khác: 5%'), form: 'AJ', requiresCo: true }]);
+    const { svc, tariff, prompts } = setup({ drafts: [TARIFF_DRAFT], tariff: t });
+    const body: AnswerRequest = {
+      q: 'còn từ Nhật thì sao',
+      context: { topic: 'tariff', state: { tariff: { dotted: '8481.80.99', origin: 'CN' } }, turns: [{ role: 'user', body: 'thuế nk 8481.80.99 tq' }] },
+      plan: { intent: 'tariff', origin: 'JP', date: '2026-09-01' },
+      forceIntent: 'tariff',
+    };
+    const res = await svc.answer(body);
+    expect(tariff.lookup).toHaveBeenCalledWith('84818099', 'JP', '2026-09-01');
+    const [compose] = prompts(SYSTEM);
+    expect(compose!.prompt).toContain('Van bi');
+    expect(compose!.prompt.replace(/[.\s]/g, '')).not.toMatch(/8481/);
+    expect(res).toMatchObject({ mode: 'tariff', userCodes: [], answerMd: TARIFF_DRAFT.answerMd, calls: 1 });
+    expect(res.tariff).toBe(t);
+
+    // No 8-digit state code, or a planned tariff turn that neither is forced nor reuses the last code: the plan alone, as before.
+    const planned = { q: 'van bi bằng đồng thuế bao nhiêu', context: body.context };
+    for (const [f, req] of [[{}, { ...body, context: { state: { tariff: { dotted: '8481.80' } } } }], [{ plan: { intent: 'tariff' } }, planned]] as const) {
+      const other = setup({ ...f, drafts: [TARIFF_DRAFT], tariff: t });
+      expect(await other.svc.answer(req)).toMatchObject({ mode: null, answerMd: '' });
+      expect(other.tariff.lookup).not.toHaveBeenCalled();
+    }
+  });
+
+  it('a planned tariff turn reusing the last code, not forced, looks up the state\'s code too: no prompt spells it, no userCodes line (R4)', async () => {
+    const plan = { intent: 'tariff', reuseLastHs: true, origin: 'JP' };
+    const context = { topic: 'tariff', state: { tariff: { dotted: '8481.80.99', origin: 'CN' } }, turns: [{ role: 'user', body: 'thuế nk 8481.80.99 tq' }] };
+    // The model's plan, then the same plan sent back by the bot.
+    for (const [f, sent] of [[{ plan }, {}], [{}, { plan }]] as const) {
+      const t = tariffOf([{ ...rate('AJCEP', 'ASEAN–Nhật Bản', 'Theo dòng 10 số: 8481.80.99.10 Van bi: 0%; 84818099 90 Loại khác: 5%'), form: 'AJ', requiresCo: true }]);
+      const { svc, run, tariff } = setup({ ...f, drafts: [TARIFF_DRAFT], tariff: t });
+      const res = await svc.answer({ q: 'còn từ Nhật thì sao', context, ...sent });
+      expect(tariff.lookup).toHaveBeenCalledWith('84818099', 'JP', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
+      expect(run).toHaveBeenCalled();
+      for (const [prompt] of run.mock.calls) expect(prompt.replace(/[.\s]/g, '')).not.toMatch(/8481/);
+      expect(res).toMatchObject({ mode: 'tariff', codeRole: 'key', userCodes: [], answerMd: TARIFF_DRAFT.answerMd });
+    }
+  });
+
+  it('drops every non-status source of 128/2020/NĐ-CP and 102/2021/NĐ-CP before compose, the cap and the sources-only reply', async () => {
+    const penalty = (id: number, documentNumber: string, kind = 'guidance') =>
+      source(id, { kind, documentNumber, label: `Nguồn ${id} — ${documentNumber}`, body: `Mức phạt theo ${documentNumber}.` });
+    const clause = { ...penalty(20, '128/2020/NĐ-CP'), key: 'p:20', citation: { ...penalty(20, '128/2020/NĐ-CP').citation, kind: undefined } };
+    const status = penalty(21, '128/2020/NĐ-CP', 'status');
+    const sources = [clause, ...Array.from({ length: 11 }, (_, i) => penalty(30 + i, i % 2 ? '102/2021/NĐ-CP' : '128/2020/ND-CP')), status, GUIDE];
+    const kept = [status.key, GUIDE.key];
+
+    const alone = await setup({ sources }).svc.answer({ q: LEGAL_Q, plan: LEGAL_PLAN, deadlineAt: Date.now() });
+    expect(alone.citations.map((c) => c.key)).toEqual(kept);
+
+    const composed = setup({ drafts: [MFN_DRAFT], sources });
+    await composed.svc.answer({ q: LEGAL_Q, plan: LEGAL_PLAN });
+    const said = composed.prompts(SYSTEM)[0]!.prompt;
+    expect(said).toContain(status.label);
+    expect(said).toContain(GUIDE.label);
+    expect(said).not.toMatch(/Nguồn (2[0]|3\d) /);
   });
 
   it('R4 addendum: a premise hs turn looks up no rate for the user code, and no prompt line carries it', async () => {
@@ -349,7 +422,35 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const question = setup({ drafts: [PHOTO_DRAFT], sources: [EN3005] });
     const res = await question.svc.answer({ q: PHOTO, plan: { ...PHOTO_PLAN, question: 'Miếng dán có hợp 30 05 10 10 không' } });
     expect(question.legal.gather).not.toHaveBeenCalled();
-    expect(res).toMatchObject({ answerMd: '', calls: 0 });
+    expect(res).toMatchObject({ answerMd: '', calls: 0, reason: 'latch' });
+  });
+
+  it('a ten-digit line, a code after "là" or a quote, and a second joined subheading reach no prompt and no query (R4)', async () => {
+    for (const [q, code] of [
+      ['mã hs 8481809910 dùng cho van được không', '84818099'],
+      ['8481.80.9910 dùng cho van được không', '84818099'],
+      ['8481 80 9910 dùng cho van được không', '84818099'],
+      ['mã hs "848180" dùng cho van được không', '848180'],
+      ['mã hs là 848180 dùng cho van được không', '848180'],
+      ['mã hs 300510 hay 382490 được không', '382490'],
+    ] as const) {
+      for (const intent of ['hs', 'legal']) {
+        const { svc, run, legal } = setup({ plan: { intent, question: 'Hàng này có dùng được [mã 1] không' }, sources: [GUIDE] });
+        expect(await svc.answer({ q })).toMatchObject({ codeRole: 'premise', mode: 'hs', reason: 'compose_failed' });
+        for (const text of [...run.mock.calls.map(([prompt]) => prompt), ...legal.gather.mock.calls.map(([query]) => query)]) {
+          expect(text.replace(/[.\s"]/g, '')).not.toContain(code);
+        }
+      }
+    }
+  });
+
+  it('row 19: a plan sent back keeps the document the state cites, and scope reads that document', async () => {
+    const { svc, legal } = setup();
+    const state = { legal: { citations: [{ label: 'Điều 18', documentNumber: '08/2015/NĐ-CP' }, { label: 'Điều 16', documentNumber: '38/2015/TT-BTC' }] } };
+    const q = 'nguyên văn điều đó';
+    const res = await svc.answer({ q, plan: { intent: 'legal', scope: { doc: '38/2015/TT-BTC', article: '16' } }, context: { topic: 'legal', state }, planOnly: true });
+    expect(res.plan.scope).toEqual({ doc: '38/2015/TT-BTC', article: '16', clause: null });
+    expect(legal.scope).toHaveBeenCalledWith(q, '38/2015/TT-BTC');
   });
 
   it('a premise message writing its heading bare is still answered, the heading never prompted (R4)', async () => {
@@ -430,11 +531,17 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const status = source(3, { kind: 'status', label: 'Tình trạng hiệu lực — 69/2018/NĐ-CP', documentNumber: '69/2018/NĐ-CP', expired, body: 'Nghị định 69/2018/NĐ-CP được thay thế.' });
     const q = 'Nghị định 69/2018/NĐ-CP còn áp dụng không';
     const plan = { intent: 'status', question: q, scope: { doc: '69/2018/NĐ-CP' } };
-    for (const body of [{ q, plan }, { q, plan, deadlineAt: Date.now() }]) {
+    for (const [body, reason] of [[{ q, plan }, 'compose_failed'], [{ q, plan, deadlineAt: Date.now() }, 'deadline']] as const) {
       const res = await setup({ sources: [status] }).svc.answer(body);
-      expect(res).toMatchObject({ answerMd: '', coverage: 'none' });
+      expect(res).toMatchObject({ answerMd: '', coverage: 'none', reason });
       expect(res.citations).toHaveLength(1);
       expect(res.citations[0]).toMatchObject({ n: 1, key: 'e:3', expired, quotes: [] });
+    }
+    // An is_error reply and a reply that is no draft fail compose the same way.
+    for (const reply of [{ text: '{"answerMd":"x"}', isError: true, durationMs: 1 }, { text: 'không có JSON', isError: false, durationMs: 1 }]) {
+      const failed = setup({ sources: [status] });
+      failed.run.mockResolvedValueOnce(reply);
+      expect(await failed.svc.answer({ q, plan })).toMatchObject({ answerMd: '', calls: 1, reason: 'compose_failed' });
     }
   });
 
