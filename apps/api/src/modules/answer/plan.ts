@@ -61,13 +61,14 @@ const NOT_HEADING = String.raw`(?!\d{2}\.?00|19\.?(?:0[6-9]|[1-9]\d)|20\.?[1-9]\
  */
 const GAP = String.raw`\s*(?:l[aà]\s*)?(?:[:\-=]\s*)?(?:["“'‘(]\s*)?`;
 const HS_WORD = String.raw`hs(?:\s*code)?(?:\s*s[oố])?`;
-const HS_WORD_BEFORE = new RegExp(String.raw`(?<!\[)${HS_WORD}${GAP}$`, 'iu');
+/** Only "hs" or "hs code" names a ten-digit line: "hs số" is also "hồ sơ số", and a record or tax number stays "[số]". */
+const HS_WORD_BEFORE = new RegExp(String.raw`(?<!\[)hs(?:\s*code)?${GAP}$`, 'iu');
 /** An ISO date ("2005-06-15"): its year may be a heading, so a dash between pairs would read it as a code. */
 const NOT_ISO_DATE = String.raw`(?!(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?!\d))`;
 /**
  * Every spelling of a code or heading: an 8-digit code, or a 10-digit line dotted, spaced or dashed ("8481.80.9910", "8481
- * 809910", "8481-80-99-10") as its 8-digit code; digits after a word naming one ("nhóm hàng 3005", "mã số 30.05.10.10",
- * "HS: 3005", "mã hs số ‘848180’", "chương 30"), a joined run too ("mã hs 848180"), with or without diacritics; a dotted
+ * 809910", "8481-80-99-10") as its 8-digit code, a dash only between every pair ("1250-1500 kg", "9001-2015" stay whole);
+ * digits after a word naming one ("nhóm hàng 3005", "mã số 30.05.10.10", "HS: 3005", "mã hs số ‘848180’", "chương 30"), a joined run too ("mã hs 848180"), with or without diacritics; a dotted
  * "3005.10" or "30.05" standing alone. Only structure exempts a number: a document number or date (a "/", a further ".dddd"
  * or an ISO date), "ngày 30.05", a rate "12.50%", a bare "dd.dd" before an accented money or time word ("12.50 triệu",
  * "08.30 sáng"), and four digits no heading opens with.
@@ -81,7 +82,7 @@ const NOT_ISO_DATE = String.raw`(?!(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[1
  */
 const HS_TOKEN = new RegExp(
   String.raw`(?<!\d)(\d{9,})(?!\d)` +
-    String.raw`|(?<!\d)${NOT_ISO_DATE}${NOT_HEADING}\d{4}(?:[.\s-]?\d{2}(?:[.\s-]?\d{2}|[.\s-]\d{4})|[.\s-]\d{6})(?!\d)` +
+    String.raw`|(?<!\d)${NOT_ISO_DATE}${NOT_HEADING}\d{4}(?:[.\s]?\d{2}(?:[.\s]?\d{2}|[.\s]\d{4})|[.\s]\d{6}|-\d{2}-\d{2}(?:\d{2})?)(?!\d)` +
     String.raw`|(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|${HS_WORD}|ch[uư][oơ]ng)${GAP})(?:${NOT_HEADING}\d{2}\.?\d{2}(?:\.?\d{2}){0,2}|\d{2}(?!\.?\d))(?![\d/])` +
     String.raw`|(?<![\d.,/])${NOT_HEADING}\d{4}\.\d{2}(?![\d/]|[.,]\d)` +
     String.raw`|(?<![\d.,/]|ng[aà]y\s)${NOT_HEADING}\d{2}\.\d{2}(?:\.\d{2}){0,2}(?![\d/%]|[.,]\d|\s*(?:triệu|tỷ|giờ|sáng|chiều)(?![\p{L}]))`,
@@ -178,7 +179,9 @@ export function assertNoUserCodes(parts: PromptPart[], codes: UserCode[], role: 
     .map((c) => {
       const d = c.code.replace(/\D/g, '');
       const [core, tail] = role === 'premise' ? [d.slice(0, 4), String.raw`(?:[.\s-]?\d{2}){0,2}`] : [d, ''];
-      return new RegExp(String.raw`(?<!\d)${core.match(/\d{2}/g)!.join(String.raw`[.\s-]?`)}${tail}(?!\d)`);
+      // A dash may follow the heading, never split it: "3005-10-10" is the code, "30-05-2026" a date.
+      const joined = core.match(/\d{2}/g)!.map((p, i) => (i === 1 ? String.raw`[.\s]?` : i ? String.raw`[.\s-]?` : '') + p);
+      return new RegExp(String.raw`(?<!\d)${joined.join('')}${tail}(?!\d)`);
     });
   const leaks = parts.filter((p) => spellings.some((re) => re.test(p.text)));
   return { parts: parts.filter((p) => !leaks.includes(p)), leakDrops: leaks.map((p) => p.name) };
@@ -219,7 +222,7 @@ export function normalizePlan(raw: unknown, userTexts: string[], stateDocs: stri
   const doc = str(scope.doc, 48);
   // A cited number in full, or the one cited document a number written without its issuer opens ("08/2015", §6.2).
   const folded = foldDocNumber(doc);
-  const opens = stateDocs.filter((d) => foldDocNumber(d).startsWith(`${folded}/`));
+  const opens = /^\d{1,4}\/\d{4}$/.test(folded) ? stateDocs.filter((d) => foldDocNumber(d).startsWith(`${folded}/`)) : [];
   const cited = doc && (stateDocs.find((d) => foldDocNumber(d) === folded) ?? (new Set(opens.map(foldDocNumber)).size === 1 ? opens[0] : null));
   const understanding = str(o.understanding, 400)
     ?.replace(new RegExp(`${DOC_NUMBER}|${PRIVATE}`, 'giu'), (m) => (/^\d{1,4}\/\d{4}/.test(m) && statedIn(said, m) ? statedDocNumber(said, m) : ''))

@@ -200,11 +200,15 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       'mức phạt 20000000 đồng áp dụng khi nào',
       'mức phạt 50000000đ cho hành vi khai sai',
       'tờ khai mở ngày 20260915',
-      // A dash separates a code's pairs, never an ISO date, a month or a phone number.
+      // A dash separates a code's pairs only when it stands between every pair: never a date, a month, a range or a phone.
       'tờ khai ngày 2026-09-15 bị phân luồng đỏ',
       'hợp đồng ký ngày 2005-06-15',
       'hạn nộp 01-2026',
       'gọi 0912-345-678 để hỏi',
+      'gọi 0912-345678 nhé',
+      'trọng lượng 1250-1500 kg có phải kiểm tra không',
+      'giai đoạn 2006-2010 có chính sách gì',
+      'ISO 9001-2015 chứng nhận',
     ]) {
       expect(maskCodes(text)).toEqual({ text, codes: [] });
     }
@@ -215,6 +219,9 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       ['mã số thuế 0312345678 theo Thông tư 36/2026', 'mã số thuế [số] theo Thông tư 36/2026'],
       ['mã số 0312345678, gọi 0912345678', 'mã số [số], gọi [số]'],
       ['8481809910 dùng cho van được không', '[số] dùng cho van được không'],
+      // "hs số" is also "hồ sơ số": only "hs" or "hs code" names a ten-digit line.
+      ['hs số 202609150001 bị trả về', 'hs số [số] bị trả về'],
+      ['hs số 0312345678 bị khoá', 'hs số [số] bị khoá'],
     ]) {
       expect(maskCodes(text!)).toEqual({ text: masked, codes: [] });
     }
@@ -228,6 +235,8 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
     expect(maskCodes('mã số 123456 của hồ sơ bị trả về').text).toBe('mã số [mã 1] của hồ sơ bị trả về');
     // "hs" also shortens "hồ sơ": "hs số 123456" is read as a subheading too (§4.2).
     expect(maskCodes('hs số 123456 bị trả về').text).toBe('hs số [mã 1] bị trả về');
+    // After a code and a connector, four digits a heading may open with are a heading: "1250 cái" is 12.50 (§4.2).
+    expect(maskCodes('mã 3005.10.10 với 1250 cái').text).toBe('mã [mã 1] với [mã 2] cái');
   });
 });
 
@@ -290,7 +299,7 @@ describe('userCodes and assertNoUserCodes — the last latch before a spawn (R4)
     expect(userCodes('mã hs 8481809910 dùng cho van được không')).toEqual([{ code: '8481.80.99', level: 8, heading: '84.81' }]);
     expect(userCodes('mã hs 300510 hay 382490 được không').map((c) => c.code)).toEqual(['3005.10', '3824.90']);
     expect(userCodes('Biểu thuế theo HS 2022 khác HS 2017 thế nào')).toEqual([]);
-    for (const text of ['8481 809910 dùng cho van được không', '8481.809910 dùng cho van', 'mã 8481-80-99 được không', '8481-80-99-10']) {
+    for (const text of ['8481 809910 dùng cho van được không', '8481.809910 dùng cho van', 'mã 8481-80-99 được không', '8481-80-99-10', '8481-80-9910']) {
       expect(userCodes(text)).toEqual([{ code: '8481.80.99', level: 8, heading: '84.81' }]);
     }
     expect(userCodes('mã hs 300510 với 382490, hay là 848180').map((c) => c.code)).toEqual(['3005.10', '3824.90', '8481.80']);
@@ -318,6 +327,8 @@ describe('userCodes and assertNoUserCodes — the last latch before a spawn (R4)
     ];
     expect(assertNoUserCodes(parts, codes, 'premise')).toEqual({ parts: [], leakDrops: ['question', 'understanding'] });
     expect(assertNoUserCodes(parts, codes, 'key').leakDrops).toEqual([]);
+    // A dash never splits the heading: a date "30-05-2026" is kept, so the turn is not failed closed.
+    expect(assertNoUserCodes([{ name: 'message', text: 'tờ khai ngày 30-05-2026' }], codes, 'premise').leakDrops).toEqual([]);
   });
 });
 
@@ -361,6 +372,8 @@ describe('normalizePlan — the model output in a fixed shape, user data only wh
     // Two documents open with it, or it stops inside a number: named nowhere, still dropped.
     expect(doc('08/2015', ['08/2015/NĐ-CP', '08/2015/TT-BTC'])).toBeNull();
     expect(doc('08/201', ['08/2015/NĐ-CP'])).toBeNull();
+    // A bare number with no year is not a document number.
+    expect(doc('08', ['08/2015/NĐ-CP'])).toBeNull();
   });
 
   it('accepts only the nine intents and coerces every other field', () => {
