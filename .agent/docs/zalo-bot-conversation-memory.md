@@ -97,7 +97,9 @@ với hàng không**, và bot đã trả MFN + FTA vì mọi tin có mã 8 số 
   (`captionForVision` trong answer.mjs), vì vision chạy ở bot.
 - Câu "mã này có hợp không" là chế độ `hs` của `/answer`: nhóm ứng viên lấy từ **mô tả hàng**, bằng chứng là chú giải
   của đúng các nhóm đó, còn so mã người dùng với ứng viên là việc của **code** (`formatAnswerMd`, `userCodes`). Chủ đề ghi
-  là `legal` hoặc bàn ứng viên, để một câu "sai" sau đó không ghi mã người dùng là sai vào sổ ([R13](../business-rules.md)).
+  luôn là `tariff`, nhưng `state.tariff` chỉ giữ **ứng viên** (`candidates`, `hs: null`) — không mã nào của người dùng vào
+  bộ nhớ — nên một câu "sai" sau đó chỉ mở lời mời `codeOffer`, không ghi mã người dùng là sai vào sổ
+  ([R13](../business-rules.md)).
 - Câu hỏi giải nghĩa mã/nhóm, chú giải, GRI thuộc chế độ `legal`. `/legal` giữ luôn Chú giải chi tiết của
   nhóm được nêu và chú giải chương của nó (`headingSections`), vì "3005.10.10" không khớp tiêu đề
   "nhóm 30.05" theo cả từ khoá lẫn vector — mô hình đã từ chối trong khi chú giải nằm sẵn trong kho.

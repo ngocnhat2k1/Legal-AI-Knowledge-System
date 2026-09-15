@@ -14,7 +14,7 @@ import { COUNTRY, fastPath, guardIntent, isBareLookup, parseVerifyDocCommand, ru
 import { answerByHs, captionForVision, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
 import { CAPABILITIES, formatAnswer, formatGeneral, formatMissingDoc, formatProvisions, sanitizeLead } from './format.mjs';
 import { L, render, toText } from './render.mjs';
-import { cleanGazetteTitle, detectOrigin, docNumberStatedIn, missingKind, parseDocRef, parseQuery, parseQuotedTariff, sameDocNumber, statedDocNumber, todayVN } from './parse.mjs';
+import { cleanGazetteTitle, detectOrigin, docNumberStatedIn, missingKind, parseQuery, parseQuotedTariff, sameDocNumber, statedDocNumber, todayVN } from './parse.mjs';
 import { ThreadType } from 'zca-js';
 
 import { loadContext, nextState } from './conversation.mjs';
@@ -138,23 +138,6 @@ test('a lead citing an HS code is kept only if the block returned it', () => {
   const block = '📋 8481.80.99 · CN';
   assert.equal(sanitizeLead('Mình tra mã 8481.80.99 nhé.', block), 'Mình tra mã 8481.80.99 nhé.');
   assert.equal(sanitizeLead('Mình tra mã 8523.52.00 nhé.', block), '');
-});
-
-// --- Document references ----------------------------------------------------
-
-test('a named Thông tư is read as a document reference', () => {
-  const ref = parseDocRef('cho mình hỏi Thông tư 38/2015/TT-BTC quy định gì');
-  assert.equal(ref.core, '38/2015');
-  assert.equal(ref.docType, 'thong_tu');
-  assert.equal(ref.confident, true);
-  assert.equal(ref.label, '38/2015/TT-BTC');
-});
-
-test('a bare number in a sentence is NOT a document reference', () => {
-  // Otherwise an ordinary question mentioning a form or lot number would be answered
-  // with "we do not hold that document".
-  assert.equal(parseDocRef('lô hàng 09/2018 đã về chưa').confident, false);
-  assert.equal(parseDocRef('không có số nào ở đây'), null);
 });
 
 // --- The router may recognise an identifier, never mint one ------------------
@@ -530,6 +513,54 @@ test('lời chào trả danh sách năng lực ngay, không qua router; chú th�
   assert.equal(captionForVision('e tham khảo mã 30051010 được không, nhóm 3005 hay 3824'), 'e tham khảo mã được không, nhóm hay');
 });
 
+/**
+ * Bảng này là bảng của `codebook().mask` trước Việc 13. Xoá lớp khuôn mẫu xong, `captionForVision` là chỗ CHE MÃ DUY NHẤT
+ * còn lại ở bot (tin chữ do `plan.ts` của API che), nên nó phải giữ nguyên cả bảng: bỏ trống một nhánh regex mà 137 test
+ * vẫn xanh nghĩa là nhánh đó không có ai canh.
+ */
+test('chú thích ảnh: mọi cách viết mã đều bị che trước khi tới vision; ngày, tỷ lệ, giờ, tiền và số hiệu văn bản giữ nguyên (R4)', () => {
+  for (const [caption, masked] of [
+    ['e tham khảo mã 30051010 được không', 'e tham khảo mã được không'],
+    ['mã 3005 10 10', 'mã'],
+    ['khai 3005.10 được không', 'khai được không'],
+    ['e nghĩ là 30.05 được không', 'e nghĩ là được không'],
+    ['HS: 3005', 'HS:'],
+    ['hs code 3005', 'hs code'],
+    ['mã số 30.05.10.10', 'mã số'],
+    ['nhóm hàng 3005 hay 3824', 'nhóm hàng hay'],
+    ['nhóm 3005 hoặc 3824, và 3926', 'nhóm hoặc , và'],
+    ['đổi mã 3005 sang 3824.', 'đổi mã sang .'],
+    ['thuộc chương 30', 'thuộc chương'],
+    // Unikey gõ "Unicode tổ hợp": chuỗi NFD phải được NFC trước, không thì lookbehind từ khoá trượt.
+    ['nhóm 3005'.normalize('NFD'), 'nhóm'],
+    // Không phải mã — vision cần chúng để đọc đúng chú thích: ngày, tỷ lệ, giờ, số tiền, số hiệu văn bản.
+    ['ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu', 'ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu'],
+    ['Nghị định 26/2023/NĐ-CP ngày 31/05/2023, năm 2026', 'Nghị định 26/2023/NĐ-CP ngày 31/05/2023, năm 2026'],
+    ['Thông tư 38/2015/TT-BTC quy định gì', 'Thông tư 38/2015/TT-BTC quy định gì'],
+  ]) {
+    assert.equal(captionForVision(caption), masked, caption);
+  }
+});
+
+/**
+ * Cùng đai an toàn `noCodes` mà `index.mjs` đã dùng cho state lưu lại: chuỗi 6–10 chữ số dính liền và mã 4-2-2(-2) nối
+ * bằng gạch — hai cách viết `HS_TOKEN` đọc thiếu ("848180" còn nguyên, "8481809900" còn lại "00"). Che thừa một chú thích
+ * ảnh là vô hại (vision chỉ cần mô tả hàng), nên chỗ này thà chặt tay.
+ */
+test('chú thích ảnh: mã dính liền và mã nối gạch cũng không tới vision; ngày ISO và năm vẫn nguyên (R4)', () => {
+  for (const [caption, masked] of [
+    ['mã hs 848180', 'mã hs'],
+    ['mã hs 8481809900', 'mã hs'],
+    ['van bi 8481-80-99 bằng đồng', 'van bi bằng đồng'],
+    ['ngày 2026-09-15', 'ngày 2026-09-15'],
+    ['biểu thuế năm 2026', 'biểu thuế năm 2026'],
+    // ponytail: đai này nuốt luôn một cụm 6–10 chữ số không phải mã (số điện thoại, số tiền) — xem `noCodes` ở answer.mjs.
+    ['0912 345678', '0912'],
+  ]) {
+    assert.equal(captionForVision(caption), masked, caption);
+  }
+});
+
 test('một câu HỎI mã có sai/đúng không không bao giờ ghi sổ (R13); "mã đúng là <mã cũ>" vẫn xác nhận', async () => {
   const fresh = { topic: 'tariff', tariffFresh: true, table: OPEN };
   for (const text of ['8481.80.99 có sai không ạ', 'mã này sai không?', 'mã 8481.80.99 đúng chưa', 'sai à']) {
@@ -592,8 +623,8 @@ test('ứng viên HS không còn mô tả nào sau cổng thì không in "Với 
 // --- 69/2018 (spec §5b.8) ------------------------------------------------------------
 
 test('HỒI QUY 69/2018: số hiệu đầy đủ đi nguyên vẹn; văn bản đúng số không bị liệt kê như của cơ quan khác', () => {
-  assert.equal(parseDocRef('Nghị định 69/2018/NĐ-CP còn áp dụng không').full, '69/2018/NĐ-CP');
-  assert.equal(parseDocRef('69/2018').full, null);
+  // Đọc số hiệu ra `{core, full, docType}` nay là việc của API (`legal.scope.ts parseDocRef`, có spec riêng): bản sao ở bot
+  // không còn ai gọi từ Việc 12. Phần bot còn giữ là so số hiệu và trình bày văn bản chưa nạp.
   assert.equal(sameDocNumber('69/2018/ND-CP', '69/2018/NĐ-CP'), true);
   assert.equal(sameDocNumber('8/2015/ND-CP', '08/2015/NĐ-CP'), true);
   assert.equal(sameDocNumber('69/2018/TT-BTC', '69/2018/NĐ-CP'), false);
@@ -614,11 +645,6 @@ test('cùng số, khác cơ quan ban hành: vẫn là văn bản khác và khôn
 });
 
 // --- Task 5 fix round ------------------------------------------------------------
-
-test('HỒI QUY QH13: đoạn cơ quan ban hành có chữ số vẫn thuộc số hiệu', () => {
-  assert.equal(parseDocRef('Luật 107/2016/QH13').full, '107/2016/QH13');
-  assert.equal(parseDocRef('Nghị quyết 1234/2021/NQ-UBTVQH14, còn hiệu lực không').full, '1234/2021/NQ-UBTVQH14');
-});
 
 test('nguyên văn theo trích dẫn: văn bản tự nạp có đúng một dòng cam (R18); hết hiệu lực toàn bộ không kèm "kiểm tra điều khoản"', () => {
   const row = (over) => ({

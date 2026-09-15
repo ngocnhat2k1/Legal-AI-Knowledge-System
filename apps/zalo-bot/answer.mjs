@@ -138,8 +138,9 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   const mfnOf = (c) => (date === new Date().toISOString().slice(0, 10) && c.mfn != null ? `${Number(c.mfn)}%` : '—');
   const menu = (c) => L([[c.hsDotted, 'b'], ' · MFN ', [mfnOf(c), 'b'], ' · ', [tail(c), 'i']], 'ul');
 
-  // R2: always said, and the LLM lead can only stand above it. The lead is gated with no block, so it names no
-  // code: "thuộc mã 7307.99.90" above the candidates reads as settled, and a quoted "sai" would hit that code.
+  // R2: always said, and since Việc 13 nothing a model wrote stands above it — the vision note reaches the reply only as
+  // `desc`, through sanitizeLead, which drops any code. A line saying "thuộc mã 7307.99.90" above the candidates would read
+  // as settled, and a quoted "sai" would then hit that code.
   const said = 'mình tra được các mã ứng viên dưới đây — đây là ứng viên để bạn chốt, chưa phải mã đã xác định.';
   const lines = [L(desc ? ['Với mô tả ', [desc, 'i'], `, ${said}`] : [said[0].toUpperCase() + said.slice(1)])];
   if (citedRuling) {
@@ -390,10 +391,24 @@ const HS_TOKEN = new RegExp(
 /** A bare heading joined to one already struck out: "nhóm [mã] hay 3824", and a list "nhóm [mã] hoặc 3824, và 3926". */
 const JOINED_HEADING = /(\[mã\](?:\s*(?:,|hay|hoặc|hoac|và|va|sang))+\s*)(\d{4})(?![\d/]|[.,]\d)/giu;
 
+/**
+ * The runs HS_TOKEN cannot read as a code: 6 to 10 joined digits ("mã hs 848180", a 9-digit typo, and "8481809900", of which
+ * HS_TOKEN reads only the first eight) or a 4-2-2(-2) code joined by dashes ("8481-80-99", which is not an ISO date). A year
+ * or a document number is shorter or carries a slash, so both survive. index.mjs strips the same runs from the state it saves.
+ * ponytail: a 6- to 10-digit amount or phone number goes as well. For saved state the real fix is the API mask; for a caption
+ * over-stripping costs nothing — vision only needs the goods description, so this fails closed.
+ */
+export const noCodes = (s) =>
+  String(s ?? '')
+    .replace(/\[mã \d+\]|(?<![\d/.-])(?:\d{6,10}|(?!(?:19|20)\d{2}-[01]\d-[0-3]\d(?![\d-]))\d{4}-\d{2}-\d{2}(?:-\d{2})?)(?![\d/-])/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 /** A photo caption as vision may read it: no code or heading the user typed, so it cannot seed the heading guesses (R4). */
 export const captionForVision = (caption) => {
-  // NFC first: Unikey's "Unicode tổ hợp" types "nhóm" decomposed, and the keyword lookbehind would miss it.
-  let s = String(caption ?? '').normalize('NFC').replace(HS_TOKEN, '[mã]');
+  // NFC first: Unikey's "Unicode tổ hợp" types "nhóm" decomposed, and the keyword lookbehind would miss it. noCodes before
+  // HS_TOKEN: HS_TOKEN reads "8481809900" as an 8-digit code and would leave "00" standing.
+  let s = noCodes(String(caption ?? '').normalize('NFC')).replace(HS_TOKEN, '[mã]');
   for (let prev = ''; prev !== s; ) [prev, s] = [s, s.replace(JOINED_HEADING, (_, head) => `${head}[mã]`)];
   return s.replace(/\[mã\]/g, ' ').replace(/\s+/g, ' ').trim();
 };

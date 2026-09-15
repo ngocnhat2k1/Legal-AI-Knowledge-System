@@ -127,16 +127,6 @@ export function plainVerdict(text) {
 /** "ok", "oke": seen, noted. Agreement on any topic, never a verdict. */
 export const isOkay = (text) => ['ok', 'oke', 'okie', 'okay'].includes(wholeMessage(text));
 
-/**
- * "This answer is wrong" — in a multi-word message. Topic-neutral by nature: these
- * words say the previous answer missed, not WHAT it missed. What they mean depends
- * entirely on what the previous answer was about, which is why callers must gate on topic.
- */
-export const DISAGREE_CUE =
-  /(?<![\p{L}])(sai|không phải|ko phải|khong phai|phải là|phai la|đúng là|dung la|mã đúng|ma dung|hs đúng|hs dung|không đúng|khong dung|chỉnh lại|chinh lai|sửa lại|sua lai|nhầm|nham|không chính xác|khong chinh xac|ý tôi là|y toi la|không phải cái|tôi muốn hỏi|toi muon hoi)(?![\p{L}])/u;
-
-export const isDisagreement = (text) => DISAGREE_CUE.test(String(text ?? '').toLowerCase());
-
 /** Every word a plain rate lookup is made of: "thuế nhập khẩu mã 8481.80.99 xuất xứ Trung Quốc là bao nhiêu %". */
 const LOOKUP_WORDS = new Set(
   ('thuế suất nhập xuất khẩu xứ mã hs code hscode bao nhiêu nhiêu phần trăm % là của cho hàng hoá hóa mfn fta c/o co form ' +

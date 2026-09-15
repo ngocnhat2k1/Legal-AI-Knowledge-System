@@ -289,6 +289,8 @@ Mọi thứ đã embed tới nay ≤ 1.600 ký tự. Mục mới: Chú giải ch
 > thích; vai mã người dùng do code quyết, nhóm của mã người dùng được ghim không gắn nhãn (D1 = có, có probe bất biến);
 > ack nói lại câu hỏi thay "🔍 Đang tra…"; chế độ `hs` là module `answer/walkthrough.ts`. Chỗ nào mâu thuẫn, kế hoạch
 > 08 thắng.
+> **Việc 13 (2026-09-15):** `withLead` và `formatLegal` đã bị xoá khỏi `format.mjs` — mọi chỗ dưới đây còn mô tả chúng là
+> ghi lại lịch sử, không phải hợp đồng còn hiệu lực; văn xuôi nay do `/answer` soạn và `formatAnswerMd` dựng.
 
 ### 3.1 Hợp đồng `POST /answer` [v2]
 

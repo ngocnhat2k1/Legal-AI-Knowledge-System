@@ -21,7 +21,7 @@ import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 
-import { answerByHs, answerImage, codeOffer, handleConfirm, handleCorrection } from './answer.mjs';
+import { answerByHs, answerImage, codeOffer, handleConfirm, handleCorrection, noCodes } from './answer.mjs';
 import { ackIngestReports, answer, confirmations, ingestReports, legalProvision, lookupFull, requestIngest, verifyDocument } from './api.mjs';
 import { loadContext, nextState, saveContext, stampTariff } from './conversation.mjs';
 import { fastPath, fold, guardIntent, isBareLookup, isOkay, parseVerifyDocCommand, plainVerdict, readsAsQuestion, unlikeTariffReply } from './dispatch.mjs';
@@ -108,17 +108,7 @@ const LEGAL_MODES = ['legal', 'status', 'mixed'];
 /** Owner decision Q1 takes about 40 s of prose above a rate; past this the block goes out alone and the API stops too. */
 const PROSE_BUDGET_MS = 45_000;
 
-/**
- * Plan text as memory may keep it (R4): masked by the API, its [mã n] labels dropped, and a run the API mask missed dropped too:
- * 6 to 10 joined digits ("mã hs 848180", a 9-digit typo) or 4-2-2 joined by dashes ("8481-80-99", not an ISO date). A year or a
- * document number is shorter or carries a slash.
- * ponytail: a 6- to 10-digit amount or phone number goes as well; the real fix is the API mask.
- */
-const noCodes = (s) =>
-  String(s ?? '')
-    .replace(/\[mã \d+\]|(?<![\d/.-])(?:\d{6,10}|(?!(?:19|20)\d{2}-[01]\d-[0-3]\d(?![\d-]))\d{4}-\d{2}-\d{2}(?:-\d{2})?)(?![\d/-])/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+/** Plan text as memory may keep it (R4): masked by the API, its [mã n] labels dropped, and the runs that mask misses too (noCodes). */
 const asked = (plan) => noCodes(plan.question);
 
 /**

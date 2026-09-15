@@ -639,7 +639,7 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 | `apps/zalo-bot/render.mjs` | toàn bộ |
 | `format.mjs` | `formatAnswer`, `confirmFooter`, `dmy`, `effectLine`, `unverifiedLines`, `sourceLines`, `formatMissingDoc`, `formatProvisions`, `formatGeneral`, `sanitizeLead` (ack, general), `formatIngest*`, `CAPABILITIES` |
 | `answer.mjs` | `answerByHs`, `handleConfirm`, `handleCorrection` (+ luồng ứng viên), `answerImage`, `gatherCandidates`, `tariffByClues` (chỉ cho ảnh đến Việc 16 và khi không có LLM; bỏ `lead`) |
-| `dispatch.mjs` | `CONFIRM_WORDS`, `confirmVerdict`, `DISAGREE_CUE`, `isDisagreement`, `isBareLookup` (+ gập dấu), `readsAsQuestion`, `tariffReply`, `fastPath` (+ lời chào, + cue trên luồng ứng viên), `isAcceptIngest`, `parseVerifyDocCommand`, `guardIntent` (+ `status`/`hs`/`mixed` đi thẳng, + `candidatesFresh`) |
+| `dispatch.mjs` | `ruling` (ngữ pháp đóng của sổ phán quyết, thay `CONFIRM_WORDS`/`confirmVerdict`), `plainVerdict`, `isBareLookup` (+ gập dấu), `readsAsQuestion`, `tariffReply`, `fastPath` (+ lời chào, + cue trên luồng ứng viên), `isAcceptIngest`, `parseVerifyDocCommand`, `guardIntent` (+ `status`/`hs`/`mixed` đi thẳng, + `candidatesFresh`) |
 | `parse.mjs`, `conversation.mjs`, `images.mjs` | toàn bộ (`conversation.mjs` + `candidatesFresh`) |
 | `router.mjs` | `claudeVision`, `runClaude`, `normalize` (cho vision) |
 | API `legal/` | `legal.retrieval.ts`; `legal.evidence.ts` (+ cột HS, + limit); `legal.grounding.ts` (`numberMarkers` thêm tùy chọn, `dropInForceClaims`, `keepRelevant`); `legal.scope.ts`; `legal.asof.ts`; `LegalService` (`documents`, `provision`, `scope`, `gather`, `ask`; export `evidenceSource`, `articleSource`, `focusOn`, `AUTHORITY_NOTE`); `EmbeddingService` |
@@ -655,7 +655,8 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 |---|---|---|
 | `answer.mjs` | `answerCodeCheck`; `answerLegal`; `missingDocAnswer` (phần `pendingIngest` chuyển sang `index.mjs` bằng `missingKind`) | 13 |
 | `format.mjs` | `formatLegal`, `withLead`, `excerpt` | 13 |
-| `dispatch.mjs` | `HS_TOKEN`, `JOINED_HEADING`, `CODE_MARK`, `codebook`, `unmaskCodes`, `asksCodeFit`, `legalAboutCode`, `LEGAL_LIST_CUE`, `TARIFF_CUE` (chuyển sang `plan.ts`), `fallbackIntent` (thành `defaultPlan`) | 13 |
+| `dispatch.mjs` | `HS_TOKEN`, `JOINED_HEADING` (chuyển sang `answer.mjs` cho `captionForVision`), `CODE_MARK`, `codebook`, `unmaskCodes`, `asksCodeFit`, `legalAboutCode`, `LEGAL_LIST_CUE`, `TARIFF_CUE` (chuyển sang `plan.ts`), `fallbackIntent` (thành `defaultPlan`), `DISAGREE_CUE`, `isDisagreement` (hết người gọi khi `route()` đi) | 13 |
+| `parse.mjs` | `mergeQuote` (hết người gọi), `parseDocRef` + `DOC_TYPE_WORDS` (bản sao của `legal.scope.ts`; từ Việc 12 chỉ `plan.ts` đọc số hiệu) | 13 |
 | `router.mjs` | `route`, `transcriptOf`, `stateOf`, `manifestOf`, `INTENTS` (chuyển sang `plan.ts`) | 13 |
 | `api.mjs` | `legalAnswer`, `legalDocuments` | 13 |
 | `index.mjs` | nhánh `legalAboutCode` (153), `check_code` (180–186), `legal` (193–217), `notify` | 12–13 |

@@ -289,11 +289,11 @@ function unverifiedLines(rows) {
 }
 
 /**
- * "Nguồn:" block, small italic. items: { n, label, note?, quote?, cut?, url?, auto? }. A standing note repeated on every source
+ * "Nguồn:" block, small italic. items: { n, label, note?, quote?, url?, auto? }. A standing note repeated on every source
  * ("tài liệu hướng dẫn áp dụng…" three times) is printed once, then "như [n]". Links are de-duplicated per document and
  * capped at three. `auto`: an evidence row extracted by machine that no person has checked yet (R18).
  */
-export function sourceLines(items) {
+function sourceLines(items) {
   if (!items.length) return [];
   const urls = [...new Set(items.map((x) => x.url).filter(Boolean))].slice(0, 3);
   const firstWithNote = new Map();
@@ -302,7 +302,7 @@ export function sourceLines(items) {
     if (x.note && !same) firstWithNote.set(x.note, x.n);
     const note = !x.note ? '' : same ? ` (như [${same}])` : ` (${x.note})`;
     const auto = x.auto ? ' (trích tự động, chưa đối chiếu)' : '';
-    return L([`[${x.n}] ${x.label}${note}${auto}${x.quote ? ` — “${x.quote}”${x.cut ? ' (trích đoạn đầu)' : ''}` : ''}`], 'note');
+    return L([`[${x.n}] ${x.label}${note}${auto}${x.quote ? ` — “${x.quote}”` : ''}`], 'note');
   };
   return [
     L(['Nguồn:'], 'note'),

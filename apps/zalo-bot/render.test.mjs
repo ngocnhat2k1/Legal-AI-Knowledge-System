@@ -406,10 +406,18 @@ test('formatAnswerMd: dòng đỏ hiệu lực gộp theo (văn bản, hiệu l�
   const clause = (n, doc, effectiveness) =>
     cite(n, { kind: null, label: `Khoản 1 Điều ${n} ${doc}`, instrument: doc, documentNumber: doc, authority: 'binding', note: null, verification: 'verified', effectiveness });
   const lines = formatAnswerMd({
-    ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [], answerMd: 'Hàng gia công được miễn thuế [1], trừ khi bán nội địa [2] [3].',
-    citations: [clause(1, 'VB-A', 'con_hieu_luc'), clause(2, 'VB-B', 'het_hieu_luc_mot_phan'), clause(3, 'VB-B', 'het_hieu_luc_mot_phan')],
+    ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [],
+    answerMd: 'Hàng gia công được miễn thuế [1], trừ khi bán nội địa [2] [3]; chú giải nhóm nói thêm [4].',
+    citations: [
+      clause(1, 'VB-A', 'con_hieu_luc'), clause(2, 'VB-B', 'het_hieu_luc_mot_phan'), clause(3, 'VB-B', 'het_hieu_luc_mot_phan'),
+      // Mục bằng chứng (Chú giải chi tiết, SEN, phụ lục…) mang tình trạng trên DÒNG NGUỒN của nó (R18): dù dữ liệu gắn
+      // `effectiveness` gì, nó không bao giờ sinh một dòng đỏ hiệu lực như một điều khoản văn bản.
+      cite(4, { effectiveness: 'het_hieu_luc_mot_phan' }),
+    ],
   });
-  assert.deepEqual(all(lines, ST.red), ['[2] [3] VB-B hết hiệu lực một phần — kiểm tra điều khoản còn áp dụng.']);
+  const red = all(lines, ST.red);
+  assert.deepEqual(red, ['[2] [3] VB-B hết hiệu lực một phần — kiểm tra điều khoản còn áp dụng.']);
+  assert.ok(!red.some((l) => l.includes('CV 1810')), red.join('\n'));
 });
 
 test('formatAnswerMd: văn bản bot tự nạp, cảnh báo của API và dòng phạm vi biểu thuế gộp thành đúng một dòng cam', () => {
