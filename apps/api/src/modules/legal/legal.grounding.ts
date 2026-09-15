@@ -47,7 +47,7 @@ export const statedIn = (text: string, fact: string): boolean => {
 export const expandMarkers = (answer: string, k: number): string =>
   answer
     .replace(/\[(\d+(?:\s*,\s*\d+)+)\]/g, (_, list: string) => list.split(',').map((n) => `[${n.trim()}]`).join(' '))
-    .replace(/\s*\[(\d+)\]/g, (m, n: string) => (Number(n) >= 1 && Number(n) <= k ? m : ''));
+    .replace(/(?<!\s)\s*\[(\d+)\]/g, (m, n: string) => (Number(n) >= 1 && Number(n) <= k ? m : ''));
 
 const LIST_MARKER = /^\s*(?:[-*•]|\d+[.)])(?=\s)/;
 
@@ -65,12 +65,14 @@ export const cutPieces = (pieces: string[], drop: (piece: string) => boolean): s
  * Facts a sentence may state only when its own [n] source contains them. `exempt`: the user may have written it — with
  * `opts`, a `label` fact only as written (a document number by its number/year), never by stray digit groups.
  * `label`: with `opts.labels` it may also stand in the label of [n] — a label is data, not model text (plan 08 §2.5).
+ * A number is read from its first digit ("(?<!\d)", "\d(?<!\d[.,]*\d)"): the same matches, without rescanning a run of
+ * digits from each of its digits (POST /answer checks model prose inside the event loop).
  */
 const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean; label?: true }> = [
-  { re: /\d+(?:[.,]\d+)?\s*%/g, exempt: false, fatal: true },
-  { re: /\d[\d.,]*\s*(?:USD|VND|đồng|đ)(?![\p{L}\d])/giu, exempt: false, fatal: true },
+  { re: /(?<!\d)\d+(?:[.,]\d+)?\s*%/g, exempt: false, fatal: true },
+  { re: /\d(?<!\d[.,]*\d)[\d.,]*\s*(?:USD|VND|đồng|đ)(?![\p{L}\d])/giu, exempt: false, fatal: true },
   { re: /\d{1,2}\/\d{1,2}\/\d{4}/g, exempt: true, fatal: false },
-  { re: /\d+\s*(?:ngày|tháng)(?![\p{L}])/giu, exempt: false, fatal: false },
+  { re: /(?<!\d)\d+\s*(?:ngày|tháng)(?![\p{L}])/giu, exempt: false, fatal: false },
   // The tail stops at emphasis, quotes and brackets: `**08/2015/NĐ-CP**` and `“…”[1]` must still anchor.
   { re: /\d{1,4}\/(?:\d{4}|VBHN)[^\s,;)*"'“”‘’[\]]*/gi, exempt: true, fatal: false, label: true },
   { re: /\d{4}(?:\.\d{2}){1,2}/g, exempt: true, fatal: false, label: true },
@@ -137,11 +139,13 @@ export function numberMarkers(
   const sentences = text.split(/(?<=[.?!;])(?= )|(?<=\n)/);
   const out: string[] = [];
   const cut: string[] = [];
+  // Normalised once, not per sentence and marker: a quote can be a whole section, a sentence can carry many markers.
+  const [normSources, normLabels] = [sources.map(norm), (opts?.labels ?? []).map(norm)];
   for (const s of sentences) {
-    const marks = [...s.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1]));
+    const marks = [...new Set([...s.matchAll(/\[(\d+)\]/g)].map((m) => Number(m[1])))];
     const ids = marks.length ? marks : validCited;
-    const hay = ids.map((n) => norm(sources[n - 1] ?? ''));
-    const labels = ids.map((n) => norm(opts?.labels[n - 1] ?? ''));
+    const hay = ids.map((n) => normSources[n - 1] ?? '');
+    const labels = ids.map((n) => normLabels[n - 1] ?? '');
     let anchored = true;
     for (const { re, exempt, fatal, label } of facts) {
       for (const [fact] of s.matchAll(re)) {
@@ -152,12 +156,13 @@ export function numberMarkers(
       }
     }
     if (anchored || opts?.cut) out.push(s);
-    else out.push(s.replace(/\s*\[\d+\]/g, '').replace(/\*\*/g, ''));
+    else out.push(s.replace(/(?<!\s)\s*\[\d+\]/g, '').replace(/\*\*/g, ''));
     if (!anchored && opts?.cut) cut.push(s.trim());
   }
 
   const order: number[] = [];
-  const renumbered = (opts?.cut ? cutPieces(out, (s) => cut.includes(s.trim())) : out.join(''))
+  const cutSet = new Set(cut);
+  const renumbered = (opts?.cut ? cutPieces(out, (s) => cutSet.has(s.trim())) : out.join(''))
     .replace(/\[(\d+)\]/g, (_, n: string) => {
       const at = order.indexOf(Number(n));
       if (at >= 0) return `[${at + 1}]`;

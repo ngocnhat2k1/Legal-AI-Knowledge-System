@@ -15,7 +15,10 @@ export const splitSentences = (text: string): string[] =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-const RATE = /\d+(?:[.,]\d+)?\s*%|(?<![\p{L}])phần trăm(?![\p{L}])|\d[\d.,]*\s*(?:USD|VND|đồng|đ)(?![\p{L}\d])/iu;
+// Guards run on every answer inside the API event loop, so every pattern here stays linear on 10,000 characters of
+// adversarial prose (guards.spec.ts times them): a number is read from its first digit only ("(?<!\d)", "\d(?<!\d[.,]*\d)"),
+// lookbehinds and spans are bounded, and no two adjacent quantifiers share a character.
+const RATE = /(?<!\d)\d+(?:[.,]\d+)?\s*%|(?<![\p{L}])phần trăm(?![\p{L}])|\d(?<!\d[.,]*\d)[\d.,]*\s*(?:USD|VND|đồng|đ)(?![\p{L}\d])/iu;
 
 /**
  * Sentences stating a rate or an amount. Rates never appear in prose: the reply prints them in a block built from /tariff
@@ -27,16 +30,17 @@ const HEADING_OR_CODE = /(?<![\d.,/])(?:\d{2}\.\d{2}|\d{4}(?:\.\d{2}){0,2}|\d{8}
 // A settling verb, any of "phải/xét/khai/áp/vào/là/thuộc", an optional "mã/nhóm (số/HS)", then the heading: "phải khai
 // 38.24", "Mình chốt là 38.24". After "có/không/chưa (thể)" the verb asks or denies: "có phải 38.24 không" settles nothing;
 // nor does "để" + verb opening the sentence or after an earlier "chưa/không" in its clause ("Để chốt 30.05 hay 38.24, cần …",
-// "Chưa đủ căn cứ để chốt 38.24"), while "Đã đủ căn cứ để chốt 38.24" settles.
+// "Chưa đủ căn cứ để chốt 38.24"), while "Đã đủ căn cứ để chốt 38.24" settles. Bounds: at most 8 spaces between words
+// the lookbehinds read, "chưa/không" at most 120 characters before "để", four verbs in a chain.
 const SETTLING = new RegExp(
-  `(?<![\\p{L}])(?<!(?:có|không|chưa)(?:\\s+thể)?\\s+)(?<!^\\s*\\**\\s*để\\s+)(?<!(?<![\\p{L}])(?:chưa|không)(?![\\p{L}])[^,;:]*\\sđể\\s+)(?:(?:phải|nên|chỉ\\s+có\\s+thể|chắc\\s+chắn|chốt|đề\\s+xuất|kết\\s+luận)(?:\\s+(?:phải|xét|khai|áp|vào|là|thuộc))*(?:\\s+(?:mã|nhóm)(?:\\s+(?:số|HS))?)?\\s+\\**${HEADING_OR_CODE.source}|thuộc\\s+hẳn(?![\\p{L}]))`,
+  `(?<![\\p{L}])(?<!(?:có|không|chưa)(?:\\s{1,8}thể)?\\s{1,8})(?<!^\\s{0,8}\\**\\s{0,8}để\\s{1,8})(?<!(?<![\\p{L}])(?:chưa|không)(?![\\p{L}])[^,;:]{0,120}\\sđể\\s{1,8})(?:(?:phải|nên|chỉ\\s+có\\s+thể|chắc\\s+chắn|chốt|đề\\s+xuất|kết\\s+luận)(?:\\s+(?:phải|xét|khai|áp|vào|là|thuộc)){0,4}(?:\\s+(?:mã|nhóm)(?:\\s+(?:số|HS))?)?\\s+\\**${HEADING_OR_CODE.source}|thuộc\\s+hẳn(?![\\p{L}]))`,
   'iu',
 );
-// "khi" and "trường hợp" make a condition only with a "thì" ("khi hàng có lớp dính thì …") or as "khi đó": "Khi chưa rõ
-// công dụng, phải xét 38.24", "trong trường hợp này … chắc chắn thuộc" and "sau/trước khi đối chiếu (thì) chắc chắn thuộc"
-// settle; "khiếu/khiến" is no "khi".
+// "khi" and "trường hợp" make a condition only with a "thì" at most 200 characters on ("khi hàng có lớp dính thì …") or
+// as "khi đó": "Khi chưa rõ công dụng, phải xét 38.24", "trong trường hợp này … chắc chắn thuộc" and "sau/trước khi đối
+// chiếu (thì) chắc chắn thuộc" settle; "khiếu/khiến" is no "khi".
 const CONDITIONAL =
-  /(?<![\p{L}])(?:nếu|tùy|tuỳ|trừ\s+khi|khi\s+đó|(?:(?<!(?:sau|trước)\s)khi|trường\s+hợp(?!\s+này))(?![\p{L}])(?:[^.;?!]|\.(?=\d))*?\sthì)(?![\p{L}])/iu;
+  /(?<![\p{L}])(?:nếu|tùy|tuỳ|trừ\s+khi|khi\s+đó|(?:(?<!(?:sau|trước)\s)khi|trường\s+hợp(?!\s+này))(?![\p{L}])(?:[^.;?!]|\.(?=\d)){0,200}?\sthì)(?![\p{L}])/iu;
 const CONFIDENCE = /(?<![\p{L}])độ\s+tin\s+cậy(?![\p{L}])/iu;
 
 /**
@@ -67,13 +71,15 @@ export const unknownCitations = (cited: number[], retrieved: number[]): number[]
   return [...new Set(cited)].filter((id) => !known.has(id));
 };
 
-const normQuote = (s: string): string =>
-  String(s ?? '')
-    .normalize('NFC')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/^[\s"'“”‘’.,;:…-]+|[\s"'“”‘’.,;:…-]+$/g, '')
-    .trim();
+const QUOTE_EDGE = /[\s"'“”‘’.,;:…-]/;
+/** Trimmed by index: a trailing `[…]+$` would rescan a run of these characters from each of its positions. */
+const normQuote = (s: string): string => {
+  const t = String(s ?? '').normalize('NFC').toLowerCase().replace(/\s+/g, ' ');
+  let [a, b] = [0, t.length];
+  while (a < b && QUOTE_EDGE.test(t[a]!)) a++;
+  while (b > a && QUOTE_EDGE.test(t[b - 1]!)) b--;
+  return t.slice(a, b);
+};
 
 /**
  * A quote proves nothing unless it is verbatim in the section it cites (spec §3.6 check 2, R10): string support, not
@@ -239,7 +245,7 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
     return order.indexOf(n) + 1;
   };
   const answer = numbered.answer
-    .replace(/\s*\[(\d+)\]/g, (m, k: string) => {
+    .replace(/(?<!\s)\s*\[(\d+)\]/g, (m, k: string) => {
       const n = numbered.order[Number(k) - 1]!;
       return quotes.has(n) ? m.replace(k, String(at(n))) : '';
     })

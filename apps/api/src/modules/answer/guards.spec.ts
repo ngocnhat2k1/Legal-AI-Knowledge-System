@@ -1,3 +1,4 @@
+import { numberMarkers } from '../legal/legal.grounding';
 import {
   type Draft,
   quoteInBody,
@@ -368,4 +369,76 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     expect(lists.cut).toBe(3);
     expect(lists.answerMd).toBe(`${lead}\n• Nếu có lớp dính thì xét 30.05 [1].\n- Nộp bản chính [1].\n2. Cần nhãn hàng [1].`);
   });
+});
+
+describe('guards run on every answer in the event loop: linear on 10,000-character adversarial prose', () => {
+  const N = 10_000;
+  const fill = (unit: string, n = N): string => unit.repeat(Math.ceil(n / unit.length)).slice(0, n);
+  const [spaces, stars] = [' '.repeat(N), '*'.repeat(N)];
+  const inputs = [
+    // Runs of digits, spaces and line breaks.
+    fill('1'),
+    fill('1.'),
+    `${fill('1', N / 2)}${' '.repeat(N / 2)}triệu x`,
+    `x${spaces}x`,
+    `x${'\n'.repeat(N)}x`,
+    fill('1. \n'),
+    fill(' 1.'),
+    // Stars, list and heading markers before spaces, a verdict label before stars.
+    stars,
+    ...['*', '#', '>', '•', '-'].map((m) => `${m}${spaces}x 38.24`),
+    `**Kết luận:**${stars} x 38.24`,
+    `Kết luận:${fill('* ')} 38.24`,
+    `Kết luận${fill(' :')} 38.24`,
+    fill('Kết luận: 38.24 '),
+    // Settling verbs and what negates them, repeated.
+    `38.24 ${fill('để phải ')}`,
+    `38.24 ${fill('phải ')}x`,
+    `x${spaces}để phải xét 38.24`,
+    `38.24 không${spaces}chốt 38.24`,
+    `38.24 không${fill(' thể')} chốt 38.24`,
+    // Conditions: many khi/nếu/thì, one spread by spaces, what is not known before a hedged or listed verb.
+    `38.24 ${fill('khi ')}phải xét 38.24`,
+    fill('khi nếu thì '),
+    `Khi chưa rõ${spaces}thì phải xét 38.24`,
+    fill('Nếu chưa rõ công dụng thì chưa nên vội chốt 38.24 '),
+    fill('nếu chưa rõ thì phải xét 38.24 và 30.05, '),
+    // Markers, headings, the user's code placed again and again, many sentences.
+    fill(' [1]'),
+    fill('[1, 2] '),
+    fill('38.24 [1] '),
+    fill('38.24, '),
+    fill('3005.10.10 thuộc mã '),
+    fill('Phải xét 38.24. '),
+    // What a quote is trimmed of, dots, quoted spans.
+    `x${fill('“”‘’…-,;:')}x`,
+    `x${'.'.repeat(N)}x`,
+    fill('. '),
+    fill('“bông, gạc, băng đã thấm tẩm dược chất” '),
+  ];
+  const subject = ctx({ userText: '3005.10.10 gồm những hàng gì', codeRole: 'subject', userCodes: ['3005.10.10'] });
+  const guards: Array<[string, (s: string) => unknown]> = [
+    ['splitSentences', (s) => splitSentences(s)],
+    ['ratesInProse', (s) => ratesInProse(s)],
+    ['settlementClaims', (s) => settlementClaims(s)],
+    ['verify at subject role', (s) => verify(draft(s, [q1, q2]), [en3005, en3824], subject)],
+    ['verify on a quote as long as the prose', (s) => verify(draft(s, [{ n: 1, quotes: [s] }]), [source({ kind: 'hs_note', body: s })], ctx())],
+    ['quoteInBody', (s) => quoteInBody(s, s)],
+    ['numberMarkers', (s) => [numberMarkers(s, [1], [s], s), numberMarkers(s, [1], [s], s, { cut: true, labels: [s] })]],
+  ];
+
+  // Best of three: another jest worker or a GC pause can stall one call past 50 ms, never all three, while a quadratic
+  // pattern takes 50 ms to seconds on every call at this length.
+  const ms = (f: () => unknown): number => {
+    const t = performance.now();
+    f();
+    return performance.now() - t;
+  };
+  it.each(guards)('%s takes under 50 ms on each input', (_, guard) => {
+    guard('Nếu chưa rõ công dụng thì phải xét 38.24 [1].');
+    const slow = inputs
+      .map((s) => [JSON.stringify(s.slice(0, 24)), Math.round(Math.min(ms(() => guard(s)), ms(() => guard(s)), ms(() => guard(s))))] as const)
+      .filter(([, t]) => t >= 50);
+    expect(slow).toEqual([]);
+  }, 300_000);
 });
