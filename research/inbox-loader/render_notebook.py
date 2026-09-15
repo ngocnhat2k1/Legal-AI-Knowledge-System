@@ -98,11 +98,11 @@ TARIFF_TARGET_WORDS = 50_000
 #: (file slug, title, legal documents in order, notebook-only entries appended after them)
 LEGAL_SOURCES = [
     ("10-luat-va-thu-tuc-hai-quan", "Luật Hải quan, Luật Thuế XNK và thủ tục hải quan",
-     ["54/VBHN-VPQH", "96/VBHN-VPQH", "46/VBHN-BTC"], []),
+     ["54/VBHN-VPQH", "96/VBHN-VPQH", "46/VBHN-BTC", "85/2026/TT-BTC"], []),
     ("11-tt-38-2015-thu-tuc-hai-quan", "Thông tư 38/2015 về thủ tục hải quan (VBHN 25/VBHN-BTC)",
      ["25/VBHN-BTC"], []),
     ("12-xuat-xu-va-xu-phat", "Xuất xứ hàng hóa và xử phạt vi phạm hành chính hải quan",
-     ["31/2018/NĐ-CP", "33/2023/TT-BTC", "128/2020/NĐ-CP"], []),
+     ["31/2018/NĐ-CP", "33/2023/TT-BTC", "128/2020/NĐ-CP", "169/2026/NĐ-CP"], []),
     ("13-quan-ly-ngoai-thuong-nd-292-2026",
      "Nghị định 292/2026/NĐ-CP về quản lý ngoại thương (thay thế Nghị định 69/2018/NĐ-CP)",
      ["292/2026/NĐ-CP"], []),
@@ -112,7 +112,8 @@ LEGAL_SOURCES = [
      ["336/2026/NĐ-CP"], []),
     ("15-chat-luong-nhan-hang-va-danh-muc-rui-ro",
      "Chất lượng sản phẩm, hàng hóa, nhãn hàng hóa và danh mục hàng hóa rủi ro",
-     ["37/2026/NĐ-CP", "36/2026/TT-BKHCN"], []),
+     ["37/2026/NĐ-CP", "36/2026/TT-BKHCN", "33/2026/TT-BCT", "41/2026/TT-BXD", "49/2026/TT-BXD",
+      "27/2026/TT-BNNMT", "27/2026/TT-BYT", "125/2026/TT-BCA"], []),
     ("16-quan-ly-chuyen-nganh-khac",
      "Quản lý chuyên ngành khác: in ấn, máy móc đã qua sử dụng, năng lượng, phí hạ tầng cảng biển",
      ["72/2022/NĐ-CP", "11/2024/TT-BTTTT", "18/2019/QĐ-TTg", "52/2018/TT-BCT"],
