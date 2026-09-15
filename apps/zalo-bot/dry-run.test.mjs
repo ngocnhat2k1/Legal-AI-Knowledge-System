@@ -3,10 +3,12 @@ import { test } from 'node:test';
 
 import { createMemory, recordingFetch, templateHits } from './dry-run.mjs';
 
-test('templateHits đếm các câu khuôn mẫu cố định của câu trả lời ghép khuôn', () => {
-  const reply = 'Với mô tả van, mình tra được…\nCăn cứ phân loại\n[1] Chú giải … (trích đoạn đầu)\nMã đúng thì trả lời "đúng", chưa đúng thì trả lời "sai".';
-  assert.equal(templateHits(reply), 4);
+test('templateHits đếm các câu khuôn mẫu cố định còn lại của luồng ảnh', () => {
+  const reply = 'Với mô tả van, mình tra được…\nMặt hàng có thể thuộc nhiều nhóm — cần bạn chốt mã.\nMã đúng thì trả lời "đúng", chưa đúng thì trả lời "sai".';
+  assert.equal(templateHits(reply), 3);
   assert.equal(templateHits('Chỉ từ mô tả này thì mình chưa chốt được nhóm [1].'), 0);
+  // Việc 13 đã xoá lớp khuôn mẫu của tin chữ: câu của nó không còn được đếm, vì không code nào viết ra được nữa.
+  assert.equal(templateHits('Căn cứ phân loại\nDanh mục mô tả mã này\n[1] Chú giải … (trích đoạn đầu)\nMình đang đọc chú giải'), 0);
 });
 
 test('chạy khô không ghi gì: phán quyết bị ghi lại, không gửi; bộ nhớ hội thoại giữ giữa các lượt', async () => {

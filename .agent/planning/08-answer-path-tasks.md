@@ -650,7 +650,7 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 | `apps/zalo-bot/render.mjs` | toàn bộ |
 | `format.mjs` | `formatAnswer`, `confirmFooter`, `dmy`, `effectLine`, `unverifiedLines`, `sourceLines`, `formatMissingDoc`, `formatProvisions`, `formatGeneral`, `sanitizeLead` (ack, general), `formatIngest*`, `CAPABILITIES` |
 | `answer.mjs` | `answerByHs`, `handleConfirm`, `handleCorrection` (+ luồng ứng viên), `answerImage`, `gatherCandidates`, `tariffByClues` (chỉ cho ảnh đến Việc 16 và khi không có LLM; bỏ `lead`) |
-| `dispatch.mjs` | `CONFIRM_WORDS`, `confirmVerdict`, `DISAGREE_CUE`, `isDisagreement`, `isBareLookup` (+ gập dấu), `readsAsQuestion`, `tariffReply`, `fastPath` (+ lời chào, + cue trên luồng ứng viên), `isAcceptIngest`, `parseVerifyDocCommand`, `guardIntent` (+ `status`/`hs`/`mixed` đi thẳng, + `candidatesFresh`) |
+| `dispatch.mjs` | `ruling` (ngữ pháp đóng của sổ phán quyết, thay `CONFIRM_WORDS`/`confirmVerdict`), `plainVerdict`, `isBareLookup` (+ gập dấu), `readsAsQuestion`, `tariffReply`, `fastPath` (+ lời chào, + cue trên luồng ứng viên), `isAcceptIngest`, `parseVerifyDocCommand`, `guardIntent` (+ `status`/`hs`/`mixed` đi thẳng, + `candidatesFresh`) |
 | `parse.mjs`, `conversation.mjs`, `images.mjs` | toàn bộ (`conversation.mjs` + `candidatesFresh`) |
 | `router.mjs` | `claudeVision`, `runClaude`, `normalize` (cho vision) |
 | API `legal/` | `legal.retrieval.ts`; `legal.evidence.ts` (+ cột HS, + limit); `legal.grounding.ts` (`numberMarkers` thêm tùy chọn, `dropInForceClaims`, `keepRelevant`); `legal.scope.ts`; `legal.asof.ts`; `LegalService` (`documents`, `provision`, `scope`, `gather`, `ask`; export `evidenceSource`, `articleSource`, `focusOn`, `AUTHORITY_NOTE`); `EmbeddingService` |
@@ -666,7 +666,8 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 |---|---|---|
 | `answer.mjs` | `answerCodeCheck`; `answerLegal`; `missingDocAnswer` (phần `pendingIngest` chuyển sang `index.mjs` bằng `missingKind`) | 13 |
 | `format.mjs` | `formatLegal`, `withLead`, `excerpt` | 13 |
-| `dispatch.mjs` | `HS_TOKEN`, `JOINED_HEADING`, `CODE_MARK`, `codebook`, `unmaskCodes`, `asksCodeFit`, `legalAboutCode`, `LEGAL_LIST_CUE`, `TARIFF_CUE` (chuyển sang `plan.ts`), `fallbackIntent` (thành `defaultPlan`) | 13 |
+| `dispatch.mjs` | `HS_TOKEN`, `JOINED_HEADING` (chuyển sang `answer.mjs` cho `captionForVision`), `CODE_MARK`, `codebook`, `unmaskCodes`, `asksCodeFit`, `legalAboutCode`, `LEGAL_LIST_CUE`, `TARIFF_CUE` (chuyển sang `plan.ts`), `fallbackIntent` (thành `defaultPlan`), `DISAGREE_CUE`, `isDisagreement` (hết người gọi khi `route()` đi) | 13 |
+| `parse.mjs` | `mergeQuote` (hết người gọi), `parseDocRef` + `DOC_TYPE_WORDS` (bản sao của `legal.scope.ts`; từ Việc 12 chỉ `plan.ts` đọc số hiệu) | 13 |
 | `router.mjs` | `route`, `transcriptOf`, `stateOf`, `manifestOf`, `INTENTS` (chuyển sang `plan.ts`) | 13 |
 | `api.mjs` | `legalAnswer`, `legalDocuments` | 13 |
 | `index.mjs` | nhánh `legalAboutCode` (153), `check_code` (180–186), `legal` (193–217), `notify` | 12–13 |
@@ -930,15 +931,20 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 
 ### Việc 13: Xoá lớp khuôn mẫu và regex định tuyến
 
-- [ ] **File:** xoá theo bảng "Xoá" ở §7 (các dòng Việc 13), gồm `answer.mjs`, `format.mjs`, `dispatch.mjs`, `router.mjs`, `api.mjs` và `index.mjs`. Trong `tariffByClues`, bỏ `lead` và `withLead`.
-- [ ] **Chuyển test:** trong `dispatch.test.mjs` có 27 chỗ dùng symbol bị xoá.
-  - Ca còn giá trị chuyển sang `plan.spec.ts` (che mã, cue), `guards.spec.ts` hoặc test của `formatAnswerMd`.
-  - Ca còn lại xoá.
-- [ ] **Chứng minh:**
+- [x] **File:** xoá theo bảng "Xoá" ở §7 (các dòng Việc 13), gồm `answer.mjs`, `format.mjs`, `dispatch.mjs`, `router.mjs`, `api.mjs` và `index.mjs`. Trong `tariffByClues`, bỏ `lead` và `withLead`.
+- [x] **Chuyển test:** trong `dispatch.test.mjs` có 27 chỗ dùng symbol bị xoá.
+  - Ca còn giá trị đã có chỗ khác giữ: che mã và cue FIT ở `plan.spec.ts` (`maskCodes`, `codeRole`, `defaultPlan`), khối nguồn và
+    dòng đỏ/cam ở `render.test.mjs` (`formatAnswerMd`).
+  - Ca còn lại xoá: 10 ca chỉ kiểm code đã xoá; 1 ca viết lại (`lead` của `tariffByClues` không còn, dòng ứng viên cố định vẫn là dòng đầu);
+    1 ca mới ở `render.test.mjs` cho `redLines` (gộp dòng đỏ theo văn bản và hiệu lực), vì chỉ test của `formatLegal` giữ nó.
+- [x] **Chứng minh:**
   - `grep -rn "answerCodeCheck\|formatLegal\|withLead\|codebook\|asksCodeFit\|legalAboutCode\|fallbackIntent\|route(" apps/zalo-bot` không ra gì.
   - `test:bot` xanh.
   - `wc -l` các file `apps/zalo-bot/*.mjs` (không tính test) giảm; ghi số dòng trước/sau vào commit.
-- [ ] **Xong khi:** CI xanh và bot mới đã deploy.
+- [ ] **Xong khi:** CI xanh và bot mới đã deploy. *(code xong trên nhánh, chờ gộp + deploy.)*
+- **Kết quả:** grep không ra gì; `test:bot` 146 → 137 xanh; `*.mjs` không tính test 3.279 → 2.861 dòng
+  (`answer.mjs` 588→426, `api.mjs` 118→95, `dispatch.mjs` 422→340, `format.mjs` 601→551, `index.mjs` 515→539 vì nhận
+  `missingDocAnswer`, `router.mjs` 202→77).
 
 ### Việc 14: Hiệu chỉnh model, effort và cỡ prompt trên server
 

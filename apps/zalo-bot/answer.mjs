@@ -9,22 +9,12 @@
  */
 import { unlinkSync } from 'node:fs';
 
-import {
-  confirmations,
-  confirmationsMatch,
-  legalAnswer,
-  legalProvision,
-  lookupFull,
-  postConfirm,
-  searchByPrefix,
-  searchGoods,
-  tariffResponse,
-} from './api.mjs';
+import { confirmations, confirmationsMatch, lookupFull, postConfirm, searchByPrefix, searchGoods, tariffResponse } from './api.mjs';
 import { stampTariff } from './conversation.mjs';
-import { confirmFooter, dmy, formatAnswer, formatLegal, formatMissingDoc, formatProvisions, rulingLine, sanitizeLead, withLead } from './format.mjs';
+import { confirmFooter, dmy, formatAnswer, rulingLine, sanitizeLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
-import { CODE_MARK, codebook, ruling } from './dispatch.mjs';
-import { citationFrom, cleanGazetteTitle, detectOrigin, keywordFrom, missingKind, ORIGIN_LABEL, parseDocRef, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
+import { ruling } from './dispatch.mjs';
+import { citationFrom, cleanGazetteTitle, detectOrigin, HS_RE, keywordFrom, ORIGIN_LABEL, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
 import { L } from './render.mjs';
 import { claudeVision } from './router.mjs';
 
@@ -64,7 +54,6 @@ export async function answerByHs(q, { showFooter = true } = {}) {
 // --- Tariff from clues (keywords + candidate headings) -----------------------
 
 const grp4 = (hs) => String(hs).replace(/\./g, '').slice(0, 4);
-const dot4 = (g) => `${g.slice(0, 2)}.${g.slice(2, 4)}`;
 /** The first (best-ranked) line of each 4-digit heading. */
 const perHeading = (cands) => cands.filter((c, i) => cands.findIndex((x) => grp4(x.hs) === grp4(c.hs)) === i);
 const tail = (c) => (c.path || '').split(' › ').slice(-2).join(' › ');
@@ -149,8 +138,9 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
   const mfnOf = (c) => (date === new Date().toISOString().slice(0, 10) && c.mfn != null ? `${Number(c.mfn)}%` : '—');
   const menu = (c) => L([[c.hsDotted, 'b'], ' · MFN ', [mfnOf(c), 'b'], ' · ', [tail(c), 'i']], 'ul');
 
-  // R2: always said, and the LLM lead can only stand above it. The lead is gated with no block, so it names no
-  // code: "thuộc mã 7307.99.90" above the candidates reads as settled, and a quoted "sai" would hit that code.
+  // R2: always said, and since Việc 13 nothing a model wrote stands above it — the vision note reaches the reply only as
+  // `desc`, through sanitizeLead, which drops any code. A line saying "thuộc mã 7307.99.90" above the candidates would read
+  // as settled, and a quoted "sai" would then hit that code.
   const said = 'mình tra được các mã ứng viên dưới đây — đây là ứng viên để bạn chốt, chưa phải mã đã xác định.';
   const lines = [L(desc ? ['Với mô tả ', [desc, 'i'], `, ${said}`] : [said[0].toUpperCase() + said.slice(1)])];
   if (citedRuling) {
@@ -198,179 +188,7 @@ export async function tariffByClues(clues, text, { showFooter = true } = {}) {
       : full || citedRuling
         ? stampTariff({ hs: top.hsDotted.replace(/\./g, ''), dotted: top.hsDotted, origin, date, snapshot: full || null, desc, keywords: productKw })
         : null;
-  return { text: withLead(sanitizeLead(clues?.lead, ''), lines), topic: 'tariff', tariff };
-}
-
-// --- "Mã này dùng được không" -------------------------------------------------
-
-/**
- * The user named a code for goods they described and asks whether it fits. Their code never reaches a prompt (R4):
- * the router read the message with the code masked, the candidate headings come from the description, and the
- * reasoning is /legal reading the notes of those headings. The code meets both only here, in code.
- */
-export async function answerCodeCheck(q, clues, text) {
-  const plain = codebook().mask(text).replace(CODE_MARK, ' ');
-  // No description from the router: a keyword search on "được không" lists headings about nothing.
-  const described = Boolean(clues?.hsHints?.length || clues?.keywords?.length);
-  const { origin, date, cands } = described ? await gatherCandidates(clues, plain) : { origin: null, date: clues?.date || today(), cands: [] };
-  const own = grp4(q.hs);
-  // The router's rank order is not stable run to run (30.05 first, then fourth, for the same message): compare with six
-  // headings, show three plus the user's own when it is among them.
-  const wide = perHeading(cands).slice(0, 6);
-  const mineAt = wide.findIndex((c) => grp4(c.hs) === own);
-  const heads = [...wide.slice(0, 3), ...(mineAt >= 3 ? [wide[mineAt]] : [])];
-  // The headings shown, plus the user's own heading as one more to tell apart — unlabelled, after the router ranked
-  // blind: R4's "comparison target", so the reasoning can say why 30.05 fits or not even when a run left it out.
-  const groups = [...new Set([...heads.map((c) => grp4(c.hs)), own])];
-  const ask = String(clues?.searchQuery || '').replace(CODE_MARK, '').trim() || `Căn cứ phân loại mã HS cho: ${plain.trim()}`;
-  // Criteria, not a verdict: from "miếng dán bàn chân ngải cứu" alone one run concluded "phải xét vào 38.24" (R2, R5).
-  const query = `${ask} Các nhóm ứng viên cần phân biệt: ${groups.map(dot4).join(', ')}. Nêu tiêu chí phân biệt theo chú giải và dữ kiện nào của hàng quyết định nhóm; mô tả chưa đủ dữ kiện thì không chốt nhóm.`;
-  const [mine, legal] = await Promise.all([
-    lookupFull(q.dotted, q.origin ?? origin, q.date),
-    heads.length ? legalAnswer(query, { asOf: date }) : null,
-  ]);
-
-  const lines = [];
-  if (!heads.length) {
-    lines.push(L(['Mình chưa tìm được nhóm ứng viên nào từ mô tả để đối chiếu với mã ', [q.dotted, 'b'], '. Bạn cho thêm thành phần, chất liệu, công dụng của hàng nhé.']));
-  } else if (mineAt >= 0) {
-    lines.push(L(['Mã ', [q.dotted, 'b'], ' bạn tham khảo thuộc nhóm ', [dot4(own), 'b'], ', trùng một nhóm ứng viên mình tra từ mô tả hàng — mới khớp ở cấp nhóm 4 số; hàng vào nhóm nào, phân nhóm nào còn tùy đặc điểm của nó, xem phần căn cứ bên dưới trước khi chốt.']));
-  } else {
-    // Not orange: the candidates are a model's ranking and move run to run, so their absence is no finding.
-    lines.push(L(['Mã ', [q.dotted, 'b'], ' thuộc nhóm ', [dot4(own), 'b'], ', chưa nằm trong các nhóm mình tra từ mô tả hàng.']));
-  }
-  lines.push(
-    mine?.goods?.path
-      ? L(['Danh mục mô tả mã này: ', [cleanGazetteTitle('', mine.goods.path, 320), 'i']])
-      : L(['Mình chưa tra được mã ', [q.dotted, 'b'], ' trong biểu đã nạp — bạn kiểm tra lại mã giúp mình.']),
-  );
-  if (heads.length) {
-    lines.push(
-      L(['Nhóm ứng viên theo mô tả hàng:']),
-      ...heads.map((c) =>
-        L([[dot4(grp4(c.hs)), 'b'], ' · ', [cleanGazetteTitle('', c.heading || tail(c), 70), 'i'], grp4(c.hs) === own ? ' (nhóm của mã bạn tham khảo)' : ''], 'ul'),
-      ),
-    );
-  }
-  lines.push(L([]));
-  // Without prose (the model timed out or is down) only the HS notes go out verbatim: the statute clauses retrieved
-  // beside them (labelling rules, "phân loại theo hồ sơ") are noise to someone comparing headings.
-  const notes = legal?.answer ? legal.citations ?? [] : (legal?.citations ?? []).filter((c) => ['en', 'hs_note', 'sen'].includes(c.kind));
-  if (notes.length) {
-    lines.push(L([['Căn cứ phân loại', 'b']]), ...formatLegal({ ...legal, citations: notes }));
-  } else if (heads.length) {
-    lines.push(L(['Mình chưa tìm được chú giải đủ căn cứ để giải thích — bạn đối chiếu Chú giải chương và Chú giải chi tiết của các nhóm trên trước khi chốt.'], 'note'));
-  }
-  lines.push(L([`Đây là gợi ý để đối chiếu, chưa phải mã đã xác định; cần chắc chắn trước khi khai thì đề nghị hải quan xác định trước mã số. Muốn xem thuế, nhắn "thuế ${q.dotted} xuất xứ <nước>".`], 'note'));
-
-  const grounded = Boolean(legal?.answer && legal.citations?.length);
-  return {
-    // No router lead: it is written before any evidence and can pass the gate saying "mã này phù hợp" (R2).
-    text: lines,
-    // A "sai" after this disputes the reasoning: it must never reach the trail as "the user's code is wrong" (R13).
-    topic: 'legal',
-    // Not remembered: "mã HS vừa tra: 3005.10.10 (miếng dán ngải cứu)" in the next prompt is the premise R4 forbids.
-    tariff: null,
-    legal: grounded
-      ? {
-          // The description-only question: the heading list would carry the user's heading into the next router prompt (R4).
-          query: ask,
-          asOf: legal.asOf ?? null,
-          docNumbers: [...new Set(legal.citations.map((c) => c.documentNumber))],
-          citations: legal.citations.slice(0, 3).map((c) => ({ documentNumber: c.documentNumber, provisionLabel: c.provisionLabel })),
-          missingDoc: null,
-        }
-      : null,
-  };
-}
-
-// --- Legal -------------------------------------------------------------------
-
-/**
- * Grounded legal answer. Three distinct outcomes, and telling them apart is the point:
- *   - the corpus does not HOLD the document the user named → say which documents it holds
- *   - the corpus holds it but nothing in it answers the question → say that
- *   - an answer, with verbatim provisions
- *
- * The first case used to be silently collapsed into "chưa tổng hợp được câu trả lời",
- * which reads as the bot failing rather than the question being out of scope.
- */
-export async function answerLegal(query, { asOf, doc, article, clause, lead } = {}) {
-  const ref = parseDocRef(doc || '') ?? (() => { const r = parseDocRef(query); return r?.confident ? r : null; })();
-
-  // The full number when the user wrote one: the API then matches that ONE document (69/2018 bug), and for
-  // a document it does not hold it answers `missingDoc` with what the Công báo catalogue knows.
-  const r = await legalAnswer(query, { asOf, doc: ref ? (ref.full ?? ref.core) : undefined, article });
-  if (r?.missingDoc) return missingDocAnswer(query, r.missingDoc, r, r.asOf ?? asOf);
-
-  if (!r || r.abstained || !(r.citations || []).length) {
-    // A named Điều that retrieval could not ground is still fetchable verbatim —
-    // "cho tôi Điều 18" is a lookup, and the text either exists or it does not.
-    if (ref && article) {
-      const rows = await legalProvision(ref.full ?? ref.core, article, clause);
-      if (rows?.length) {
-        return {
-          text: withLead(lead, formatProvisions(rows)),
-          topic: 'legal',
-          legal: {
-            query,
-            asOf: asOf ?? null,
-            docNumbers: [rows[0].documentNumber],
-            citations: rows.slice(0, 3).map((p) => ({ documentNumber: p.documentNumber, provisionLabel: p.citationLabel })),
-          },
-        };
-      }
-    }
-    // No answer from the API is not "nothing found": neither the corpus nor the Công báo catalogue was consulted.
-    if (!r) return { text: 'Không gọi được dịch vụ tra cứu văn bản. Thử lại sau nhé.', topic: 'legal', legal: null };
-    // The API reason is shown only when it passes the same gate as LLM prose (it can be model text).
-    const reason = sanitizeLead(r?.reason, '');
-    return {
-      text: [
-        L(['Mình chưa tìm thấy điều khoản đủ căn cứ trong ', ref ? [ref.label, 'b'] : 'các văn bản mình đang có', ' nên chưa trả lời, để tránh sai.']),
-        ...(reason ? [L([`Lý do: ${reason}`], 'note')] : []),
-        L(['Nếu bạn biết số hiệu văn bản, nhắn số hiệu để mình tìm trên Công báo và nạp về.']),
-      ],
-      topic: 'legal',
-      legal: { query, asOf: r?.asOf ?? null, missingDoc: null },
-    };
-  }
-
-  return {
-    text: formatLegal(r),
-    topic: 'legal',
-    legal: {
-      query,
-      asOf: r.asOf ?? null,
-      docNumbers: [...new Set((r.citations || []).map((c) => c.documentNumber))],
-      citations: (r.citations || []).slice(0, 3).map((c) => ({ documentNumber: c.documentNumber, provisionLabel: c.provisionLabel })),
-      missingDoc: null,
-    },
-  };
-}
-
-/**
- * Answer for a document we do not hold, carrying whatever the gazette catalogue knows.
- * `pendingIngest` is what lets the next turn act on "nạp" — the offer and the thing
- * being offered have to survive between messages, which is what conversation memory is for.
- */
-export function missingDocAnswer(query, label, apiAnswer, asOf) {
-  // A catalogue hit equal to the number asked for IS that document: offer it, never list it as another one.
-  const { kind, matches } = missingKind(label, apiAnswer?.gazetteMatches ?? [], apiAnswer?.gazetteMatchKind ?? 'none');
-  // Only an EXACT catalogue hit may be offered for ingest. A near-miss by number is a
-  // different document, and an ambiguous year is a question for the user — fetching
-  // either would answer something nobody asked.
-  const hit = kind === 'exact' ? (matches[0] ?? null) : null;
-  return {
-    text: formatMissingDoc(label, matches, kind),
-    topic: 'legal',
-    legal: {
-      query,
-      asOf: asOf ?? null,
-      missingDoc: label,
-      pendingIngest: hit ? { number: hit.number, title: hit.title, sourceUrl: hit.sourceUrl } : null,
-    },
-  };
+  return { text: lines, topic: 'tariff', tariff };
 }
 
 // --- Verify-on-use: confirm / correct ---------------------------------------
@@ -557,8 +375,43 @@ export async function codeOffer(tariff, fix) {
 
 // --- Image --------------------------------------------------------------------
 
+/**
+ * Every spelling of a code or heading vision must not see: an 8-digit code; digits after a word naming one ("nhóm hàng 3005",
+ * "mã số 30.05.10.10", "HS: 3005", "chương 30"); a dotted "3005.10" or "30.05" standing alone. Not a date ("ngày 30.05",
+ * "14.09.2026"), an amount ("12.50%", "12.50 triệu") or a time ("08.30 sáng"). The typed path masks in the API (plan.ts
+ * maskCodes); vision runs here, so the caption is stripped here.
+ */
+const HS_TOKEN = new RegExp(
+  `${HS_RE.source}` +
+    `|(?<=(?:nhóm(?:\\s*hàng)?|mã(?:\\s*số)?(?:\\s*hs)?|hs(?:\\s*code)?|chương)\\s*:?\\s*)\\d{2}(?:\\.?\\d{2}(?:\\.\\d{2}){0,2})?(?![\\d/])` +
+    `|(?<![\\d.,/])\\d{4}\\.\\d{2}(?![\\d/%]|[.,]\\d)` +
+    `|(?<![\\d.,/]|ngày\\s)\\d{2}\\.\\d{2}(?:\\.\\d{2}){0,2}(?![\\d/%]|[.,]\\d|\\s*(?:triệu|tỷ|đồng|usd|giờ|sáng|chiều|h(?![\\p{L}])))`,
+  'giu',
+);
+/** A bare heading joined to one already struck out: "nhóm [mã] hay 3824", and a list "nhóm [mã] hoặc 3824, và 3926". */
+const JOINED_HEADING = /(\[mã\](?:\s*(?:,|hay|hoặc|hoac|và|va|sang))+\s*)(\d{4})(?![\d/]|[.,]\d)/giu;
+
+/**
+ * The runs HS_TOKEN cannot read as a code: 6 to 10 joined digits ("mã hs 848180", a 9-digit typo, and "8481809900", of which
+ * HS_TOKEN reads only the first eight) or a 4-2-2(-2) code joined by dashes ("8481-80-99", which is not an ISO date). A year
+ * or a document number is shorter or carries a slash, so both survive. index.mjs strips the same runs from the state it saves.
+ * ponytail: a 6- to 10-digit amount or phone number goes as well. For saved state the real fix is the API mask; for a caption
+ * over-stripping costs nothing — vision only needs the goods description, so this fails closed.
+ */
+export const noCodes = (s) =>
+  String(s ?? '')
+    .replace(/\[mã \d+\]|(?<![\d/.-])(?:\d{6,10}|(?!(?:19|20)\d{2}-[01]\d-[0-3]\d(?![\d-]))\d{4}-\d{2}-\d{2}(?:-\d{2})?)(?![\d/-])/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 /** A photo caption as vision may read it: no code or heading the user typed, so it cannot seed the heading guesses (R4). */
-export const captionForVision = (caption) => codebook().mask(caption).replace(CODE_MARK, ' ').replace(/\s+/g, ' ').trim();
+export const captionForVision = (caption) => {
+  // NFC first: Unikey's "Unicode tổ hợp" types "nhóm" decomposed, and the keyword lookbehind would miss it. noCodes before
+  // HS_TOKEN: HS_TOKEN reads "8481809900" as an 8-digit code and would leave "00" standing.
+  let s = noCodes(String(caption ?? '').normalize('NFC')).replace(HS_TOKEN, '[mã]');
+  for (let prev = ''; prev !== s; ) [prev, s] = [s, s.replace(JOINED_HEADING, (_, head) => `${head}[mã]`)];
+  return s.replace(/\[mã\]/g, ' ').replace(/\s+/g, ' ').trim();
+};
 
 /** Answer a photo message: download → vision-identify → deterministic tariff lookup. */
 export async function answerImage(imageUrls, caption) {

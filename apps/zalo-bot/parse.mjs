@@ -138,55 +138,6 @@ export function stripMentions(content, mentions) {
   return s.replace(/\s+/g, ' ').trim();
 }
 
-/** Prepend the replied-to text as context so a follow-up question keeps its subject. */
-export function mergeQuote(content, quote) {
-  const q = String(quote?.msg || '').replace(/\s+/g, ' ').trim();
-  if (!q) return content;
-  const ctx = q.length > 600 ? q.slice(0, 600) + '…' : q;
-  return `Ngữ cảnh (tin được trả lời): ${ctx}\nCâu hỏi: ${content}`.trim();
-}
-
-/**
- * A document reference the user named ("Thông tư 38/2015", "NĐ 08/2015/NĐ-CP").
- * Mirrors apps/api/src/modules/legal/legal.scope.ts — the bot needs it locally to
- * check the corpus manifest BEFORE spending a retrieval, and to say plainly that a
- * document is not held rather than answering from a different one.
- */
-const DOC_TYPE_WORDS = [
-  [/(thông tư|thong tu|tt)$/i, 'thong_tu'],
-  [/(nghị định|nghi dinh|nđ|nd)$/i, 'nghi_dinh'],
-  [/(nghị quyết|nghi quyet|nq)$/i, 'nghi_quyet'],
-  [/(pháp lệnh|phap lenh|pl)$/i, 'phap_lenh'],
-  [/(quyết định|quyet dinh|qđ|qd)$/i, 'quyet_dinh'],
-  [/(văn bản hợp nhất|van ban hop nhat|vbhn)$/i, 'vbhn'],
-  [/(luật|luat)$/i, 'luat'],
-];
-
-export function parseDocRef(raw) {
-  const text = String(raw || '').normalize('NFC').trim();
-  const m = text.match(/(\d{1,4})\s*\/\s*(\d{4}|vbhn(?:-[a-zà-ỹ]+)?)/i);
-  if (!m) return null;
-  const start = m.index ?? 0;
-  const before = text.slice(0, start).replace(/\bsố\b/gi, '').trim();
-  let docType = null;
-  for (const [re, kind] of DOC_TYPE_WORDS) {
-    if (re.test(before)) { docType = kind; break; }
-  }
-  const after = text.slice(start + m[0].length);
-  // Issuers can end in digits (QH13, NQ-UBTVQH14): cutting at the digit would miss the law we hold.
-  const issuer = after.match(/^\s*\/\s*[a-zà-ỹ][a-zà-ỹ\d-]*/i)?.[0] ?? '';
-  const isVbhn = /vbhn/i.test(m[2]);
-  const label = (text.slice(start, start + m[0].length) + issuer).replace(/\s+/g, '').toUpperCase();
-  return {
-    core: `${m[1]}/${m[2]}`.toUpperCase(),
-    docType,
-    label,
-    // The number as written, issuer included, when the user wrote one — what the API needs to match exactly.
-    full: issuer ? label : null,
-    confident: Boolean(docType) || Boolean(issuer) || isVbhn,
-  };
-}
-
 /** The API's foldDocNumber (legal.scope.ts): NFC, no whitespace, upper case, Đ → D, no leading zeros. */
 const foldDocNumber = (s) =>
   String(s ?? '').normalize('NFC').replace(/\s+/g, '').toUpperCase().replace(/Đ/g, 'D').replace(/^0+(?=\d)/, '');

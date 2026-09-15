@@ -24,7 +24,7 @@
  * so a cue that does not match the current topic is never allowed to reach a handler
  * that would write to the audit trail.
  */
-import { detectOrigin, HS_RE, hasHs, ORIGIN_LABEL, parseDocRef } from './parse.mjs';
+import { detectOrigin, HS_RE, hasHs, ORIGIN_LABEL } from './parse.mjs';
 
 const wholeMessage = (text) => String(text ?? '').toLowerCase().normalize('NFC').replace(/[.!,?…\s]+$/g, '').trim();
 
@@ -127,30 +127,6 @@ export function plainVerdict(text) {
 /** "ok", "oke": seen, noted. Agreement on any topic, never a verdict. */
 export const isOkay = (text) => ['ok', 'oke', 'okie', 'okay'].includes(wholeMessage(text));
 
-/**
- * "This answer is wrong" — in a multi-word message. Topic-neutral by nature: these
- * words say the previous answer missed, not WHAT it missed. What they mean depends
- * entirely on what the previous answer was about, which is why callers must gate on topic.
- */
-export const DISAGREE_CUE =
-  /(?<![\p{L}])(sai|không phải|ko phải|khong phai|phải là|phai la|đúng là|dung la|mã đúng|ma dung|hs đúng|hs dung|không đúng|khong dung|chỉnh lại|chinh lai|sửa lại|sua lai|nhầm|nham|không chính xác|khong chinh xac|ý tôi là|y toi la|không phải cái|tôi muốn hỏi|toi muon hoi)(?![\p{L}])/u;
-
-export const isDisagreement = (text) => DISAGREE_CUE.test(String(text ?? '').toLowerCase());
-
-const TARIFF_CUE = /thuế|%|phần trăm|xuất xứ|c\/o|mfn|fta|ưu đãi|biểu/;
-const LEGAL_LIST_CUE =
-  /danh mục|rủi ro|kiểm tra chuyên ngành|quản lý chuyên ngành|giấy phép|hợp quy|hợp chuẩn|kiểm dịch|năng lượng|thông tư|nghị định|quyết định|công văn|văn bản/;
-
-/**
- * An HS code inside a question about a legal list is a legal question: "mũ bảo hiểm 6506.10.10 thuộc danh mục rủi ro
- * nào theo Thông tư 36/2026" asks which document lists the code, and the tariff lookup the code would otherwise
- * trigger answered with MFN 20% (observed 2026-09-14). Any tariff cue keeps the tariff path.
- */
-export function legalAboutCode(text) {
-  const t = String(text ?? '').toLowerCase().normalize('NFC');
-  return hasHs(t) && !TARIFF_CUE.test(t) && LEGAL_LIST_CUE.test(t);
-}
-
 /** Every word a plain rate lookup is made of: "thuế nhập khẩu mã 8481.80.99 xuất xứ Trung Quốc là bao nhiêu %". */
 const LOOKUP_WORDS = new Set(
   ('thuế suất nhập xuất khẩu xứ mã hs code hscode bao nhiêu nhiêu phần trăm % là của cho hàng hoá hóa mfn fta c/o co form ' +
@@ -173,62 +149,6 @@ export function isBareLookup(text) {
     .replace(/\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}/g, ' ');
   return rest.split(/[^\p{L}\d/%]+/u).filter((w) => w && !LOOKUP_WORDS.has(w)).length === 0;
 }
-
-/**
- * Every spelling of a code or heading the router must not see: an 8-digit code; digits after a word naming one ("nhóm
- * hàng 3005", "mã số 30.05.10.10", "HS: 3005", "chương 30"); a dotted "3005.10" or "30.05" standing alone. Not a date
- * ("ngày 30.05", "14.09.2026"), an amount ("12.50%", "12.50 triệu") or a time ("08.30 sáng").
- */
-const HS_TOKEN = new RegExp(
-  `${HS_RE.source}` +
-    `|(?<=(?:nhóm(?:\\s*hàng)?|mã(?:\\s*số)?(?:\\s*hs)?|hs(?:\\s*code)?|chương)\\s*:?\\s*)\\d{2}(?:\\.?\\d{2}(?:\\.\\d{2}){0,2})?(?![\\d/])` +
-    `|(?<![\\d.,/])\\d{4}\\.\\d{2}(?![\\d/%]|[.,]\\d)` +
-    `|(?<![\\d.,/]|ngày\\s)\\d{2}\\.\\d{2}(?:\\.\\d{2}){0,2}(?![\\d/%]|[.,]\\d|\\s*(?:triệu|tỷ|đồng|usd|giờ|sáng|chiều|h(?![\\p{L}])))`,
-  'giu',
-);
-/**
- * A bare heading joined to one already masked: "nhóm [mã 1] hay 3824", and a list "nhóm [mã 1] hoặc 3824, và 3926" —
- * a heading may end at punctuation, and connectors may follow each other (", và").
- */
-const JOINED_HEADING = /(\[mã \d+\](?:\s*(?:,|hay|hoặc|hoac|và|va|sang))+\s*)(\d{4})(?![\d/]|[.,]\d)/giu;
-export const CODE_MARK = /\[mã \d+\]/g;
-
-/**
- * The router never sees the digits of a code (R4): a code the user prefers is not a premise, whether it is in the new
- * message, an earlier turn or the "code just looked up" line. Each code becomes `[mã n]`, the same n wherever it recurs,
- * so a rewritten question can be given its codes back.
- */
-export function codebook() {
-  const codes = [];
-  const key = (m) => {
-    const d = m.replace(/[.\s]/g, '');
-    return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : m;
-  };
-  const mark = (m) => {
-    const k = key(m);
-    const i = codes.includes(k) ? codes.indexOf(k) : codes.push(k) - 1;
-    return `[mã ${i + 1}]`;
-  };
-  // NFC first: Unikey's "Unicode tổ hợp" types "nhóm" decomposed, and the keyword lookbehind would miss it.
-  const mask = (text) => {
-    let s = String(text ?? '').normalize('NFC').replace(HS_TOKEN, mark);
-    for (let prev = ''; prev !== s; ) [prev, s] = [s, s.replace(JOINED_HEADING, (_, head, code) => head + mark(code))];
-    return s;
-  };
-  return { codes, mask };
-}
-
-export const unmaskCodes = (text, codes = []) => String(text ?? '').replace(/\[mã (\d+)\]/g, (m, n) => codes[n - 1] ?? m);
-
-/**
- * "Vì sao hàng của em vào mã X", "mã này dùng đc k": a question about the code itself, the user's code as the premise
- * of a classification (R4). Read without diacritics and with the short forms staff type; a question about what a list or
- * a rule allows ("xe 8703.23.51 nhập khẩu được không") is not one.
- */
-export const asksCodeFit = (text) =>
-  /(?<![a-z])(?:ma|code|hs|nhom)(?![a-z])[^?!\n]{0,40}(?<![a-z])(?:duoc|dc|dung|sai|phu hop|ok|chuan)\s*(?:khong|ko|k|chua|ha|a|nhi)(?![a-z])|(?<![a-z])(?:vi sao|tai sao|sao lai)(?![a-z])|(?<![a-z])(?:ap|vao|thuoc|khai|tham khao)\s+(?:ma|nhom|code)(?![a-z])/.test(
-    fold(text),
-  );
 
 /** A bare greeting gets the capabilities at once: "hi" used to go through the router and come back as a product search. */
 const GREETINGS = ['hi', 'hello', 'hey', 'alo', 'chao', 'xin chao', 'chao bot', 'chao ban', 'hi bot', 'hello bot'];
@@ -407,16 +327,4 @@ export function guardIntent(intentRaw, { topic = null, tariffFresh = false, cand
   // "Refine" is "not that one" — it belongs to whatever we were already doing; after candidates, the classification.
   if (intent === 'refine') return topic === 'legal' ? 'legal' : topic === 'tariff' ? (candidatesFresh ? 'hs' : 'tariff') : 'general';
   return intent;
-}
-
-/**
- * Fallback when no LLM is available (no CLAUDE_CODE_OAUTH_TOKEN). Without a router the
- * bot used to treat every non-HS message as a product-keyword lookup, which is how a
- * legal follow-up became a tariff search. Stay on the current topic instead.
- */
-export function fallbackIntent({ topic = null, text = '' }) {
-  if (topic === 'legal') return 'legal';
-  if (isDisagreement(text) && topic === 'general') return 'general';
-  if (parseDocRef(text)?.confident) return 'legal'; // "Nghị định 69/2018/NĐ-CP còn áp dụng không" is no product
-  return 'tariff';
 }

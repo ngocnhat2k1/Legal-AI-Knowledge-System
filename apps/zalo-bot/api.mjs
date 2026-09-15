@@ -71,33 +71,10 @@ export const answer = (body, timeoutMs = 125_000) => postJson('/answer', body, t
 
 // --- Legal ------------------------------------------------------------------
 
-export function legalAnswer(query, { asOf, doc, article } = {}) {
-  const qs = new URLSearchParams({ q: query });
-  if (asOf) qs.set('asOf', asOf);
-  if (doc) qs.set('doc', doc);
-  if (article) qs.set('article', article);
-  return getJson(`/legal?${qs}`);
-}
-
 export function legalProvision(doc, article, clause) {
   const qs = new URLSearchParams({ doc, article: String(article) });
   if (clause) qs.set('clause', String(clause));
   return getJson(`/legal/provision?${qs}`);
-}
-
-/**
- * The corpus manifest, cached. The router prompt carries it (so the model does not
- * promise a document we do not hold) and the legal path checks against it (so the
- * bot can say "we don't carry that Thông tư" instead of answering from another one).
- */
-let manifest = { docs: [], at: 0 };
-const MANIFEST_TTL = 60 * 60 * 1000;
-
-export async function legalDocuments() {
-  if (manifest.docs.length && Date.now() - manifest.at < MANIFEST_TTL) return manifest.docs;
-  const docs = await getJson('/legal/documents');
-  if (Array.isArray(docs) && docs.length) manifest = { docs, at: Date.now() };
-  return manifest.docs;
 }
 
 // --- Conversation memory ----------------------------------------------------
