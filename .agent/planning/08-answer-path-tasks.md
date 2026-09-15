@@ -493,7 +493,9 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 1. **Che mã** bằng `maskCodes` trong `plan.ts`: port nguyên `HS_TOKEN`, `JOINED_HEADING` và `key` của `dispatch.mjs` ở `a37c663`.
    - Chuẩn hoá NFC trước.
    - Che mọi cách viết mã 8 số, `dddd.dd(.dd)`, `dd.dd(.dd)` đứng riêng, và chữ số sau `nhóm (hàng)|mã (số)|hs (code)|chương` (có hoặc không có `:`).
-   - Không che: ngày, số tiền, giờ, năm, số hiệu văn bản.
+   - Sau từ khoá, một dãy số liền `\d{4}(\d{2}){0,2}` cũng là mã: "mã hs 848180", "hs 848180 dùng cho van được không" bị che, có trong `userCodes` ở dạng có chấm (`8481.80`), và chốt ở bước 4 bỏ phần nào còn viết nó.
+   - Nhóm 4 số đứng trần, không có từ khoá, chỉ bị che khi một mã trong sổ (tin này hoặc phần đã che trước đó) bắt đầu bằng nó (`BARE_HEADING`: "thuộc 3005 hay 3824, mã 3005.10.10"), hoặc khi nó nối sau một nhóm đã che bằng `,`, `hay`, `hoặc`, `và`, `sang` (`JOINED_HEADING`). Bốn số đứng một mình khác, như "năm 2026", giữ nguyên.
+   - Không che: ngày, số tiền, giờ, năm, số hiệu văn bản ("Thông tư 36/2026"), và dãy từ 9 chữ số liền trở lên ("mã số thuế 0312345678", số điện thoại). Giới hạn biết trước: dòng 10 số gõ liền ("8481809910") cũng không bị che; có chấm hoặc cách thì vẫn che.
    - Áp cho tin mới, quote, lượt cũ và dòng trạng thái.
 2. **`codeRole` do code quyết**, trên chữ đã gập dấu (NFD, bỏ dấu, đ→d):
 

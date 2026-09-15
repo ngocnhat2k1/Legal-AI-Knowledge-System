@@ -60,10 +60,13 @@ export const fold = (s: string): string =>
  * a bare "dd.dd" before an accented money or time word ("12.50 triệu", "08.30 sáng"). Nothing after a keyword or a
  * "dddd.dd" is ever read as a unit: two review rounds found "3005.10 sang 3824.90", "mã 3005 ngay", "mã 7411 đồng tinh
  * luyện" and "3005.10 usd" leaking through unit words. Over-masking an amount costs nothing; a leaked code is R4.
+ * After a keyword a joined run is a code too ("mã hs 848180"). A run of nine or more joined digits is no code: a tax
+ * number or a phone ("mã số thuế 0312345678") masked as one came back as a userCodes line.
+ * ponytail: a ten-digit sub-line typed joined ("8481809910") is left unmasked with them; dotted or spaced it is masked.
  */
 const HS_TOKEN = new RegExp(
-  String.raw`\d{4}[.\s]?\d{2}[.\s]?\d{2}` +
-    String.raw`|(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|hs(?:\s*code)?|ch[uư][oơ]ng)\s*:?\s*)\d{2}(?:\.?\d{2}(?:\.\d{2}){0,2})?(?![\d/])` +
+  String.raw`(?<!\d)\d{4}[.\s]?\d{2}[.\s]?\d{2}(?!\d)` +
+    String.raw`|(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|hs(?:\s*code)?|ch[uư][oơ]ng)\s*:?\s*)\d{2}(?:\.?\d{2}(?:\.?\d{2}){0,2})?(?![\d/])` +
     String.raw`|(?<![\d.,/])\d{4}\.\d{2}(?![\d/]|[.,]\d)` +
     String.raw`|(?<![\d.,/]|ng[aà]y\s)\d{2}\.\d{2}(?:\.\d{2}){0,2}(?![\d/%]|[.,]\d|\s*(?:triệu|tỷ|giờ|sáng|chiều)(?![\p{L}]))`,
   'giu',

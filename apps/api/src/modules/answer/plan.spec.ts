@@ -102,6 +102,11 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       ['nhóm 3005, 3824.', 'nhóm [mã 1], [mã 2].'],
       // A bare heading of a code the text also names, wherever it stands.
       ['miếng dán thuộc 3005 hay 3824, mã 3005.10.10 có đúng không', 'miếng dán thuộc [mã 2] hay [mã 3], mã [mã 1] có đúng không'],
+      // A joined six-digit run after a code word is a subheading.
+      ['mã hs 848180', 'mã hs [mã 1]'],
+      ['mã 848180', 'mã [mã 1]'],
+      ['hs 848180 dùng cho van được không', 'hs [mã 1] dùng cho van được không'],
+      ['phân nhóm 300510 gồm gì', 'phân nhóm [mã 1] gồm gì'],
     ]) {
       expect(maskCodes(text!).text).toBe(masked);
     }
@@ -120,6 +125,9 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       'ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu',
       '15.000.000 đồng',
       'hạn 14.09.2026',
+      // Ten joined digits are a tax number or a phone, never a code.
+      'mã số thuế 0312345678 theo Thông tư 36/2026',
+      'mã số 0312345678, gọi 0912345678',
     ]) {
       expect(maskCodes(text)).toEqual({ text, codes: [] });
     }
@@ -174,6 +182,15 @@ describe('userCodes and assertNoUserCodes — the last latch before a spawn (R4)
 
   it('lists a code followed by a word that is also a unit, so the latch checks it', () => {
     expect(userCodes('e khai 3005.10 sang 3824.90 được không').map((c) => c.code)).toEqual(['3005.10', '3824.90']);
+  });
+
+  it('lists a joined six-digit run after a code word dotted, so the latch drops a part spelling it', () => {
+    for (const text of ['mã hs 848180', 'mã 848180', 'hs 848180 dùng cho van được không']) {
+      const codes = userCodes(text);
+      expect(codes).toEqual([{ code: '8481.80', level: 6, heading: '84.81' }]);
+      expect(assertNoUserCodes([{ name: 'turns', text: `NGƯỜI DÙNG: ${text}` }], codes, 'key').leakDrops).toEqual(['turns']);
+    }
+    expect(userCodes('mã số thuế 0312345678')).toEqual([]);
   });
 
   it('drops a part holding the code in any spelling, keeps a document number', () => {
