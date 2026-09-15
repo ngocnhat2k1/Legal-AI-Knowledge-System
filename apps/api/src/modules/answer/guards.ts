@@ -184,6 +184,12 @@ export interface VerifyResult {
 const EVIDENCE_KINDS = new Set(['en', 'sen', 'hs_note', 'gri', 'ruling', 'guidance', 'annex_table']);
 const CODE8 = /(?<![\d.,/])(?:\d{4}\.\d{2}\.\d{2}|\d{8})(?![\d/%]|[.,]\d)/g;
 const PLACED_UNDER = new RegExp(`(?<!\\p{L})(?:thuộc|vào|áp|khai)\\s+(?:mã|nhóm)(?:\\s+(?:số|HS))?\\s+\\**(${HEADING_OR_CODE.source})`, 'giu');
+// G6 lets a placement stand when its clause head is exactly the code itself ("Mã này thuộc nhóm 30.05") or goods of the
+// code in general before what the code holds ("Các hàng thuộc mã 3005.10.10 gồm …"); "bạn" anywhere makes them the user's.
+const THIS_CODE = /^(?:phân\s+)?(?:mã|nhóm)\s+này$/iu;
+const GOODS_OF_CODE = /^(?:(?:các|những|mọi)\s+(?:mặt\s+)?(?:hàng|sản\s+phẩm)|hàng\s+h(?:óa|oá))$/iu;
+const CODE_CONTENT = /^\**\s*(?:gồm|bao\s+gồm|áp\s+dụng\s+cho|dành\s+cho)(?![\p{L}])/iu;
+const YOU = /(?<![\p{L}])bạn(?![\p{L}])/iu;
 
 /** "3005" → "30.05", "300510" → "3005.10", "30051010" → "3005.10.10". */
 const dotted = (d: string): string =>
@@ -255,12 +261,18 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
     [
       'G6',
       'places the goods under the code asked about',
-      (s) =>
-        subject &&
-        [...s.matchAll(PLACED_UNDER)].some((m) => {
-          const head = s.slice(0, m.index).split(/[,;:]|\s(?:nên|và|vì|còn|nhưng)\s/).pop()!;
-          return own.some((u) => u.startsWith(digits(m[1]!)) || digits(m[1]!).startsWith(u)) && !own.some((u) => spelled(u).test(head));
-        }),
+      (s) => {
+        const you = YOU.test(s);
+        return (
+          subject &&
+          [...s.matchAll(PLACED_UNDER)].some((m) => {
+            const head = s.slice(0, m.index).split(/[,;:]|\s(?:nên|và|vì|còn|nhưng)\s/).pop()!;
+            const tail = s.slice(m.index + m[0].length, m.index + m[0].length + 30);
+            const generic = !you && (THIS_CODE.test(head.trim()) || (GOODS_OF_CODE.test(head.trim()) && CODE_CONTENT.test(tail)));
+            return own.some((u) => u.startsWith(digits(m[1]!)) || digits(m[1]!).startsWith(u)) && !own.some((u) => spelled(u).test(head)) && !generic;
+          })
+        );
+      },
     ],
     ['G7', 'calls an ended instrument in force', (s) => dropInForceClaims(s, expired, current) !== s],
   ];

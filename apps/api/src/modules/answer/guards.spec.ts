@@ -393,6 +393,28 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     }
   });
 
+  it('G6: at subject role goods of the code in general before "gồm", or the code as "mã/nhóm này", stand; "bạn" places goods', () => {
+    const c = ctx({ userText: '3005.10.10 gồm những hàng gì', codeRole: 'subject', userCodes: ['3005.10.10'] });
+    const q = [{ n: 1, quotes: ['Phân nhóm 3005.10 gồm loại có lớp dính'] }];
+    for (const prose of [
+      'Các hàng thuộc mã 3005.10.10 gồm băng có lớp dính [1].',
+      'Những sản phẩm thuộc mã 3005.10.10 bao gồm băng, gạc có lớp dính [1].',
+      'Mã này thuộc nhóm 30.05 [1].',
+      'Phân nhóm này thuộc nhóm 30.05 [1].',
+    ]) {
+      expect(verify(draft(prose, q), [en3005], c).answerMd).toBe(prose);
+    }
+    for (const prose of [
+      'Hàng hóa thuộc mã 3005.10.10 [1].',
+      'Miếng dán thuộc mã 3005.10.10 là đúng [1].',
+      'Với thông tin bạn cung cấp, hàng hóa thuộc mã 3005.10.10 [1].',
+      'Các hàng thuộc mã 3005.10.10 gồm cả miếng dán của bạn [1].',
+    ]) {
+      const r = verify(draft(prose, q), [en3005], c);
+      expect([r.answerMd, r.violations]).toEqual(['', [expect.objectContaining({ rule: 'G6', sentence: prose })]]);
+    }
+  });
+
   it('G7: "Có, Nghị định 69/2018/NĐ-CP hiện vẫn còn hiệu lực" is dropped when the data says it ended', () => {
     const status = source({
       kind: 'status',
