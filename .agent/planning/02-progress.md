@@ -92,6 +92,13 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
     không có lỗi anh em.
   - Đường **dùng lại vector theo md5** của `seed-evidence` (viết 2026-09-15, chưa từng chạy trên CSDL thật) chạy đúng:
     174 mục đổi `source_ref` mà giữ được vector.
+  - **Probe R4 báo PASS giả khi đường hầm chết.** `jaccard` của hai tập rỗng trả 1.00, mà một lượt hỏi lỗi mạng cho tập
+    rỗng, nên 13/18 lượt trượt vẫn ra "mean gap -0.037 → PASS". Đã thêm bộ đếm `failed` và câu `NO READING` (exit 2):
+    có lượt nào không tới được API thì probe từ chối chấm. Cổng deploy mà tự xanh khi hỏng thì tệ hơn là không có cổng.
+  - **Đừng chạy probe qua `ssh -L`.** Đường hầm đứt hai lần giữa chừng (một lượt treo 718 giây). Lần đầu nghi do dùng
+    chung kênh SSH với lệnh khác (ControlMaster); đặt `ControlPath=none` vẫn đứt. Cách chạy được: `docker cp` script vào
+    container `zalo-bot` rồi `docker exec -d ... node /tmp/r4-probe.mjs > /tmp/r4.log`, ghi log trong container và đọc
+    lại sau — SSH đứt cũng không ảnh hưởng. Xoá file trong container khi xong (D4).
   - `pgrep -f deploy.sh` qua ssh **luôn tự khớp chính lệnh của mình**; phải dùng `ps -eo args | grep "[d]eploy\.sh"`.
   - Chạy jest từ trong `.claude/worktrees/*` thì `testPathIgnorePatterns: /\.claude/` (thêm ở `8220f34`) nuốt sạch
     test; phải thêm `--testPathIgnorePatterns /node_modules/`. Checkout sạch của CI không dính.
