@@ -439,6 +439,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
       ['mã hs số 848180 dùng cho van được không', '848180'],
       ['mã hs 300510 với 382490 được không', '382490'],
       ['mã hs 300510-382490 được không', '382490'],
+      ['mã hs 300510, 200000 và 382490 được không', '382490'],
     ] as const) {
       for (const intent of ['hs', 'legal']) {
         const { svc, run, legal } = setup({ plan: { intent, question: 'Hàng này có dùng được [mã 1] không' }, sources: [GUIDE] });

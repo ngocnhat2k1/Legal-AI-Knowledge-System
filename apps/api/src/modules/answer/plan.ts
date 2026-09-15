@@ -63,8 +63,9 @@ const GAP = String.raw`\s*(?:l[aà]\s*)?(?:[:\-=]\s*)?(?:["“'‘(]\s*)?`;
 const HS_WORD = String.raw`hs(?:\s*code)?(?:\s*s[oố])?`;
 /** Only "hs" or "hs code" names a ten-digit line: "hs số" is also "hồ sơ số", and a record or tax number stays "[số]". */
 const HS_WORD_BEFORE = new RegExp(String.raw`(?<!\[)hs(?:\s*code)?${GAP}$`, 'iu');
+const MONTH_DAY = String.raw`-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?!\d)`;
 /** An ISO date ("2005-06-15"): its year may be a heading, so a dash between pairs would read it as a code. */
-const NOT_ISO_DATE = String.raw`(?!(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?!\d))`;
+const NOT_ISO_DATE = String.raw`(?!(?:19|20)\d{2}${MONTH_DAY})`;
 /**
  * Every spelling of a code or heading: an 8-digit code, or a 10-digit line dotted, spaced or dashed ("8481.80.9910", "8481
  * 809910", "8481-80-99-10") as its 8-digit code, a dash only between every pair ("1250-1500 kg", "9001-2015" stay whole);
@@ -91,12 +92,15 @@ const HS_TOKEN = new RegExp(
 /**
  * Headings or joined subheadings listed after one already masked: "nhóm [mã 1] hay 3824", "mã hs [mã 1] với 382490",
  * "[mã 1]/3824", and "nhóm [mã 1] hoặc 3824, và 3926" — a list may end at punctuation, and connectors may follow each other
- * (", hay là"). Four digits no heading opens with stay whole: "mã 3005.10.10 và 200000 USD". The whole list is matched once,
- * then each code in it: one pass per listed code was quadratic on a long list.
+ * (", hay là"). An ISO date or four digits no heading opens with stay whole, and the list goes on past them: "mã 3005.10.10,
+ * 200000 và 382490", "mã 848180 - 2005-06-15 - 300510". The check is per item, never in JOINED: there it ended the list at
+ * the number and left every later code unmasked. The whole list is matched once, then each item in it: one pass per listed
+ * code was quadratic on a long list.
  */
-const JOINED = String.raw`((?:\s*(?:,|\/|-|hay\s*l[aà]|hay|hoặc|hoac|và|va|với|voi|sang))+\s*)(${NOT_HEADING}\d{4}(?:\.?\d{2})?)(?![\d/]|[.,]\d)`;
+const JOINED = String.raw`((?:\s*(?:,|\/|-|hay\s*l[aà]|hay|hoặc|hoac|và|va|với|voi|sang))+\s*)(\d{4}(?:\.?\d{2})?)(?![\d/]|[.,]\d)((?:${MONTH_DAY})?)`;
 const JOINED_LIST = new RegExp(String.raw`(?<=\[mã \d+\])(?:${JOINED})+`, 'giu');
 const JOINED_HEADING = new RegExp(JOINED, 'giu');
+const LISTED_CODE = new RegExp(String.raw`^${NOT_ISO_DATE}${NOT_HEADING}`, 'u');
 /** Four digits standing alone: masked only when a code the text or the book holds opens with them ("thuộc 3005 hay 3824, mã 3005.10.10"). */
 const BARE_HEADING = /(?<![\d.,/])\d{4}(?![\d/]|[.,]\d)/gu;
 export const CODE_MARK = /\[mã \d+\]/gu;
@@ -118,7 +122,9 @@ export function maskCodes(text: string, book: string[] = []): { text: string; co
     .normalize('NFC')
     .replace(HS_TOKEN, (m: string, long: string | undefined, at: number, all: string) => (long && !HS_WORD_BEFORE.test(all.slice(0, at)) ? '[số]' : mark(m)))
     .replace(BARE_HEADING, (m) => (codes.some((c) => c.replace(/\D/g, '').startsWith(m)) ? mark(m) : m))
-    .replace(JOINED_LIST, (list) => list.replace(JOINED_HEADING, (_, head: string, code: string) => head + mark(code)));
+    .replace(JOINED_LIST, (list) =>
+      list.replace(JOINED_HEADING, (item: string, head: string, code: string, date: string) => (LISTED_CODE.test(code + date) ? head + mark(code) + date : item)),
+    );
   return { text: s, codes };
 }
 

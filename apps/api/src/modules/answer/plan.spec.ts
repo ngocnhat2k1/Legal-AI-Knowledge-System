@@ -168,10 +168,15 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       expect(maskCodes(text!).text).toBe(masked);
       expect(userCodes(text!)).toHaveLength(1);
     }
+    // The list goes on past the number: every code after it is still masked.
+    expect(maskCodes('mã 3005.10.10, 200000 và 382490').text).toBe('mã [mã 1], 200000 và [mã 2]');
+    expect(userCodes('mã hs 300510, 200000 và 382490').map((c) => c.code)).toEqual(['3005.10', '3824.90']);
+    expect(maskCodes('mã 848180 - 2005-06-15 - 300510').text).toBe('mã [mã 1] - 2005-06-15 - [mã 2]');
+    expect(maskCodes('nhóm 3005, 2026 và 3824 gồm gì').text).toBe('nhóm [mã 1], 2026 và [mã 2] gồm gì');
   });
 
   it('stays linear: ten thousand characters of any shape mask in well under 50 ms', () => {
-    for (const unit of [' ', 'mã hs ', ', 3824', ' hay là', " '", '12-', '8481 80 ', '1234567890 ', 'e khai mã 3005.10.10 được không ']) {
+    for (const unit of [' ', 'mã hs ', ', 3824', ', 2026 - 2005-06-15', ' hay là', " '", '12-', '8481 80 ', '1234567890 ', 'e khai mã 3005.10.10 được không ']) {
       const text = `nhóm 3005${unit.repeat(Math.ceil(10_000 / unit.length))}848180`;
       for (const fn of [maskCodes, userCodes]) {
         const t0 = performance.now();
