@@ -27,7 +27,7 @@ const RATE = new RegExp(`(?<!\\d)\\d+(?:[.,]\\d+)?\\s*%|(?<![\\p{L}])phần tră
  */
 export const ratesInProse = (text: string): string[] => splitSentences(text).filter((s) => RATE.test(s));
 
-const HEADING_OR_CODE = /(?<![\d.,/])(?:\d{2}\.\d{2}|\d{4}(?:\.\d{2}){0,2}|\d{8})(?![\d/%]|[.,]\d)/;
+export const HEADING_OR_CODE = /(?<![\d.,/])(?:\d{2}\.\d{2}|\d{4}(?:\.\d{2}){0,2}|\d{8})(?![\d/%]|[.,]\d)/;
 // A settling verb, any of "phải/xét/khai/áp/vào/là/thuộc", an optional "mã/nhóm (số/HS)", then the heading: "phải khai
 // 38.24", "Mình chốt là 38.24". After "có/không/chưa (thể)" the verb asks or denies: "có phải 38.24 không" settles nothing;
 // nor does "để" + verb opening the sentence or after an earlier "chưa/không" in its clause ("Để chốt 30.05 hay 38.24, cần …",
@@ -100,7 +100,7 @@ export const settlementClaims = (text: string): string[] =>
     return settlingIn(s).some((m) => (!m[1] || lone(s, m)) && (!conditional || unknownCondition(s, m)));
   });
 
-const digits = (s: string): string => s.replace(/\D/g, '');
+export const digits = (s: string): string => s.replace(/\D/g, '');
 
 /**
  * The user's own 8-digit codes found in texts sent to a model (R4). Check the question, goods facts, transcript and state —
@@ -197,7 +197,7 @@ const CODE_CONTENT = /^\**\s*(?:gồm|bao\s+gồm|áp\s+dụng\s+cho|dành\s+cho
 const YOU = /(?<![\p{L}])bạn(?![\p{L}])/iu;
 
 /** "3005" → "30.05", "300510" → "3005.10", "30051010" → "3005.10.10". */
-const dotted = (d: string): string =>
+export const dotted = (d: string): string =>
   d.length <= 4 ? `${d.slice(0, 2)}.${d.slice(2)}` : [d.slice(0, 4), d.slice(4, 6), d.slice(6)].filter(Boolean).join('.');
 const names = (text: string, d: string): boolean => new RegExp(`(?<![\\d.,/])${dotted(d).replace(/\./g, '\\.')}(?![\\d/%]|[.,]\\d)`).test(text);
 /** The digits `d` in any spelling: "3005.10.10", "30051010", "3005 10 10". */

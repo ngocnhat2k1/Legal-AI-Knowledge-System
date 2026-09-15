@@ -1,6 +1,9 @@
 import { numberMarkers } from '../legal/legal.grounding';
 import {
+  digits,
+  dotted,
   type Draft,
+  HEADING_OR_CODE,
   quoteInBody,
   ratesInProse,
   settlementClaims,
@@ -11,6 +14,14 @@ import {
   verify,
   type VerifyContext,
 } from './guards';
+
+describe('digits, dotted and HEADING_OR_CODE — shared with the classification walkthrough', () => {
+  it('spells a code both ways and finds a heading or code only on digit boundaries', () => {
+    expect([digits('3005.10.10'), dotted('3005'), dotted('300510'), dotted('30051010')]).toEqual(['30051010', '30.05', '3005.10', '3005.10.10']);
+    expect(['nhóm 38.24', 'mã 3005.10.10', '30051010'].map((s) => HEADING_OR_CODE.test(s))).toEqual([true, true, true]);
+    expect(['38.245', '15/07/2023', '3,5%', '138.24'].map((s) => HEADING_OR_CODE.test(s))).toEqual([false, false, false, false]);
+  });
+});
 
 describe('ratesInProse — rates live in the code-built block, never in prose (owner decision 2026-09-14)', () => {
   it('flags a percentage, "phần trăm" and an amount, whatever the sentence cites', () => {
