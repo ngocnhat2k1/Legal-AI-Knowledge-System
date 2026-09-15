@@ -115,8 +115,21 @@ describe('buildWalkthroughPrompt', () => {
     const brief = buildWalkthroughPrompt({ ...input, depth: 'brief' });
     expect(brief).toContain('Độ sâu brief: tối đa khoảng 170 từ');
     expect(brief).not.toContain('Độ sâu full');
-    expect(prompt).toContain('Độ sâu full: tối đa khoảng 180 từ');
+    expect(prompt).toContain('Độ sâu full: viết đủ chín mục');
     expect(prompt).not.toContain('Độ sâu brief');
+  });
+
+  // The owner wants the sectioned report their sample document is made of, so the nine keys ARE the outline. The prompt
+  // used to say the opposite ("đó không phải dàn bài … không có gì để nói thì bỏ") and the model dropped up to five
+  // sections of ten on a live question (2026-09-15); the runner's titles then printed a report starting at II.2.
+  it('full asks for all nine sections, in order, merged into nothing and headed by nothing', () => {
+    expect(prompt).toContain('Viết đủ cả chín mục theo thứ tự này');
+    expect(prompt).toContain('đừng bỏ trống và đừng gộp sang mục khác');
+    expect(prompt).toContain('Không gộp mục, không bỏ mục nào, không tự viết dòng');
+    expect(prompt).toContain('facts, nature, candidates, exclusions, gir, levels, explanation, risk, conclusion');
+    expect(prompt).not.toContain('đó không phải dàn bài');
+    // brief is still the short continuous answer: one message, no headings, no outline.
+    expect(buildWalkthroughPrompt({ ...input, depth: 'brief' })).toContain('Độ sâu brief: tối đa khoảng 170 từ');
   });
 
   it('asks for [#id] beside a verbatim quote in the same sentence, and sections carry no cite list', () => {
@@ -415,8 +428,8 @@ describe('validateWalkthrough', () => {
     expect(gir('Quy tắc 3(b) xét đặc trưng cơ bản khi 3(a) không phân định được [1].')).toEqual([]);
     expect(gir('Quy tắc 6 chỉ so các phân nhóm cùng cấp [1].')).toEqual(['walkthrough-gir-rule']);
     expect(gir('GRI 1 đặt lời văn nhóm lên trước [1].')).toEqual(['walkthrough-gir-rule']);
-    // A heading line, a follow-up in the cited paragraph and a rule not needed all pass.
-    expect(gir('## Áp quy tắc\nTheo GIR 1, xét theo nội dung nhóm và chú giải [1]. Vì vậy Quy tắc 1 đã giải quyết xong.\n\nChưa cần tới GIR 3.', [2])).toEqual([]);
+    // A lead line, a follow-up in the cited paragraph and a rule not needed all pass.
+    expect(gir('Áp quy tắc.\nTheo GIR 1, xét theo nội dung nhóm và chú giải [1]. Vì vậy Quy tắc 1 đã giải quyết xong.\n\nChưa cần tới GIR 3.', [2])).toEqual([]);
     expect(gir('Lúc đó sang GIR 3(b) [1].')).toEqual(['walkthrough-gir-order']);
   });
 
@@ -453,12 +466,12 @@ describe('validateWalkthrough', () => {
     const used = good().sections.reduce((n, s) => n + s.markdown.length, 0);
     expect(rules(withSection('nature', 'a'.repeat(1501 - used)), brief)).toEqual(['walkthrough-length']);
     expect(rules(withSection('nature', 'a'.repeat(1500 - used)), brief)).toEqual([]);
-    expect(rules(withSection('nature', 'a'.repeat(2701 - used)))).toEqual(['walkthrough-length']);
-    expect(rules(withSection('nature', 'a'.repeat(2700 - used)))).toEqual([]);
+    expect(rules(withSection('nature', 'a'.repeat(4201 - used)))).toEqual(['walkthrough-length']);
+    expect(rules(withSection('nature', 'a'.repeat(4200 - used)))).toEqual([]);
     expect(rules(withSection('nature', '## Bản chất\nHàng là miếng dán.'), brief)).toEqual(['walkthrough-brief-headings']);
-    expect(rules(withSection('nature', '## Bản chất\nHàng là miếng dán.'))).toEqual([]);
-    expect(rules(withSection('nature', '## A\nHàng là miếng dán.\n## B\nMột.\n## C\nHai.'))).toEqual([]);
-    expect(rules(withSection('nature', '## A\nHàng là miếng dán.\n## B\nMột.\n## C\nHai.\n## D\nBa.'))).toEqual(['walkthrough-template-headings']);
+    expect(rules(withSection('nature', '## Bản chất\nHàng là miếng dán.'))).toEqual(['walkthrough-template-headings']);
+    expect(rules(withSection('nature', '## A\nHàng là miếng dán.\n## B\nMột.\n## C\nHai.'))).toEqual(['walkthrough-template-headings']);
+    expect(rules(withSection('nature', 'Hàng là miếng dán.'))).toEqual([]);
     expect(rules(withSection('nature', '| Nhóm | Mô tả |\n| 30.05 | băng |'))).toEqual(['walkthrough-markdown-subset']);
     expect(rules(withSection('nature', '### Bản chất\nHàng là miếng dán.'))).toEqual(['walkthrough-markdown-subset']);
     expect(rules(withSection('nature', 'Hàng là miếng dán ✅'))).toEqual(['walkthrough-markdown-subset']);

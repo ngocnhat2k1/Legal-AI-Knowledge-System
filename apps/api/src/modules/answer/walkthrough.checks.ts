@@ -202,8 +202,11 @@ export const citesNoNoteOrGri = ({ kind, meta = {} }: EvidenceRow): boolean =>
 const REASONED = /lập luận|căn cứ (?:vào |theo )?(?:chú giải|quy tắc)|theo (?:cơ quan )?hải quan.*(?<!\p{L})vì(?!\p{L})/iu;
 
 /** Characters of markdown (agreed 2026-09-14): 170 and 220 words asked, overshoot 30–75%, ~4.6 characters a word. */
-const CAP = { brief: 1500, full: 2700 } as const;
-const MAX_FULL_HEADINGS = 3;
+// full carries nine titled sections with their verbatim quotes, not three merged ones: 2700 cut the report in half.
+const CAP = { brief: 1500, full: 4200 } as const;
+/** The runner prints the section titles itself (walkthrough.run.ts SECTION_TITLES), so a heading the model writes is a
+ * second title over the same text. It used to name its own, capped at three, when it merged the sections. */
+const MAX_FULL_HEADINGS = 0;
 const MAX_ITEM_WORDS = 12;
 const OFF_SUBSET = /^\s*\|.*\|\s*$|<\/?[a-z][^>]*>|[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]|^\s*(?:#|#{3,})\s/imu;
 
@@ -372,7 +375,7 @@ export function validateWalkthrough(raw: WalkthroughOutput, input: ClassifyInput
   if (total > CAP[input.depth]) add('length', `${total} characters of markdown; ${input.depth} allows ${CAP[input.depth]}: cut repetition, keep the deciding reasoning`);
   const headingLines = output.sections.reduce((n, s) => n + (nfc(s.markdown).match(/^\s*##\s/gm)?.length ?? 0), 0);
   if (input.depth === 'full' && headingLines > MAX_FULL_HEADINGS)
-    add('template-headings', `${headingLines} "## " headings read as a fixed template; merge sections under at most ${MAX_FULL_HEADINGS} headings of your own`);
+    add('template-headings', `${headingLines} "## " headings: the system prints each section's title, so write none — one section per sections[] element instead`);
   for (const sec of output.sections) {
     const md = nfc(sec.markdown);
     if (input.depth === 'brief' && /^\s*#/m.test(md)) add('brief-headings', `section "${sec.key}": a brief answer is plain paragraphs without headings`);

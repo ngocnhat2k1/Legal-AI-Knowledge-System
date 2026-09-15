@@ -463,11 +463,14 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const res = await svc.answer({ q });
     expect(prompts(WALKTHROUGH_SYSTEM)[0]!.prompt).toContain('\nDÒNG THUẾ (');
     expect(res).toMatchObject({ depth: 'full', tariffRef: ['3005.10.10'] });
-    // The policy block is code's, in its own section, and a list the corpus has not loaded reads "chưa nạp" (R12, R18).
+    // The policy block is code's, in its own section, and a list the corpus has not loaded reads "chưa kiểm tra được",
+    // never "Không" (R12, R18). No list in this registry answers for 3005.10.10, so the caveat is all there is to say —
+    // and it is said once for the whole answer, not repeated under each candidate.
     expect(res.answerMd).toContain(`## ${SECTION_TITLES.policy}`);
-    expect(res.answerMd).toContain('Mã **3005.10.10** (ứng viên, chưa chốt):');
-    expect(res.answerMd).toMatch(/Kho \*\*chưa nạp\*\*/);
+    expect(res.answerMd).toMatch(/chưa kiểm tra được\*\* \(kho chưa nạp, hoặc chưa chắc đã lấy đủ dòng\)/);
+    expect(res.answerMd.match(/chưa kiểm tra được/g)).toHaveLength(1);
     expect(res.answerMd).not.toMatch(/^- Không\b/m);
+    expect(res.answerMd).not.toMatch(/\bKhông\b(?![ ]có tên trong danh mục đã nạp)/);
   });
 
   it('D3(a): a tariff_ref under a heading the walkthrough did not conclude points at no block', async () => {
