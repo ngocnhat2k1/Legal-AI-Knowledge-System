@@ -27,7 +27,7 @@ const RATE = new RegExp(`(?<!\\d)\\d+(?:[.,]\\d+)?\\s*%|(?<![\\p{L}])phần tră
  */
 export const ratesInProse = (text: string): string[] => splitSentences(text).filter((s) => RATE.test(s));
 
-/** Not global: use it with `test` or `.source`. */
+/** Not global, so `test` keeps no lastIndex: a caller that needs every match builds `new RegExp(HEADING_OR_CODE.source, 'g')`. */
 export const HEADING_OR_CODE = /(?<![\d.,/])(?:\d{2}\.\d{2}|\d{4}(?:\.\d{2}){0,2}|\d{8})(?![\d/%]|[.,]\d)/;
 // A settling verb, any of "phải/xét/khai/áp/vào/là/thuộc", an optional "mã/nhóm (số/HS)", then the heading: "phải khai
 // 38.24", "Mình chốt là 38.24". After "có/không/chưa (thể)" the verb asks or denies: "có phải 38.24 không" settles nothing;
@@ -72,6 +72,8 @@ const CONFIDENCE = /(?<![\p{L}])độ\s+tin\s+cậy(?![\p{L}])/iu;
 // finding, a fact about the label or a Chapter test read as ignorance ("kiểm nghiệm không xác định được dược chất nào",
 // "nhà sản xuất không xác định công dụng trên nhãn"), a heading to check read as settled after ignorance as it is with no
 // condition ("nên xét 30.05 trước"), a condition after the verb, and "phải xét 38.24 thay vì 30.05", which passes as on main.
+// Order counts, since only a heading after the verb exempts it: "Nếu chưa rõ thì phải xét 38.24, nếu có dược chất thì xét
+// 30.05" passes, "Nếu có dược chất thì xét 30.05, nếu chưa rõ thì phải xét 38.24" is cut.
 const OPENER = /(?<![\p{L}])(?:nếu|khi(?!\s+đó)|trường\s+hợp(?!\s+này))(?![\p{L}])/giu;
 const IGNORANCE =
   /(?<![\p{L}])(?:(?:chưa|không)\s+(?:rõ|biết|xác\s+định)|(?:chưa\s+có|thiếu|không\s+có|chưa\s+đủ)\s+(?:thông\s+tin|căn\s+cứ|dữ\s+kiện|tài\s+liệu))(?![\p{L}])/iu;
@@ -210,7 +212,7 @@ const YOU = /(?<![\p{L}])bạn(?![\p{L}])/iu;
 /** A code in any spelling, dotted: "3005" → "30.05", "300510" → "3005.10", "3005.10.10" and "30051010" → "3005.10.10". */
 export const dotted = (code: string): string => {
   const d = digits(code);
-  return d.length <= 4 ? `${d.slice(0, 2)}.${d.slice(2)}` : [d.slice(0, 4), d.slice(4, 6), d.slice(6)].filter(Boolean).join('.');
+  return (d.length <= 4 ? [d.slice(0, 2), d.slice(2)] : [d.slice(0, 4), d.slice(4, 6), d.slice(6)]).filter(Boolean).join('.');
 };
 const names = (text: string, d: string): boolean => new RegExp(`(?<![\\d.,/])${dotted(d).replace(/\./g, '\\.')}(?![\\d/%]|[.,]\\d)`).test(text);
 /** The digits `d` in any spelling: "3005.10.10", "30051010", "3005 10 10". */
@@ -284,9 +286,23 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
     const marks = [...s.matchAll(/\[(\d+(?:\s*,\s*\d+)*)\]/g)].flatMap(([, list]) => list!.split(',').map(Number)).filter((n) => n >= 1 && n <= sources.length);
     return marks.length ? marks : cited;
   };
+  // A span is normalised once and what each body holds is remembered for the call (the rates and settling passes read the
+  // same spans); only the first 20 spans of a sentence are read as wording, the rest as written, which fails closed.
+  const held = new Map<string, boolean>();
+  const heldIn = (n: number, q: string): boolean => {
+    const key = `${n}\n${q}`;
+    if (!held.has(key)) held.set(key, holds(q, bodyOf(n)));
+    return held.get(key)!;
+  };
   const unquoted = (s: string): string => {
-    const criteria = idsOf(s).filter((n) => quotes.has(n) && CRITERIA_KINDS.has(sources[n - 1]!.kind)).map(bodyOf);
-    return !criteria.length || TARIFF_WORDS.test(s) ? s : s.replace(QUOTED, (span: string, a: string) => (criteria.some((body) => holds(normQuote(a), body)) ? '…' : span));
+    const criteria = idsOf(s).filter((n) => quotes.has(n) && CRITERIA_KINDS.has(sources[n - 1]!.kind));
+    if (!criteria.length || TARIFF_WORDS.test(s)) return s;
+    let read = 0;
+    return s.replace(QUOTED, (span: string, a: string) => {
+      if (++read > 20) return span;
+      const q = normQuote(a);
+      return criteria.some((n) => heldIn(n, q)) ? '…' : span;
+    });
   };
   const sentences = splitSentences(draft.answerMd);
   const rates = new Set(sentences.filter((s) => ratesInProse(unquoted(s)).length > 0));

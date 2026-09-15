@@ -1,7 +1,13 @@
 import { runClaude } from '../answer/claude';
-import { generate } from './legal.generation';
+import { buildPrompt, generate } from './legal.generation';
 
 jest.mock('../answer/claude', () => ({ runClaude: jest.fn() }));
+
+describe('buildPrompt', () => {
+  it('asks for every figure as the source writes it: numberMarkers empties "20 triệu đồng" against "20.000.000 đồng" (R10)', () => {
+    expect(buildPrompt('mức phạt', '2026-09-15', [])).toContain('không quy đổi đơn vị');
+  });
+});
 
 describe('generate', () => {
   const token0 = process.env.CLAUDE_CODE_OAUTH_TOKEN;

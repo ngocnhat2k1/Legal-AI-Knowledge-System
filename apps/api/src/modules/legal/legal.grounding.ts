@@ -61,6 +61,23 @@ export const cutPieces = (pieces: string[], drop: (piece: string) => boolean): s
     .join('')
     .replace(/^[ \t]*(?:[-*•]|\d+[.)])[ \t]*(?:\n|$)/gm, '');
 
+const UNIT = '(?:triệu|tỷ|nghìn|ngàn)';
+const CURRENCY = '(?:đồng|VND|USD|đ)(?![\\p{L}\\d])';
+/** After a unit word: markdown or punctuation, then a word that is no currency. */
+const THEN_WORD = `[\\s*/()\\-–,]{0,8}(?!${CURRENCY})\\p{L}`;
+/**
+ * An amount, shared with the answer guards' G1: a currency, or "triệu/tỷ/nghìn/ngàn" before a currency or no word at all:
+ * "20 triệu đồng", "Phạt **20 triệu** đồng", "1 tỷ". A count stands before a word, through markdown, "/", "(", "," or a
+ * dash to the range's own count: "1 tỷ CFU", "**1 tỷ** CFU", "1 tỷ/gói", "1 triệu (IU)", "1 tỷ-10 tỷ CFU", "2 nghìn, tùy".
+ * Known ceiling: a per-unit amount ("20 triệu/lần") reads as a count. In the legal path "20 triệu đồng" against a
+ * source's "20.000.000 đồng" empties the answer: both prompts tell the model to copy figures as the source writes them.
+ * Not global: `test` keeps no lastIndex; numberMarkers builds its own global copy.
+ */
+export const AMOUNT = new RegExp(
+  `\\d(?<!\\d[.,]*\\d)[\\d.,]*\\s*(?:${UNIT}(?:\\s{1,8}${CURRENCY}|(?!${THEN_WORD})(?![\\s*]{0,8}[-–][\\s*]{0,8}\\d[\\d.,]{0,20}\\s{0,8}${UNIT}${THEN_WORD}))|USD|VND|đồng|đ)(?![\\p{L}\\d])`,
+  'iu',
+);
+
 /**
  * Facts a sentence may state only when its own [n] source contains them. `exempt`: the user may have written it — with
  * `opts`, a `label` fact only as written (a document number by its number/year), never by stray digit groups.
@@ -68,16 +85,9 @@ export const cutPieces = (pieces: string[], drop: (piece: string) => boolean): s
  * A number is read from its first digit ("(?<!\d)", "\d(?<!\d[.,]*\d)"): the same matches, without rescanning a run of
  * digits from each of its digits (POST /answer checks model prose inside the event loop).
  */
-/**
- * An amount, shared with the answer guards' G1: a currency, or "triệu/tỷ/nghìn/ngàn" before a currency or no word at all:
- * "20 triệu đồng", "1 tỷ"; a count ("1 tỷ CFU", "20 nghìn miếng") is no amount. In the legal path "20 triệu đồng" against
- * a source's "20.000.000 đồng" empties the answer: the prompt tells the model to copy figures as the source writes them.
- */
-export const AMOUNT = /\d(?<!\d[.,]*\d)[\d.,]*\s*(?:(?:triệu|tỷ|nghìn|ngàn)(?:\s{1,8}(?:đồng|VND|USD|đ)|(?!\s{1,8}\p{L}))|USD|VND|đồng|đ)(?![\p{L}\d])/giu;
-
 const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean; label?: true }> = [
   { re: /(?<!\d)\d+(?:[.,]\d+)?\s*%/g, exempt: false, fatal: true },
-  { re: AMOUNT, exempt: false, fatal: true },
+  { re: new RegExp(AMOUNT.source, 'giu'), exempt: false, fatal: true },
   { re: /\d{1,2}\/\d{1,2}\/\d{4}/g, exempt: true, fatal: false },
   { re: /(?<!\d)\d+\s*(?:ngày|tháng)(?![\p{L}])/giu, exempt: false, fatal: false },
   // The tail stops at emphasis, quotes and brackets: `**08/2015/NĐ-CP**` and `“…”[1]` must still anchor.

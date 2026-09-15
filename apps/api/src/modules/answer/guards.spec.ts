@@ -18,9 +18,12 @@ import {
 describe('digits, dotted and HEADING_OR_CODE — shared with the classification walkthrough', () => {
   it('spells a code both ways and finds a heading or code only on digit boundaries', () => {
     expect([digits('3005.10.10'), dotted('3005'), dotted('300510'), dotted('30051010')]).toEqual(['30051010', '30.05', '3005.10', '3005.10.10']);
-    expect([dotted('3005.10.10'), dotted('38.24')]).toEqual(['3005.10.10', '38.24']);
+    expect([dotted('3005.10.10'), dotted('38.24'), dotted(''), dotted('30')]).toEqual(['3005.10.10', '38.24', '', '30']);
     expect(['nhóm 38.24', 'mã 3005.10.10', '30051010'].map((s) => HEADING_OR_CODE.test(s))).toEqual([true, true, true]);
     expect(['38.245', '15/07/2023', '3,5%', '138.24'].map((s) => HEADING_OR_CODE.test(s))).toEqual([false, false, false, false]);
+    // Not global, so `test` keeps no lastIndex; a caller that needs every match builds its own global copy.
+    expect(HEADING_OR_CODE.global).toBe(false);
+    expect([...'nhóm 38.24 hay mã 3005.10.10'.matchAll(new RegExp(HEADING_OR_CODE.source, 'g'))].map(([m]) => m)).toEqual(['38.24', '3005.10.10']);
   });
 });
 
@@ -39,6 +42,29 @@ describe('ratesInProse — rates live in the code-built block, never in prose (o
     const prose =
       'Phạt 20 triệu đồng [1]. Mức 1 tỷ. Phí 500 nghìn đồng. Phạt 1,5 tỷ VND. Hàng có 20 thành phần. Tỷ lệ dược chất cao. Sản phẩm men vi sinh chứa 1 tỷ CFU mỗi gói [1]. Lô hàng gồm 20 nghìn miếng dán [1].';
     expect(ratesInProse(prose)).toEqual(['Phạt 20 triệu đồng [1].', 'Mức 1 tỷ.', 'Phí 500 nghìn đồng.', 'Phạt 1,5 tỷ VND.']);
+  });
+
+  it('reads a count through markdown and punctuation after the unit word: "**1 tỷ** CFU", "1 tỷ/gói", "1 triệu (IU)", "1 tỷ-10 tỷ CFU"', () => {
+    const counts = [
+      'Men vi sinh chứa **1 tỷ** CFU mỗi gói [1].',
+      'Men vi sinh chứa 1 tỷ/gói CFU [1].',
+      'Mỗi viên chứa 1 triệu (IU) vitamin A [1].',
+      'Mỗi gói chứa từ 1 tỷ-10 tỷ CFU [1].',
+      'Mỗi gói chứa 1 tỷ – 10 tỷ CFU [1].',
+      'Nhóm 38.24 có khoảng 2 nghìn, tùy cách đếm [2].',
+      // Known ceiling: a per-unit amount reads as a count.
+      'Phạt 20 triệu/lần vi phạm.',
+    ];
+    const amounts = [
+      'Phạt **20 triệu** đồng [1].',
+      'Mức phạt 20 triệu đồng.',
+      'Mức 1 tỷ VND.',
+      'Phạt **1 tỷ**.',
+      'Phạt 20 triệu - 30 triệu đồng.',
+      'Phạt 1 tỷ, 2 tỷ nếu tái phạm.',
+      'Phạt 20 triệu (đồng) [1].',
+    ];
+    expect(ratesInProse([...counts, ...amounts].join(' '))).toEqual(amounts);
   });
 
   it('leaves provisions, durations, codes and dates alone', () => {
@@ -145,8 +171,8 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     expect(r.cut).toBe(1);
   });
 
-  it('G1: a count with a unit word stands: "1 tỷ CFU", "20 nghìn miếng"', () => {
-    const prose = `${lead} Sản phẩm men vi sinh chứa 1 tỷ CFU mỗi gói [1]. Lô hàng gồm 20 nghìn miếng dán [1].`;
+  it('G1: a count with a unit word stands: "1 tỷ CFU", "**1 tỷ** CFU", "20 nghìn miếng"', () => {
+    const prose = `${lead} Sản phẩm men vi sinh chứa 1 tỷ CFU mỗi gói [1]. Men vi sinh chứa **1 tỷ** CFU mỗi gói [1]. Lô hàng gồm 20 nghìn miếng dán [1].`;
     expect(verify(draft(prose, [q1]), [en3005], ctx()).answerMd).toBe(prose);
   });
 
@@ -328,6 +354,8 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
       'Nếu chưa rõ công dụng thì phải xét nhóm 30.05 (hàng có dược chất) và nhóm 38.24 (chế phẩm hóa chất) [1] [2].',
       'Nếu chưa rõ công dụng thì phải xét 30.05 hay là 38.24 tùy kết quả giám định [1] [2].',
       'Nếu chưa rõ công dụng thì chỉ nên khai 30.05 khi có chứng từ chứng minh dược chất [1].',
+      // Two cases, the ignorance case first: the other case's heading comes after the verb.
+      'Nếu chưa rõ thì phải xét 38.24, nếu có dược chất thì xét 30.05 [1] [2].',
       // Long clauses: "chưa" 131 characters before "để", "Khi" 212 characters before "thì".
       'Hiện hồ sơ chưa thể hiện đầy đủ thành phần hoạt chất và hàm lượng từng chất trong miếng dán cũng như công dụng được công bố trên nhãn sản phẩm để chốt 38.24 [2].',
       'Khi miếng dán có chứa tinh dầu ngải cứu, long não, bạc hà cùng các thành phần thảo dược khác được tẩm trên nền vải không dệt có lớp keo dính, đóng gói bán lẻ với nhãn ghi công dụng giảm đau và lưu thông khí huyết thì phải xét nhóm 30.05 [1].',
@@ -346,6 +374,8 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
       'Nếu chưa rõ công dụng thì nên xét 30.05 trước, vì Chú giải Chương 38 loại trừ hàng thuộc Chương 30 [1] [2].',
       'Nếu chưa rõ công dụng thì phải xét nhóm 38.24 như một khả năng [2].',
       'Nếu chưa rõ công dụng thì cũng nên xét nhóm 38.24 để loại trừ [2].',
+      // The same two cases with the ignorance case second: the other case's heading comes before the verb.
+      'Nếu có dược chất thì xét 30.05, nếu chưa rõ thì phải xét 38.24 [1] [2].',
     ];
     expect(settlementClaims(ceilings.join(' '))).toEqual(ceilings);
     expect(settlementClaims('Nên xét 30.05 trước [1].')).toHaveLength(1);
@@ -411,6 +441,10 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     const vat = 'Công văn nêu “máy bay không người lái thuộc đối tượng chịu thuế GTGT 10%” [1].';
     const tax = verify(draft(vat, [{ n: 1, quotes: ['máy bay không người lái thuộc đối tượng chịu thuế GTGT 10%'] }]), [cv], ctx());
     expect(tax.violations).toEqual([expect.objectContaining({ rule: 'G1', sentence: vat })]);
+    // Only the first 20 quoted spans of a sentence are read as wording; the rest are read as written.
+    const spans = (k: number) => `Chú giải ghi ${'“dược chất” '.repeat(k)}và “trên 50% tính theo trọng lượng” [1].`;
+    expect(verify(draft(spans(19), [rate]), [note], ctx()).violations).toEqual([]);
+    expect(verify(draft(spans(20), [rate]), [note], ctx()).violations).toContainEqual(expect.objectContaining({ rule: 'G1', sentence: spans(20) }));
   });
 
   it('G4: two candidates with no missing fact is a violation for repair only', () => {
@@ -538,7 +572,14 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
 describe('guards run on every answer in the event loop: linear on 10,000-character adversarial prose', () => {
   const N = 10_000;
   const fill = (unit: string, n = N): string => unit.repeat(Math.ceil(n / unit.length)).slice(0, n);
+  const numbered = (unit: (i: number) => string, n = N): string => {
+    let s = '';
+    for (let i = 0; s.length < n; i++) s += unit(i);
+    return s.slice(0, n);
+  };
   const [spaces, stars] = [' '.repeat(N), '*'.repeat(N)];
+  // Three criteria bodies of 80,000 characters, as long as a whole Chapter note.
+  const bodies = [0, 1, 2].map((k) => numbered((i) => `đoạn ${k}-${i} chú giải chương 38 chế phẩm hóa chất. `, 80_000));
   const inputs = [
     // Runs of digits, spaces and line breaks.
     fill('1'),
@@ -579,6 +620,7 @@ describe('guards run on every answer in the event loop: linear on 10,000-charact
     `x${'.'.repeat(N)}x`,
     fill('. '),
     fill('“bông, gạc, băng đã thấm tẩm dược chất” '),
+    numbered((i) => `“mẫu câu không có trong thân ${i}” `),
     fill('“"'),
     fill(`“${'a'.repeat(299)}`),
     fill('thuế '),
@@ -599,6 +641,15 @@ describe('guards run on every answer in the event loop: linear on 10,000-charact
     [
       'verify on the prose cut into quotes of a body four times as long',
       (s) => verify(draft('Chế phẩm thuộc Chương 38 [1].', [{ n: 1, quotes: s.match(/[^]{1,30}/g) ?? [] }]), [source({ kind: 'hs_note', body: s.repeat(4) })], ctx()),
+    ],
+    [
+      'verify on quoted spans marking three criteria bodies of 80,000 characters',
+      (s) =>
+        verify(
+          draft(`${s} [1] [2] [3].`, bodies.map((b, i) => ({ n: i + 1, quotes: [b.slice(0, 200)] }))),
+          bodies.map((body) => source({ kind: 'hs_note', body })),
+          ctx(),
+        ),
     ],
     ['quoteInBody', (s) => quoteInBody(s, s)],
     ['numberMarkers', (s) => [numberMarkers(s, [1], [s], s), numberMarkers(s, [1], [s], s, { cut: true, labels: [s] })]],
