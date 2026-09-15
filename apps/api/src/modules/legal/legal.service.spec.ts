@@ -352,7 +352,7 @@ describe('LegalService.scope and gather — the halves POST /answer calls (plan 
     expect(notes.params.at(-1)).toBe(10); // 4 headings + 2 × 3 chapters
   });
 
-  it('gather keeps at most 8 pins: status, sections naming an asked code, EN, SEN, chapter notes, cases, then the rest', async () => {
+  it('gather keeps at most 8 pins: status, sections naming an asked code, EN, chapter notes (binding) before SEN (guidance), cases, then the rest', async () => {
     const pin = (id: number, kind: string, hsCodes: string[] = []) =>
       ({
         id, kind, instrument: 'x', authority: 'binding', title: `${kind} ${id}`, body: 'thân', documentNumber: null, effectiveFrom: null,
@@ -367,7 +367,7 @@ describe('LegalService.scope and gather — the halves POST /answer calls (plan 
     const { sources } = await new LegalService({ execute: async () => [] } as never, embedding).gather('Van 8481.80.99 dùng cho gì', {
       asOf: '2026-09-14', hsCodes: ['8481.80.99'], headings: ['84.81'], clauses: 0, cases: true, sen: 2,
     });
-    expect(sources.map((s) => s.key)).toEqual(['e:1', 'e:2', 'e:3', 'e:4', 'e:5', 'e:6', 'e:7', 'e:8']);
+    expect(sources.map((s) => s.key)).toEqual(['e:1', 'e:2', 'e:3', 'e:4', 'e:7', 'e:8', 'e:9', 'e:5']);
     // SEN is ranked by heading alone: no asked code reaches its query.
     expect((senSections as jest.Mock).mock.calls.at(-1)!.slice(1)).toEqual([['84.81'], '2026-09-14', 2]);
   });
@@ -455,6 +455,16 @@ describe('legal.evidence SQL — cases out of ranking, a cap per heading, the ma
     expect(q.sql).toMatch(/x\.rn <= \$\d+/);
     expect(q.params.at(-1)).toBe(2);
     expect(q.sql).not.toContain('LIMIT');
+  });
+
+  it('hsCodeSections puts a row listing an asked code exactly before rows matching it only by prefix, then authority, then id', async () => {
+    const { db, queries } = capture();
+    await actual.hsCodeSections(db, ['6506.10.10', '8481.80.99'], '2026-09-14');
+    const q = queries[0]!;
+    // c8's seed lists parent levels ('6506', '6506.10'): a prefix-only row must not take one of the three slots first.
+    expect(q.sql).toMatch(/ORDER BY NOT \(e\.hs_codes && ARRAY\[\$\d+, \$\d+\]::text\[\]\), CASE e\.authority WHEN 'binding' THEN 0 .*? END, e\.id\s+LIMIT \$\d+/s);
+    expect(q.params.filter((p) => p === '6506.10.10')).toHaveLength(2);
+    expect(q.params.at(-1)).toBe(3);
   });
 
   it('headingSections puts every chapter\'s own note ahead of any subheading note, so a cut takes subheading notes first', async () => {

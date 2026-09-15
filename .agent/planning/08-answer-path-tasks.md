@@ -267,8 +267,17 @@ Trả về:
 **`answer.service`:**
 - **Truy vấn:** `unique([plan.question, ...plan.queries]).slice(0, 3)`, chạy song song. Chỉ truy vấn đầu mang pin.
 - **Nhóm được ghim:**
-  - chế độ hs: `plan.hsHints` đổi thành tối đa 5 nhóm có chấm (giả thuyết mù) và `clauses: 0`, tức không lấy điều luật;
-  - vai subject: nhóm của chính mã.
+  - chế độ hs: `plan.hsHints` đổi thành tối đa 5 nhóm có chấm (giả thuyết mù), cộng nhóm 4 số của mã premise (D1: không nhãn, xếp theo số); `clauses: 0`, tức không lấy điều luật; `cases: true`; `sen: 2`, tức tối đa 2 dòng SEN mỗi nhóm, xếp theo chính nhóm (dòng nêu mã con nhỏ nhất trước, rồi id), nên mã người dùng không bao giờ chọn dòng SEN;
+  - vai subject: nhóm của chính mã, và mã 8 số của nó làm `hsCodes`.
+- **Trần và thứ tự ghim** (`gather`, chung cho `GET /legal`): tối đa 8 mục, theo thứ tự
+  1. dòng status của văn bản được nêu;
+  2. mục liệt kê đúng mã được hỏi;
+  3. EN;
+  4. chú giải chương, phần (`hs_note`, ràng buộc); trong đó chú giải của chương đứng trước mọi chú giải phân nhóm;
+  5. SEN (hướng dẫn);
+  6. case;
+  7. mục `hsCodeSections` còn lại.
+- **Đúng mã trước tiền tố:** `hsCodeSections` (tối đa 3) xếp mục có `hs_codes` chứa đúng mã được hỏi (dạng có chấm, cùng độ dài) trước mục chỉ khớp tiền tố, rồi theo thẩm quyền, rồi id. Seed của c8 thêm cấp cha (`6506`, `6506.10`) vào `hs_codes`, nên nếu không xếp thế thì mục chỉ khớp tiền tố có thể chiếm hết 3 chỗ.
 - **Mã premise của người dùng không bao giờ thành pin** (D1).
 - **Gộp và cắt:** gộp theo `key`, mục ghim đứng trước, rồi xếp theo `bestDist`. Tối đa 12 nguồn và `ANSWER_PROMPT_CHARS`. Citation giữ nguyên thân để kiểm quote.
 

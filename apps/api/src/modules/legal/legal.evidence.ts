@@ -151,23 +151,26 @@ export async function namedStatus(db: Database, documentNumbers: string[], asOf:
 /**
  * Sections whose text carries an HS code the question names ("mũ bảo hiểm 6506.10.10 thuộc danh mục
  * nào") — the list that contains the code IS the answer, and the simple parser cannot match "6506.10.10" by
- * keyword. Binding sources first. A list entry covers its children ("2404.11" lists 2404.11.00), and a heading asked
- * finds its listed lines; entries shorter than four digits never match. Window rows (meta.part) are left to retrieval:
+ * keyword. A list entry covers its children ("2404.11" lists 2404.11.00), and a heading asked finds its listed lines;
+ * entries shorter than four digits never match. A section listing an asked code exactly (the dotted code itself, as
+ * gather's `naming` compares) comes first: hs_codes carry parent levels ('6506', '6506.10'), so sections matching only
+ * by prefix would otherwise fill the limit. Then binding sources first. Window rows (meta.part) are left to retrieval:
  * a pin returns the whole section. Classification cases list codes too, but enter by heading only (caseSections).
  */
 export async function hsCodeSections(db: Database, codes: string[], asOf: string, limit = 3): Promise<RetrievedEvidence[]> {
   if (!codes.length) return [];
   const d = sql`${asOf}::date`;
+  const asked = sql`ARRAY[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[]`;
   const rows = (await db.execute(sql`
     SELECT ${columns(d)}, 1::float8 AS score, NULL::float8 AS best_dist
     FROM evidence_section e
     WHERE e.meta->>'part' IS NULL AND e.meta->>'case_id' IS NULL AND ${valid(d)}
       AND EXISTS (
-        SELECT 1 FROM unnest(e.hs_codes) c, unnest(ARRAY[${sql.join(codes.map((c) => sql`${c}`), sql`, `)}]::text[]) q
+        SELECT 1 FROM unnest(e.hs_codes) c, unnest(${asked}) q
         WHERE length(replace(c, '.', '')) >= 4
           AND (replace(q, '.', '') LIKE replace(c, '.', '') || '%' OR replace(c, '.', '') LIKE replace(q, '.', '') || '%')
       )
-    ORDER BY CASE e.authority WHEN 'binding' THEN 0 WHEN 'authoritative' THEN 1 WHEN 'administrative' THEN 2
+    ORDER BY NOT (e.hs_codes && ${asked}), CASE e.authority WHEN 'binding' THEN 0 WHEN 'authoritative' THEN 1 WHEN 'administrative' THEN 2
                               WHEN 'reference' THEN 3 ELSE 4 END, e.id
     LIMIT ${limit}
   `)) as unknown as Array<Record<string, unknown>>;

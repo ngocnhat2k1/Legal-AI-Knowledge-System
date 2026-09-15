@@ -295,13 +295,14 @@ export class LegalService {
     const limit = Math.min(EVIDENCE_MAX_DIST, Math.min(...all.map((a) => a.bestDist ?? Infinity)) + EVIDENCE_MARGIN);
     // What the question names outright — a document's status row, a section listing its HS code — may be the whole
     // answer ("replaced from 05/09/2026", "high-risk list of TT 36/2026"), so it leads the pins, which are cut at MAX_PINS.
+    // Chapter and section notes bind (GRI 1), so they go before SEN rows, which are guidance.
     const naming = (e: RetrievedEvidence) => e.hsCodes.some((c) => hsCodes.includes(c));
     const pinned = [
       ...named,
       ...byCode.filter(naming),
       ...byHeading.filter((e) => e.kind === 'en'),
-      ...bySen,
       ...byHeading.filter((e) => e.kind !== 'en'),
+      ...bySen,
       ...cases,
       ...byCode.filter((e) => !naming(e)),
     ]
