@@ -314,9 +314,9 @@ export function excerpt(raw, min = 140, max = 480) {
 }
 
 /**
- * "Nguồn:" block, small italic. items: { n, label, note?, quote?, cut?, url? }. A standing note repeated on every source
+ * "Nguồn:" block, small italic. items: { n, label, note?, quote?, cut?, url?, auto? }. A standing note repeated on every source
  * ("tài liệu hướng dẫn áp dụng…" three times) is printed once, then "như [n]". Links are de-duplicated per document and
- * capped at three.
+ * capped at three. `auto`: an evidence row extracted by machine that no person has checked yet (R18).
  */
 export function sourceLines(items) {
   if (!items.length) return [];
@@ -326,7 +326,8 @@ export function sourceLines(items) {
     const same = firstWithNote.get(x.note);
     if (x.note && !same) firstWithNote.set(x.note, x.n);
     const note = !x.note ? '' : same ? ` (như [${same}])` : ` (${x.note})`;
-    return L([`[${x.n}] ${x.label}${note}${x.quote ? ` — “${x.quote}”${x.cut ? ' (trích đoạn đầu)' : ''}` : ''}`], 'note');
+    const auto = x.auto ? ' (trích tự động, chưa đối chiếu)' : '';
+    return L([`[${x.n}] ${x.label}${note}${auto}${x.quote ? ` — “${x.quote}”${x.cut ? ' (trích đoạn đầu)' : ''}` : ''}`], 'note');
   };
   return [
     L(['Nguồn:'], 'note'),
@@ -487,6 +488,9 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false } = {
         // The API keeps only quotes found verbatim in the body; 159 leaves room for the ellipsis.
         quote: c.quotes?.length ? cleanGazetteTitle('', c.quotes[0], 159) : '',
         url: c.url,
+        // Owner decision 2026-09-15: an evidence row (Explanatory Note, SEN, ruling, annex table…) nobody checked says so on its
+        // own source line, never in orange; a statute clause keeps unverifiedLines above.
+        auto: Boolean(c.kind) && c.verification === 'auto_unverified',
       })),
     ),
   );

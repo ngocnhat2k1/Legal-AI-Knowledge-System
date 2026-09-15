@@ -420,15 +420,26 @@ test('formatAnswerMd: văn bản bot tự nạp, cảnh báo của API và dòng
   assert.ok(!history.some((l) => l.includes('trả lời "đúng"')), 'câu soạn không mời "đúng"/"sai": không mã nào đang chờ xác nhận');
 });
 
-test('formatAnswerMd nguồn: nhãn thẩm quyền một lần rồi "như [1]", quote ≤ 160 ký tự, nhãn EN giữ "(có thể gồm cả nhóm …)"', () => {
+test('formatAnswerMd nguồn: nhãn thẩm quyền một lần rồi "như [1]", quote ≤ 160 ký tự, nhãn EN giữ "(có thể gồm cả nhóm …)"; bằng chứng trích tự động ghi nhỏ trên dòng nguồn (R18)', () => {
+  const AUTO = ' (trích tự động, chưa đối chiếu)';
   const rows = rowsOf(formatAnswerMd(HS_PHOTO));
   const src = (n) => rows.find((l) => l.startsWith(`[${n}] `));
   assert.equal(rows.filter((l) => l.includes(EN_NOTE)).length, 1);
-  assert.ok(src(1).startsWith(`[1] Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05 (${EN_NOTE}) — “`), src(1));
-  assert.ok(src(2).startsWith('[2] Chú giải Chương 30 — “'), src(2));
-  assert.ok(src(3).startsWith('[3] Chú giải chi tiết HS 2022 · Chương 38 · nhóm 38.24 (có thể gồm cả nhóm 38.23) (như [1]) — “'), src(3));
+  assert.ok(src(1).startsWith(`[1] Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05 (${EN_NOTE})${AUTO} — “`), src(1));
+  assert.ok(src(2).startsWith(`[2] Chú giải Chương 30${AUTO} — “`), src(2));
+  assert.ok(src(3).startsWith(`[3] Chú giải chi tiết HS 2022 · Chương 38 · nhóm 38.24 (có thể gồm cả nhóm 38.23) (như [1])${AUTO} — “`), src(3));
   for (const n of [1, 2, 3]) assert.ok(src(n).match(/“(.*)”$/)[1].length <= 160, src(n));
   assert.ok(!rows.some((l) => l.includes('(trích đoạn đầu)')));
+  // Owner decision 2026-09-15: an evidence row a person checked carries nothing; neither does a statute clause, whose standing
+  // stays the orange "bot tự nạp" line. The evidence mark is never orange.
+  const checked = rowsOf(formatAnswerMd({ ...HS_PHOTO, citations: HS_PHOTO.citations.map((c) => ({ ...c, verification: 'verified' })) }));
+  assert.ok(!checked.some((l) => l.includes(AUTO)), checked.join('\n'));
+  const clause = cite(4, { kind: null, label: 'Khoản 1 Điều 9 VB-A', documentNumber: 'VB-A', note: null, quotes: ['Hàng hóa nhập khẩu để gia công được miễn thuế nhập khẩu.'] });
+  const legal = formatAnswerMd({ ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [], citations: [...HS_PHOTO.citations, clause] });
+  assert.ok(rowsOf(legal).find((l) => l.startsWith('[4] ')).startsWith('[4] Khoản 1 Điều 9 VB-A — “'));
+  const orange = all(legal, ST.orange);
+  assert.equal(orange.length, 1);
+  assert.ok(orange[0].startsWith('VB-A do bot tự nạp') && !orange[0].includes('trích tự động'), orange[0]);
 });
 
 test('formatAnswerMd tariff (Q1): văn xuôi và khối thuế dựng một lần: [k] không trùng, cảnh báo của khối nằm dưới văn xuôi, còn lời mời đúng/sai, vẫn là câu tra thuế', () => {
