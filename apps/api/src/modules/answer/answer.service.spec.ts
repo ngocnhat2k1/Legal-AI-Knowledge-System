@@ -133,7 +133,7 @@ const HS_ROWS = [
  */
 const PHOTO_WALK = {
   sections: [
-    { key: 'facts', markdown: 'Bạn mới nói miếng dán bàn chân ngải cứu, chưa nói miếng dán có tẩm dược chất hay không.' },
+    { key: 'nature', markdown: 'Bạn mới nói miếng dán bàn chân ngải cứu, chưa nói miếng dán có tẩm dược chất hay không.' },
     {
       key: 'candidates',
       markdown: `Nhóm 30.05 gồm sản phẩm "${EN_QUOTE}" [#1]; nếu lớp ngải cứu chỉ để làm ấm thì cần so thêm nhóm 38.24.`,
@@ -236,8 +236,10 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     for (const o of others) expect(o.sen).toBeUndefined();
 
     // The reply is the owner's sectioned report: titles by code, in the "## " md() renders, the model's own prose under them.
+    // THÔNG TIN HÀNG HÓA is there although the model wrote no facts section: code prints it from the planner's goods.
     expect(res.answerMd.split('\n').filter((l) => l.startsWith('## '))).toEqual([
       `## ${SECTION_TITLES.facts}`,
+      `## ${SECTION_TITLES.nature}`,
       `## ${SECTION_TITLES.candidates}`,
       `## ${SECTION_TITLES.conclusion}`,
     ]);
@@ -540,7 +542,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const walk = {
       ...PHOTO_WALK,
       sections: [
-        { key: 'facts', markdown: 'Thuế nhập khẩu của dòng này là 8%.' },
+        { key: 'nature', markdown: 'Thuế nhập khẩu của dòng này là 8%.' },
         { key: 'conclusion', markdown: 'Thuế suất ưu đãi của dòng kia là 5%.' },
       ],
     };
@@ -589,7 +591,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
   it('§4.1: the walkthrough\'s own opening sentence cut, or more than a third of it, leaves the sources only', async () => {
     const rateLine = 'Thuế nhập khẩu của dòng này là 8%.';
     // (a) the first sentence of the first section is the one G1 cuts: firstCut, whatever else survives.
-    const opener = { ...PHOTO_WALK, sections: [{ key: 'facts', markdown: rateLine }, ...PHOTO_WALK.sections.slice(1)] };
+    const opener = { ...PHOTO_WALK, sections: [{ key: 'nature', markdown: rateLine }, ...PHOTO_WALK.sections.slice(1)] };
     // (b) the opener stands and three of the four sentences go: the one-third rule alone, with firstCut false.
     const third = {
       ...PHOTO_WALK,
@@ -643,7 +645,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const walk = {
       ...PHOTO_WALK,
       tariff_ref: ['30051010'],
-      sections: [{ key: 'facts', markdown: `Thuế nhập khẩu của dòng này là 8%. ${PHOTO_WALK.sections[0]!.markdown}` }, ...PHOTO_WALK.sections.slice(1)],
+      sections: [{ key: 'nature', markdown: `Thuế nhập khẩu của dòng này là 8%. ${PHOTO_WALK.sections[0]!.markdown}` }, ...PHOTO_WALK.sections.slice(1)],
     };
     const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
     const res = await svc.answer({ q: 'miếng dán bàn chân ngải cứu thì khai nhóm nào' });

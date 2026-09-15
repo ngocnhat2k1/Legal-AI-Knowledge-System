@@ -51,6 +51,7 @@ import {
   flatten,
   type HeadingLines,
   ORDER,
+  factsBlock,
   policyBlock,
   repairItems,
   verifySections,
@@ -681,7 +682,7 @@ export class AnswerService {
     // R1, R4: a missing fact stating a rate or filling in a masked code must not reach the bot this way; one that merely
     // runs past 12 words is still a true missing fact and stays (R3, R5).
     const badFacts = new Set(after.flatMap((v) => (v.sentence && v.rule !== 'walkthrough-item-length' ? [v.sentence.normalize('NFC')] : [])));
-    const answerMd = dropped ? '' : flatten(checked.sections, policyBlock(POLICY_LISTS, rows, tariffRef, asOf));
+    const answerMd = dropped ? '' : flatten(checked.sections, policyBlock(POLICY_LISTS, rows, tariffRef, asOf), factsBlock(o.goods));
     const lines = await timed('verify', () => this.hsLines(users.map((u) => digits(u.code))));
     for (const h of headings) lines.set(digits(h.heading), h.headingText);
     return {

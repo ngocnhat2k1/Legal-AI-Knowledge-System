@@ -203,7 +203,9 @@ export function verifySections(output: WalkthroughOutput, sources: GuardSource[]
     // 'policy' is the code's own title (policyBlock): a section the model returned under it would print a licence or
     // inspection claim beside the block saying the list is not loaded (R12, R18). The prompt never offers the key, so nor
     // does the code — ORDER keeps it only so flatten() can place the code-built block in the owner's order.
-    if (key === 'policy') continue;
+    // facts and policy are the system's own sections (factsBlock, policyBlock): a model section under either key would
+    // print a second body under a code-written title, and the checks that own those rules never ran over it.
+    if (key === 'policy' || key === 'facts') continue;
     // Every section the model tagged with this key, not just the first: the prompt tags paragraphs ("Gắn mỗi đoạn một key"),
     // so one key can carry several, and dropping the rest lost them with `cut` counted as 0 — invisible to the §4.1 net.
     // Each stays its own draft, so [n] inside it still means that section's own cites[n-1].
@@ -363,6 +365,23 @@ const shortQuote = (q: string): string => {
 };
 
 /**
+ * The THÔNG TIN HÀNG HÓA section, written here and never by the model. It restates what the asker said, so it carries
+ * their own measurements ("D112 x H165mm", "220V", "mới 100%") — and G1 cut every sentence of it as a number no quote
+ * backs, which, as the first section, dropped the whole answer (2026-09-15). The planner already separates what they
+ * wrote from what is still missing; code prints both and there is nothing left for a guard to doubt.
+ */
+export function factsBlock(goods: { facts: string[]; missing: string[] }): string {
+  const said = goods.facts.map((f) => `- ${f.trim()}`).filter((l) => l.length > 2);
+  const missing = goods.missing.map((f) => f.trim()).filter(Boolean);
+  if (!said.length && !missing.length) return '';
+  return [
+    ...(said.length ? ['Bạn đã cho biết:', ...said] : []),
+    // R3/R5: what is still open is said here too, so an answer that does not settle shows why on its face.
+    ...(missing.length ? [`${said.length ? 'Chưa rõ' : 'Bạn chưa cho biết'}: ${missing.join('; ')}.`] : []),
+  ].join('\n');
+}
+
+/**
  * The CHÍNH SÁCH CHUYÊN NGÀNH section, written here and never by the model (plan 08 §0; R12, R18). Each listing is its own
  * line with the entry verbatim; the rest are grouped, and a list the corpus does not hold reads "chưa nạp" — saying "Không"
  * about a list nobody checked is the failure this block exists to make impossible.
@@ -404,8 +423,12 @@ export function policyBlock(registry: PolicyList[], rows: EvidenceRow[], codes: 
  * The surviving sections under the owner's titles, in the markdown subset md() renders ("## " is a bold line). The policy
  * block takes its own place in that order.
  */
-export function flatten(sections: VerifiedWalkthrough['sections'], policy: string): string {
-  const all = [...sections, ...(policy.trim() ? [{ key: 'policy' as WalkthroughSectionKey, markdown: policy.trim() }] : [])];
+export function flatten(sections: VerifiedWalkthrough['sections'], policy: string, facts = ''): string {
+  const all = [
+    ...sections,
+    ...(facts.trim() ? [{ key: 'facts' as WalkthroughSectionKey, markdown: facts.trim() }] : []),
+    ...(policy.trim() ? [{ key: 'policy' as WalkthroughSectionKey, markdown: policy.trim() }] : []),
+  ];
   return all
     .slice()
     .sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key))

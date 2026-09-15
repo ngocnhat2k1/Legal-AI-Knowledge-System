@@ -9,6 +9,7 @@ import {
   classifyInput,
   cutSentences,
   evidenceRow,
+  factsBlock,
   flatten,
   type HeadingLines,
   policyBlock,
@@ -123,7 +124,7 @@ const section = (key: string, markdown: string, cites: Array<{ id: number; quote
 /** A walkthrough as the model writes one: most sentences name a candidate heading, only some of them inside a quote. */
 const walked = (): WalkthroughOutput => ({
   sections: [
-    section('facts', 'Bạn mới mô tả miếng dán bàn chân có thành phần ngải cứu, chưa nói có tẩm dược chất hay không.'),
+    section('nature', 'Bạn mới mô tả miếng dán bàn chân có thành phần ngải cứu, chưa nói có tẩm dược chất hay không.'),
     section('candidates', `Nhóm 30.05 gồm sản phẩm "${EN_QUOTE}" [1]. Còn nhóm 38.24 là nhóm quét của chương 38 [2].`, [
       { id: 1, quotes: [EN_QUOTE] },
       { id: 3, quotes: ['các sản phẩm và chế phẩm hóa học chưa được chi tiết hoặc ghi ở nơi khác'] },
@@ -184,7 +185,7 @@ describe('verifySections — the shared guards over the walkthrough', () => {
     ]);
     expect(held.cut).toBe(0);
     expect(held.violations.filter((v) => v.rule === 'G3')).toEqual([]);
-    expect(held.sections.map((s) => s.key)).toEqual(['facts', 'candidates', 'exclusions', 'levels', 'conclusion']);
+    expect(held.sections.map((s) => s.key)).toEqual(['nature', 'candidates', 'exclusions', 'levels', 'conclusion']);
     // Anchors are not a blanket pass: a heading the runner never printed still needs a quote.
     const stray = walked();
     stray.sections[0]!.markdown = 'Miếng dán này có thể còn phải so với nhóm 39.26.';
@@ -210,7 +211,7 @@ describe('verifySections — the shared guards over the walkthrough', () => {
     const out = verifySections(made, guardSources, ctx({ anchors: ANCHORS }));
     expect(out.violations.some((v) => v.rule === 'G2')).toBe(true);
     // The sentence's only support was made up, so it goes and its section with it; the rest of the answer stands.
-    expect(out.sections.map((s) => s.key)).toEqual(['facts', 'exclusions', 'levels', 'conclusion']);
+    expect(out.sections.map((s) => s.key)).toEqual(['nature', 'exclusions', 'levels', 'conclusion']);
     expect(out.citations.map((c) => c.source)).toEqual([1, 0]);
   });
 
@@ -229,7 +230,7 @@ describe('verifySections — the shared guards over the walkthrough', () => {
     const w = walked();
     w.sections.push(section('candidates', `Nhóm 38.24 là nhóm quét cuối chương, gồm "${CHEM}" [1].`, [{ id: 3, quotes: [CHEM] }]));
     const out = verifySections(w, guardSources, ctx({ anchors: ANCHORS }));
-    expect(out.sections.map((s) => s.key)).toEqual(['facts', 'candidates', 'exclusions', 'levels', 'conclusion']);
+    expect(out.sections.map((s) => s.key)).toEqual(['nature', 'candidates', 'exclusions', 'levels', 'conclusion']);
     // Both paragraphs under the one title, and the second section's own [1] is evidence 3, already the answer's [2].
     expect(out.sections[1]!.markdown.split('\n\n')).toHaveLength(2);
     expect(out.sections[1]!.markdown).toContain(`"${CHEM}" [2].`);
@@ -240,11 +241,11 @@ describe('verifySections — the shared guards over the walkthrough', () => {
   it('prose that survives marking nothing still lists the evidence the answer quoted, as compose does', () => {
     const w = walked();
     w.sections = [
-      section('facts', 'Bạn mới mô tả miếng dán bàn chân có thành phần ngải cứu.', [{ id: 1, quotes: [EN_QUOTE] }]),
+      section('nature', 'Bạn mới mô tả miếng dán bàn chân có thành phần ngải cứu.', [{ id: 1, quotes: [EN_QUOTE] }]),
       section('conclusion', 'Mình để mở giữa 30.05 và 38.24 cho tới khi biết nhãn ghi công dụng gì.'),
     ];
     const out = verifySections(w, guardSources, ctx({ anchors: ANCHORS }));
-    expect(out.sections.map((s) => s.key)).toEqual(['facts', 'conclusion']);
+    expect(out.sections.map((s) => s.key)).toEqual(['nature', 'conclusion']);
     expect(out.citations).toEqual([{ n: 1, source: 0, quotes: [EN_QUOTE] }]);
   });
 
@@ -259,17 +260,17 @@ describe('verifySections — the shared guards over the walkthrough', () => {
     const w = walked();
     w.sections = [
       // Unmarked, so it is read against the answer's quotes: "30 ngày" is a fact only Q1 holds.
-      section('facts', 'Mẫu của lô này được lưu 30 ngày theo hướng dẫn.'),
+      section('nature', 'Mẫu của lô này được lưu 30 ngày theo hướng dẫn.'),
       section('candidates', `Văn bản đã kết luận "${Q1}" [1].`, [{ id: 5, quotes: [Q1] }]),
       section('conclusion', `Hồ sơ đi kèm thì "${Q2}" [1].`, [{ id: 5, quotes: [Q2] }]),
     ];
     const out = verifySections(w, guardsOf([...SOURCES, RULING]), ctx({ anchors: ANCHORS }));
-    expect([out.cut, out.sections.map((s) => s.key)]).toEqual([0, ['facts', 'candidates', 'conclusion']]);
+    expect([out.cut, out.sections.map((s) => s.key)]).toEqual([0, ['nature', 'candidates', 'conclusion']]);
   });
 
   it('the answer losing its own first sentence is reported, so the runner drops the prose as compose does (§4.1)', () => {
     const bad = walked();
-    bad.sections[0] = section('facts', 'Thuế nhập khẩu của nhóm này là 8%.');
+    bad.sections[0] = section('nature', 'Thuế nhập khẩu của nhóm này là 8%.');
     expect(verifySections(bad, guardSources, ctx({ anchors: ANCHORS })).firstCut).toBe(true);
     expect(verifySections(walked(), guardSources, ctx({ anchors: ANCHORS })).firstCut).toBe(false);
   });
@@ -376,6 +377,32 @@ describe('policyBlock — printed by code, never by the model', () => {
     expect(policyBlock(registry, rows, ['30.05'], 'hôm nay')).toBe('');
   });
 
+  // The prompt no longer asks for a facts section, but a model that writes one anyway must not reach the reply: its body
+  // would print under the code-written title, and G1 would cut it for the asker's own measurements — the very failure
+  // moving the section into code removed (2026-09-15).
+  it('a facts section the model writes anyway is dropped, not verified and not printed', () => {
+    const rogue = walked();
+    rogue.sections = [section('facts', 'Chuông bung bằng thép, D112 x H165mm, hàng mới 100%.'), ...rogue.sections];
+    const out = verifySections(rogue, guardSources, ctx({ anchors: ANCHORS }));
+    expect(out.sections.map((s) => s.key)).not.toContain('facts');
+    // Not verified either: its sentence is neither counted as said nor as cut, so it cannot trip §4.1 on its own.
+    expect([out.said, out.cut, out.firstCut]).toEqual([verifySections(walked(), guardSources, ctx({ anchors: ANCHORS })).said, 0, false]);
+    const md = flatten(out.sections, '', factsBlock({ facts: ['thân bằng thép'], missing: [] }));
+    expect(md.split('\n').filter((l) => l === `## ${SECTION_TITLES.facts}`)).toHaveLength(1);
+    expect(md).not.toContain('D112 x H165mm');
+  });
+
+  it('THÔNG TIN HÀNG HÓA is code, so the asker\'s own measurements survive G1', () => {
+    expect(factsBlock({ facts: ['thân bằng thép', 'D112 x H165mm'], missing: ['máy mẹ thuộc nhóm nào'] }).split('\n')).toEqual([
+      'Bạn đã cho biết:',
+      '- thân bằng thép',
+      '- D112 x H165mm',
+      'Chưa rõ: máy mẹ thuộc nhóm nào.',
+    ]);
+    expect(factsBlock({ facts: [], missing: ['công dụng'] })).toBe('Bạn chưa cho biết: công dụng.');
+    expect(factsBlock({ facts: [], missing: [] })).toBe('');
+  });
+
   it('the unchecked-list caveat counts them all and names only the first six', () => {
     const doubt = Array.from({ length: 8 }, (_, i) =>
       list({ id: `d${i}`, instrument: `${10 + i}/2026/TT-BCT`, annex_anchor: null, validity_verified: false, loaded: { kind: 'annex_table', document_number: `${10 + i}/2026/TT-BCT`, source_hint: '' } }),
@@ -390,9 +417,11 @@ describe('policyBlock — printed by code, never by the model', () => {
 describe('flatten — the sectioned report of the owner sample', () => {
   it('prints his titles in his order, the policy block among them, in the markdown md() renders', () => {
     const out = verifySections(walked(), guardSources, ctx({ anchors: ANCHORS }));
-    const md = flatten(out.sections, 'Mã **3005.10.10** (ứng viên, chưa chốt):\n- Kho **chưa nạp** nên mình chưa kiểm tra được: 11/2024/TT-BTTTT');
+    // facts and the policy block are the system's own, passed in; the model's sections fill the rest of the order.
+    const md = flatten(out.sections, 'Mã **3005.10.10** (ứng viên, chưa chốt):\n- Kho **chưa nạp** nên mình chưa kiểm tra được: 11/2024/TT-BTTTT', factsBlock({ facts: ['thép, D112 x H165mm'], missing: ['có tẩm dược chất không'] }));
     expect(md.split('\n').filter((l) => l.startsWith('#'))).toEqual([
       `## ${SECTION_TITLES.facts}`,
+      `## ${SECTION_TITLES.nature}`,
       `## ${SECTION_TITLES.candidates}`,
       `## ${SECTION_TITLES.exclusions}`,
       `## ${SECTION_TITLES.levels}`,
