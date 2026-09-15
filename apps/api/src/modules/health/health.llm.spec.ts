@@ -58,7 +58,10 @@ describe('probeLlmDeep (only when /health?llm=deep asks)', () => {
     await expect(load().probeLlmDeep()).resolves.toBe('up');
     const [prompt, opts] = mockRunClaude.mock.calls[0] as [string, { timeoutMs: number }];
     expect(prompt.length).toBeLessThan(80);
-    expect(opts.timeoutMs).toBeLessThanOrEqual(10_000);
+    // Six back-to-back runs of this exact command line took 3.6–10.9 s on an idle laptop, and the dev box is slower:
+    // a budget near the top of that spread reports `timeout` at a healthy model. Still far under nginx's 300 s.
+    expect(opts.timeoutMs).toBeGreaterThanOrEqual(30_000);
+    expect(opts.timeoutMs).toBeLessThanOrEqual(60_000);
     expect(prompt).not.toMatch(/thuế|\?/); // a constant, never a question someone asked
   });
 
@@ -80,13 +83,32 @@ describe('probeLlmDeep (only when /health?llm=deep asks)', () => {
     await expect(load().probeLlmDeep()).resolves.toBe('quota');
   });
 
-  it('reports timeout when the runner gives up or dies without an envelope', async () => {
+  /**
+   * runClaude returns null for three different things, and the runbook sends the operator two different ways:
+   * `timeout` says "slow or busy, retry", `error` says "read the container logs". A CLI that was OOM-killed or
+   * crashed returns null in milliseconds and belongs in the second group — the logs are the only place its stderr
+   * (a spend limit printed there included) can be read.
+   */
+  it('reports error, not timeout, when the runner comes back empty straight away', async () => {
     mockRunClaude.mockResolvedValue(null);
-    await expect(load().probeLlmDeep()).resolves.toBe('timeout');
+    await expect(load().probeLlmDeep()).resolves.toBe('error');
 
     jest.resetModules();
     mockRunClaude.mockRejectedValue(new Error('no temp dir'));
-    await expect(load().probeLlmDeep()).resolves.toBe('timeout');
+    await expect(load().probeLlmDeep()).resolves.toBe('error');
+  });
+
+  it('reports timeout only when the runner actually spent its whole budget', async () => {
+    jest.useFakeTimers();
+    try {
+      mockRunClaude.mockImplementation(async (_prompt: string, opts: { timeoutMs: number }) => {
+        jest.advanceTimersByTime(opts.timeoutMs);
+        return null;
+      });
+      await expect(load().probeLlmDeep()).resolves.toBe('timeout');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('answers no_cli and no_token from the cheap probe without spawning the model', async () => {
@@ -110,6 +132,31 @@ describe('probeLlmDeep (only when /health?llm=deep asks)', () => {
 
       jest.advanceTimersByTime(5 * 60_000 + 1);
       await expect(llm.probeLlmDeep()).resolves.toBe('up');
+      expect(mockRunClaude).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  /**
+   * The runbook tells the operator to retry a `timeout` and to wait out a `quota`. Both are lies if every retry inside
+   * five minutes re-reads the same cached verdict — and a busy-slot `timeout` costs nothing to re-ask, because it never
+   * spawned anything. So only `up` earns the full TTL.
+   */
+  it('holds up for the full TTL but re-checks a failure within the minute', async () => {
+    jest.useFakeTimers();
+    try {
+      mockRunClaude.mockResolvedValue(envelope("reached your org's monthly spend limit", true));
+      const llm = load();
+      await expect(llm.probeLlmDeep()).resolves.toBe('quota');
+
+      jest.advanceTimersByTime(5_000);
+      await expect(llm.probeLlmDeep()).resolves.toBe('quota');
+      expect(mockRunClaude).toHaveBeenCalledTimes(1); // a curl loop still cannot spawn per call
+
+      jest.advanceTimersByTime(60_000);
+      mockRunClaude.mockResolvedValue(envelope('ok'));
+      await expect(llm.probeLlmDeep()).resolves.toBe('up'); // recovery is visible without restarting the container
       expect(mockRunClaude).toHaveBeenCalledTimes(2);
     } finally {
       jest.useRealTimers();

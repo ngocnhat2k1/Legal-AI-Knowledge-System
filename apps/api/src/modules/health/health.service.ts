@@ -40,16 +40,18 @@ export class HealthService {
 
   async check(deep = false): Promise<HealthReport> {
     const llm = probeLlm();
-    const llmDeep = deep ? { llmDeep: await probeLlmDeep() } : undefined;
+    // Started here, awaited below: the probe and the query run side by side, so `?llm=deep` costs max(probe, db)
+    // rather than probe + db. Awaiting it first would add the probe's whole budget to every deep health call.
+    const probe = deep ? probeLlmDeep() : undefined;
     try {
       const result = await this.db.execute(
         sql`select extversion from pg_extension where extname = 'vector' limit 1`,
       );
       const rows = result as unknown as ReadonlyArray<{ extversion: string | null }>;
       const pgvector = rows.length > 0 ? rows[0]!.extversion : null;
-      return { status: pgvector ? 'ok' : 'degraded', db: 'up', pgvector, llm, ...llmDeep };
+      return { status: pgvector ? 'ok' : 'degraded', db: 'up', pgvector, llm, ...(probe && { llmDeep: await probe }) };
     } catch {
-      return { status: 'degraded', db: 'down', pgvector: null, llm, ...llmDeep };
+      return { status: 'degraded', db: 'down', pgvector: null, llm, ...(probe && { llmDeep: await probe }) };
     }
   }
 }

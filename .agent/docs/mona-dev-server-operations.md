@@ -153,21 +153,26 @@ curl -s 'http://127.0.0.1:3060/health?llm=deep'
 ```
 
 Nó chạy `claude -p` một lần với câu hỏi cố định (một câu tiếng Anh xin đúng chữ `ok`; **không bao giờ có chữ của người
-dùng** — [R14](../business-rules.md)), tắt tool, timeout 10 giây, và dùng chung mức trần 2 tiến trình `claude` với đường
+dùng** — [R14](../business-rules.md)), tắt tool, timeout 30 giây, và dùng chung mức trần 2 tiến trình `claude` với đường
 trả lời. Kết quả thêm trường `llmDeep`; `llm` giữ nguyên nghĩa cũ nên mọi thứ đang đọc `llm` (`deploy.sh`, `apps/eval`)
 không đổi.
 
-**Kết quả được nhớ 5 phút.** Gọi lại trong khoảng đó trả về đúng kết quả cũ và không tốn tiến trình nào — vòng lặp curl
-hay dashboard không thể đốt hạn mức. Đổi lại, sau khi sửa `.env` hoặc recreate container thì phải chờ tới 5 phút mới
-thấy kết quả mới. Kiểm sâu **không miễn phí**: mỗi lần chạy thật là một lượt gọi mô hình (đo 2026-09-15: ~1,6 s phía mô
-hình, ~5,5 s cả lệnh, vài cent) — dùng khi deploy hoặc khi nghi bot im tiếng, đừng đặt vào cron mỗi phút.
+**Kết quả `up` được nhớ 5 phút; mọi kết quả khác chỉ nhớ ~30 giây.** Gọi lại trong khoảng đó trả về đúng kết quả cũ và
+không tốn tiến trình nào — vòng lặp curl hay dashboard không thể đốt hạn mức — nhưng một kết quả hỏng thì hỏi lại sau
+nửa phút là đo thật, nên "thử lại" ở bảng dưới có tác dụng. Cache nằm trong tiến trình Node: **restart/recreate
+container là mất cache ngay**, lần `?llm=deep` kế tiếp đo lại liền. Cái chậm là chiều ngược lại: nếu sửa xong mà tiến
+trình vẫn sống (hạn mức reset, bot rảnh suất tiến trình) thì phải chờ hết ~30 giây đó mới thấy đổi.
+
+Kiểm sâu **không miễn phí**: mỗi lần chạy thật là một lượt gọi mô hình (đo 2026-09-15, sáu lần liên tiếp trên laptop
+rảnh: 3,6–10,9 giây cả lệnh, trong đó 1,7–3,6 giây là mô hình; vài cent) — dùng khi deploy hoặc khi nghi bot im tiếng,
+đừng đặt vào cron mỗi phút.
 
 | `llmDeep` | Nghĩa | Làm gì |
 |---|---|---|
 | `up` | mô hình đã trả lời thật | không phải làm gì |
 | `quota` | câu trả lời mang chữ kiểu "spend limit" / "usage limit": hết hạn mức thuê bao. Nhận dạng bằng chuỗi, **chỉ là phỏng đoán** — CLI không có trường máy đọc được | chờ hạn mức reset; trong lúc đó bot vẫn chạy nhưng chỉ ở chế độ trích dẫn |
-| `error` | CLI chạy được nhưng mô hình báo lỗi (`is_error`) | `docker-compose logs --tail 50 api` xem dòng `[health] deep llm probe: error`; thử lại sau |
-| `timeout` | không có câu trả lời trong 10 giây: mô hình chậm/kẹt, hoặc cả 2 suất tiến trình đang bận soạn câu trả lời cho bot | thử lại sau một phút; vẫn `timeout` lúc bot rảnh thì kiểm CLI như `no_cli` |
+| `error` | mô hình chạy nhưng báo lỗi (`is_error`, token sai…), **hoặc** CLI chết ngay mà không in JSON: crash, bị OOM giết, in lỗi dạng chữ thường | `docker-compose logs --tail 50 api` — tìm dòng `[claude] exited … without a result: …`, đó là chỗ **duy nhất** đọc được stderr của CLI (kể cả khi chữ báo hết hạn mức chỉ ra ở đó). Không thấy gì thì xem mục RAM/OOM ngay dưới |
+| `timeout` | hết 30 giây vẫn chưa có câu trả lời: mô hình chậm/kẹt, hoặc cả 2 suất tiến trình đang bận soạn câu trả lời cho bot | thử lại sau một phút (kết quả hỏng chỉ nhớ ~30 giây nên lần sau là đo thật); vẫn `timeout` lúc bot rảnh thì kiểm CLI như `no_cli` |
 | `no_token` / `no_cli` | như bảng trên (kiểm sâu không spawn gì trong hai trường hợp này) | như bảng trên |
 
 `llmDeep` **không** đổi `status` và không làm `/health` trả 503: tra cứu biểu thuế và web UI chạy được khi không có mô
@@ -243,7 +248,7 @@ Workflow [`.github/workflows/ci-cd.yml`](../../.github/workflows/ci-cd.yml) có 
 Commit chỉ đổi `.agent/**` hoặc `*.md` không chạy workflow. Server không build gì, nên deploy không ăn RAM của host.
 Theo dõi ở tab Actions trên GitHub (hoặc `gh run watch`); deploy xong thì kiểm theo mục 4, **kèm một lần kiểm sâu**
 `curl -s 'http://127.0.0.1:3060/health?llm=deep'` để biết thuê bao còn trả lời được. `deploy.sh` cố ý chỉ đợi `/health`
-rẻ: kiểm sâu tốn một tiến trình `claude` và có thể mất 10 giây, không nên nằm trong vòng đợi 60 giây của script; nó cũng
+rẻ: kiểm sâu tốn một tiến trình `claude` và có thể mất tới 30 giây, không nên nằm trong vòng đợi 60 giây của script; nó cũng
 không phải lý do để coi deploy là hỏng (hết hạn mức thì code mới vẫn đúng, chỉ là bot trả lời ở chế độ trích dẫn).
 
 - **Chỉ commit ở đầu `main` được deploy.** Re-run một run cũ khi `main` đã đi tiếp thì script in `main has moved past …`
