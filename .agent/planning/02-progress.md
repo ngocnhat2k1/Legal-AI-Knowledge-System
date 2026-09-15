@@ -1,7 +1,7 @@
 ---
 type: planning
 status: active
-updated: 2026-09-14
+updated: 2026-09-15
 related:
   - ../index.md
   - ../business-rules.md
@@ -17,7 +17,7 @@ tiếp theo, và điều gì đã học được mà code không cho thấy.
 | | |
 |---|---|
 | **Đang chạy** | Server dev dùng chung của MONA (`<MONA_DEV_HOST>`; giá trị thật trong `.agent/local/mona-dev-server.md`), stack `/opt/docker-projects/customs-assistant`, cổng 127.0.0.1 3060/5435/8060: API + web UI + kho pháp lý 15 văn bản + worker ingest + bot Zalo (đã đăng nhập, `ALLOWED_THREADS` đã đặt), `/health` báo `llm: up`. Deploy mới nhất `0bf25af` (2026-09-14 ~09:22 UTC qua CI/CD: `/legal` dùng tầng bằng chứng); bản sửa hiệu lực + định tuyến theo ngay sau, sau deploy phải chạy `seed-evidence` một lần (runbook §5). **Từ 2026-09-14 deploy bằng CI/CD:** push `main` → GitHub Actions test, build image lên ghcr.io, server chỉ kéo về ([runbook §5](../docs/mona-dev-server-operations.md#5-deploy-bản-mới)). LLM (`claude -p` thuê bao) trả lời lại được từ ~09:20 UTC 2026-09-14; trước đó hết hạn mức ("org's monthly spend limit") mà `/health` vẫn báo `llm: up`, vì nó chỉ kiểm token + binary. Vận hành: [runbook](../docs/mona-dev-server-operations.md). |
-| **Việc tiếp theo** | **[Kế hoạch 08](08-answer-path-tasks.md) — `POST /answer`, bot soạn câu trả lời trên bằng chứng** (đọc §0 trước). Xong: Việc 0 (`8494c75` ADR + kế hoạch), Việc 1 (`d0a9ccc` dry-run nhiều lượt; câu hỏi thật ở `.agent/local/real-questions.json`), Việc 3 (`b2b829b`, chưa push), lõi Việc 4/7 (`e70a53e`, `b43cd82`), hợp đồng `answer/types.ts` (`1f567bd`). Đang chạy: workflow Việc 4/5/7/8/11 trong worktree; Việc 2 đo `claude -p` trên server. Phiên c8 làm `answer/walkthrough.ts`, `policy.ts` và dữ liệu `db/seed/data/legal/*`. (1) Chủ dự án chat thử trên Zalo: câu "mã này dùng được không" kèm mô tả hàng, câu giải nghĩa mã/nhóm, hiệu lực văn bản, văn bản liệt kê một mã HS. (2) Mảng 3 đầy đủ của [kế hoạch 05](05-bot-parity-tasks.md): `POST /answer`. |
+| **Việc tiếp theo** | **[Kế hoạch 08](08-answer-path-tasks.md) — `POST /answer`, bot soạn câu trả lời trên bằng chứng** (đọc §0 trước).<br>**Trên `main` local, chưa push:** Việc 4, 5, 6, 7, 8, 10, 11; `types.ts` với `cites`; stack dữ liệu của c8 (`591ec3c`…`adcf01d`).<br>**Nhánh đang rà hoặc sửa:**<br>• `plan08/predeploy-api-followups`: đã duyệt `df1f363`, đang chạy đợt 2.<br>• `plan08/guards-minimal`<br>• `plan08/viec12-bot-answer`: vòng sửa R13.<br>**Sau đó, theo thứ tự:**<br>1. Gộp các nhánh (merge, không rebase).<br>2. Làm Việc 13.<br>3. Bot: nhãn R18 "(trích tự động, chưa đối chiếu)" trên dòng nguồn, và "còn từ Nhật thì sao" gọi prose.<br>4. Nối walkthrough khi c8 báo chốt.<br>5. Kiểm trong worktree sạch, gồm full jest, `tsc` và bot.<br>6. Một lần push chung với c8.<br>7. Deploy.<br>8. Chạy `seed-evidence`, khoảng 80–85 phút, giờ do phiên này chọn.<br>9. Probe R4 (`.agent/local/r4-probe.mjs`).<br>10. Chủ dự án thử trên Zalo. |
 | **Chờ chủ dự án** | (1) chat thử bot sau deploy `69d1ab4`, báo chỗ chưa ổn; (2) có nạp 4 nghị định biểu thuế còn thiếu (144/2024, 108/2025, 199/2025, 201/2026) không; (3) đối chiếu PDF Công báo EVFTA 8711.20.x (9,3% năm 2026 → 20,4% năm 2027); (4) quyết corpus sinh lại theo từng văn bản và sửa `gazette_issue` 128/2020/NĐ-CP — [kế hoạch 05](05-bot-parity-tasks.md) Task 5; (5) [kế hoạch 06](06-deploy-mona-dev-server.md): kiểm thử bot trong nhóm, domain + mật khẩu basic auth, `rclone.conf`; (6) thêm 16 nguồn mới vào notebook (TASK-021; sau mỗi lần đẩy `verify_drive.py` phải ra `0 lệch`); (7) các câu hỏi mở của phiên 2026-09-14 bên dưới. |
 | **Việc của agent** | — (container seed-evidence và API nháp đã gỡ 2026-09-14). |
 | **Đã mất vĩnh viễn** | VPS Contabo bị xoá (xác nhận 2026-09-13): `lookup_confirmation` (phán quyết chuyên viên), session Zalo, `.env` cũ. Bộ nhớ áp mã HS học lại từ đầu. |
@@ -64,6 +64,81 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 
 ---
 
+### 2026-09-15 — Kho tri thức `ngochi` thành JSON: case phân loại, Chú giải chi tiết/SEN trích lại, 8 văn bản Công báo mới, sổ danh mục HS, chế độ hướng dẫn phân loại
+
+*(Mục của phiên c8.)*
+
+- **Vì sao:**
+  - Chủ dự án (2026-09-14) muốn bot dạy phân loại HS từng bước, không chỉ đưa mã. Tham khảo cấu trúc `format-cau-tra-loi.md`; không commit file này vì có số điện thoại của bên thứ ba.
+  - Chủ dự án cũng muốn tri thức trong thư mục `ngochi` nằm thành JSON trong git, để chuyển server chỉ cần nhúng lại.
+  - Chủ dự án chốt:
+    - giữ chữ bảng tổng hợp nội bộ VVMV trong repo;
+    - nạp các thông tư danh mục rủi ro chính thức;
+    - nạp 169/2026/NĐ-CP và 85/2026/TT-BTC;
+    - 20035/TB-CHQ không có bản đủ.
+- **Đã làm (dữ liệu, `db/seed/data/legal/`):**
+  - `classification-cases.ndjson` (mới): 36 case chỉ gồm trích dẫn nguyên văn, lấy từ 26/29 công văn. Bộ kiểm: `research/inbox-loader/check_cases.py` kèm test.
+  - `hs-explanatory-notes.ndjson` trích lại, 1.306 → 1.324 dòng: mỗi nhóm một dòng (1.228), cộng một dòng chung mỗi chương (96).
+    - Đã sửa: chữ rơi sang nhóm trước, nhóm bị gộp, trang phụ lục chữ Latin, dòng phân nhóm.
+    - `LIST_MARK` hẹp lại. Script EN không còn ghi SEN.
+  - `hs-sen.ndjson`: do `extract_sen.py` mới sinh, mỗi chú giải một dòng (97 → 425), có `codes`/`subheadings`/`headings`/`title`.
+  - `ingest_congbao.py` (kèm `test_ingest_congbao.py`):
+    - đọc ô từ `w:tc` thô;
+    - neo "Phụ lục" trần, bậc A./B., tiêu đề ở hàng 1;
+    - bỏ bảng quốc hiệu và khối chữ ký; văn xuôi sau phụ lục vào `notes`;
+    - lấy `gazette_issue`/`gazette_date` từ chú thích Công báo;
+    - thêm `--only`, `--out`;
+    - khôi phục khoản Word đánh số tự động;
+    - "DANH MỤC" trần cho `.doc` chỉ tính sau Điều cuối.
+  - Văn bản 15 → 23: thêm 33/2026/TT-BCT, 41 và 49/2026/TT-BXD, 27/2026/TT-BNNMT, 27/2026/TT-BYT, 125/2026/TT-BCA, 169/2026/NĐ-CP, 85/2026/TT-BTC. Quan hệ 19 → 37. Thêm Phụ lục I của QĐ 18/2019/QĐ-TTg.
+  - `policy-lists.json` + `apps/api/src/modules/answer/policy.ts`: sổ 26 danh mục khoá theo mã HS; `policyStatus` trả `LISTED`/`NOT_LISTED`/`NOT_LOADED`/`UNCERTAIN`. Sổ ghi mã in sai (`unreadable`), mã hoãn áp dụng (`deferred`) và điều kiện áp dụng (`applies_when`).
+  - `notebook-only.ndjson`: ẩn tên doanh nghiệp, mã số thuế, số tờ khai và số quản lý hàng hóa trong `ds-hang-qua-kvgs`.
+- **Đã làm (seed), `evidence-build.ts`:**
+  - Sinh thêm dòng case (kind `ruling`, `meta.case_id`) và dòng SEN có `hs_codes`/`hs_heading`/`meta.also_headings`.
+  - Dòng cửa sổ: EN hoặc công văn dài hơn 6.800 ký tự giữ nguyên dòng đầy đủ, có thêm các cửa sổ tối đa 4.000 ký tự (`meta.parent/part/parts/offset`). Không sinh cửa sổ nằm trong 6.800 ký tự đầu.
+  - Mã cha 4/6 số chỉ lấy từ ô bảng phụ lục, nhãn SEN và kết luận case.
+  - Mục tình trạng bỏ chữ "còn hiệu lực" khi cả văn bản đã hết hiệu lực. Ví dụ 128/2020 → "hiệu lực từ 10/12/2020 đến trước 01/07/2026".
+  - `evidence.ts` dùng lại vector khi md5 của `embed_text` đã có trong bảng.
+  - Tổng 1.979 → khoảng 2.882 mục.
+- **Đã làm (chế độ hướng dẫn phân loại, `apps/api/src/modules/answer/walkthrough*.ts`):**
+  - Prompt "teaching walk", thắng prompt tối giản qua hai giám khảo.
+  - `normalizeWalkthrough`: mô hình ghi `[#id]` kèm cụm nguyên văn 20–60 ký tự trong câu; code đánh số lại theo mục, dựng `cites`, xoá `tariff_ref` khi không in DÒNG THUẾ.
+  - Các kiểm cấp mục. Chưa nối vào `POST /answer` (việc của phiên plan 08).
+- **Đã làm (ghi chú kiến thức):**
+  - Đổi theo NĐ 169/2026 (128/2020 hết hiệu lực từ 01/07/2026) và TT 85/2026: R3, R1, `hs-classification.md` §3/§7/§8/§11, `project-context.md`, `tariff-system.md`, `customs-declaration.md`, `evaluation.md`.
+  - Ghi chú ngày trên ba ADR. Mọi con số đã đối chiếu với bản Công báo.
+- **Tài liệu:**
+  - [Đường ống hộp thư đến](../docs/inbox-ingest-workflow.md): thêm bảng bộ trích xuất, cách đọc bảng Word, case, sổ danh mục, bẫy 18–29.
+  - [Runbook §5](../docs/mona-dev-server-operations.md#5-deploy-bản-mới): thêm số dòng và thời gian `seed-evidence`, việc dùng lại vector, quy tắc chỉ chạy seed sau khi deploy xong, và mục "Dựng lại kho tri thức trên server mới".
+- **Bất ngờ:**
+  - Script SEN cũ bỏ 646/667 nhãn mã. Không chú giải nào còn cho biết nó giải thích phân nhóm nào, mà file vẫn trông đầy đủ.
+  - `row.cells` của python-docx lặp ô gộp. Ở 125/2026/TT-BCA, tên nhóm "Pháo hoa" nằm trong cột Mã HS, và một ô 13 mã bị chép sang bảy mặt hàng.
+  - Word giữ số khoản trong `numbering.xml`, nên 169/2026 Điều 9 và 85/2026 Điều 1 mất khoản 1 trong chữ.
+  - Công báo có thể đăng muộn rất lâu: 15/2024/TT-BYT muộn 205 ngày. Không suy ra "quá lâu nên chắc không ban hành".
+  - File BNV hoá ra là bản ký số của 16/2026/TT-BNV, dù ô số hiệu trống trong lớp text.
+  - Mã in sai trên Công báo ("404.29.90", "6802.92.90", "8507.60.10") được giữ nguyên và gắn cờ, không sửa.
+  - `source_ref` là số dòng: thêm một dòng giữa file làm đổi khoá mọi dòng sau, nên phải dùng lại vector theo md5.
+  - Mô hình tự đánh số `[n]` thì số chạy sang mục sau, nên code phải giữ sổ trích dẫn. Không giới hạn độ dài thì bước viết mất 109–202 s, vượt trần 100 s.
+  - Qua `verify()` của plan 08, 42% câu của bản brief bị G3 cắt vì nhóm ứng viên nêu ngoài trích dẫn. Đã báo phiên plan 08; hướng xử lý là `anchors`.
+- **Kiểm:**
+  - `evidence-build.spec` 37/37, `policy.spec` 48/48, `walkthrough.spec` 35 (+3 bỏ qua khi không đặt `WALKTHROUGH_RUNS`), `tsc -p apps/api/tsconfig.app.json` sạch.
+  - `check_cases.py`: "OK: 36 cases from 26 rulings". Inbox-loader unittest 77 OK.
+  - Chạy thử walkthrough bằng `claude -p` (Opus, high): brief 62–83 s, full 82–107 s.
+- **Giới hạn:**
+  - Chưa deploy, chưa chạy `seed-evidence` trên server. Ước lượng khoảng 2.260 mục phải nhúng, 80–85 phút. Đường dùng lại vector chưa chạy trên CSDL thật.
+  - **15/2024/TT-BYT chưa nạp:** textutil làm lệch cột dưới ô gộp, nên danh mục 27/2026/TT-BYT chưa có mã HS nguồn.
+  - Đã ký nhưng chưa lên Công báo, đang chờ (R16): 16/2026/TT-BNV; 24, 26, 28/2026/TT-BYT; 126/2026/TT-BQP.
+  - Trường `notes` của bảng phụ lục chưa in vào thân mục bằng chứng.
+  - Công văn 4778/TB-TCHQ vẫn để `scanned=false`.
+  - Lần đẩy notebook tới sẽ bị chặn ở nguồn 13–16, 50–58, 90, 91; nguồn 21, 23–27 đã bị chặn từ trước. Mỗi nguồn cần `--force-file`.
+- **Chờ chủ dự án:**
+  - (1) Đẩy notebook với `--force-file` cho các nguồn trên, gồm nguồn 91 để thay bản chưa ẩn thông tin riêng (Google Doc cũ vẫn còn bản chưa ẩn). Chưa agent nào đẩy.
+  - (2) Chọn cách nạp 15/2024/TT-BYT (+ 988/QĐ-BYT).
+  - (3) Có in trường `notes` của bảng phụ lục vào bằng chứng không.
+  - (4) Có nạp phụ lục chữ Latin của Chú giải chi tiết (Chương 29, 33, 44, 71) không.
+  - (5) 18/2019/QĐ-TTg (mã theo HS 2017) có cần bảng chuyển sang AHTN 2022 không.
+  - (6) Chọn người có tên thẩm tra 36 case (R18).
+
 ### 2026-09-14 (tối) — Bot đọc câu hỏi trước khi tra mã; "mã này dùng được không" được trả lời bằng chú giải (`4367d6b`, `33fe661`)
 
 - **Vì sao:** chủ dự án gửi ảnh chat nhóm: người dùng mô tả miếng dán bàn chân ngải cứu, hỏi "tham khảo mã 30051010 không biết được không", bot trả MFN + 4 biểu FTA. Chủ dự án: không phải câu nào có mã cũng là hỏi thuế; câu giải nghĩa mã phải đọc chú giải và lập luận, không dò từ khoá.
@@ -77,6 +152,125 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 - **Đo sớm Việc 2 (server, CLI 2.1.270):** `sonnet/low` prompt 5k ký tự 22–30 s, 2/3 lượt JSON bên trong không đọc được (có chữ/xuống dòng quanh JSON → `parseDraft` phải chịu được); `opus/high` prompt 40k ký tự **133 s**, trả 9,7k ký tự — vượt trần 100 s.
 - **Việc 2 xong (3 lượt/cấu hình, tuần tự, prompt 40k EN + chú giải chương 30.04/30.05/33.07/38.24, KHÔNG giới hạn độ dài đầu ra — mô hình viết 7–11k ký tự):** `opus/high` 131–137 s, JSON 3/3; `opus/medium` 82–91 s, 3/3; `sonnet/high` 49–119 s (dao động), 2/3. `sonnet/low` prompt 5k: 22–30 s, JSON bên trong 1/3. RAM trống ≥ 3,1 GB, 0 `is_error`. Cờ tắt tool: `--tools ''` (còn `--disallowedTools`, `--permission-mode`). **Bài học:** độ dài đầu ra quyết định thời gian; prompt compose phải giới hạn chữ, và `parseDraft` phải chịu chữ quanh JSON. **Đo lại có giới hạn "~250 từ"** (cùng prompt 40k, `--tools ''`; mô hình viết 312–352 từ): `opus/high` 61–79 s, `opus/medium` 50–51 s, JSON 4/4. **D2 chốt mặc định `opus/high`** (chủ dự án chọn suy luận cao), `ANSWER_COMPOSE_EFFORT=medium` là lối lùi nếu p95 thật ở Việc 14 vượt 120 s.
 - **Mốc "trước" (Việc 1, bot `a37c663`, `.agent/local/voice-before.txt`, 9 luồng / 13 lượt, 216 s):** câu ảnh chụp 2 tin · 3.080 ký tự · 68 s · **templateHits 11**; tra thuế / tìm mã 1 tin · 870–1.000 ký tự · 6–15 s · templateHits 0–2; mũ bảo hiểm danh mục 2 tin · 2.592 ký tự; giải nghĩa 3005.10.10 1 tin · 1.623 ký tự · 38 s; "hi" 343 ký tự; trailWrites 0 ở mọi lượt.
+- **Deploy `2d5bdd6` (CI xanh, kiểm trên server):** `/health` ok; `/legal` có văn xuôi qua `answer/claude.ts` dùng chung (6 s); chạy khô: "hi" → danh sách năng lực không qua router (0,0 s), "8479.89.10 thuế của hscode này" tra thẳng 0,3 s (trước 9,2 s), "thue nk 84818099 tq" tra thẳng. Việc 4/5/7/8/11 đang ở workflow (worktree `.claude/worktrees/`, đã gitignore `26dce6d`, chưa push); vòng rà đầu: Việc 4 và 8 đạt, Việc 5 có lỗi chặn R4 (biểu thức đơn vị làm lọt "3005.10 sang 3824.90"), Việc 11 có 3 lỗi lớn (R13 khi in khối thuế đủ, lời mời đúng/sai trong khối thuế, `[n]` trùng giữa khối thuế và nguồn) — đang sửa.
+- **Đã gộp vào `main` (chưa push):** Việc 4 (`3a95dde`, rà lại đạt; cờ `--no-session-persistence`, `--strict-mcp-config` đã thử trên CLI 2.1.270 của server: 3 s, JSON đúng, không sinh thư mục transcript) và Việc 8 (`2b4a7bf`, rà lại đạt). SQL mới của Việc 8 (cửa sổ, `array_agg`, `NOT EXISTS`, lọc case) chạy thật trên Postgres server bằng câu `PgDialect` sinh ra: `evidenceRetrieve` 10 dòng 50 ms, `headingSections` 9, `hsCodeSections` 2, `namedStatus` 1, `caseSections` 0 (chưa seed case). Việc 7 rà đầu chưa đạt (G4 bỏ lọt câu chốt diễn đạt khác, G6 cắt câu giải thích đúng, miễn G3 quá rộng) — sửa ở `a0d5864`; rà lại còn 1 lỗi lớn (bản sửa làm "sau khi … thì chắc chắn thuộc 38.24" lọt vì "khi" được coi là điều kiện) + 2 nhỏ (G6 miễn khi mã đứng bất kỳ đâu trước động từ; "Chưa đủ căn cứ để chốt 38.24" bị cắt oan) → sửa ở `dffffbd`, gộp `cd33a02` (answer + legal 178 test, `tsc` sạch). Còn biết mà chưa làm: "Khi chưa rõ công dụng thì phải xét 38.24" vẫn qua G4, "**Kết luận:** nhóm 38.24" chưa bắt, G6 cắt "Các hàng thuộc mã 3005.10.10 gồm …" — thêm test khi gặp trong log.
+- **2026-09-15 (sau khi hết hạn mức phiên và phục hồi):**
+  - **Việc 10 (`POST /answer`) đã gộp `a62b4f9`**, chưa push.
+    - Workflow rà 4 góc (R4/R14; hợp đồng + đường lỗi; guards/repair; SQL và `gather` chạy thật trên CSDL server, chỉ đọc) có 25 phát hiện đã xác nhận.
+    - Blocker: ở vai subject, mã trong quote hoặc state bị viết thẳng vào prompt compose và câu truy vấn.
+    - Major:
+      - khoá R4 bỏ cả khối dòng thuế vì dòng 10 số nêu mã → văn xuôi không nguồn;
+      - lỗi DB lộ tham số SQL vào log (R14) → thêm `QuietExceptionFilter`;
+      - compose lỗi thì mất hết nguồn;
+      - repair trả rỗng không tính vào `cut`;
+      - `[1, 2]` làm lệch câu repair.
+    - Sửa ở `304ae25`, rà lại đạt. 3 lỗi nhỏ còn lại sửa tay ở `2d63dea`: mở rộng marker sau repair, cảnh báo cho đường chỉ trả nguồn, không in dòng nhóm trùng mã. Bỏ bản sửa thì đúng 3 test đỏ.
+    - `main` đã commit, kiểm trong worktree sạch: jest 240 qua, `tsc` sạch, bot 83.
+    - Trên cây chung, `walkthrough.checks.ts` (còn `cite_ids`) và 1 test `policy.spec` của c8 đang đỏ; cả hai là file chưa commit của c8.
+  - **Workflow `plan08/predeploy-api-followups`** đang chạy các việc (1), (2), (3), (6) ở mục dưới, chỉ API.
+  - **Việc 12** (bot gọi `/answer`), nhánh `plan08/viec12-bot-answer`.
+    - Rà 4 góc, 45 phát hiện. Blocker R13:
+      - tin soạn bị đọc là tin tra thuế;
+      - `readsAsQuestion` bỏ lọt câu hỏi không dấu ("mã này sai k");
+      - `DISAGREE_CUE` coi "ý tôi là…" là phán quyết.
+    - Blocker R4: câu hỏi chữ đi `tariffByClues` trên chữ thô.
+    - Sửa ở `e7c3fc0`, `584e7c6`, `7494d94`; bot 108 test.
+    - Rà lại chưa đạt: 1 blocker (dòng "Hàng hóa có mã HS …" do mô hình viết vẫn làm tin soạn khớp `tariffReply`) và 2 major (phán quyết quote tin tra cũ bị ghi cho mã mới; "em gõ sai" bị ghi `wrong`).
+    - Đang chạy vòng sửa + rà lại (tối đa 2 vòng), quyết theo mã đang tra thay vì câu chữ.
+  - **Việc API đợt 2** (sau khi workflow trước deploy xong, vì cùng đụng `plan.ts`):
+    - (a) `maskCodes` che mã 6 số viết liền sau từ khoá ("mã hs 848180") — blocker R4.
+    - (b) `stateOf` thêm `documentNumber` để "nguyên văn điều đó" điền được `scope.article`.
+    - (c) response có `fallback: true` khi `defaultPlan` thay kế hoạch (hàng 23), và FIT nhận "có hợp không".
+    - (d) response có `reason: no_sources | compose_failed | deadline | latch`.
+  - **Chủ dự án đã chốt (2026-09-15):**
+    - (i) R18: trích dẫn EN/SEN in chữ nhỏ "(trích tự động, chưa đối chiếu)" trên dòng nguồn. Không dùng dòng cam.
+    - (ii) Câu hỏi thuế không có mã: tìm mã trước, có phân tích (compose hs). Không dùng `tariffByClues`. Cần thêm hàng này vào §2.2.
+  - **Chốt với c8 về walkthrough:**
+    - (1) `VerifyContext.anchors`: nhóm ứng viên và mã LINES do code đưa vào được G3 coi là có neo.
+    - (2) % và từ chốt nằm trong cụm trích nguyên văn đã kiểm với dòng en/sen/hs_note/gri/ruling được che trước G1/G4. Không áp cho annex_table; không áp khi câu có thuế suất/MFN/ưu đãi/FTA.
+    - (3) Runner dựng lại `cites` sau `verify`.
+    - (4) Chế độ full: mỗi ứng viên một dòng thuế, chọn trung lập; effort medium cho full, high cho brief.
+  - **Dữ liệu c8:**
+    - Bỏ các window nằm trong 6.800 ký tự đầu của dòng cha.
+    - SEN ghi `hs_heading` (nhóm đầu) và `meta.also_headings` (mọi nhóm).
+    - Mã cha trong `hs_codes` lên cùng đợt push này → `hsCodeSections` phải xếp dòng khớp đúng mã lên trước.
+    - Hai stack push chung một lần: c8 commit trước trên `main`, không rebase.
+    - 169/2026 và 85/2026 đã nạp (chưa commit). Chặn (a) 128/2020 giữ tới khi thấy dòng status đã seed trên server.
+  - Việc phía API phát sinh từ Việc 12, chưa làm:
+    - `PlanState` đọc `provisionLabel` nhưng bot lưu `label`;
+    - "còn từ Nhật thì sao" cần API lấy mã từ `context.state.tariff`.
+  - **Bỏ nhánh `plan08/guards-uncertain-condition` (không gộp).**
+    - Sau 2 vòng sửa/rà, vòng nào cũng sinh ReDoS mới: ngôi sao lập phương, dấu đầu dòng + chuỗi khoảng trắng chạy hàng chục giây ở 10k ký tự. Kèm 4 hồi quy so với `main`.
+    - Làm lại từ `main` trên nhánh `plan08/guards-minimal`, theo nguyên tắc tối giản và tuyến tính:
+      - test thời gian < 50 ms ở 10k cho mọi guard; sửa các điểm chậm sẵn có của main (RATE với chuỗi số, lookbehind "để", normQuote);
+      - G4 chỉ bắt điều kiện "khi/nếu … thì" có cụm "chưa rõ/thiếu thông tin…";
+      - SETTLING nhận "Kết luận:";
+      - G6 chỉ miễn "các hàng/hàng hóa/mã này … gồm";
+      - `anchors` và che cụm trích tiêu chí (theo thỏa thuận với c8); G1 bắt "triệu/tỷ/nghìn đồng"; export `digits`/`dotted`/`HEADING_OR_CODE`.
+    - Ca cần hiểu ngôn ngữ ghi thành giới hạn, để prompt và repair xử lý.
+  - **`plan08/predeploy-api-followups` đã được rà lại và duyệt (`df1f363`).** Đang chạy đợt 2 trên chính nhánh này:
+    - `maskCodes` che mã viết liền sau từ khoá;
+    - `stateOf` thêm `documentNumber`;
+    - response thêm `fallback`, `reason`; FIT nhận "hợp";
+    - `hsCodeSections` xếp mã khớp đúng lên trước;
+    - thứ tự pin: hs_note (ràng buộc) đứng trước SEN;
+    - test cho `reuseLastHs`; cập nhật tài liệu plan 08.
+  - **Vá G4/G6, vòng 1:** `4f6e054`, `dcfcc6a` — bắt kết luận chốt mã khi thiếu dữ kiện với nhiều cách viết, nhãn "**Kết luận phân loại:**", G6 thôi cắt câu giải nghĩa. Tấn công 24 ca.
+    - Rà lại chưa đạt, 4 major: ReDoS (2,76 s ở 10k ký tự so với ~1 ms trên main); câu có dấu phẩy trước "thì" vẫn lọt; "nên" nghĩa "vì vậy" bị coi là rào đón; "…, <nhóm>" bị coi là danh sách ứng viên. Kèm 5 minor.
+    - Đang chạy vòng sửa + rà lại, tối đa 2 vòng, có test chặn thời gian < 50 ms ở 10k ký tự.
+    - Nguyên tắc: regex chỉ là lưới chặn cuối; ca cần hiểu ngôn ngữ thì ghi thành giới hạn và để repair xử lý.
+  - **Workflow vá G4/G6** trên nhánh `plan08/guards-uncertain-condition`, 3 chỗ hở ban đầu:
+    - câu kết luận có điều kiện là "chưa rõ" vẫn bị coi là chốt mã;
+    - "**Kết luận:** nhóm …";
+    - G6 cắt oan câu giải nghĩa.
+  - **Việc phải làm sau khi gộp các nhánh, trước deploy:**
+    - (1) `PlanState` đọc `label` (bot lưu `label`).
+    - (2) Tra thuế "còn từ Nhật thì sao": API lấy mã từ `context.state.tariff`.
+    - (3) `/answer` bỏ mọi nguồn thuộc 128/2020/NĐ-CP và 102/2021/NĐ-CP trước compose, cho tới khi c8 nạp 169/2026/NĐ-CP. Lý do: chủ dự án đã duyệt nạp; 169/2026 hiệu lực 01/07/2026, rất có thể thay 128/2020, mà kho vẫn ghi `con_hieu_luc` → không để mức phạt cũ vào prompt.
+    - (4) G1 bắt số tiền có chữ đơn vị ("20 triệu đồng", "1 tỷ đồng"); `RATE` hiện bỏ lọt.
+    - (5) Sau khi c8 tích hợp EN/SEN mới: kiểm lại số dòng pin.
+      - Dữ liệu mới: EN 1.324 dòng, mỗi nhóm một dòng; SEN 425 dòng, mỗi chú giải một dòng, 658 mã.
+      - Pin không bao giờ bị cắt trong `gather()`, nên nếu `headingSections`/`hsCodeSections` ra hơn khoảng 6 dòng thì phải thêm giới hạn theo loại trước khi deploy. Đã nhờ c8 báo số dòng cho 30.05/38.24, 84.81, 85.17, 8481.80.99, 8517.62.53.
+    - (6) Số ước lượng của c8 (chưa chạy SQL):
+      - 30.05 + 38.24 ra 2 EN, 4 SEN;
+      - 27.10, 40.01, 85.04 mỗi nhóm 8 SEN; 03.01, 39.26, 73.08 mỗi nhóm 7;
+      - một số SEN là nhóm theo khoảng ("39.01–39.12") nên ghim dưới nhiều nhóm.
+      Đã thống nhất giới hạn pin trong `legal.evidence.ts` + `gather()`:
+      - SEN ≤ 3 cho mỗi nhóm được hỏi, ưu tiên chú giải có mã trùng mã được hỏi;
+      - EN 1 cho mỗi nhóm; case ≤ 2 cho mỗi nhóm; `hsCodeSections` ≤ 3 cho mỗi mã và mỗi loại;
+      - tổng pin ≤ 8, áp cả `GET /legal`, theo thứ tự: tình trạng hiệu lực → dòng nêu đúng mã → EN → SEN → case.
+      - **Sửa lại (6) sau khi đọc SQL** (`legal.evidence.ts`):
+        - `headingSections` chỉ ghim EN theo nhóm (hoặc `also_headings`) và `hs_note` theo chương, không ghim SEN. SEN chỉ vào qua `hsCodeSections` (LIMIT 3 tổng, binding trước).
+        - Chỗ phình thật là LIMIT của `headingSections` = số nhóm + 2 × số chương: chế độ hs 6 nhóm / 4 chương → 14 dòng, cộng case.
+        - `/legal`: 4 nhóm → tới 12 pin, mỗi pin tới 6k ký tự, đúng dạng timeout 100 s trước đây.
+        - Việc cần làm, đã chốt với c8:
+          - Cap tổng pin trong `gather()`: 8 cho `/legal`.
+          - Chế độ hs ghim SEN theo nhóm ứng viên, tối đa 2 mỗi nhóm. SEN là lớp duy nhất giảng cấp 8 số; EN chỉ tới 6 số.
+          - Xếp SEN trung lập: chú giải có `codes` trùng một dòng trong LINES của ứng viên đó trước, rồi theo thứ tự mã. Không xếp theo mã người dùng khi `codeRole = premise` (lối R4 kín); xếp theo mã được hỏi chỉ ở vai `subject`.
+          - Chỉ bỏ ruling/case cho đều giữa các ứng viên. Không làm vậy với SEN/EN: SEN thưa (382 chú giải / khoảng 1.200 nhóm), nên thiếu SEN không lộ gì.
+      - **(3) chốt với c8:** chặn cứng 128/2020 và 102/2021, không ngoại lệ lịch sử.
+        - Căn cứ: khoản 2 Điều 38 NĐ 169/2026 làm 128/2020 và Điều 2 của 102/2021 hết hiệu lực từ 01/07/2026; khoản 1 Điều 39 cho áp mức nhẹ hơn.
+        - Bỏ chặn khi c8 nạp xong điều khoản 169/2026.
+        - c8 đang sửa R3 và các ghi chú khái niệm có trích số liệu 128/2020; phiên này không đụng các file đó.
+      - (10) Sau khi nạp 85/2026/TT-BTC (hiệu lực 15/09/2026): chế độ hs ghim Điều 4 và Điều 6 làm căn cứ "hải quan phân loại thế nào".
+      - (7) Walkthrough của c8 gần chốt; c8 sẽ báo khi xong. `policy.ts`, `policy.spec.ts` và `policy-lists.json` chỉ lên cùng commit dữ liệu/tích hợp của c8 (cùng annex-tables + evidence-build); commit riêng thì CI đỏ vì spec cần dòng của danh mục chưa commit. c8 báo SHA trước khi push, sau đó mới nối `policyStatus`. `policyRows` không còn vào prompt, vì văn xuôi không được khẳng định có/không trong danh mục.
+        - API gọi `policyStatus()` và trả kết quả.
+        - Bot in mỗi kết quả LISTED/UNCERTAIN một dòng kèm quote, cộng một dòng nhỏ "đã đối chiếu: … · chưa nạp: …" (từ NOT_LISTED/NOT_LOADED). Bỏ các danh mục có `applies_when` không hợp câu hỏi.
+      - (8) Khi nối walkthrough:
+        - chạy `verify()` trên các section, vì `validateWalkthrough` không còn kiểm thuế/chốt/neo số/quote;
+        - các ứng viên phải có cùng loại bằng chứng: nếu không phải nhóm nào cũng có công văn thì bỏ công văn, tránh để lộ nhóm của người dùng qua R4;
+        - bỏ dòng 8 số của người dùng nhưng giữ một dòng cùng nhóm;
+        - `conclusion.headings` được phép rỗng: đã sửa chú thích ở `types.ts`.
+        - Chạy xác nhận của c8: bản brief có 4–9 vi phạm vì mô hình đếm [n] nối qua các mục và tự điền `tariff_ref`. c8 thêm `normalizeWalkthrough(draft, input)` để đánh số lại [1..k] mỗi mục, dựng `cite_ids`, bỏ id lạ, và ép `tariff_ref` rỗng khi không in khối thuế.
+        - Luồng runner: `looseJson` → `normalizeWalkthrough` → `verify` → `validateWalkthrough`.
+        - Lỗ hợp đồng đã nêu với c8: section chỉ có `cite_ids`, không có quote, nên `verify()` sẽ giết mọi [n] ở G2 và mọi câu có số ở G3.
+        - **Đã chốt `196a794`:** `WalkthroughSection.cites: [{id, quotes}]` thay `cite_ids`; `candidates[].cite_ids` giữ nguyên.
+        - Quote lấy từ chính câu văn: mỗi `[#id]` phải nằm trong câu có cụm nguyên văn ≥ 20 ký tự trong "…".
+        - `normalizeWalkthrough` chỉ giữ cụm có trong thân nguồn, không bịa quote. Không bắt mô hình viết map quote ẩn vì tốn thời gian.
+        - Runner đánh số lại toàn cục qua các mục cho `formatAnswerMd`.
+      - (9) Sau khi gộp nhánh G4: `guards.ts` export `digits`/`dotted`/`HEADING_OR_CODE` để walkthrough dùng chung.
+      - c8 không sửa SQL pin hay `modules/legal/`. Test không được giả định `hs_codes` có mã cha: chỉ có sau khi seed của c8 lên; CSDL hiện chỉ có mã 8 số có chấm.
+  - **c8:** walkthrough chưa nối cho tới khi c8 báo chốt. Trước khi tích hợp evidence-build và chạy `seed-evidence` trên server, c8 sẽ báo danh sách file và cửa sổ seed. Gộp tiếp: Việc 5 (`9dc857d`; che mã theo cấu trúc, không theo từ đơn vị — "1234.56 USD" bị che thừa, chấp nhận; danh sách "nhóm 3005 hoặc 3824, và 3926" che đủ ở cả bot `8661ad8`), Việc 6 (`21ae09b`, bước kế hoạch `sonnet/low` 30 s, lỗi gì cũng về `defaultPlan`), Việc 11 (`14df4e9`; rà lại còn 1 lỗi lớn: câu hs đủ dài làm khối thuế ứng viên rơi sang tin thứ 2 và khớp `tariffReply` → thêm "Nếu hàng thuộc mã" vào `COMPOSED`, test quét văn xuôi 0–4.000 ký tự, bỏ bản sửa thì test đỏ ở +100). Bot 83 test. Việc 10 (`POST /answer`) đang làm.
 - **Giới hạn:** nhánh đối chiếu mất ~1 phút (router + `/legal`); an toàn R4 ở nhánh `legal` vẫn dựa một phần vào router chọn đúng intent (lưới code: `asksCodeFit`); `isBareLookup` là danh sách từ, câu tra thuế dùng từ lạ sẽ đi router (chậm hơn, không sai).
 
 ### 2026-09-14 (chiều) — Mảng 2 xong trên server; lát đầu Mảng 3: `/legal` dùng tầng bằng chứng, đã deploy qua CI/CD
