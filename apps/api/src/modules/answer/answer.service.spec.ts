@@ -7,6 +7,7 @@ import type { ClaudeOpts } from './claude';
 import { SYSTEM } from './compose';
 import { userCodesIn } from './guards';
 import { PLAN_SYSTEM } from './plan';
+import { SECTION_TITLES, WALKTHROUGH_SYSTEM } from './walkthrough.run';
 
 // Every message below is written for the test; none is a real user's.
 
@@ -43,18 +44,30 @@ const source = (
 interface Fakes {
   plan?: object;
   drafts?: object[];
+  /** What the classification walkthrough returns (hs mode). */
+  walks?: object[];
   repairs?: object[];
   sources?: Source[];
   scope?: Partial<DocScope>;
   tariff?: TariffResponse;
   lines?: Array<{ prefix: string; heading: string }>;
+  /** hs_description rows the walkthrough's LINES are built from. */
+  hsRows?: Array<{ hs_code: string; heading: string; path: string }>;
 }
 
 function setup(f: Fakes = {}) {
   const drafts = [...(f.drafts ?? [])];
+  const walks = [...(f.walks ?? [])];
   const repairs = [...(f.repairs ?? [])];
   const run = jest.fn(async (_prompt: string, opts: ClaudeOpts) => {
-    const reply = opts.systemPrompt === PLAN_SYSTEM ? f.plan : opts.systemPrompt === SYSTEM ? drafts.shift() : repairs.shift();
+    const reply =
+      opts.systemPrompt === PLAN_SYSTEM
+        ? f.plan
+        : opts.systemPrompt === WALKTHROUGH_SYSTEM
+          ? walks.shift()
+          : opts.systemPrompt === SYSTEM
+            ? drafts.shift()
+            : repairs.shift();
     return reply ? { text: JSON.stringify(reply), isError: false, durationMs: 1 } : null;
   });
   const legal = {
@@ -67,7 +80,8 @@ function setup(f: Fakes = {}) {
   };
   const tariff = { lookup: jest.fn(async (_hs: string, _origin: string | undefined, _date: string) => f.tariff) };
   const confirmation = { matchByProduct: jest.fn(async (): Promise<unknown[]> => []) };
-  const db = { execute: jest.fn(async () => f.lines ?? []) };
+  // Two queries share this fake: hsLines (prefix → heading) and headingLines (the hs_description rows of a candidate).
+  const db = { execute: jest.fn(async (q: unknown) => (JSON.stringify(q).includes('substring') ? (f.hsRows ?? []) : (f.lines ?? []))) };
   const svc = new AnswerService(legal as never, tariff as never, confirmation as never, db as never, run);
   const prompts = (system: string | undefined) => run.mock.calls.filter(([, o]) => o.systemPrompt === system).map(([p, o]) => ({ prompt: p, opts: o }));
   return { svc, run, legal, tariff, confirmation, prompts };
@@ -105,8 +119,42 @@ const PHOTO_DRAFT = {
   coverage: 'partial',
 };
 const HEADING_TEXT = 'Bông, gạc, băng và các sản phẩm tương tự';
+const CHEM_TEXT = 'Chất gắn đã điều chế; các sản phẩm và chế phẩm hóa học';
+const EN_QUOTE = 'đã được thấm tẩm hoặc tráng phủ dược chất dùng cho y tế';
+/** hs_description as the walkthrough reads it: two headings with lines, so there is something to weigh 30.05 against. */
+const HS_ROWS = [
+  { hs_code: '30051010', heading: HEADING_TEXT, path: `${HEADING_TEXT} › Băng dán › Đã tráng phủ` },
+  { hs_code: '30059090', heading: HEADING_TEXT, path: `${HEADING_TEXT} › Loại khác › Loại khác` },
+  { hs_code: '38249999', heading: CHEM_TEXT, path: `${CHEM_TEXT} › Loại khác › Loại khác` },
+];
+/**
+ * A walkthrough the guards and the section checks both accept: the 30.05 sentence rests on a verbatim EN quote, the 38.24
+ * sentence names a candidate heading outside any quote (what the anchors hold), and the conclusion stays open (R2, R5).
+ */
+const PHOTO_WALK = {
+  sections: [
+    { key: 'facts', markdown: 'Bạn mới nói miếng dán bàn chân ngải cứu, chưa nói miếng dán có tẩm dược chất hay không.' },
+    {
+      key: 'candidates',
+      markdown: `Nhóm 30.05 gồm sản phẩm "${EN_QUOTE}" [#1]; nếu lớp ngải cứu chỉ để làm ấm thì cần so thêm nhóm 38.24.`,
+    },
+    { key: 'conclusion', markdown: 'Mình để mở giữa hai nhóm cho tới khi biết nhãn ghi công dụng gì.' },
+  ],
+  candidates: [
+    { heading: '30.05', assessment: 'co_the_neu', deciding_facts: ['miếng dán có tẩm dược chất không'], cite_ids: [1] },
+    { heading: '38.24', assessment: 'chua_du_du_kien', deciding_facts: ['thành phần của lớp ngải cứu'], cite_ids: [] },
+  ],
+  conclusion: { headings: ['30.05', '38.24'], needs_advance_ruling: false, missing_facts: ['công dụng ghi trên nhãn'] },
+  tariff_ref: [],
+};
 const photo = () =>
-  setup({ plan: PHOTO_PLAN, drafts: [PHOTO_DRAFT], sources: [EN3005], lines: [{ prefix: '3005', heading: HEADING_TEXT }, { prefix: '30051010', heading: HEADING_TEXT }] });
+  setup({
+    plan: PHOTO_PLAN,
+    walks: [PHOTO_WALK],
+    sources: [EN3005],
+    hsRows: HS_ROWS,
+    lines: [{ prefix: '3005', heading: HEADING_TEXT }, { prefix: '30051010', heading: HEADING_TEXT }],
+  });
 const PHOTO_BODY: AnswerRequest = { q: PHOTO, context: { topic: 'tariff', state: { tariff: { dotted: '3005.10.10', desc: 'miếng dán' } }, turns: OLD_TURNS } };
 
 const rate = (schedule: string, scheduleName: string, statement: string) => ({
@@ -164,27 +212,41 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     expect(res.plan.intent).toBe('legal');
   });
 
-  it('(d) premise hs: no prompt holds the user code or an old turn; its heading is pinned unlabelled among the hints; the candidate backs the code', async () => {
+  it('(d) premise hs walks the classification: the ĐỀ BÀI holds no user code or old turn, its heading is pinned unlabelled, the candidate backs the code', async () => {
     const { svc, prompts, legal } = photo();
     const res = await svc.answer(PHOTO_BODY);
     const [plan] = prompts(PLAN_SYSTEM);
-    const [compose] = prompts(SYSTEM);
+    const [walk] = prompts(WALKTHROUGH_SYSTEM);
+    expect(prompts(SYSTEM)).toHaveLength(0); // hs never runs the interim compose prompt again
     expect(userCodesIn([plan!.prompt], ['3005.10.10'])).toEqual([]);
     expect(plan!.prompt).not.toMatch(/3005|30\.05/);
-    expect(userCodesIn([compose!.prompt], ['3005.10.10'])).toEqual([]);
-    expect(compose!.prompt.split('\nNGUỒN:\n')[0]).not.toMatch(/3005|30\.05|\[mã/);
-    for (const t of OLD_TURNS) expect(compose!.prompt).not.toContain(t.body);
+    // The question, the goods and the rules; LINES and evidence bodies below are the nomenclature, exempt as in userCodesIn.
+    const brief = walk!.prompt.split(/\n\n(?=BẰNG CHỨNG CHUNG|NHÓM )/)[0]!;
+    expect(userCodesIn([brief], ['3005.10.10'])).toEqual([]);
+    expect(brief).not.toMatch(/3005|30\.05/);
+    // The masks stay in, unlike compose: the walkthrough is told "[mã n] là mã người hỏi viết, đã che" (R4, D1).
+    expect(brief).toContain('[mã 1]');
+    for (const t of OLD_TURNS) expect(walk!.prompt).not.toContain(t.body);
+    expect(walk!.prompt).toContain('NHÓM 30.05');
+    expect(walk!.prompt).toContain('NHÓM 38.24');
 
     const [first, ...others] = legal.gather.mock.calls.map(([, o]) => o);
     expect(first).toMatchObject({ hsCodes: [], headings: ['30.04', '30.05', '33.07', '38.24'], clauses: 0, cases: true, sen: 2 });
     for (const o of others) expect(o).toMatchObject({ hsCodes: [], headings: [], cases: false });
     for (const o of others) expect(o.sen).toBeUndefined();
 
-    expect(res.answerMd).toBe(PHOTO_DRAFT.answerMd);
+    // The reply is the owner's sectioned report: titles by code, in the "## " md() renders, the model's own prose under them.
+    expect(res.answerMd.split('\n').filter((l) => l.startsWith('## '))).toEqual([
+      `## ${SECTION_TITLES.facts}`,
+      `## ${SECTION_TITLES.candidates}`,
+      `## ${SECTION_TITLES.conclusion}`,
+    ]);
+    expect(res.answerMd).toContain(`Nhóm 30.05 gồm sản phẩm "${EN_QUOTE}" [1];`);
+    expect(res.answerMd).toContain('cần so thêm nhóm 38.24.');
     expect(res.candidates).toEqual([{ hs: '30.05', level: 4, title: HEADING_TEXT, evidence: [1] }]);
     expect(res.userCodes[0]).toMatchObject({ code: '3005.10.10', exists: true, inCandidates: true });
-    expect(res.citations[0]).toMatchObject({ n: 1, key: 'e:1', kind: 'en', hsHeading: '30.05', quotes: PHOTO_DRAFT.citations[0]!.quotes });
-    expect(res.calls).toBe(2);
+    expect(res.citations[0]).toMatchObject({ n: 1, key: 'e:1', kind: 'en', hsHeading: '30.05', quotes: [EN_QUOTE] });
+    expect(res).toMatchObject({ calls: 2, cut: 0, depth: 'full', missingFacts: ['công dụng ghi trên nhãn'] });
   });
 
   it('(e) a rate in prose is repaired: a clean rewrite keeps the prose, a second rate is cut', async () => {
@@ -377,6 +439,261 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const [compose] = prompts(SYSTEM);
     expect(compose!.prompt).not.toContain('DÒNG THUẾ');
     expect(compose!.prompt.replace(/[.\s]/g, '')).not.toContain('30051010');
+  });
+
+  it('R4 in the walkthrough: a heading holding the user\'s own line is looked up for nothing, and a rate line still naming it is dropped whole', async () => {
+    // 30.05 holds the user's own leaf, so none of its lines is looked up: a sibling would put the policy and duty blocks on
+    // a leaf the report never argued for. 38.24's line is clean but its statement names the code, so DÒNG THUẾ never prints.
+    const t = tariffOf([{ ...rate('ACFTA', 'ASEAN–Trung Quốc', 'Theo dòng 10 số: 3005.10.10.10 Miếng dán: 0%'), form: 'E', requiresCo: true }]);
+    const { svc, prompts, tariff } = setup({ plan: PHOTO_PLAN, walks: [PHOTO_WALK], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
+    const res = await svc.answer(PHOTO_BODY);
+    const looked = tariff.lookup.mock.calls.map(([hs]) => hs);
+    expect(looked).toEqual(['38249999']); // no leaf of 30.05 at all, the user's own or its siblings'
+    const [walk] = prompts(WALKTHROUGH_SYSTEM);
+    expect(walk!.prompt).not.toContain('\nDÒNG THUẾ (');
+    expect(userCodesIn([walk!.prompt.split(/\n\n(?=NHÓM )/)[0]!], ['3005.10.10'])).toEqual([]);
+    expect(res.tariffRef).toEqual([]);
+  });
+
+  it('D3(a): with a rate line under every heading the walkthrough may point at one, and the code prints its policy block', async () => {
+    const t = tariffOf([{ ...rate('ACFTA', 'ASEAN–Trung Quốc', '0% nếu có C/O form E hợp lệ'), form: 'E', requiresCo: true }]);
+    const walk = { ...PHOTO_WALK, tariff_ref: ['30051010'] };
+    const q = 'miếng dán bàn chân ngải cứu thì khai nhóm nào';
+    const { svc, prompts } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
+    const res = await svc.answer({ q });
+    expect(prompts(WALKTHROUGH_SYSTEM)[0]!.prompt).toContain('\nDÒNG THUẾ (');
+    expect(res).toMatchObject({ depth: 'full', tariffRef: ['3005.10.10'] });
+    // The policy block is code's, in its own section, and a list the corpus has not loaded reads "chưa nạp" (R12, R18).
+    expect(res.answerMd).toContain(`## ${SECTION_TITLES.policy}`);
+    expect(res.answerMd).toContain('Mã **3005.10.10** (ứng viên, chưa chốt):');
+    expect(res.answerMd).toMatch(/Kho \*\*chưa nạp\*\*/);
+    expect(res.answerMd).not.toMatch(/^- Không\b/m);
+  });
+
+  it('D3(a): a tariff_ref under a heading the walkthrough did not conclude points at no block', async () => {
+    const t = tariffOf([{ ...rate('ACFTA', 'ASEAN–Trung Quốc', '0% nếu có C/O form E hợp lệ'), form: 'E', requiresCo: true }]);
+    const walk = { ...PHOTO_WALK, tariff_ref: ['38249999'], conclusion: { ...PHOTO_WALK.conclusion, headings: ['30.05'] } };
+    const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
+    const res = await svc.answer({ q: 'miếng dán bàn chân ngải cứu thì khai nhóm nào' });
+    expect(res.tariffRef).toEqual([]);
+    expect(res.answerMd).not.toContain('3824.99.99');
+  });
+
+  it('R10: a candidate\'s evidence must back that heading — a note kind, or a row of another heading, backs none', async () => {
+    // Two rows besides the EN: a `note` (never evidence, R10) and a chapter Chú giải the prompt prints under every heading.
+    const NOTE = source(2, { kind: 'note', label: 'Ghi chú nội bộ của nhóm', body: 'Hồ sơ kỹ thuật của lô hàng nên được lưu cùng tờ khai để tra cứu về sau.' });
+    const CHAPTER = source(3, { kind: 'hs_note', label: 'Chú giải Chương 30', body: 'Chương này không bao gồm các sản phẩm đã đóng gói để bán lẻ dùng cho mục đích khác.' });
+    const NOTE_Q = 'Hồ sơ kỹ thuật của lô hàng nên được lưu cùng tờ khai';
+    const CHAPTER_Q = 'Chương này không bao gồm các sản phẩm đã đóng gói để bán lẻ';
+    const walk = {
+      ...PHOTO_WALK,
+      sections: [
+        ...PHOTO_WALK.sections,
+        { key: 'risk', markdown: `Bảng nội bộ nhắc "${NOTE_Q}" [#2]; chú giải chương ghi "${CHAPTER_Q}" [#3].` },
+      ],
+      candidates: [
+        { heading: '30.05', assessment: 'co_the_neu', deciding_facts: ['miếng dán có tẩm dược chất không'], cite_ids: [1] },
+        { heading: '38.24', assessment: 'chua_du_du_kien', deciding_facts: ['thành phần của lớp ngải cứu'], cite_ids: [2, 3] },
+      ],
+    };
+    const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005, NOTE, CHAPTER], hsRows: HS_ROWS });
+    const res = await svc.answer(PHOTO_BODY);
+    const chapterAt = res.citations.find((c) => c.key === 'e:3')!.n;
+    const noteAt = res.citations.find((c) => c.key === 'e:2')!.n;
+    // The shared Chú giải the prompt printed under 38.24 backs it; the `note` row, quoted in the same sentence, does not.
+    expect(res.candidates.map((c) => [c.hs, c.evidence])).toEqual([
+      ['30.05', [1]],
+      ['38.24', [chapterAt]],
+    ]);
+    expect(res.candidates[1]!.evidence).not.toContain(noteAt);
+  });
+
+  it('R2: a walk that concludes four headings comes back with three candidates', async () => {
+    const FOUR_ROWS = [
+      ...HS_ROWS,
+      { hs_code: '30049099', heading: 'Thuốc (trừ các mặt hàng thuộc nhóm 30.02, 30.05 hoặc 30.06)', path: 'Thuốc › Loại khác' },
+      { hs_code: '33079090', heading: 'Chế phẩm dùng trước, trong hoặc sau khi cạo râu', path: 'Chế phẩm › Loại khác' },
+    ];
+    // A chapter Chú giải the prompt prints under every heading, so each of the four has evidence that backs it (R10).
+    const CHAPTER = source(2, { kind: 'hs_note', label: 'Chú giải Chương 30', body: 'Chương này không bao gồm các sản phẩm đã đóng gói để bán lẻ dùng cho mục đích khác.' });
+    const CHAPTER_Q = 'Chương này không bao gồm các sản phẩm đã đóng gói để bán lẻ';
+    const heads = ['30.05', '38.24', '30.04', '33.07'];
+    const walk = {
+      sections: [
+        PHOTO_WALK.sections[0]!,
+        { key: 'candidates', markdown: `Chú giải chương ghi "${CHAPTER_Q}" [#2], nên cả bốn nhóm đều còn phải đối chiếu.` },
+        PHOTO_WALK.sections[2]!,
+      ],
+      candidates: heads.map((heading) => ({ heading, assessment: 'chua_du_du_kien', deciding_facts: ['thành phần của lớp ngải cứu'], cite_ids: [2] })),
+      conclusion: { headings: heads, needs_advance_ruling: true, missing_facts: ['công dụng ghi trên nhãn'] },
+      tariff_ref: [],
+    };
+    const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005, CHAPTER], hsRows: FOUR_ROWS });
+    const res = await svc.answer(PHOTO_BODY);
+    expect(res.candidates.map((c) => c.hs)).toEqual(['30.05', '38.24', '30.04']);
+  });
+
+  it('every section of the walkthrough emptied leaves the sources, not a reply with no prose and no source', async () => {
+    const walk = {
+      ...PHOTO_WALK,
+      sections: [
+        { key: 'facts', markdown: 'Thuế nhập khẩu của dòng này là 8%.' },
+        { key: 'conclusion', markdown: 'Thuế suất ưu đãi của dòng kia là 5%.' },
+      ],
+    };
+    // 25 s left: enough for the walkthrough, never enough for the repair pass.
+    const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS });
+    const res = await svc.answer({ ...PHOTO_BODY, deadlineAt: Date.now() + 25_000 });
+    expect(res).toMatchObject({ mode: 'hs', answerMd: '', reason: 'compose_failed' });
+    expect(res.citations.map((c) => c.n)).toEqual([1]);
+  });
+
+  it('a deadline too short for the full walkthrough asks for brief, looks no rate up, and points at no block', async () => {
+    const { svc, prompts, tariff } = setup({ plan: PHOTO_PLAN, walks: [PHOTO_WALK], sources: [EN3005], hsRows: HS_ROWS });
+    const res = await svc.answer({ ...PHOTO_BODY, deadlineAt: Date.now() + 60_000 });
+    expect(prompts(WALKTHROUGH_SYSTEM)[0]!.prompt).toContain('Độ sâu brief');
+    expect(tariff.lookup).not.toHaveBeenCalled();
+    expect(res).toMatchObject({ depth: 'brief', tariffRef: [] });
+    expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
+  });
+
+  it('the walkthrough timing out or returning no JSON leaves the sources, never a second compose call', async () => {
+    for (const reply of [null, { text: 'xin lỗi', isError: false, durationMs: 1 }, { text: '{}', isError: true, durationMs: 1 }]) {
+      const { svc, run, prompts } = setup({ plan: PHOTO_PLAN, sources: [EN3005], hsRows: HS_ROWS });
+      run.mockResolvedValueOnce({ text: JSON.stringify(PHOTO_PLAN), isError: false, durationMs: 1 }).mockResolvedValueOnce(reply as never);
+      const res = await svc.answer(PHOTO_BODY);
+      expect(prompts(SYSTEM)).toHaveLength(0);
+      expect(res).toMatchObject({ mode: 'hs', answerMd: '', calls: 2, reason: 'compose_failed' });
+      expect(res.citations.map((c) => c.n)).toEqual([1]);
+    }
+  });
+
+  it('a list claim or a risk score in the walkthrough is cut by code even with no budget to repair it (R3, R12)', async () => {
+    const banned = ['Hàng này không phải kiểm tra chuyên ngành.', 'Đây là trường hợp rủi ro thấp.'];
+    for (const sentence of banned) {
+      const walk = { ...PHOTO_WALK, sections: [...PHOTO_WALK.sections, { key: 'risk', markdown: sentence }] };
+      // 25 s left: enough for the walkthrough, never enough for the repair pass.
+      const { svc, prompts } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS });
+      const res = await svc.answer({ ...PHOTO_BODY, deadlineAt: Date.now() + 25_000 });
+      expect(prompts(undefined)).toHaveLength(0);
+      expect(res).toMatchObject({ calls: 2, cut: 1, repaired: false });
+      expect(res.answerMd).not.toContain(sentence);
+      expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
+    }
+  });
+
+
+  it('§4.1: the walkthrough\'s own opening sentence cut, or more than a third of it, leaves the sources only', async () => {
+    const rateLine = 'Thuế nhập khẩu của dòng này là 8%.';
+    // (a) the first sentence of the first section is the one G1 cuts: firstCut, whatever else survives.
+    const opener = { ...PHOTO_WALK, sections: [{ key: 'facts', markdown: rateLine }, ...PHOTO_WALK.sections.slice(1)] };
+    // (b) the opener stands and three of the four sentences go: the one-third rule alone, with firstCut false.
+    const third = {
+      ...PHOTO_WALK,
+      sections: [
+        PHOTO_WALK.sections[0]!,
+        { key: 'nature', markdown: `${rateLine} Thuế suất ưu đãi là 5%. Mức thuế VAT là 10%.` },
+      ],
+    };
+    for (const walk of [opener, third]) {
+      // 25 s left: enough for the walkthrough, never enough for the repair pass.
+      const { svc, prompts } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS });
+      const res = await svc.answer({ ...PHOTO_BODY, deadlineAt: Date.now() + 25_000 });
+      expect(prompts(undefined)).toHaveLength(0);
+      expect(res).toMatchObject({ mode: 'hs', answerMd: '', coverage: 'none', tariffRef: [] });
+    }
+  });
+
+  it('R1: a missing fact stating a rate never reaches the bot; one that only runs long still does (R3, R5)', async () => {
+    const long = 'nhãn ghi công dụng gì và lớp ngải cứu có phải là dược chất theo hồ sơ kỹ thuật không';
+    const walk = { ...PHOTO_WALK, conclusion: { ...PHOTO_WALK.conclusion, missing_facts: ['thuế nhập khẩu của dòng này là 8%', long] } };
+    // 25 s left: enough for the walkthrough, never enough for the repair pass.
+    const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS });
+    const res = await svc.answer({ ...PHOTO_BODY, deadlineAt: Date.now() + 25_000 });
+    expect(res.missingFacts).toEqual([long]);
+  });
+
+  it('a walkthrough that abstains, or returns no conclusion at all, still answers: no candidate, no missing fact, no throw (R5)', async () => {
+    const open = { ...PHOTO_WALK, conclusion: { headings: [], needs_advance_ruling: true, missing_facts: ['công dụng ghi trên nhãn'] } };
+    const { conclusion: _drop, ...noConclusion } = PHOTO_WALK;
+    for (const [walk, missing] of [
+      [open, ['công dụng ghi trên nhãn']],
+      [noConclusion, []],
+    ] as Array<[object, string[]]>) {
+      const res = await setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS }).svc.answer(PHOTO_BODY);
+      expect(res).toMatchObject({ candidates: [], missingFacts: missing, coverage: 'partial' });
+      expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
+    }
+  });
+
+  it('fewer than two headings with hs_description lines: no walkthrough, the interim compose prompt stands in', async () => {
+    const only3005 = HS_ROWS.filter((r) => r.hs_code.startsWith('3005'));
+    const { svc, prompts } = setup({ plan: PHOTO_PLAN, drafts: [PHOTO_DRAFT], walks: [PHOTO_WALK], sources: [EN3005], hsRows: only3005, lines: [{ prefix: '3005', heading: HEADING_TEXT }] });
+    const res = await svc.answer(PHOTO_BODY);
+    expect(prompts(WALKTHROUGH_SYSTEM)).toHaveLength(0);
+    expect(prompts(SYSTEM)).toHaveLength(1);
+    expect(res).toMatchObject({ answerMd: PHOTO_DRAFT.answerMd, calls: 2, depth: 'brief' });
+  });
+
+  it('§4.1 at full depth: the prose dropped means no candidate block for the bot to print (D3(a))', async () => {
+    const t = tariffOf([{ ...rate('ACFTA', 'ASEAN–Trung Quốc', '0% nếu có C/O form E hợp lệ'), form: 'E', requiresCo: true }]);
+    const walk = {
+      ...PHOTO_WALK,
+      tariff_ref: ['30051010'],
+      sections: [{ key: 'facts', markdown: `Thuế nhập khẩu của dòng này là 8%. ${PHOTO_WALK.sections[0]!.markdown}` }, ...PHOTO_WALK.sections.slice(1)],
+    };
+    const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
+    const res = await svc.answer({ q: 'miếng dán bàn chân ngải cứu thì khai nhóm nào' });
+    expect(res).toMatchObject({ depth: 'full', answerMd: '', tariffRef: [] });
+    expect(res.citations.map((c) => c.n)).toEqual([1]);
+  });
+
+  it('§4.1: the opener is the first section of the reply, not the first the model happened to emit', async () => {
+    // The reply renders in the owner's order, so the sentence §4.1 is about is the FACTS one whatever the model emitted first.
+    const flagged = 'Đây là trường hợp rủi ro thấp cho lô hàng này.';
+    const walk = { ...PHOTO_WALK, sections: [{ key: 'conclusion', markdown: flagged }, ...PHOTO_WALK.sections.slice(0, 2)] };
+    const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS });
+    // 25 s left: the risk-score sentence is cut by code, never repaired.
+    const res = await svc.answer({ ...PHOTO_BODY, deadlineAt: Date.now() + 25_000 });
+    expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
+    expect(res.answerMd).not.toContain(flagged);
+  });
+
+  it('R4: a walkthrough sentence naming the premise code is never sent for repair', async () => {
+    const leak = 'Mã 3005.10.10 là mã băng dán đã tráng phủ.';
+    const bad = {
+      ...PHOTO_WALK,
+      sections: [
+        PHOTO_WALK.sections[0]!,
+        { key: 'levels', markdown: `Nhóm 30.05 gồm "${EN_QUOTE}" [#1] và thuế nhập khẩu của dòng này là 8%. ${leak}` },
+        ...PHOTO_WALK.sections.slice(1),
+      ],
+    };
+    const { svc, prompts } = setup({ plan: PHOTO_PLAN, walks: [bad], repairs: [{ sentences: ['x', 'y'] }], sources: [EN3005], hsRows: HS_ROWS });
+    await svc.answer(PHOTO_BODY);
+    const [repair] = prompts(undefined);
+    expect(repair!.prompt).toContain('thuế nhập khẩu của dòng này là 8%');
+    expect(repair!.prompt).not.toContain('3005.10.10');
+  });
+
+  it('a walkthrough sentence the guards cut is sent for repair once, and the rewrite is put back in its section', async () => {
+    const bad = {
+      ...PHOTO_WALK,
+      sections: [
+        PHOTO_WALK.sections[0]!,
+        { key: 'levels', markdown: `Nhóm 30.05 gồm "${EN_QUOTE}" [#1] và thuế nhập khẩu của dòng này là 8%.` },
+        ...PHOTO_WALK.sections.slice(1),
+      ],
+    };
+    const fixed = `Nhóm 30.05 gồm "${EN_QUOTE}" [1] và loại có lớp dính tách riêng.`;
+    const { svc, prompts } = setup({ plan: PHOTO_PLAN, walks: [bad], repairs: [{ sentences: [fixed] }], sources: [EN3005], hsRows: HS_ROWS });
+    const res = await svc.answer(PHOTO_BODY);
+    const [repair] = prompts(undefined);
+    expect(repair!.prompt).toContain('thuế nhập khẩu của dòng này là 8%');
+    expect(repair!.prompt).toContain(`TRÍCH DẪN: "${EN_QUOTE}"`);
+    expect(repair!.opts).toMatchObject({ model: 'sonnet', effort: 'low' });
+    expect(res).toMatchObject({ repaired: true, cut: 0, calls: 3 });
+    expect(res.answerMd).toContain(`## ${SECTION_TITLES.levels}\n${fixed}`);
   });
 
   it('a subject turn gets back only the message\'s own code: a quote or state code the plan folded in never reaches compose or gather (R4)', async () => {
@@ -619,7 +936,8 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
 
     const ruling = photo();
     ruling.confirmation.matchByProduct.mockRejectedValue(new Error('db down'));
-    expect((await ruling.svc.answer(PHOTO_BODY)).answerMd).toBe(PHOTO_DRAFT.answerMd);
+    const res = await ruling.svc.answer(PHOTO_BODY);
+    expect([res.ruling, res.answerMd.startsWith(`## ${SECTION_TITLES.facts}`), res.cut]).toEqual([null, true, 0]);
   });
 
   it('forceIntent without a plan stands on defaultPlan, and a client plan carrying a raw code is masked again', async () => {

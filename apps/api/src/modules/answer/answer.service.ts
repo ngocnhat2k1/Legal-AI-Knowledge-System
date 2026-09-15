@@ -16,8 +16,9 @@ import { ConfirmationService } from '../tariff/confirmation.service';
 import { TariffService } from '../tariff/tariff.service';
 import type { RateView, TariffResponse } from '../tariff/tariff.types';
 import type { Effort } from './claude';
-import { buildComposeInput, buildRepairPrompt, type ComposeMode, parseDraft, parseRepair, SYSTEM } from './compose';
-import { type Source as GuardSource, quoteInBody, splitSentences, verify } from './guards';
+import { buildComposeInput, buildRepairPrompt, type ComposeMode, looseJson, parseDraft, parseRepair, SYSTEM } from './compose';
+import { EVIDENCE_KINDS, type Source as GuardSource, names, quoteInBody, splitSentences, verify } from './guards';
+import { POLICY_LISTS } from './policy';
 import {
   assertNoUserCodes,
   citedDocs,
@@ -38,6 +39,23 @@ import {
   type UserCode,
   userCodes,
 } from './plan';
+import { buildWalkthroughPrompt, normalizeWalkthrough, validateWalkthrough } from './walkthrough';
+import {
+  applyRepair,
+  assessedOf,
+  candidateHeadings,
+  classifyInput,
+  conclusionOf,
+  cutSentences,
+  evidenceRow,
+  flatten,
+  type HeadingLines,
+  ORDER,
+  policyBlock,
+  repairItems,
+  verifySections,
+  WALKTHROUGH_SYSTEM,
+} from './walkthrough.run';
 
 /** Provider token of the model runner: runClaude in the app, a fake in the spec. */
 export const CLAUDE_RUNNER = Symbol('CLAUDE_RUNNER');
@@ -57,6 +75,12 @@ const MAX_SOURCES = 12;
 const ENDED_PENALTY_DOCS = ['128/2020/NĐ-CP', '102/2021/NĐ-CP'].map(foldDocNumber);
 const PROSE = ['hs', 'legal', 'status', 'mixed'];
 const LEGAL = ['legal', 'status', 'mixed'];
+/**
+ * Compose budget the walkthrough needs before it may ask for `full`. Its author measured brief at 62–83 s and full at
+ * 82–107 s against this same 100 s cap, so full runs only when the whole cap is there; anything shorter is brief, which
+ * still reads as the sectioned report (the section titles are printed by code) but points at no tariff block (D3(a)).
+ */
+const FULL_DEPTH_MS = 100_000;
 
 export interface AnswerRequest {
   q: string;
@@ -108,7 +132,10 @@ export interface AnswerResponse {
   warnings: string[];
   cut: number;
   repaired: boolean;
-  depth: 'brief';
+  /** The walkthrough's depth; every other mode stays 'brief'. At 'full' the bot prints a tariff block per `tariffRef` (D3(a)). */
+  depth: 'brief' | 'full';
+  /** Candidate lines the walkthrough points at, at most two, dotted; the bot looks each up and prints a code-built block. */
+  tariffRef: string[];
   missingDoc: string | null;
   gazetteMatchKind: DocScope['gazetteMatchKind'];
   gazetteMatches: DocScope['gazetteMatches'];
@@ -121,6 +148,36 @@ export interface AnswerResponse {
   calls: number;
   timingMs: Record<'plan' | 'retrieve' | 'compose' | 'verify' | 'repair', number>;
 }
+
+/** What the walkthrough step needs from the turn it runs in; every text here was masked and latched by the caller (R4). */
+interface WalkthroughRun {
+  q: string;
+  question: string;
+  goodsFacts: string;
+  asOf: string;
+  sources: Source[];
+  sourcesOnly: Partial<AnswerResponse>;
+  users: UserCode[];
+  keys: UserCode[];
+  role: CodeRole;
+  goods: { facts: string[]; missing: string[] };
+  pins: GatherOpts;
+  timeoutMs: number;
+  deadline: number;
+  start: number;
+  leakDrops: string[];
+  timed: <T>(step: 'plan' | 'retrieve' | 'compose' | 'verify' | 'repair', work: () => Promise<T>) => Promise<T>;
+  /** One more model call spent. */
+  bump: () => void;
+}
+
+/** Standing lines the bot prints whatever the prose says (§10 risk 1, G7); no prose cites them, so they claim no quote (R10). */
+const warningsOf = (listed: Source[]): string[] => [
+  ...(listed.some((s) => s.citation.verification === 'auto_unverified') ? ['unverified'] : []),
+  ...(listed.some((s) => s.note?.includes(AUTHORITY_NOTE.undetermined!)) ? ['undetermined'] : []),
+  ...(listed.some((s) => s.note?.includes('CHƯA CÓ HIỆU LỰC')) ? ['upcoming'] : []),
+  ...(listed.some(oldCatalog) ? ['old_catalog'] : []),
+];
 
 @Injectable()
 export class AnswerService {
@@ -239,6 +296,7 @@ export class AnswerService {
         cut: 0,
         repaired: false,
         depth: 'brief',
+        tariffRef: [],
         missingDoc: null,
         gazetteMatchKind: 'none',
         gazetteMatches: [],
@@ -285,7 +343,8 @@ export class AnswerService {
         .replace(/\s+([,.?!;:])/g, '$1')
         .replace(/\s{2,}/g, ' ')
         .trim();
-    const message = unmask(maskCodes(q, codes).text);
+    const maskedMessage = maskCodes(q, codes).text;
+    const message = unmask(maskedMessage);
     const question = unmask(plan.question) || message;
     const understanding = unmask(plan.understanding ?? '');
     const goods = { facts: plan.goods.facts.map(unmask).filter(Boolean), missing: plan.goods.missing.map(unmask).filter(Boolean) };
@@ -304,6 +363,15 @@ export class AnswerService {
       // One part per rate line and per query: the latch drops only the one naming the code.
       ...tariffLines.map((text) => ({ name: 'tariffLines', text })),
       ...plan.queries.map((query) => ({ name: 'queries', text: unmask(query) })),
+      // The walkthrough reads the question with the masks left in ("[mã n] là mã người hỏi viết, đã che"), unlike compose,
+      // which strips them for a premise. Same latch, one call: a masked text holds no digit of the code either way (R4).
+      ...(mode === 'hs'
+        ? [
+            { name: 'walkQuestion', text: plan.question },
+            { name: 'walkMessage', text: maskedMessage },
+            ...plan.goods.facts.map((text) => ({ name: 'walkGoods', text })),
+          ]
+        : []),
     ];
     if (role === 'premise' || role === 'key') {
       // What the model is told about the question and what retrieval runs on, never the evidence: D1 lets a premise heading's notes in.
@@ -342,16 +410,21 @@ export class AnswerService {
     if (!sources.length && (mode !== 'tariff' || !kept('tariffLines').length)) return finish({ ...common, reason: 'no_sources' });
     // Compose skipped or failed: the sources alone, so the bot still prints them and their end-of-force line from data
     // (§10 risk 1, G7). No prose cites them, so they claim no quote (R10).
-    const warningsOf = (listed: typeof sources): string[] => [
-      ...(listed.some((s) => s.citation.verification === 'auto_unverified') ? ['unverified'] : []),
-      ...(listed.some((s) => s.note?.includes(AUTHORITY_NOTE.undetermined!)) ? ['undetermined'] : []),
-      ...(listed.some((s) => s.note?.includes('CHƯA CÓ HIỆU LỰC')) ? ['upcoming'] : []),
-      ...(listed.some(oldCatalog) ? ['old_catalog'] : []),
-    ];
     const listed = sources.slice(0, 3);
     const sourcesOnly = { ...common, citations: listed.map((s, i) => citationOf(i + 1, s, [])), warnings: warningsOf(listed) };
     const timeoutMs = Math.min(100_000, deadline - Date.now() - 5_000);
     if (timeoutMs < 15_000) return finish({ ...sourcesOnly, reason: 'deadline' });
+
+    if (mode === 'hs') {
+      const walked = await this.walkthrough({
+        q, asOf, sources, sourcesOnly, users, role, keys, goods, pins, timeoutMs, deadline, start, timed, leakDrops,
+        question: kept('walkQuestion')[0] || kept('walkMessage')[0] || '',
+        goodsFacts: kept('walkGoods').join('; '),
+        bump: () => void (calls += 1),
+      });
+      // No heading with hs_description lines to walk down, or no readable JSON: the interim compose prompt below stands in.
+      if (walked) return finish(walked.part, walked.lines);
+    }
 
     const tariffMode = mode === 'tariff';
     const prompt = buildComposeInput({
@@ -368,8 +441,8 @@ export class AnswerService {
       maxSourceChars: Number(process.env.ANSWER_PROMPT_CHARS) || 40_000,
     });
     calls++;
-    // ponytail: in hs mode compose's interim hs prompt stands in for the classification walkthrough until walkthrough.ts (c8) exports a non-empty walkthroughSchema.
-    // R4: where ClassifyInput is built here, the rate-line filter above applies to its tariffLines and to every candidate line singling out the user's code.
+    // hs reaches here only when the walkthrough found fewer than two candidate headings with hs_description lines: this
+    // interim prompt stands in, one heading being nothing to weigh anything against.
     const reply = await timed('compose', () =>
       this.run(prompt, {
         timeoutMs,
@@ -468,6 +541,187 @@ export class AnswerService {
       },
       lines,
     );
+  }
+
+  /**
+   * hs mode: the classification walkthrough (plan 08 §0, walkthrough.ts). null = not attempted, and the caller's interim
+   * compose prompt stands in; anything else is the response part, the model call included in it whether it worked or not.
+   */
+  private async walkthrough(o: WalkthroughRun): Promise<{ part: Partial<AnswerResponse>; lines?: Map<string, string | null> } | null> {
+    const { asOf, sources, users, role, keys, timed } = o;
+    const pool = [...new Set([...(o.pins.headings ?? []), ...sources.flatMap((s) => (s.hs.heading ? [s.hs.heading] : []))])];
+    const heads = pool.length ? await timed('retrieve', () => this.headingLines(pool)) : [];
+    const known = new Map(heads.map((h) => [h.heading, h] as const));
+    const chosen = candidateHeadings(o.pins.headings ?? [], sources, new Set(known.keys()));
+    // One heading is no walkthrough: there is nothing to weigh it against (R2), and the prompt's whole shape is comparison.
+    if (chosen.length < 2 || !o.question) return null;
+    const headings = chosen.map((h) => known.get(h)!);
+
+    // Full measured 82–107 s by its author against this 100 s cap, brief 62–83 s: full runs only with the whole cap, and a
+    // run that still overruns falls to the sources (reason 'compose_failed'), which is what the bot prints either way.
+    const depth = o.timeoutMs >= FULL_DEPTH_MS ? 'full' : 'brief';
+    // R4: a premise code is never looked up, and a heading that holds one of the user's own leaves gets no line at all — a
+    // sibling would put the policy block and the duty block on a leaf the report never argued for. tariffShown() then prints
+    // no DÒNG THUẾ (fail closed), which is what the comment on this block always promised.
+    // ponytail: one line per heading, its first; leaves of a heading whose rates differ are not shown.
+    const mine = new Set(keys.filter((u) => u.level === 8).map((u) => digits(u.code)));
+    const looked =
+      depth === 'full'
+        ? await timed('retrieve', () =>
+            Promise.all(
+              headings.map(async (h) => {
+                const code = h.lines.some((l) => mine.has(digits(l.code))) ? undefined : h.lines[0]?.code;
+                const t = code ? await this.lookup(digits(code), null, asOf) : null;
+                return t && code ? rateLines(t).map((line) => ({ code, line })) : [];
+              }),
+            ),
+          )
+        : [];
+    // The same latch every spawn passes, so a sub-line spelling ("3005.10.10.10") drops the line as the code itself would.
+    const tariffLines = looked.flat().filter((t) => {
+      const drops = assertNoUserCodes([{ name: 'walkTariff', text: `${t.code}\n${t.line}` }], keys, role).leakDrops;
+      o.leakDrops.push(...drops);
+      return !drops.length;
+    });
+
+    const input = classifyInput({ question: o.question, goodsFacts: o.goodsFacts, depth, asOf, headings, sources, tariffLines });
+    o.bump();
+    const reply = await timed('compose', () =>
+      this.run(buildWalkthroughPrompt(input), {
+        timeoutMs: o.timeoutMs,
+        systemPrompt: WALKTHROUGH_SYSTEM,
+        model: process.env.ANSWER_COMPOSE_MODEL || 'opus',
+        effort: (process.env.ANSWER_COMPOSE_EFFORT as Effort | undefined) || 'high',
+      }),
+    );
+    const parsed = reply && !reply.isError ? looseJson(reply.text) : null;
+    if (!parsed) return { part: { ...o.sourcesOnly, reason: 'compose_failed' } };
+
+    const guardSources = sources.map(guardSource);
+    const rows = sources.map((s, i) => evidenceRow(s, i, asOf));
+    // Anchors: the headings and lines the runner itself put in the prompt from hs_description. Without them G3 read every
+    // candidate heading named outside a quote as ungrounded and cut 42% of the walkthrough's sentences (measured 2026-09-15).
+    const ctx = {
+      userText: o.q,
+      codeRole: role,
+      userCodes: users.map((u) => u.code),
+      headings: new Set(headings.map((h) => h.heading)),
+      anchors: [...headings.map((h) => h.heading), ...headings.flatMap((h) => h.lines.map((l) => l.code))],
+    };
+    let output = normalizeWalkthrough(parsed, input);
+    let checked = await timed('verify', async () => verifySections(output, guardSources, ctx));
+    const rules = await timed('verify', async () => validateWalkthrough(output, input));
+    const said = checked.said;
+    // The reply renders in the owner's order (flatten), not the order the model emitted, so the §4.1 opener is the first
+    // ORDER section's first sentence — the same sentence verifySections' own firstCut is about.
+    const opener = splitSentences(ORDER.map((k) => output.sections.find((s) => s.key === k)).find(Boolean)?.markdown ?? '')[0] ?? '';
+
+    let repaired = false;
+    const items = repairItems(output, guardSources, [...checked.violations, ...rules]).filter((it) => {
+      // The latch before every spawn (§4.2 step 4): a sentence or quote copied from evidence may name the user's own code.
+      if (role !== 'premise' && role !== 'key') return true;
+      const drops = assertNoUserCodes([{ name: 'repair', text: [it.sentence, ...it.quotes].join('\n') }], keys.filter((u) => u.level > 4), 'key').leakDrops;
+      o.leakDrops.push(...drops);
+      return !drops.length;
+    });
+    if (items.length && Date.now() - o.start < 90_000 && o.deadline - Date.now() >= 30_000) {
+      o.bump();
+      const out = await timed('repair', () =>
+        this.run(buildRepairPrompt(items), { timeoutMs: Math.min(30_000, o.deadline - Date.now() - 3_000), model: 'sonnet', effort: 'low' }),
+      );
+      const rewritten = out && !out.isError ? parseRepair(out.text, items.length) : null;
+      if (rewritten) {
+        repaired = true;
+        output = applyRepair(output, items, rewritten);
+      }
+    }
+    // Whatever the section checks still name after the one repair pass is taken out, repaired or not: they cut nothing on
+    // their own, and they own the rules verify() does not (a list claim, a risk score, a persona, an uncited source).
+    const after = await timed('verify', async () => validateWalkthrough(output, input));
+    const gone = new Set(after.flatMap((v) => (v.sentence ? [v.sentence] : [])));
+    output = cutSentences(output, gone);
+    checked = await timed('verify', async () => verifySections(output, guardSources, ctx));
+    // Nothing of the model's prose stood: the sources alone, as compose falls back, so the bot still prints them and their
+    // end-of-force lines instead of "thử lại sau ít phút".
+    if (!checked.sections.length) return { part: { ...o.sourcesOnly, reason: 'compose_failed' } };
+
+    // §4.1, as compose: the answer's own first sentence cut, or more than a third of what it wrote.
+    const cut = said - checked.said + checked.cut;
+    const dropped = checked.firstCut || gone.has(opener) || cut * 3 > said || !checked.sections.length;
+    const conclusion = conclusionOf(output);
+    // D3(a)/R1: only a line under a heading the walkthrough still concludes. walkthrough-tariff-ref names the rest but
+    // carries no sentence, so neither the repair pass nor the cut above ever acts on it.
+    const tariffRef = (output.tariff_ref ?? []).filter((c) => conclusion.headings.some((h) => digits(c).startsWith(digits(h)))).slice(0, 2);
+    const at = new Map(checked.citations.map((c) => [c.source + 1, c.n]));
+    const assessed = new Map(assessedOf(output).map((c) => [c.heading, c]));
+    const block = new Map(input.candidates.map((c) => [c.heading, new Set(c.evidence.map((r) => r.id))]));
+    // R10: a candidate's [n] must back THAT heading — an evidence-kind row the prompt printed under it (its own rows, and
+    // the shared Chú giải and GIR the prompt gives every heading), or one whose label or surviving quote names it; never a
+    // note, an internal table or a plain provision. verify()'s own G5 pass never sees these, since each section is verified
+    // with candidates: [] (walkthrough.run.ts), so this is the only place the rule is held.
+    const backs = (h: string, id: number): boolean => {
+      const s = guardSources[id - 1];
+      if (!s || !EVIDENCE_KINDS.has(s.kind)) return false;
+      if (block.get(h)?.has(id)) return true;
+      const qs = checked.citations.find((c) => c.source === id - 1)?.quotes ?? [];
+      return s.hsHeading === h || s.hsCodes.some((c) => digits(c).startsWith(digits(h))) || [s.label, ...qs].some((t) => names(t, digits(h)));
+    };
+    // R2: the headings the walkthrough left standing, each with the evidence a quote still holds; never a bare 8-digit code.
+    const candidates = conclusion.headings
+      .filter((h) => chosen.includes(h))
+      .map((h) => ({
+        hs: h,
+        level: 4,
+        title: known.get(h)!.headingText,
+        evidence: [...new Set((assessed.get(h)?.cite_ids ?? []).flatMap((id) => (backs(h, id) && at.has(id) ? [at.get(id)!] : [])))],
+      }))
+      .filter((c) => c.evidence.length)
+      .slice(0, 3);
+    const cited = checked.citations.map((c) => sources[c.source]!);
+    // R1, R4: a missing fact stating a rate or filling in a masked code must not reach the bot this way; one that merely
+    // runs past 12 words is still a true missing fact and stays (R3, R5).
+    const badFacts = new Set(after.flatMap((v) => (v.sentence && v.rule !== 'walkthrough-item-length' ? [v.sentence.normalize('NFC')] : [])));
+    const answerMd = dropped ? '' : flatten(checked.sections, policyBlock(POLICY_LISTS, rows, tariffRef, asOf));
+    const lines = await timed('verify', () => this.hsLines(users.map((u) => digits(u.code))));
+    for (const h of headings) lines.set(digits(h.heading), h.headingText);
+    return {
+      part: {
+        asOf,
+        answerMd,
+        citations: checked.citations.map((c) => citationOf(c.n, sources[c.source]!, c.quotes)),
+        candidates,
+        ruling: await timed('verify', () => this.rulingFor(o.goods.facts, candidates).catch(() => null)),
+        missingFacts: conclusion.missing_facts.filter((f) => !badFacts.has(f.normalize('NFC'))),
+        coverage: !answerMd ? 'none' : candidates.length === 1 && !conclusion.needs_advance_ruling && !conclusion.missing_facts.length ? 'full' : 'partial',
+        cut,
+        repaired,
+        depth,
+        tariffRef: answerMd ? tariffRef : [],
+        warnings: warningsOf(answerMd ? cited : sources.slice(0, 3)),
+      },
+      lines,
+    };
+  }
+
+  /** A candidate heading with its hs_description heading text and every line under it, in code order (the walkthrough's LINES). */
+  private async headingLines(headings: string[]): Promise<HeadingLines[]> {
+    const want = [...new Set(headings.map((h) => digits(h)))].filter((d) => /^\d{4}$/.test(d));
+    if (!want.length) return [];
+    const rows = (await this.db.execute(sql`
+      SELECT hs_code, heading, path FROM hs_description
+      WHERE substring(hs_code from 1 for 4) IN (${sql.join(
+        want.map((d) => sql`${d}`),
+        sql`, `,
+      )})
+      ORDER BY hs_code
+    `)) as unknown as Array<{ hs_code: string; heading: string | null; path: string }>;
+    const by = new Map<string, HeadingLines>();
+    for (const r of rows) {
+      const heading = headingOf(r.hs_code);
+      if (!by.has(heading)) by.set(heading, { heading, headingText: r.heading ?? '', lines: [] });
+      by.get(heading)!.lines.push({ code: r.hs_code, path: r.path });
+    }
+    return [...by.values()];
   }
 
   /** A code the tariff path refuses (not 8 digits, bad origin, no rate that day) is left to the bot's own tariff branch. */

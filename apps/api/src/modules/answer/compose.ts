@@ -1,7 +1,8 @@
 /**
  * The compose step of POST /answer (plan 08 §3): the system prompt the model writes under, the user prompt built from
  * the plan and the gathered sources, and tolerant readers for what the model returns. Pure: the runner spawns claude
- * and applies the guards. The classification walkthrough (walkthrough.ts) replaces the interim hs block when it lands.
+ * and applies the guards. The classification walkthrough (walkthrough.ts) now owns hs mode; the hs block below stands in only
+ * when the walkthrough finds fewer than two candidate headings with hs_description lines (answer.service.ts).
  */
 
 export type ComposeMode = 'legal' | 'status' | 'mixed' | 'tariff' | 'hs';

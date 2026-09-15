@@ -324,6 +324,18 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     const tariff = got && (got.origin ?? null) === q.origin && got.date === q.date ? got : await lookupFull(q.dotted, q.origin, q.date);
     if (tariff) tariffLines = [{ q, tariff, confirm: await confirmations(direct.hs, q.origin) }];
   }
+  // D3(a): a full walkthrough names the candidate lines its reply points at; the block under them is built from /tariff, never
+  // written (R1). No origin is known here, so each block is the general one, printed as a candidate to check (never green).
+  if (mode === 'hs' && composed.depth === 'full') {
+    const date = composed.asOf ?? plan.date ?? '';
+    const blocks = await Promise.all(
+      (composed.tariffRef ?? []).slice(0, 2).map(async (dotted) => {
+        const tariff = await lookupFull(dotted, null, date);
+        return tariff ? { q: { dotted, origin: null, date: tariff.date ?? date }, tariff, confirm: null } : null;
+      }),
+    );
+    tariffLines = blocks.filter(Boolean);
+  }
   const lines = formatAnswerMd(composed, { tariffLines });
   // No call ran and nothing came back: retrieval found no source, and "thử lại sau" would never help. A line the code writes (a
   // user code missing from the catalogue) still prints above the honest sentence.

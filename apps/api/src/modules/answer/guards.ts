@@ -199,7 +199,9 @@ export interface VerifyResult {
   cut: number;
 }
 
-const EVIDENCE_KINDS = new Set(['en', 'sen', 'hs_note', 'gri', 'ruling', 'guidance', 'annex_table']);
+/** Kinds that may back a candidate; a note, an internal table or a plain provision never does (R10). Exported: the
+ * walkthrough builds its own candidates, since verify() runs per section and never sees them (walkthrough.run.ts). */
+export const EVIDENCE_KINDS = new Set(['en', 'sen', 'hs_note', 'gri', 'ruling', 'guidance', 'annex_table']);
 const CODE8 = /(?<![\d.,/])(?:\d{4}\.\d{2}\.\d{2}|\d{8})(?![\d/%]|[.,]\d)/g;
 const PLACED_UNDER = new RegExp(`(?<!\\p{L})(?:thuộc|vào|áp|khai)\\s+(?:mã|nhóm)(?:\\s+(?:số|HS))?\\s+\\**(${HEADING_OR_CODE.source})`, 'giu');
 // G6 lets a placement stand when its clause head is exactly the code itself ("Mã này thuộc nhóm 30.05") or goods of the
@@ -214,7 +216,8 @@ export const dotted = (code: string): string => {
   const d = digits(code);
   return (d.length <= 4 ? [d.slice(0, 2), d.slice(2)] : [d.slice(0, 4), d.slice(4, 6), d.slice(6)]).filter(Boolean).join('.');
 };
-const names = (text: string, d: string): boolean => new RegExp(`(?<![\\d.,/])${dotted(d).replace(/\./g, '\\.')}(?![\\d/%]|[.,]\\d)`).test(text);
+/** `text` names the code `d` in its dotted spelling, no deeper code and no date. */
+export const names = (text: string, d: string): boolean => new RegExp(`(?<![\\d.,/])${dotted(d).replace(/\./g, '\\.')}(?![\\d/%]|[.,]\\d)`).test(text);
 /** The digits `d` in any spelling: "3005.10.10", "30051010", "3005 10 10". */
 const spelled = (d: string): RegExp => new RegExp(`(?<!\\d)${[...d].join('[.\\s]?')}(?!\\d)`, 'g');
 

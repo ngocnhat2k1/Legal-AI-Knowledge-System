@@ -242,11 +242,52 @@ test('formatAnswerMd câu ảnh (hs): không câu mẫu cũ, một câu so mã, 
   assert.equal(all(lines, ST.orange).length, 0, 'câu so mã không bao giờ tô cam');
 });
 
-test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp tariffReply — brief, full, mixed', () => {
+/**
+ * answerMd as the classification walkthrough flattens it (walkthrough.run.ts): the owner's section titles written by code as
+ * "## " lines, the model's prose under them, and the policy block the code prints — a list the corpus lacks reads "chưa nạp".
+ */
+const WALK_MD = [
+  '## I. THÔNG TIN HÀNG HÓA',
+  'Bạn mới nói miếng dán bàn chân ngải cứu, chưa nói miếng dán có tẩm dược chất hay không.',
+  '',
+  '## II.2 Xem xét các nhóm có khả năng áp dụng',
+  'Nhóm **30.05** gồm sản phẩm "đã được thấm tẩm hoặc tráng phủ dược chất dùng cho y tế" [1]; nếu lớp ngải cứu chỉ để làm ấm thì cần so thêm nhóm **38.24** [3].',
+  '',
+  '## II.5 Kết luận mã HS đề xuất',
+  'Trong nhóm 30.05 thì phân nhóm 3005.10 là loại có lớp dính [1].',
+  '',
+  '## CHÍNH SÁCH CHUYÊN NGÀNH',
+  'Mã **3005.10.10** (ứng viên, chưa chốt):',
+  '- **36/2026/TT-BKHCN Phụ lục I**: có tên trong danh mục — "1 | Băng dán y tế | 3005.10.10"',
+  '- Kho **chưa nạp** nên mình chưa kiểm tra được: 11/2024/TT-BTTTT',
+  '',
+  '## KẾT LUẬN CUỐI CÙNG',
+  'Mình để mở giữa hai nhóm cho tới khi biết nhãn ghi công dụng gì.',
+].join('\n');
+
+test('formatAnswerMd walkthrough: tiêu đề mục in đậm thành dòng riêng, dòng "chưa nạp" giữ nguyên, khối thuế ứng viên ở dưới', () => {
+  const tariffLines = ['3005.10.10', '3824.99.99'].map(lookup);
+  const lines = formatAnswerMd({ ...HS_PHOTO, answerMd: WALK_MD, depth: 'full' }, { tariffLines });
+  const rows = rowsOf(lines);
+  for (const title of ['I. THÔNG TIN HÀNG HÓA', 'II.2 Xem xét các nhóm có khả năng áp dụng', 'CHÍNH SÁCH CHUYÊN NGÀNH', 'KẾT LUẬN CUỐI CÙNG'])
+    assert.ok(rows.includes(title), `thiếu tiêu đề "${title}"`);
+  // A "## " line is a bold line to md(): no "#" reaches the reader.
+  assert.ok(!rows.some((l) => l.includes('#')), 'không còn dấu # nào');
+  assert.equal(all(lines, ST.b).filter((t) => t === 'I. THÔNG TIN HÀNG HÓA').length, 1);
+  // The policy block is code's: a list the corpus has not loaded says so, and no line says "Không" about it.
+  assert.ok(rows.some((l) => l.startsWith('Kho chưa nạp nên mình chưa kiểm tra được:')));
+  assert.ok(!rows.some((l) => /^Không /.test(l)));
+  // D3(a): at full depth the candidate blocks print under the report, at most two, and the brief hint does not.
+  assert.ok(!rows.includes(HINT));
+  assert.equal(rows.filter((l) => l.startsWith('Nếu hàng thuộc mã ')).length, 2);
+});
+
+test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp tariffReply — brief, full, mixed, walkthrough', () => {
   const tariffLines = ['3005.10.10', '3824.99.99'].map(lookup);
   const replies = {
     brief: formatAnswerMd(HS_PHOTO, { tariffLines }),
     full: formatAnswerMd({ ...HS_PHOTO, depth: 'full' }, { tariffLines }),
+    walk: formatAnswerMd({ ...HS_PHOTO, answerMd: WALK_MD, depth: 'full' }, { tariffLines }),
     mixed: formatAnswerMd({ ...HS_PHOTO, mode: 'mixed', userCodes: [], candidates: [] }, { tariffLines: tariffLines.slice(0, 1) }),
   };
   for (const [name, lines] of Object.entries(replies)) {
@@ -257,9 +298,12 @@ test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp 
   // away from the candidates heading. Sweep prose lengths so wherever render splits, no message reads as a tariff reply.
   const filler = 'Chú giải chi tiết nhóm này mô tả tiêu chí phân biệt theo công dụng và cách trình bày của hàng [1]. ';
   for (let chars = 0; chars <= 4000; chars += 50) {
-    const answerMd = `${HS_PHOTO.answerMd}\n\n${filler.repeat(Math.ceil(chars / filler.length)).slice(0, chars)}`;
+    const pad = filler.repeat(Math.ceil(chars / filler.length)).slice(0, chars);
+    const answerMd = `${HS_PHOTO.answerMd}\n\n${pad}`;
     const variants = {
       full: formatAnswerMd({ ...HS_PHOTO, answerMd, depth: 'full' }, { tariffLines }),
+      // The walkthrough's own titles split a long reply at different places: sweep them too.
+      walk: formatAnswerMd({ ...HS_PHOTO, answerMd: `${WALK_MD}\n\n${pad}`, depth: 'full' }, { tariffLines }),
       mixed: formatAnswerMd({ ...HS_PHOTO, answerMd, mode: 'mixed', userCodes: [], candidates: [] }, { tariffLines: tariffLines.slice(0, 1) }),
     };
     for (const [name, lines] of Object.entries(variants)) {
