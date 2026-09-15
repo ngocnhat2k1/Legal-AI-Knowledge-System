@@ -142,6 +142,42 @@ Kết quả mong đợi: `{"status":"ok","db":"up","pgvector":"0.8.6","llm":"up"
 | `no_token` | `CLAUDE_CODE_OAUTH_TOKEN` trống trong container: điền `.env` rồi recreate |
 | `no_cli` | CLI `claude` trong image không chạy được: kiểm tra `docker-compose run --rm --no-deps migrate claude --version` |
 
+### Kiểm sâu tầng mô hình (`?llm=deep`)
+
+`llm` ở trên là kiểm rẻ: nó chỉ nói token và binary `claude` có mặt, **không** nói thuê bao còn trả lời được. Ngày
+2026-09-14 hết hạn mức tháng của tổ chức, mọi câu trả lời rơi về chế độ chỉ-trích-dẫn, mà `/health` vẫn báo `llm: up`.
+Muốn biết mô hình có thật sự trả lời hay không thì hỏi thêm:
+
+```bash
+curl -s 'http://127.0.0.1:3060/health?llm=deep'
+```
+
+Nó chạy `claude -p` một lần với câu hỏi cố định (một câu tiếng Anh xin đúng chữ `ok`; **không bao giờ có chữ của người
+dùng** — [R14](../business-rules.md)), tắt tool, timeout 30 giây, và dùng chung mức trần 2 tiến trình `claude` với đường
+trả lời. Kết quả thêm trường `llmDeep`; `llm` giữ nguyên nghĩa cũ nên mọi thứ đang đọc `llm` (`deploy.sh`, `apps/eval`)
+không đổi.
+
+**Kết quả `up` được nhớ 5 phút; mọi kết quả khác chỉ nhớ ~30 giây.** Gọi lại trong khoảng đó trả về đúng kết quả cũ và
+không tốn tiến trình nào — vòng lặp curl hay dashboard không thể đốt hạn mức — nhưng một kết quả hỏng thì hỏi lại sau
+nửa phút là đo thật, nên "thử lại" ở bảng dưới có tác dụng. Cache nằm trong tiến trình Node: **restart/recreate
+container là mất cache ngay**, lần `?llm=deep` kế tiếp đo lại liền. Cái chậm là chiều ngược lại: nếu sửa xong mà tiến
+trình vẫn sống (hạn mức reset, bot rảnh suất tiến trình) thì phải chờ hết ~30 giây đó mới thấy đổi.
+
+Kiểm sâu **không miễn phí**: mỗi lần chạy thật là một lượt gọi mô hình (đo 2026-09-15, sáu lần liên tiếp trên laptop
+rảnh: 3,6–10,9 giây cả lệnh, trong đó 1,7–3,6 giây là mô hình; vài cent) — dùng khi deploy hoặc khi nghi bot im tiếng,
+đừng đặt vào cron mỗi phút.
+
+| `llmDeep` | Nghĩa | Làm gì |
+|---|---|---|
+| `up` | mô hình đã trả lời thật | không phải làm gì |
+| `quota` | câu trả lời mang chữ kiểu "spend limit" / "usage limit": hết hạn mức thuê bao. Nhận dạng bằng chuỗi, **chỉ là phỏng đoán** — CLI không có trường máy đọc được | chờ hạn mức reset; trong lúc đó bot vẫn chạy nhưng chỉ ở chế độ trích dẫn |
+| `error` | mô hình chạy nhưng báo lỗi (`is_error`, token sai…), **hoặc** CLI chết ngay mà không in JSON: crash, bị OOM giết, in lỗi dạng chữ thường | `docker-compose logs --tail 50 api` — tìm dòng `[claude] exited … without a result: …`, đó là chỗ **duy nhất** đọc được stderr của CLI (kể cả khi chữ báo hết hạn mức chỉ ra ở đó). Không thấy gì thì xem mục RAM/OOM ngay dưới |
+| `timeout` | hết 30 giây vẫn chưa có câu trả lời: mô hình chậm/kẹt, hoặc cả 2 suất tiến trình đang bận soạn câu trả lời cho bot | thử lại sau một phút (kết quả hỏng chỉ nhớ ~30 giây nên lần sau là đo thật); vẫn `timeout` lúc bot rảnh thì kiểm CLI như `no_cli` |
+| `no_token` / `no_cli` | như bảng trên (kiểm sâu không spawn gì trong hai trường hợp này) | như bảng trên |
+
+`llmDeep` **không** đổi `status` và không làm `/health` trả 503: tra cứu biểu thuế và web UI chạy được khi không có mô
+hình, hạ cả service vì hết hạn mức còn hỏng hơn là mất phần soạn câu trả lời.
+
 Container, RAM, OOM:
 
 ```bash
@@ -210,7 +246,10 @@ Workflow [`.github/workflows/ci-cd.yml`](../../.github/workflows/ci-cd.yml) có 
    nào giữ.
 
 Commit chỉ đổi `.agent/**` hoặc `*.md` không chạy workflow. Server không build gì, nên deploy không ăn RAM của host.
-Theo dõi ở tab Actions trên GitHub (hoặc `gh run watch`); deploy xong thì kiểm theo mục 4.
+Theo dõi ở tab Actions trên GitHub (hoặc `gh run watch`); deploy xong thì kiểm theo mục 4, **kèm một lần kiểm sâu**
+`curl -s 'http://127.0.0.1:3060/health?llm=deep'` để biết thuê bao còn trả lời được. `deploy.sh` cố ý chỉ đợi `/health`
+rẻ: kiểm sâu tốn một tiến trình `claude` và có thể mất tới 30 giây, không nên nằm trong vòng đợi 60 giây của script; nó cũng
+không phải lý do để coi deploy là hỏng (hết hạn mức thì code mới vẫn đúng, chỉ là bot trả lời ở chế độ trích dẫn).
 
 - **Chỉ commit ở đầu `main` được deploy.** Re-run một run cũ khi `main` đã đi tiếp thì script in `main has moved past …`
   và không làm gì. Quay lui bằng `git revert` rồi push.
