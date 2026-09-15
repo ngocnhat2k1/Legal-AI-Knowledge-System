@@ -128,6 +128,10 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       ['mã hs "848180" dùng cho van được không', 'mã hs "[mã 1]" dùng cho van được không'],
       ['mã hs (848180) dùng cho van được không', 'mã hs ([mã 1]) dùng cho van được không'],
       ['mã hs - 848180 được không', 'mã hs - [mã 1] được không'],
+      // The gap between the word and the digits is not bounded, so a row pasted out of a padded table is still a code:
+      // the keyword lookbehind is made linear by the digit ahead of it, never by a limit on the run (§4.2, Việc 5).
+      [`mã hs${' '.repeat(20)}848180 được không`, `mã hs${' '.repeat(20)}[mã 1] được không`],
+      ['Mã HS\t\t\t\t\t\t\t\t\t\t3005', 'Mã HS\t\t\t\t\t\t\t\t\t\t[mã 1]'],
       // A second joined subheading in a list.
       ['mã hs 300510 hay 382490 được không', 'mã hs [mã 1] hay [mã 2] được không'],
       ['mã hs 848180, 848190 được không', 'mã hs [mã 1], [mã 2] được không'],

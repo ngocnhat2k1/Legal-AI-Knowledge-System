@@ -58,6 +58,8 @@ const NOT_HEADING = String.raw`(?!\d{2}\.?00|19\.?(?:0[6-9]|[1-9]\d)|20\.?[1-9]\
 /**
  * What may stand between a code word and its digits: "là", a colon, dash or equals sign, an opening quote or parenthesis.
  * Each space run follows a character that is not a space: three adjacent \s* made a lookbehind cubic on a run of spaces.
+ * The runs stay unbounded, so a row pasted out of a padded table still reads as a code; what keeps them cheap is the
+ * `(?=\d)` in front of the lookbehind that uses this gap, not a limit on how far a code word may sit from its digits.
  */
 const GAP = String.raw`\s*(?:l[aà]\s*)?(?:[:\-=]\s*)?(?:["“'‘(]\s*)?`;
 const HS_WORD = String.raw`hs(?:\s*code)?(?:\s*s[oố])?`;
@@ -88,11 +90,15 @@ const NOT_ISO_DATE = String.raw`(?!(?:19|20)\d{2}${MONTH_DAY})`;
  * userCodes line comes back. After an hs word ("mã hs 8481809910") the first eight are the code, so the latch sees it.
  * ponytail: a joined six-digit run with no code word right before it ("e khai 848180", "mã hs của hàng là 848180") stays
  * unmasked; a free word gap would over-mask record numbers, so widen GAP only with cases proving they stay whole.
+ * The keyword branch asks for a digit before it reads the gap behind it. A lookbehind is tried at every position, and
+ * reading a run of spaces backwards from each of them is quadratic: 8.6 s on 40,000 spaces on node 22, the version the
+ * server runs, and 7.3 s on 20, while 24 and 25 optimise it away. Guarded, every run is read back once, from the one
+ * digit that follows it, and nothing about what is masked changes.
  */
 const HS_TOKEN = new RegExp(
   String.raw`(?<!\d)(\d{9,})(?!\d)` +
     String.raw`|(?<!\d)${NOT_ISO_DATE}${NOT_HEADING}\d{4}(?:[.\s]?\d{2}(?:[.\s]?\d{2}|[.\s]\d{4})|[.\s]\d{6}|-\d{2}-\d{2}(?:\d{2})?)(?!\d)` +
-    String.raw`|(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|${HS_WORD}|ch[uư][oơ]ng)${GAP})(?:${NOT_HEADING}\d{2}\.?\d{2}(?:\.?\d{2}){0,2}|\d{2}(?!\.?\d))(?![\d/])` +
+    String.raw`|(?=\d)(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|${HS_WORD}|ch[uư][oơ]ng)${GAP})(?:${NOT_HEADING}\d{2}\.?\d{2}(?:\.?\d{2}){0,2}|\d{2}(?!\.?\d))(?![\d/])` +
     String.raw`|(?<![\d.,/])${NOT_HEADING}\d{4}\.\d{2}(?![\d/]|[.,]\d)` +
     String.raw`|(?<![\d.,/]|ng[aà]y\s)${NOT_HEADING}\d{2}\.\d{2}(?:\.\d{2}){0,2}(?![\d/%]|[.,]\d|\s*(?:triệu|tỷ|giờ|sáng|chiều)(?![\p{L}]))`,
   'giu',
