@@ -117,7 +117,9 @@ Từ Việc 12, bot không còn gọi `route()` cho tin chữ. Luồng đầy đ
 
 - **Bot gửi ngữ cảnh, API che mã.** Bước kế hoạch nhận `context = {topic, state, turns}` thô; API che mọi mã trước
   khi dựng prompt (R4). Kế hoạch bot tự dựng (tra thuế trần, tra thuế theo kế hoạch) chỉ có
-  `{intent: 'tariff', origin, date}` — không `question`, không mã.
+  `{intent: 'tariff', origin, date}` — không `question`, không mã. "còn từ Nhật thì sao" (`reuseLastHs`) đi cùng đường văn xuôi +
+  khối: kế hoạch `{intent: 'tariff', reuseLastHs: true, origin, date}` kèm `context`, API lấy `state.tariff.dotted` làm khoá;
+  khối thuế tra mã đó với xuất xứ mới, `/answer` không trả lời thì khối đi một mình.
 - **`state.tariff` sau câu soạn chế độ hs** = `{hs: null, candidates: ['30.05', …], desc, keywords, at}`. `hs: null`
   nên `tariffFresh` là false: một chữ "đúng" không ghi gì, vì không có kết quả tra nào đang chờ xác nhận.
   `desc` = `plan.goods.facts` (API đã lọc số, serial, model). Không có ứng viên nào thì `state.tariff = null`.

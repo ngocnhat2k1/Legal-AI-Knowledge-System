@@ -1205,7 +1205,7 @@ test('refine chạy lại chế độ API đọc từ câu soạn trước, khô
   assert.deepEqual([again.answers[1].plan.intent, again.answers[1].forceIntent], ['refine', undefined]);
 });
 
-test('kế hoạch tariff: mã bị nghi không tra thuế; không mã thì hỏi mã hoặc soạn hs, không tra từ khoá trên tin (R4); "còn từ Nhật" chỉ tra khối; văn bản thiếu không chặn tra thuế', async () => {
+test('kế hoạch tariff: mã bị nghi không tra thuế; không mã thì hỏi mã hoặc soạn hs, không tra từ khoá trên tin (R4); "còn từ Nhật" có văn xuôi + khối như tra trần; văn bản thiếu không chặn tra thuế', async () => {
   const doubt = await conversation().say('thuế mã 84818099 dùng cho van nước được không', fakeApi({ planned: plannedOf(plan08({ intent: 'tariff', ...noGoods })) }));
   assert.ok(!pathsOf(doubt).includes('/tariff'), pathsOf(doubt).join(','));
   assert.match(doubt.text, /mô tả giúp mình/);
@@ -1227,9 +1227,24 @@ test('kế hoạch tariff: mã bị nghi không tra thuế; không mã thì hỏ
 
   const t = conversation();
   await t.say('8481.80.99 TQ', fakeApi());
-  const japan = await t.say('còn từ Nhật thì sao', fakeApi({ planned: plannedOf(plan08({ intent: 'tariff', reuseLastHs: true, origin: 'JP', ...noGoods }), { codeRole: 'none' }) }));
-  assert.equal(japan.answers.length, 1, 'API không đọc mã từ state: lượt /answer thứ hai không bao giờ có văn xuôi');
-  assert.ok(japan.text.startsWith('Hàng hóa có mã HS 8481.80.99'), japan.text.slice(0, 60));
+  const reuse = plannedOf(plan08({ intent: 'tariff', reuseLastHs: true, origin: 'JP', ...noGoods }), { codeRole: 'none' });
+  const japan = await t.say('còn từ Nhật thì sao', fakeApi({ planned: reuse }));
+  assert.equal(japan.answers.length, 2);
+  const [, asked] = japan.answers;
+  assert.deepEqual(
+    [asked.planOnly, asked.forceIntent, asked.plan],
+    [undefined, 'tariff', { intent: 'tariff', reuseLastHs: true, origin: 'JP', date: todayVN() }],
+    'Q1: cùng đường văn xuôi + khối như tra trần; kế hoạch bot dựng không mã (R4)',
+  );
+  assert.equal(asked.context.state.tariff.dotted, '8481.80.99', 'API lấy mã vừa tra trong state làm khoá');
+  assert.ok(japan.text.startsWith('Hàng hóa có mã HS 8481.80.99') && japan.text.includes('Nhật Bản'), '/answer không trả lời: khối thuế một mình');
+  const withProse = conversation();
+  await withProse.say('8481.80.99 TQ', fakeApi());
+  const prose = 'Hàng từ Nhật Bản chỉ hưởng mức ưu đãi đặc biệt khi có C/O đúng mẫu của hiệp định.';
+  const jp = await withProse.say('còn từ Nhật thì sao', fakeApi({ planned: reuse, composed: { mode: 'tariff', answerMd: prose, citations: [], cut: 0, calls: 1 } }));
+  const [sentJp] = render(jp.r.text);
+  assert.ok(sentJp.msg.startsWith(`${prose}\n\nHàng hóa có mã HS 8481.80.99`), sentJp.msg.slice(0, 160));
+  assert.deepEqual([withProse.memo.state.tariff.origin, withProse.memo.state.tariff.open], ['JP', true]);
 
   const decree = await conversation().say('cho mình hỏi thuế 8481.80.99 theo Nghị định 26/2023/NĐ-CP bao nhiêu', fakeApi({ planned: plannedOf(plan08({ intent: 'tariff', ...noGoods }), { codeRole: 'key', missingDoc: '26/2023/NĐ-CP' }) }));
   assert.ok(pathsOf(decree).includes('/tariff') && !decree.text.includes('chưa có toàn văn'), decree.text.slice(0, 80));

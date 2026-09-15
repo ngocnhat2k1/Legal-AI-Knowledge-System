@@ -135,12 +135,13 @@ const legalMemory = (plan, cites, asOf) => ({
  * A rate lookup with a few sentences of prose above its block (owner decision Q1). Both run at once; the block goes out
  * alone, as before, when /answer has no prose or the lookup itself failed — prose about a rate that was not found misleads.
  * The plan the bot builds carries no code and no user text (R4): the API takes the question from `q` and masks it itself.
+ * `plan`: more plan fields, `reuseLastHs` for "còn từ Nhật thì sao", whose code the API reads from the context's state.
  */
-async function rateWithProse(q, body, showFooter) {
+async function rateWithProse(q, body, showFooter, plan = {}) {
   const [byHs, res] = await Promise.all([
     answerByHs(q, { showFooter }),
     answer(
-      { ...body, deadlineAt: new Date(Date.now() + PROSE_BUDGET_MS).toISOString(), plan: { intent: 'tariff', origin: q.origin, date: q.date }, forceIntent: 'tariff' },
+      { ...body, deadlineAt: new Date(Date.now() + PROSE_BUDGET_MS).toISOString(), plan: { intent: 'tariff', ...plan, origin: q.origin, date: q.date }, forceIntent: 'tariff' },
       PROSE_BUDGET_MS + 5_000,
     ),
   ]);
@@ -255,10 +256,11 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
       const q = { ...direct, origin: direct.origin ?? plan.origin ?? null, date: plan.date || direct.date };
       return { ...(await rateWithProse(q, base, !ctx.tariffFresh)), intent };
     }
-    // "còn từ Nhật thì sao": cùng mã vừa tra, xuất xứ khác. Chỉ khối thuế: API không đọc mã từ state nên không có văn xuôi.
+    // "còn từ Nhật thì sao": cùng mã vừa tra, xuất xứ khác. Cùng đường văn xuôi + khối như tra trần (Q1): API lấy mã trong
+    // state.tariff của context làm khoá, khối thuế tra bằng mã đó với xuất xứ mới; /answer không trả lời thì khối đi một mình.
     if (plan.reuseLastHs && ctx.tariff?.hs) {
       const q = { hs: ctx.tariff.hs, dotted: ctx.tariff.dotted, origin: plan.origin ?? ctx.tariff.origin ?? null, date: plan.date || todayVN() };
-      return { ...(await answerByHs(q, { showFooter: false })), intent };
+      return { ...(await rateWithProse(q, base, false, { reuseLastHs: true })), intent };
     }
     // Không có mã để tra. Có tên hàng thì câu hỏi trước hết là mã nào: soạn hs (§7 giữ tra từ khoá cho ảnh). Không tên hàng,
     // hoặc hỏi tiếp khi không còn mã nào trên bàn: hỏi mã — tra từ khoá trên chính tin nhắn giữ lại chữ số người dùng (R4).
