@@ -134,8 +134,71 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       // Chapters 19 and 20 end at 1905 and 2009: those headings are still codes.
       ['nhóm 2009 gồm gì', 'nhóm [mã 1] gồm gì'],
       ['thuộc chương 20', 'thuộc chương [mã 1]'],
+      // A ten-digit line split four and six, and a dash between the pairs: the eight-digit code.
+      ['8481 809910 dùng cho van được không', '[mã 1] dùng cho van được không'],
+      ['8481.809910 dùng cho van được không', '[mã 1] dùng cho van được không'],
+      ['mã 8481-80-99 được không', 'mã [mã 1] được không'],
+      ['8481-80-99-10 dùng cho van được không', '[mã 1]-10 dùng cho van được không'],
+      // Single quotes, "hs số", and the connectors với, hay là, "/" and "-" in a list.
+      ["mã hs '848180' được không", "mã hs '[mã 1]' được không"],
+      ['mã hs ‘848180’ được không', 'mã hs ‘[mã 1]’ được không'],
+      ['mã hs số 848180 được không', 'mã hs số [mã 1] được không'],
+      ['HS số: 848180 được không', 'HS số: [mã 1] được không'],
+      ['mã hs 300510 với 382490 được không', 'mã hs [mã 1] với [mã 2] được không'],
+      ['mã hs 300510 hay là 382490 được không', 'mã hs [mã 1] hay là [mã 2] được không'],
+      ['ma hs 300510 hay la 382490 duoc khong', 'ma hs [mã 1] hay la [mã 2] duoc khong'],
+      ['nhom 3005 voi 3824', 'nhom [mã 1] voi [mã 2]'],
+      ['mã hs 300510 / 382490 được không', 'mã hs [mã 1] / [mã 2] được không'],
+      ['mã hs 300510-382490 được không', 'mã hs [mã 1]-[mã 2] được không'],
     ]) {
       expect(maskCodes(text!).text).toBe(masked);
+    }
+  });
+
+  it('after a masked code, a connector never makes an amount, a date or a record number a code', () => {
+    for (const [text, masked] of [
+      ['mã 3005.10.10 và 200000 USD thì thuế sao', 'mã [mã 1] và 200000 USD thì thuế sao'],
+      ['mã 8481.80.99, 150000 cái thuế bao nhiêu', 'mã [mã 1], 150000 cái thuế bao nhiêu'],
+      ['mã hs 848180, 202609 lô hàng', 'mã hs [mã 1], 202609 lô hàng'],
+      ['mã 3005.10.10 với 1000 cái, hay là 2026', 'mã [mã 1] với 1000 cái, hay là 2026'],
+      ['mã hs 848180 / 2026-09-15', 'mã hs [mã 1] / 2026-09-15'],
+      ['mã hs 848180 - 20000000 đồng', 'mã hs [mã 1] - 20000000 đồng'],
+      ["mã hs '848180', hồ sơ số 123456 bị trả về", "mã hs '[mã 1]', hồ sơ số 123456 bị trả về"],
+    ]) {
+      expect(maskCodes(text!).text).toBe(masked);
+      expect(userCodes(text!)).toHaveLength(1);
+    }
+    // The list goes on past the number: every code after it is still masked.
+    expect(maskCodes('mã 3005.10.10, 200000 và 382490').text).toBe('mã [mã 1], 200000 và [mã 2]');
+    expect(userCodes('mã hs 300510, 200000 và 382490').map((c) => c.code)).toEqual(['3005.10', '3824.90']);
+    expect(maskCodes('mã 848180 - 2005-06-15 - 300510').text).toBe('mã [mã 1] - 2005-06-15 - [mã 2]');
+    expect(maskCodes('nhóm 3005, 2026 và 3824 gồm gì').text).toBe('nhóm [mã 1], 2026 và [mã 2] gồm gì');
+  });
+
+  // Growth, not a wall-clock budget: under parallel jest workers an absolute 50 ms flakes, while doubling the input of a
+  // linear scan stays near 2x on a loaded machine and a quadratic one reaches 4x. The sizes alternate and each keeps its
+  // fastest of five, so a burst of load on other workers slows both alike. The backstop still fails a hang fast.
+  it('stays linear: doubling ten thousand characters of any shape at most triples the time', () => {
+    const time = (fn: (t: string) => unknown, text: string): number => {
+      const t0 = performance.now();
+      fn(text);
+      return performance.now() - t0;
+    };
+    const units = [' ', 'mã hs ', ', 3824', ', 2026 - 2005-06-15', ' hay là', " '", '12-', '8481 80 ', '1234567890 ', 'hs 1234567890 ', 'e khai mã 3005.10.10 được không '];
+    // Distinct codes, each looked up in the book grown so far: a listed heading, or a dotted one with a bare heading none opens.
+    const listed = (n: number) => Array.from({ length: n / 6 }, (_, i) => `, ${1001 + i}`).join('');
+    const distinct = (n: number) => Array.from({ length: n / 15 }, (_, i) => `, ${3001 + (i % 900)}.${10 + (i % 89)}, 2826`).join('');
+    for (const shape of [...units.map((unit) => (n: number) => unit.repeat(Math.ceil(n / unit.length))), listed, distinct]) {
+      const [text10, text20] = [10_000, 20_000].map((n) => `nhóm 3005${shape(n)}848180`);
+      for (const fn of [maskCodes, userCodes]) {
+        let [t10, t20] = [Infinity, Infinity];
+        for (let i = 0; i < 5; i++) {
+          t10 = Math.min(t10, time(fn, text10!));
+          t20 = Math.min(t20, time(fn, text20!));
+        }
+        expect(t20).toBeLessThan(1_000);
+        if (t10 >= 5 || t20 >= 5) expect(t20 / Math.max(t10, 0.5)).toBeLessThan(3);
+      }
     }
   });
 
@@ -158,6 +221,15 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       'mức phạt 20000000 đồng áp dụng khi nào',
       'mức phạt 50000000đ cho hành vi khai sai',
       'tờ khai mở ngày 20260915',
+      // A dash separates a code's pairs only when it stands between every pair: never a date, a month, a range or a phone.
+      'tờ khai ngày 2026-09-15 bị phân luồng đỏ',
+      'hợp đồng ký ngày 2005-06-15',
+      'hạn nộp 01-2026',
+      'gọi 0912-345-678 để hỏi',
+      'gọi 0912-345678 nhé',
+      'trọng lượng 1250-1500 kg có phải kiểm tra không',
+      'giai đoạn 2006-2010 có chính sách gì',
+      'ISO 9001-2015 chứng nhận',
     ]) {
       expect(maskCodes(text)).toEqual({ text, codes: [] });
     }
@@ -168,6 +240,9 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       ['mã số thuế 0312345678 theo Thông tư 36/2026', 'mã số thuế [số] theo Thông tư 36/2026'],
       ['mã số 0312345678, gọi 0912345678', 'mã số [số], gọi [số]'],
       ['8481809910 dùng cho van được không', '[số] dùng cho van được không'],
+      // "hs số" is also "hồ sơ số": only "hs" or "hs code" names a ten-digit line.
+      ['hs số 202609150001 bị trả về', 'hs số [số] bị trả về'],
+      ['hs số 0312345678 bị khoá', 'hs số [số] bị khoá'],
     ]) {
       expect(maskCodes(text!)).toEqual({ text: masked, codes: [] });
     }
@@ -179,6 +254,10 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
     expect(maskCodes('phat 12.50 trieu').text).toBe('phat [mã 1] trieu');
     // A record number after "mã số" reads as a subheading (§4.2).
     expect(maskCodes('mã số 123456 của hồ sơ bị trả về').text).toBe('mã số [mã 1] của hồ sơ bị trả về');
+    // "hs" also shortens "hồ sơ": "hs số 123456" is read as a subheading too (§4.2).
+    expect(maskCodes('hs số 123456 bị trả về').text).toBe('hs số [mã 1] bị trả về');
+    // After a code and a connector, four digits a heading may open with are a heading: "1250 cái" is 12.50 (§4.2).
+    expect(maskCodes('mã 3005.10.10 với 1250 cái').text).toBe('mã [mã 1] với [mã 2] cái');
   });
 });
 
@@ -241,6 +320,10 @@ describe('userCodes and assertNoUserCodes — the last latch before a spawn (R4)
     expect(userCodes('mã hs 8481809910 dùng cho van được không')).toEqual([{ code: '8481.80.99', level: 8, heading: '84.81' }]);
     expect(userCodes('mã hs 300510 hay 382490 được không').map((c) => c.code)).toEqual(['3005.10', '3824.90']);
     expect(userCodes('Biểu thuế theo HS 2022 khác HS 2017 thế nào')).toEqual([]);
+    for (const text of ['8481 809910 dùng cho van được không', '8481.809910 dùng cho van', 'mã 8481-80-99 được không', '8481-80-99-10', '8481-80-9910']) {
+      expect(userCodes(text)).toEqual([{ code: '8481.80.99', level: 8, heading: '84.81' }]);
+    }
+    expect(userCodes('mã hs 300510 với 382490, hay là 848180').map((c) => c.code)).toEqual(['3005.10', '3824.90', '8481.80']);
   });
 
   it('drops a part holding the code in any spelling, keeps a document number', () => {
@@ -254,6 +337,7 @@ describe('userCodes and assertNoUserCodes — the last latch before a spawn (R4)
       { name: 'goods', text: 'số lô 130051010' },
     ];
     expect(assertNoUserCodes(parts, codes, 'key')).toEqual({ parts: [parts[0], parts[4], parts[5]], leakDrops: ['turn:0', 'turn:1', 'state'] });
+    expect(assertNoUserCodes([{ name: 'queries', text: 'hàng 3005-10-10' }], codes, 'key').leakDrops).toEqual(['queries']);
   });
 
   it('for a premise code also drops the 4-digit heading (owner decision D1: the heading reaches compose only as a pin)', () => {
@@ -264,6 +348,8 @@ describe('userCodes and assertNoUserCodes — the last latch before a spawn (R4)
     ];
     expect(assertNoUserCodes(parts, codes, 'premise')).toEqual({ parts: [], leakDrops: ['question', 'understanding'] });
     expect(assertNoUserCodes(parts, codes, 'key').leakDrops).toEqual([]);
+    // A dash never splits the heading: a date "30-05-2026" is kept, so the turn is not failed closed.
+    expect(assertNoUserCodes([{ name: 'message', text: 'tờ khai ngày 30-05-2026' }], codes, 'premise').leakDrops).toEqual([]);
   });
 });
 
@@ -298,6 +384,17 @@ describe('normalizePlan — the model output in a fixed shape, user data only wh
     const minted = normalizePlan(raw, ['đọc lại thông tư 36 của bộ Khoa học công nghệ']);
     expect(minted?.scope.doc).toBeNull();
     expect(minted?.understanding).toBe('Bạn hỏi Thông tư còn hiệu lực không');
+  });
+
+  it('row 19: a scope document written without its issuer is the one cited document it opens, in the state\'s spelling', () => {
+    const doc = (written: string, cited: string[]) => normalizePlan({ intent: 'legal', scope: { doc: written, article: 18 } }, ['nguyên văn điều đó'], cited)?.scope.doc;
+    expect(doc('08/2015', ['08/2015/NĐ-CP', '38/2015/TT-BTC', '08/2015/nđ-cp'])).toBe('08/2015/NĐ-CP');
+    expect(doc('8/2015', ['08/2015/NĐ-CP'])).toBe('08/2015/NĐ-CP');
+    // Two documents open with it, or it stops inside a number: named nowhere, still dropped.
+    expect(doc('08/2015', ['08/2015/NĐ-CP', '08/2015/TT-BTC'])).toBeNull();
+    expect(doc('08/201', ['08/2015/NĐ-CP'])).toBeNull();
+    // A bare number with no year is not a document number.
+    expect(doc('08', ['08/2015/NĐ-CP'])).toBeNull();
   });
 
   it('accepts only the nine intents and coerces every other field', () => {

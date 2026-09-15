@@ -55,15 +55,32 @@ export const fold = (s: string): string =>
 
 /** Four digits no heading opens with: none ends in 00, and chapters 19 and 20 end at 1905 and 2009 ("HS 2022", "20000000 đồng"). */
 const NOT_HEADING = String.raw`(?!\d{2}\.?00|19\.?(?:0[6-9]|[1-9]\d)|20\.?[1-9]\d)`;
-/** What may stand between a code word and its digits: "là", a colon, dash or equals sign, an opening quote or parenthesis. */
-const GAP = String.raw`\s*(?:l[aà]\s*)?[:\-=]?\s*["“(]?\s*`;
-const HS_WORD_BEFORE = new RegExp(String.raw`(?<!\[)hs(?:\s*code)?${GAP}$`, 'iu');
 /**
- * Every spelling of a code or heading: an 8-digit code, or a 10-digit line dotted or spaced ("8481.80.9910") as its 8-digit
- * code; digits after a word naming one ("nhóm hàng 3005", "mã số 30.05.10.10", "HS: 3005", "mã hs là “848180”", "chương
- * 30"), a joined run too ("mã hs 848180"), with or without diacritics; a dotted "3005.10" or "30.05" standing alone. Only
- * structure exempts a number: a document number or date (a "/" or a further ".dddd"), "ngày 30.05", a rate "12.50%", a
- * bare "dd.dd" before an accented money or time word ("12.50 triệu", "08.30 sáng"), and four digits no heading opens with.
+ * What may stand between a code word and its digits: "là", a colon, dash or equals sign, an opening quote or parenthesis.
+ * Each space run follows a character that is not a space: three adjacent \s* made a lookbehind cubic on a run of spaces.
+ */
+const GAP = String.raw`\s*(?:l[aà]\s*)?(?:[:\-=]\s*)?(?:["“'‘(]\s*)?`;
+const HS_WORD = String.raw`hs(?:\s*code)?(?:\s*s[oố])?`;
+/**
+ * Only "hs" or "hs code" names a ten-digit line: "hs số" is also "hồ sơ số", and a record or tax number stays "[số]". A
+ * sticky lookbehind read back from the digits only as far as the words and gap reach (never past a digit): testing "…$"
+ * on everything before each run scanned the whole prefix, quadratic on a text of ten-digit runs.
+ */
+const HS_WORD_BEFORE = new RegExp(String.raw`(?<=(?<!\[)hs(?:\s*code)?${GAP})`, 'iuy');
+const hsWordBefore = (all: string, at: number): boolean => {
+  HS_WORD_BEFORE.lastIndex = at;
+  return HS_WORD_BEFORE.test(all);
+};
+const MONTH_DAY = String.raw`-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?!\d)`;
+/** An ISO date ("2005-06-15"): its year may be a heading, so a dash between pairs would read it as a code. */
+const NOT_ISO_DATE = String.raw`(?!(?:19|20)\d{2}${MONTH_DAY})`;
+/**
+ * Every spelling of a code or heading: an 8-digit code, or a 10-digit line dotted, spaced or dashed ("8481.80.9910", "8481
+ * 809910", "8481-80-99-10") as its 8-digit code, a dash only between every pair ("1250-1500 kg", "9001-2015" stay whole);
+ * digits after a word naming one ("nhóm hàng 3005", "mã số 30.05.10.10", "HS: 3005", "mã hs số ‘848180’", "chương 30"), a joined run too ("mã hs 848180"), with or without diacritics; a dotted
+ * "3005.10" or "30.05" standing alone. Only structure exempts a number: a document number or date (a "/", a further ".dddd"
+ * or an ISO date), "ngày 30.05", a rate "12.50%", a bare "dd.dd" before an accented money or time word ("12.50 triệu",
+ * "08.30 sáng"), and four digits no heading opens with.
  * Nothing after a keyword or a "dddd.dd" is ever read as a unit: two review rounds found "3005.10 sang 3824.90", "mã 3005
  * ngay", "mã 7411 đồng tinh luyện" and "3005.10 usd" leaking through unit words. An over-masked amount costs the plan its
  * meaning and forces a premise, but a leaked code is R4, so a code's shape wins.
@@ -74,17 +91,24 @@ const HS_WORD_BEFORE = new RegExp(String.raw`(?<!\[)hs(?:\s*code)?${GAP}$`, 'iu'
  */
 const HS_TOKEN = new RegExp(
   String.raw`(?<!\d)(\d{9,})(?!\d)` +
-    String.raw`|(?<!\d)${NOT_HEADING}\d{4}[.\s]?\d{2}(?:[.\s]?\d{2}|[.\s]\d{4})(?!\d)` +
-    String.raw`|(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|hs(?:\s*code)?|ch[uư][oơ]ng)${GAP})(?:${NOT_HEADING}\d{2}\.?\d{2}(?:\.?\d{2}){0,2}|\d{2}(?!\.?\d))(?![\d/])` +
+    String.raw`|(?<!\d)${NOT_ISO_DATE}${NOT_HEADING}\d{4}(?:[.\s]?\d{2}(?:[.\s]?\d{2}|[.\s]\d{4})|[.\s]\d{6}|-\d{2}-\d{2}(?:\d{2})?)(?!\d)` +
+    String.raw`|(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|${HS_WORD}|ch[uư][oơ]ng)${GAP})(?:${NOT_HEADING}\d{2}\.?\d{2}(?:\.?\d{2}){0,2}|\d{2}(?!\.?\d))(?![\d/])` +
     String.raw`|(?<![\d.,/])${NOT_HEADING}\d{4}\.\d{2}(?![\d/]|[.,]\d)` +
     String.raw`|(?<![\d.,/]|ng[aà]y\s)${NOT_HEADING}\d{2}\.\d{2}(?:\.\d{2}){0,2}(?![\d/%]|[.,]\d|\s*(?:triệu|tỷ|giờ|sáng|chiều)(?![\p{L}]))`,
   'giu',
 );
 /**
- * A heading or joined subheading after one already masked: "nhóm [mã 1] hay 3824", "mã hs [mã 1] hay 382490", and a list
- * "nhóm [mã 1] hoặc 3824, và 3926" — it may end at punctuation, and connectors may follow each other (", và").
+ * Headings or joined subheadings listed after one already masked: "nhóm [mã 1] hay 3824", "mã hs [mã 1] với 382490",
+ * "[mã 1]/3824", and "nhóm [mã 1] hoặc 3824, và 3926" — a list may end at punctuation, and connectors may follow each other
+ * (", hay là"). An ISO date or four digits no heading opens with stay whole, and the list goes on past them: "mã 3005.10.10,
+ * 200000 và 382490", "mã 848180 - 2005-06-15 - 300510". The check is per item, never in JOINED: there it ended the list at
+ * the number and left every later code unmasked. The whole list is matched once, then each item in it: one pass per listed
+ * code was quadratic on a long list.
  */
-const JOINED_HEADING = /(\[mã \d+\](?:\s*(?:,|hay|hoặc|hoac|và|va|sang))+\s*)(\d{4}(?:\.?\d{2})?)(?![\d/]|[.,]\d)/giu;
+const JOINED = String.raw`((?:\s*(?:,|\/|-|hay\s*l[aà]|hay|hoặc|hoac|và|va|với|voi|sang))+\s*)(\d{4}(?:\.?\d{2})?)(?![\d/]|[.,]\d)((?:${MONTH_DAY})?)`;
+const JOINED_LIST = new RegExp(String.raw`(?<=\[mã \d+\])(?:${JOINED})+`, 'giu');
+const JOINED_HEADING = new RegExp(JOINED, 'giu');
+const LISTED_CODE = new RegExp(String.raw`^${NOT_ISO_DATE}${NOT_HEADING}`, 'u');
 /** Four digits standing alone: masked only when a code the text or the book holds opens with them ("thuộc 3005 hay 3824, mã 3005.10.10"). */
 const BARE_HEADING = /(?<![\d.,/])\d{4}(?![\d/]|[.,]\d)/gu;
 export const CODE_MARK = /\[mã \d+\]/gu;
@@ -96,17 +120,28 @@ export const CODE_MARK = /\[mã \d+\]/gu;
  */
 export function maskCodes(text: string, book: string[] = []): { text: string; codes: string[] } {
   const codes = [...book];
-  const mark = (m: string): string => {
-    const d = m.replace(/[.\s]/g, '').slice(0, 8);
-    const key = /^\d{8}$/.test(d) ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : m;
-    const i = codes.indexOf(key);
-    return `[mã ${i < 0 ? codes.push(key) : i + 1}]`;
+  // Each code's first index and the four digits every code opens with, kept as codes grow: scanning `codes` per match
+  // was quadratic on a text of many distinct codes.
+  const index = new Map<string, number>();
+  const heads = new Set<string>();
+  const add = (code: string, i: number): void => {
+    if (!index.has(code)) index.set(code, i);
+    heads.add(code.replace(/\D/g, '').slice(0, 4));
   };
-  let s = String(text ?? '')
+  codes.forEach(add);
+  const mark = (m: string): string => {
+    const d = m.replace(/[.\s-]/g, '').slice(0, 8);
+    const key = /^\d{8}$/.test(d) ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : m;
+    if (!index.has(key)) add(key, codes.push(key) - 1);
+    return `[mã ${index.get(key)! + 1}]`;
+  };
+  const s = String(text ?? '')
     .normalize('NFC')
-    .replace(HS_TOKEN, (m: string, long: string | undefined, at: number, all: string) => (long && !HS_WORD_BEFORE.test(all.slice(0, at)) ? '[số]' : mark(m)))
-    .replace(BARE_HEADING, (m) => (codes.some((c) => c.replace(/\D/g, '').startsWith(m)) ? mark(m) : m));
-  for (let prev = ''; prev !== s; ) [prev, s] = [s, s.replace(JOINED_HEADING, (_, head: string, code: string) => head + mark(code))];
+    .replace(HS_TOKEN, (m: string, long: string | undefined, at: number, all: string) => (long && !hsWordBefore(all, at) ? '[số]' : mark(m)))
+    .replace(BARE_HEADING, (m) => (heads.has(m) ? mark(m) : m))
+    .replace(JOINED_LIST, (list) =>
+      list.replace(JOINED_HEADING, (item: string, head: string, code: string, date: string) => (LISTED_CODE.test(code + date) ? head + mark(code) + date : item)),
+    );
   return { text: s, codes };
 }
 
@@ -166,8 +201,10 @@ export function assertNoUserCodes(parts: PromptPart[], codes: UserCode[], role: 
     .filter((c) => c.level >= 4)
     .map((c) => {
       const d = c.code.replace(/\D/g, '');
-      const [core, tail] = role === 'premise' ? [d.slice(0, 4), String.raw`(?:[.\s]?\d{2}){0,2}`] : [d, ''];
-      return new RegExp(String.raw`(?<!\d)${core.match(/\d{2}/g)!.join(String.raw`[.\s]?`)}${tail}(?!\d)`);
+      const [core, tail] = role === 'premise' ? [d.slice(0, 4), String.raw`(?:[.\s-]?\d{2}){0,2}`] : [d, ''];
+      // A dash may follow the heading, never split it: "3005-10-10" is the code, "30-05-2026" a date.
+      const joined = core.match(/\d{2}/g)!.map((p, i) => (i === 1 ? String.raw`[.\s]?` : i ? String.raw`[.\s-]?` : '') + p);
+      return new RegExp(String.raw`(?<!\d)${joined.join('')}${tail}(?!\d)`);
     });
   const leaks = parts.filter((p) => spellings.some((re) => re.test(p.text)));
   return { parts: parts.filter((p) => !leaks.includes(p)), leakDrops: leaks.map((p) => p.name) };
@@ -206,7 +243,10 @@ export function normalizePlan(raw: unknown, userTexts: string[], stateDocs: stri
   const goods = (o.goods ?? {}) as Record<string, unknown>;
   const scope = (o.scope ?? {}) as Record<string, unknown>;
   const doc = str(scope.doc, 48);
-  const cited = doc && stateDocs.find((d) => foldDocNumber(d) === foldDocNumber(doc));
+  // A cited number in full, or the one cited document a number written without its issuer opens ("08/2015", §6.2).
+  const folded = foldDocNumber(doc);
+  const opens = /^\d{1,4}\/\d{4}$/.test(folded) ? stateDocs.filter((d) => foldDocNumber(d).startsWith(`${folded}/`)) : [];
+  const cited = doc && (stateDocs.find((d) => foldDocNumber(d) === folded) ?? (new Set(opens.map(foldDocNumber)).size === 1 ? opens[0] : null));
   const understanding = str(o.understanding, 400)
     ?.replace(new RegExp(`${DOC_NUMBER}|${PRIVATE}`, 'giu'), (m) => (/^\d{1,4}\/\d{4}/.test(m) && statedIn(said, m) ? statedDocNumber(said, m) : ''))
     .replace(/\s+/g, ' ')
