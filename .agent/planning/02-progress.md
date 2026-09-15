@@ -245,6 +245,12 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
     (146 − 10 ca chỉ kiểm code đã xoá, 1 viết lại, 1 thêm cho `redLines`); che mã và cue FIT nay do `plan.spec.ts` giữ, khối
     nguồn và dòng đỏ/cam do `render.test.mjs`.
   - **Đang chạy `plan08/timing-growth`:** gộp hai test thời gian về một helper chung, hiệu chỉnh trên máy có tải, yêu cầu full jest xanh 10 lần và vẫn bắt được code bậc hai. Đây là việc cuối chặn push.
+  - **Đã gộp `397501d`: `/health?llm=deep`.** Vá lỗ "hết hạn mức mà `/health` vẫn báo `llm: up`" (14/09).
+    - Mặc định vẫn là kiểm rẻ (token + binary), không đổi hình dạng response; thêm trường `llmDeep` khi gọi kèm `?llm=deep`.
+    - Kiểm sâu gọi `claude -p` prompt cố định (không có chữ người dùng), tools off, qua `runClaude` nên dùng chung hàng đợi 2 tiến trình.
+    - `up` nhớ 5 phút, mọi kết quả hỏng chỉ nhớ 30 giây. Ngưỡng 30 s (đo thật 3,6–10,9 s). CLI chết ngay → `error`, không phải `timeout`. `llmDeep` không bao giờ làm `/health` trả 503.
+    - Rà 2 góc: 1 blocker + 3 major đã sửa ở `47bc2b2`; người rà cuối chạy CLI giả 10 kiểu hỏng qua code thật.
+    - Trên `main`: jest 381, bot 136, `tsc` sạch.
   - **CHẶN PUSH — ReDoS có sẵn trên `main` (`451809c`):** GAP trong lookbehind từ khoá của `maskCodes` có ba `\s*` liền nhau. Số đo: 800 dấu cách mất 410 ms, 10k dấu cách + một chữ số treo nhiều giờ; trần q 2000 ký tự vẫn tốn vài giây mỗi tin. Đã sửa ở `plan08/api-mask-minors` (`3e94301`), nên nhánh này phải gộp trước khi push.
     - Vòng 2 (`addb765`): dấu gạch chỉ được nằm giữa mọi cặp số, nên khoảng năm/số lượng/số hiệu tiêu chuẩn không bị che.
     - Rà lại chưa đạt, 1 major (lọt R4 mới): `JOINED` đặt `NOT_HEADING` trong mục danh sách, nên danh sách dừng ở số tiền/năm và mã phía sau không được che. Đang sửa bằng cách kiểm từng mục trong callback.
