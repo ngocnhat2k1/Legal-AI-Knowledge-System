@@ -63,6 +63,14 @@ describe('planStep — claude call #1 (Việc 6)', () => {
     expect(stateLine({ label: 'Điều 18', documentNumber: '08/2015/NĐ-CP' })).toContain('nguồn vừa trích: Điều 18 (08/2015/NĐ-CP)');
   });
 
+  it('row 19: keeps a scope document the state cites, in the state\'s spelling; one named nowhere is still dropped', async () => {
+    const citations = [{ label: 'Điều 18', documentNumber: '08/2015/NĐ-CP' }, { label: 'Điều 16', documentNumber: '38/2015/TT-BTC' }];
+    const input = { text: 'nguyên văn điều đó', quote: null, topic: 'legal', state: { legal: { citations } }, turns: [{ role: 'user', body: 'hồ sơ hải quan gồm gì' }], documents: [] };
+    const scopeOf = async (doc: string) => (await planStep(input, runner({ text: JSON.stringify({ intent: 'legal', scope: { doc, article: '16' } }) }).run)).plan.scope;
+    expect(await scopeOf('38/2015/tt-btc')).toEqual({ doc: '38/2015/TT-BTC', article: '16', clause: null });
+    expect(await scopeOf('39/2018/TT-BTC')).toEqual({ doc: null, article: '16', clause: null });
+  });
+
   it('reads a status question without a code as status when the model says so, the document kept only as the user wrote it', async () => {
     const { run } = runner({ text: '{"intent":"status","question":"Nghị định 69/2018 còn áp dụng không","scope":{"doc":"69/2018/NĐ-CP"}}' });
     const out = await planStep({ text: 'Nghị định 69/2018 còn áp dụng không', quote: null, topic: null, state: {}, turns: [], documents: [] }, run);
@@ -110,6 +118,22 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       ['mã 848180', 'mã [mã 1]'],
       ['hs 848180 dùng cho van được không', 'hs [mã 1] dùng cho van được không'],
       ['phân nhóm 300510 gồm gì', 'phân nhóm [mã 1] gồm gì'],
+      // A ten-digit sub-line is its eight-digit code: joined after an hs word, or dotted or spaced.
+      ['mã hs 8481809910 dùng cho van được không', 'mã hs [mã 1] dùng cho van được không'],
+      ['8481.80.9910 dùng cho van được không', '[mã 1] dùng cho van được không'],
+      ['8481 80 9910 dùng cho van được không', '[mã 1] dùng cho van được không'],
+      // "là", a dash, quotes or a parenthesis between the code word and the run.
+      ['mã hs là 848180 dùng cho van được không', 'mã hs là [mã 1] dùng cho van được không'],
+      ['mã hs “848180” dùng cho van được không', 'mã hs “[mã 1]” dùng cho van được không'],
+      ['mã hs "848180" dùng cho van được không', 'mã hs "[mã 1]" dùng cho van được không'],
+      ['mã hs (848180) dùng cho van được không', 'mã hs ([mã 1]) dùng cho van được không'],
+      ['mã hs - 848180 được không', 'mã hs - [mã 1] được không'],
+      // A second joined subheading in a list.
+      ['mã hs 300510 hay 382490 được không', 'mã hs [mã 1] hay [mã 2] được không'],
+      ['mã hs 848180, 848190 được không', 'mã hs [mã 1], [mã 2] được không'],
+      // Chapters 19 and 20 end at 1905 and 2009: those headings are still codes.
+      ['nhóm 2009 gồm gì', 'nhóm [mã 1] gồm gì'],
+      ['thuộc chương 20', 'thuộc chương [mã 1]'],
     ]) {
       expect(maskCodes(text!).text).toBe(masked);
     }
@@ -128,17 +152,33 @@ describe('maskCodes — the plan prompt never sees the digits of a code (R4)', (
       'ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu',
       '15.000.000 đồng',
       'hạn 14.09.2026',
-      // Ten joined digits are a tax number or a phone, never a code.
-      'mã số thuế 0312345678 theo Thông tư 36/2026',
-      'mã số 0312345678, gọi 0912345678',
+      // No heading ends in 00, none runs 1906–1999 or 2010–2099: an HS edition, a round amount, a date.
+      'HS 2022 có hiệu lực từ ngày nào',
+      'Biểu thuế theo HS 2022 khác HS 2017 thế nào',
+      'mức phạt 20000000 đồng áp dụng khi nào',
+      'mức phạt 50000000đ cho hành vi khai sai',
+      'tờ khai mở ngày 20260915',
     ]) {
       expect(maskCodes(text)).toEqual({ text, codes: [] });
     }
   });
 
+  it('writes nine or more joined digits as [số]: no code and no digit for a model, unless an hs word names a ten-digit line', () => {
+    for (const [text, masked] of [
+      ['mã số thuế 0312345678 theo Thông tư 36/2026', 'mã số thuế [số] theo Thông tư 36/2026'],
+      ['mã số 0312345678, gọi 0912345678', 'mã số [số], gọi [số]'],
+      ['8481809910 dùng cho van được không', '[số] dùng cho van được không'],
+    ]) {
+      expect(maskCodes(text!)).toEqual({ text: masked, codes: [] });
+    }
+    expect(maskCodes('HS code: 8481809910')).toEqual({ text: 'HS code: [mã 1]', codes: ['8481.80.99'] });
+  });
+
   it('over-masks a number shaped like a code rather than risk a leak (R4)', () => {
     expect(maskCodes('1234.56 USD').text).toBe('[mã 1] USD');
     expect(maskCodes('phat 12.50 trieu').text).toBe('phat [mã 1] trieu');
+    // A record number after "mã số" reads as a subheading (§4.2).
+    expect(maskCodes('mã số 123456 của hồ sơ bị trả về').text).toBe('mã số [mã 1] của hồ sơ bị trả về');
   });
 });
 
@@ -198,6 +238,9 @@ describe('userCodes and assertNoUserCodes — the last latch before a spawn (R4)
       expect(assertNoUserCodes([{ name: 'turns', text: `NGƯỜI DÙNG: ${text}` }], codes, 'key').leakDrops).toEqual(['turns']);
     }
     expect(userCodes('mã số thuế 0312345678')).toEqual([]);
+    expect(userCodes('mã hs 8481809910 dùng cho van được không')).toEqual([{ code: '8481.80.99', level: 8, heading: '84.81' }]);
+    expect(userCodes('mã hs 300510 hay 382490 được không').map((c) => c.code)).toEqual(['3005.10', '3824.90']);
+    expect(userCodes('Biểu thuế theo HS 2022 khác HS 2017 thế nào')).toEqual([]);
   });
 
   it('drops a part holding the code in any spelling, keeps a document number', () => {

@@ -53,29 +53,38 @@ export const fold = (s: string): string =>
     .toLowerCase()
     .replace(/đ/g, 'd');
 
+/** Four digits no heading opens with: none ends in 00, and chapters 19 and 20 end at 1905 and 2009 ("HS 2022", "20000000 đồng"). */
+const NOT_HEADING = String.raw`(?!\d{2}\.?00|19\.?(?:0[6-9]|[1-9]\d)|20\.?[1-9]\d)`;
+/** What may stand between a code word and its digits: "là", a colon, dash or equals sign, an opening quote or parenthesis. */
+const GAP = String.raw`\s*(?:l[aà]\s*)?[:\-=]?\s*["“(]?\s*`;
+const HS_WORD_BEFORE = new RegExp(String.raw`(?<!\[)hs(?:\s*code)?${GAP}$`, 'iu');
 /**
- * Every spelling of a code or heading: an 8-digit code; digits after a word naming one ("nhóm hàng 3005", "mã số
- * 30.05.10.10", "HS: 3005", "chương 30"), with or without diacritics; a dotted "3005.10" or "30.05" standing alone. Only
- * structure exempts a number: a document number or date (a "/" or a further ".dddd"), "ngày 30.05", a rate "12.50%", and
- * a bare "dd.dd" before an accented money or time word ("12.50 triệu", "08.30 sáng"). Nothing after a keyword or a
- * "dddd.dd" is ever read as a unit: two review rounds found "3005.10 sang 3824.90", "mã 3005 ngay", "mã 7411 đồng tinh
- * luyện" and "3005.10 usd" leaking through unit words. Over-masking an amount costs nothing; a leaked code is R4.
- * After a keyword a joined run is a code too ("mã hs 848180"). A run of nine or more joined digits is no code: a tax
- * number or a phone ("mã số thuế 0312345678") masked as one came back as a userCodes line.
- * ponytail: a ten-digit sub-line typed joined ("8481809910") is left unmasked with them; dotted or spaced it is masked.
+ * Every spelling of a code or heading: an 8-digit code, or a 10-digit line dotted or spaced ("8481.80.9910") as its 8-digit
+ * code; digits after a word naming one ("nhóm hàng 3005", "mã số 30.05.10.10", "HS: 3005", "mã hs là “848180”", "chương
+ * 30"), a joined run too ("mã hs 848180"), with or without diacritics; a dotted "3005.10" or "30.05" standing alone. Only
+ * structure exempts a number: a document number or date (a "/" or a further ".dddd"), "ngày 30.05", a rate "12.50%", a
+ * bare "dd.dd" before an accented money or time word ("12.50 triệu", "08.30 sáng"), and four digits no heading opens with.
+ * Nothing after a keyword or a "dddd.dd" is ever read as a unit: two review rounds found "3005.10 sang 3824.90", "mã 3005
+ * ngay", "mã 7411 đồng tinh luyện" and "3005.10 usd" leaking through unit words. An over-masked amount costs the plan its
+ * meaning and forces a premise, but a leaked code is R4, so a code's shape wins.
+ * Nine or more joined digits (a tax number, a phone, a line typed bare) become "[số]": no digit reaches a model and no
+ * userCodes line comes back. After an hs word ("mã hs 8481809910") the first eight are the code, so the latch sees it.
+ * ponytail: a joined six-digit run with no code word right before it ("e khai 848180", "mã hs của hàng là 848180") stays
+ * unmasked; a free word gap would over-mask record numbers, so widen GAP only with cases proving they stay whole.
  */
 const HS_TOKEN = new RegExp(
-  String.raw`(?<!\d)\d{4}[.\s]?\d{2}[.\s]?\d{2}(?!\d)` +
-    String.raw`|(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|hs(?:\s*code)?|ch[uư][oơ]ng)\s*:?\s*)\d{2}(?:\.?\d{2}(?:\.?\d{2}){0,2})?(?![\d/])` +
-    String.raw`|(?<![\d.,/])\d{4}\.\d{2}(?![\d/]|[.,]\d)` +
-    String.raw`|(?<![\d.,/]|ng[aà]y\s)\d{2}\.\d{2}(?:\.\d{2}){0,2}(?![\d/%]|[.,]\d|\s*(?:triệu|tỷ|giờ|sáng|chiều)(?![\p{L}]))`,
+  String.raw`(?<!\d)(\d{9,})(?!\d)` +
+    String.raw`|(?<!\d)${NOT_HEADING}\d{4}[.\s]?\d{2}(?:[.\s]?\d{2}|[.\s]\d{4})(?!\d)` +
+    String.raw`|(?<=(?<!\[)(?:nh[oó]m(?:\s*h[aà]ng)?|m[aã](?:\s*s[oố])?(?:\s*hs)?|hs(?:\s*code)?|ch[uư][oơ]ng)${GAP})(?:${NOT_HEADING}\d{2}\.?\d{2}(?:\.?\d{2}){0,2}|\d{2}(?!\.?\d))(?![\d/])` +
+    String.raw`|(?<![\d.,/])${NOT_HEADING}\d{4}\.\d{2}(?![\d/]|[.,]\d)` +
+    String.raw`|(?<![\d.,/]|ng[aà]y\s)${NOT_HEADING}\d{2}\.\d{2}(?:\.\d{2}){0,2}(?![\d/%]|[.,]\d|\s*(?:triệu|tỷ|giờ|sáng|chiều)(?![\p{L}]))`,
   'giu',
 );
 /**
- * A bare heading joined to one already masked: "nhóm [mã 1] hay 3824", "mã [mã 1] sang 3824", and a list "nhóm [mã 1]
- * hoặc 3824, và 3926" — a heading may end at punctuation, and connectors may follow each other (", và").
+ * A heading or joined subheading after one already masked: "nhóm [mã 1] hay 3824", "mã hs [mã 1] hay 382490", and a list
+ * "nhóm [mã 1] hoặc 3824, và 3926" — it may end at punctuation, and connectors may follow each other (", và").
  */
-const JOINED_HEADING = /(\[mã \d+\](?:\s*(?:,|hay|hoặc|hoac|và|va|sang))+\s*)(\d{4})(?![\d/]|[.,]\d)/giu;
+const JOINED_HEADING = /(\[mã \d+\](?:\s*(?:,|hay|hoặc|hoac|và|va|sang))+\s*)(\d{4}(?:\.?\d{2})?)(?![\d/]|[.,]\d)/giu;
 /** Four digits standing alone: masked only when a code the text or the book holds opens with them ("thuộc 3005 hay 3824, mã 3005.10.10"). */
 const BARE_HEADING = /(?<![\d.,/])\d{4}(?![\d/]|[.,]\d)/gu;
 export const CODE_MARK = /\[mã \d+\]/gu;
@@ -88,14 +97,14 @@ export const CODE_MARK = /\[mã \d+\]/gu;
 export function maskCodes(text: string, book: string[] = []): { text: string; codes: string[] } {
   const codes = [...book];
   const mark = (m: string): string => {
-    const d = m.replace(/[.\s]/g, '');
+    const d = m.replace(/[.\s]/g, '').slice(0, 8);
     const key = /^\d{8}$/.test(d) ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : m;
     const i = codes.indexOf(key);
     return `[mã ${i < 0 ? codes.push(key) : i + 1}]`;
   };
   let s = String(text ?? '')
     .normalize('NFC')
-    .replace(HS_TOKEN, mark)
+    .replace(HS_TOKEN, (m: string, long: string | undefined, at: number, all: string) => (long && !HS_WORD_BEFORE.test(all.slice(0, at)) ? '[số]' : mark(m)))
     .replace(BARE_HEADING, (m) => (codes.some((c) => c.replace(/\D/g, '').startsWith(m)) ? mark(m) : m));
   for (let prev = ''; prev !== s; ) [prev, s] = [s, s.replace(JOINED_HEADING, (_, head: string, code: string) => head + mark(code))];
   return { text: s, codes };
@@ -183,10 +192,11 @@ const statedDocNumber = (said: string, n: string): string => {
 
 /**
  * The model's plan in the §2.4 shape, or null when it names no known intent (the caller falls back to defaultPlan). The
- * model may recognise a document number, never mint one; goods facts and the understanding carry nothing the user did not
- * write and no serial, model, lot or phone number.
+ * model may recognise a document number, never mint one: scope.doc is one the user wrote or, in the state's own spelling,
+ * one the state cites (`citedDocs`: "nguyên văn điều đó", §6.2). Goods facts and the understanding carry nothing the user
+ * did not write and no serial, model, lot or phone number.
  */
-export function normalizePlan(raw: unknown, userTexts: string[]): Plan | null {
+export function normalizePlan(raw: unknown, userTexts: string[], stateDocs: string[] = []): Plan | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
   if (!INTENTS.includes(o.intent as Intent)) return null;
@@ -196,6 +206,7 @@ export function normalizePlan(raw: unknown, userTexts: string[]): Plan | null {
   const goods = (o.goods ?? {}) as Record<string, unknown>;
   const scope = (o.scope ?? {}) as Record<string, unknown>;
   const doc = str(scope.doc, 48);
+  const cited = doc && stateDocs.find((d) => foldDocNumber(d) === foldDocNumber(doc));
   const understanding = str(o.understanding, 400)
     ?.replace(new RegExp(`${DOC_NUMBER}|${PRIVATE}`, 'giu'), (m) => (/^\d{1,4}\/\d{4}/.test(m) && statedIn(said, m) ? statedDocNumber(said, m) : ''))
     .replace(/\s+/g, ' ')
@@ -213,7 +224,7 @@ export function normalizePlan(raw: unknown, userTexts: string[]): Plan | null {
       missing: arr(goods.missing).filter((f) => !isPrivate.test(f)).slice(0, 3),
     },
     refines: o.refines === true,
-    scope: { doc: doc && statedIn(said, doc) ? statedDocNumber(said, doc) : null, article: number(scope.article), clause: number(scope.clause) },
+    scope: { doc: cited || (doc && statedIn(said, doc) ? statedDocNumber(said, doc) : null), article: number(scope.article), clause: number(scope.clause) },
     keywords: arr(o.keywords),
     hsHints: arr(o.hsHints)
       .map((s) => s.replace(/\D/g, ''))
@@ -310,6 +321,12 @@ const transcriptOf = (turns: PlanInput['turns']): string =>
         .join('\n')
     : '(chưa có lượt nào trước đó)';
 
+/** Document numbers of the sources just cited, for normalizePlan's scope.doc. State comes from the client: any shape. */
+export function citedDocs(state: PlanState): string[] {
+  const citations: unknown = state.legal?.citations;
+  return (Array.isArray(citations) ? citations : []).map((c) => String(c?.documentNumber ?? '')).filter(Boolean);
+}
+
 /** What the pronouns in the new message can point at. */
 function stateOf(topic: string | null, state: PlanState): string {
   const bits = [`chủ đề đang bàn: ${topic ?? 'chưa có'}`];
@@ -387,7 +404,7 @@ export async function planStep(input: PlanInput, run: Runner): Promise<PlanStepR
   if (!kept.some((p) => p.name === 'message')) return done(null, 0);
   const res = await run(buildPlanInput(kept, input.documents), { timeoutMs: PLAN_TIMEOUT_MS, systemPrompt: PLAN_SYSTEM, model: 'sonnet', effort: 'low' });
   const userTexts = [input.text, input.quote ?? '', ...input.turns.filter((t) => t.role === 'user').map((t) => t.body)];
-  return done(res && !res.isError ? normalizePlan(looseJson(res.text), userTexts) : null, 1);
+  return done(res && !res.isError ? normalizePlan(looseJson(res.text), userTexts, citedDocs(input.state)) : null, 1);
 }
 
 /**

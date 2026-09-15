@@ -20,6 +20,7 @@ import { buildComposeInput, buildRepairPrompt, type ComposeMode, parseDraft, par
 import { type Source as GuardSource, quoteInBody, splitSentences, verify } from './guards';
 import {
   assertNoUserCodes,
+  citedDocs,
   CODE_MARK,
   type CodeRole,
   codeRole,
@@ -167,7 +168,7 @@ export class AnswerService {
     const forced = INTENTS.includes(body.forceIntent as Intent) ? (body.forceIntent as Intent) : null;
     let plan: Plan;
     if (body.plan != null) {
-      const p = normalizePlan(body.plan, [q, quote ?? '', ...turns.filter((t) => t.role === 'user').map((t) => t.body)]) ?? defaultPlan(q, topic);
+      const p = normalizePlan(body.plan, [q, quote ?? '', ...turns.filter((t) => t.role === 'user').map((t) => t.body)], citedDocs(state)) ?? defaultPlan(q, topic);
       // A plan from the client is text a prompt reads: every text of it masked again, so no raw code reaches a model (R4).
       // A partial plan (the bot's tariff branch) has no question: the masked message stands in.
       const mask = (s: string): string => maskCodes(s, codes).text;

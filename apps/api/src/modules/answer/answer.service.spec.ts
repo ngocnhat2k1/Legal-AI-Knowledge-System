@@ -425,6 +425,34 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     expect(res).toMatchObject({ answerMd: '', calls: 0, reason: 'latch' });
   });
 
+  it('a ten-digit line, a code after "là" or a quote, and a second joined subheading reach no prompt and no query (R4)', async () => {
+    for (const [q, code] of [
+      ['mã hs 8481809910 dùng cho van được không', '84818099'],
+      ['8481.80.9910 dùng cho van được không', '84818099'],
+      ['8481 80 9910 dùng cho van được không', '84818099'],
+      ['mã hs "848180" dùng cho van được không', '848180'],
+      ['mã hs là 848180 dùng cho van được không', '848180'],
+      ['mã hs 300510 hay 382490 được không', '382490'],
+    ] as const) {
+      for (const intent of ['hs', 'legal']) {
+        const { svc, run, legal } = setup({ plan: { intent, question: 'Hàng này có dùng được [mã 1] không' }, sources: [GUIDE] });
+        expect(await svc.answer({ q })).toMatchObject({ codeRole: 'premise', mode: 'hs', reason: 'compose_failed' });
+        for (const text of [...run.mock.calls.map(([prompt]) => prompt), ...legal.gather.mock.calls.map(([query]) => query)]) {
+          expect(text.replace(/[.\s"]/g, '')).not.toContain(code);
+        }
+      }
+    }
+  });
+
+  it('row 19: a plan sent back keeps the document the state cites, and scope reads that document', async () => {
+    const { svc, legal } = setup();
+    const state = { legal: { citations: [{ label: 'Điều 18', documentNumber: '08/2015/NĐ-CP' }, { label: 'Điều 16', documentNumber: '38/2015/TT-BTC' }] } };
+    const q = 'nguyên văn điều đó';
+    const res = await svc.answer({ q, plan: { intent: 'legal', scope: { doc: '38/2015/TT-BTC', article: '16' } }, context: { topic: 'legal', state }, planOnly: true });
+    expect(res.plan.scope).toEqual({ doc: '38/2015/TT-BTC', article: '16', clause: null });
+    expect(legal.scope).toHaveBeenCalledWith(q, '38/2015/TT-BTC');
+  });
+
   it('a premise message writing its heading bare is still answered, the heading never prompted (R4)', async () => {
     const { svc, prompts, legal } = setup({ plan: PHOTO_PLAN, drafts: [PHOTO_DRAFT], sources: [EN3005], lines: [{ prefix: '3005', heading: HEADING_TEXT }] });
     const res = await svc.answer({ q: 'miếng dán thuộc 3005 hay 3824, mã 3005.10.10 có đúng không' });

@@ -279,6 +279,8 @@ Trả về:
   5. SEN (hướng dẫn);
   6. case;
   7. mục `hsCodeSections` còn lại.
+
+  Hệ quả, **chờ trưởng nhóm hoặc chủ dự án chốt**: `headingSections` trả tới số nhóm + 2 × số chương, nên khi các nhóm ứng viên trải từ 3 chương trở lên (ví dụ 30.05, 33.07, 38.24), EN và `hs_note` chiếm đủ 8 chỗ và không dòng SEN hay case nào được ghim. SEN và case chỉ được ghim khi EN và chú giải còn chừa chỗ, thường là tối đa 2 chương. Phương án nếu cần giữ SEN: chú giải chương, phần đứng trước SEN, còn chú giải phân nhóm lùi xuống sau SEN, trước case. Chưa ảnh hưởng thật: DB dev chưa có dòng SEN nào gắn nhóm, nhưng sẽ ảnh hưởng khi seed bằng chứng của c8 lên.
 - **Đúng mã trước tiền tố:** `hsCodeSections` (tối đa 3) xếp mục có `hs_codes` chứa đúng mã được hỏi (dạng có chấm, cùng độ dài) trước mục chỉ khớp tiền tố, rồi theo thẩm quyền, rồi id. Seed của c8 thêm cấp cha (`6506`, `6506.10`) vào `hs_codes`, nên nếu không xếp thế thì mục chỉ khớp tiền tố có thể chiếm hết 3 chỗ.
 - **Mã premise của người dùng không bao giờ thành pin** (D1).
 - **Gộp và cắt:** gộp theo `key`, mục ghim đứng trước, rồi xếp theo `bestDist`. Tối đa 12 nguồn và `ANSWER_PROMPT_CHARS`. Citation giữ nguyên thân để kiểm quote.
@@ -514,10 +516,14 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 
 1. **Che mã** bằng `maskCodes` trong `plan.ts`: port nguyên `HS_TOKEN`, `JOINED_HEADING` và `key` của `dispatch.mjs` ở `a37c663`.
    - Chuẩn hoá NFC trước.
-   - Che mọi cách viết mã 8 số, `dddd.dd(.dd)`, `dd.dd(.dd)` đứng riêng, và chữ số sau `nhóm (hàng)|mã (số)|hs (code)|chương` (có hoặc không có `:`).
-   - Sau từ khoá, một dãy số liền `\d{4}(\d{2}){0,2}` cũng là mã: "mã hs 848180", "hs 848180 dùng cho van được không" bị che, có trong `userCodes` ở dạng có chấm (`8481.80`), và chốt ở bước 4 bỏ phần nào còn viết nó.
-   - Nhóm 4 số đứng trần, không có từ khoá, chỉ bị che khi một mã trong sổ (tin này hoặc phần đã che trước đó) bắt đầu bằng nó (`BARE_HEADING`: "thuộc 3005 hay 3824, mã 3005.10.10"), hoặc khi nó nối sau một nhóm đã che bằng `,`, `hay`, `hoặc`, `và`, `sang` (`JOINED_HEADING`). Bốn số đứng một mình khác, như "năm 2026", giữ nguyên.
-   - Không che: ngày, số tiền, giờ, năm, số hiệu văn bản ("Thông tư 36/2026"), và dãy từ 9 chữ số liền trở lên ("mã số thuế 0312345678", số điện thoại). Giới hạn biết trước: dòng 10 số gõ liền ("8481809910") cũng không bị che; có chấm hoặc cách thì vẫn che.
+   - Che mọi cách viết mã 8 số, `dddd.dd(.dd)`, `dd.dd(.dd)` đứng riêng, và chữ số sau `nhóm (hàng)|mã (số)|hs (code)|chương`. Giữa từ khoá và chữ số được có "là", `:`, `-`, `=`, ngoặc kép (`"` hoặc `“`) hay ngoặc đơn: "mã hs là 848180", "mã hs “848180”", "mã hs (848180)".
+   - Sau từ khoá, một dãy số liền `\d{4}(\d{2}){0,2}` cũng là mã: "mã hs 848180", "hs 848180 dùng cho van được không" bị che, có trong `userCodes` ở dạng có chấm (`8481.80`), và chốt ở bước 4 bỏ phần nào còn viết nó. Sau `mã` hoặc `mã số`, 6 số liền cũng đọc là phân nhóm, kể cả số hồ sơ ("mã số 123456 của hồ sơ" → vai `premise`, kế hoạch `legal` thành `hs`): che thừa có chủ ý; chỉ xem lại nếu chủ dự án thấy câu hỏi số hồ sơ bị định tuyến sai khi thử trên Zalo.
+   - Dòng 10 số là mã 8 số đầu của nó khi viết có chấm hoặc cách (`8481.80.9910`, `8481 80 9910`, `8481.80.99.10`), hoặc viết liền ngay sau `hs`, `mã hs`, `hs code` ("mã hs 8481809910").
+   - Nhóm 4 số đứng trần, không có từ khoá, chỉ bị che khi một mã trong sổ (tin này hoặc phần đã che trước đó) bắt đầu bằng nó (`BARE_HEADING`: "thuộc 3005 hay 3824, mã 3005.10.10"), hoặc khi nó nối sau một mã đã che bằng `,`, `hay`, `hoặc`, `và`, `sang` (`JOINED_HEADING`, nhận cả phân nhóm 6 số liền: "mã hs 300510 hay 382490", "mã hs 848180, 848190"). Bốn số đứng một mình khác, như "năm 2026", giữ nguyên.
+   - Không bao giờ là mã: bốn số đầu `dd00`, `1906`–`1999`, `2010`–`2099`, vì không nhóm nào như vậy (chương 19 hết ở 1905, chương 20 hết ở 2009). Nên "HS 2022", "HS 2017", "mức phạt 20000000 đồng", ngày "20260915" giữ nguyên; "nhóm 2009", "chương 20" vẫn bị che. Trần: số tiền khác có dáng mã, như 12500000, vẫn bị che thừa.
+   - Không che: ngày, số tiền, giờ, năm, số hiệu văn bản ("Thông tư 36/2026").
+   - Dãy từ 9 chữ số liền trở lên, không đứng sau từ `hs`, thành `[số]` ("mã số thuế [số]", số điện thoại, "8481809910" gõ trần): không chữ số nào tới model, không thành mã, không có dòng `userCodes`.
+   - **Giới hạn biết trước (R4 còn hở):** 6 số liền không có từ khoá đứng ngay trước ("e khai 848180 được không"), hoặc từ khoá cách bởi chữ khác ("mã hs của hàng là 848180"), không bị che, `userCodes` rỗng, nên chốt không có gì để kiểm. Không nới thành "cách tối đa vài từ", vì như thế che thừa số hồ sơ. Theo dõi riêng.
    - Áp cho tin mới, quote, lượt cũ và dòng trạng thái.
 2. **`codeRole` do code quyết**, trên chữ đã gập dấu (NFD, bỏ dấu, đ→d):
 
@@ -601,7 +607,9 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
   1. kế hoạch trả `refine`, `refines: true` và `goods` đã sửa;
   2. API chạy lại chế độ hs;
   3. compose nhận LƯỢT TRƯỚC và được dặn mở bằng một câu ghi nhận đính chính ("À, là hộp bằng vải — …").
-- **"nguyên văn điều đó":** `scope.article` lấy từ `state.legal.citations` → `legalProvision`. Dòng trạng thái của prompt kế hoạch nêu nhãn nguồn (`label`, hoặc `provisionLabel` của state cũ), kèm số hiệu văn bản khi nhãn chưa có nó: "Điều 18 (08/2015/NĐ-CP)".
+- **"nguyên văn điều đó":** `scope.article` và `scope.doc` lấy từ `state.legal.citations` → `legalProvision`. Dòng trạng thái của prompt kế hoạch nêu nhãn nguồn (`label`, hoặc `provisionLabel` của state cũ), kèm số hiệu văn bản khi nhãn chưa có nó: "Điều 18 (08/2015/NĐ-CP)".
+  - `normalizePlan` giữ `scope.doc` khi số hiệu đó là `documentNumber` của một nguồn trong state (`citedDocs`), và trả đúng cách viết của state. Kế hoạch bot gửi lại cũng được đọc như vậy. Số hiệu không có trong chữ người dùng lẫn state thì vẫn bị bỏ: model chỉ nhận ra số hiệu, không tự đặt ra.
+  - Nhờ vậy, khi lượt trước trích hai văn bản, bot tra đúng văn bản người dùng nhắm tới chứ không lấy nguồn đầu tiên.
 - **"còn từ Nhật thì sao":** tin không nêu mã, kế hoạch `tariff` có `reuseLastHs` hoặc bot ép `forceIntent: "tariff"`.
   - API lấy `state.tariff.dotted` (đủ 8 số) làm mã vai `key` để tra `/tariff`; xuất xứ và ngày theo kế hoạch.
   - Chữ số của mã đó không vào prompt nào, kể cả đuôi dòng 10 số trong dòng thuế.

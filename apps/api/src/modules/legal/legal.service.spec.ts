@@ -370,6 +370,15 @@ describe('LegalService.scope and gather — the halves POST /answer calls (plan 
     expect(sources.map((s) => s.key)).toEqual(['e:1', 'e:2', 'e:3', 'e:4', 'e:7', 'e:8', 'e:9', 'e:5']);
     // SEN is ranked by heading alone: no asked code reaches its query.
     expect((senSections as jest.Mock).mock.calls.at(-1)!.slice(1)).toEqual([['84.81'], '2026-09-14', 2]);
+
+    // Headings in three chapters: EN and HS notes fill all 8 pins, so no SEN row or case is pinned (§2.4).
+    (headingSections as jest.Mock).mockResolvedValueOnce([20, 21, 22].map((id) => pin(id, 'en')).concat([23, 24, 25, 26, 27, 28].map((id) => pin(id, 'hs_note'))));
+    (senSections as jest.Mock).mockResolvedValueOnce([pin(29, 'sen'), pin(30, 'sen')]);
+    (caseSections as jest.Mock).mockResolvedValueOnce([pin(31, 'ruling')]);
+    const crowded = await new LegalService({ execute: async () => [] } as never, embedding).gather('Miếng dán ngải cứu thuộc nhóm nào', {
+      asOf: '2026-09-14', hsCodes: [], headings: ['30.05', '33.07', '38.24'], clauses: 0, cases: true, sen: 2,
+    });
+    expect(crowded.sources.map((s) => s.key)).toEqual(['e:20', 'e:21', 'e:22', 'e:23', 'e:24', 'e:25', 'e:26', 'e:27']);
   });
 
   it('gather with clauses 0 searches no statute clauses', async () => {
