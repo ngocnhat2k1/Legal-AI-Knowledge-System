@@ -34,8 +34,18 @@ const HEADING_OR_CODE = /(?<![\d.,/])(?:\d{2}\.\d{2}|\d{4}(?:\.\d{2}){0,2}|\d{8}
 // the lookbehinds read, "chưa/không" at most 120 characters before "để", four verbs in a chain.
 const SETTLING = new RegExp(
   `(?<![\\p{L}])(?<!(?:có|không|chưa)(?:\\s{1,8}thể)?\\s{1,8})(?<!^\\s{0,8}\\**\\s{0,8}để\\s{1,8})(?<!(?<![\\p{L}])(?:chưa|không)(?![\\p{L}])[^,;:]{0,120}\\sđể\\s{1,8})(?:(?:phải|nên|chỉ\\s+có\\s+thể|chắc\\s+chắn|chốt|đề\\s+xuất|kết\\s+luận)(?:\\s+(?:phải|xét|khai|áp|vào|là|thuộc)){0,4}(?:\\s+(?:mã|nhóm)(?:\\s+(?:số|HS))?)?\\s+\\**${HEADING_OR_CODE.source}|thuộc\\s+hẳn(?![\\p{L}]))`,
-  'iu',
+  'giu',
 );
+/** Every SETTLING match in `s`, overlapping ones too: each position is tried once, as `test` would try it. */
+const settlingIn = (s: string): RegExpExecArray[] => {
+  const out: RegExpExecArray[] = [];
+  SETTLING.lastIndex = 0;
+  for (let m = SETTLING.exec(s); m; m = SETTLING.exec(s)) {
+    out.push(m);
+    SETTLING.lastIndex = m.index + 1;
+  }
+  return out;
+};
 // "khi" and "trường hợp" make a condition only with a "thì" at most 200 characters on ("khi hàng có lớp dính thì …") or
 // as "khi đó": "Khi chưa rõ công dụng, phải xét 38.24", "trong trường hợp này … chắc chắn thuộc" and "sau/trước khi đối
 // chiếu (thì) chắc chắn thuộc" settle; "khiếu/khiến" is no "khi".
@@ -43,15 +53,43 @@ const CONDITIONAL =
   /(?<![\p{L}])(?:nếu|tùy|tuỳ|trừ\s+khi|khi\s+đó|(?:(?<!(?:sau|trước)\s)khi|trường\s+hợp(?!\s+này))(?![\p{L}])(?:[^.;?!]|\.(?=\d)){0,200}?\sthì)(?![\p{L}])/iu;
 const CONFIDENCE = /(?<![\p{L}])độ\s+tin\s+cậy(?![\p{L}])/iu;
 
+// A condition that says what is not known settles as surely as "Chưa rõ công dụng nên phải xét 38.24". The verb's own
+// condition runs from the last "nếu/khi/trường hợp" in the 120 characters before it to its "thì" or comma, with no second
+// break before the verb; as on main, the verb still settles nothing after a hedge ("chưa nên vội chốt", "rất khó kết
+// luận"), before a listed heading ("30.05 và nhóm 38.24") or before a condition of its own ("chỉ nên khai 30.05 khi …").
+// Known ceilings, left to the compose prompt and repair: ignorance in other words ("thông tin chưa đủ để xác định"), a
+// finding read as ignorance ("kiểm nghiệm không xác định được dược chất nào"), a condition after the verb.
+const OPENER = /(?<![\p{L}])(?:nếu|khi(?!\s+đó)|trường\s+hợp(?!\s+này))(?![\p{L}])/giu;
+const IGNORANCE =
+  /(?<![\p{L}])(?:(?:chưa|không)\s+(?:rõ|biết|xác\s+định)|(?:chưa\s+có|thiếu|không\s+có|chưa\s+đủ)\s+(?:thông\s+tin|căn\s+cứ|dữ\s+kiện|tài\s+liệu))(?![\p{L}])/iu;
+const BREAK = /[,;:]\s*(?:thì(?![\p{L}]))?|(?<![\p{L}])thì(?![\p{L}])/iu;
+const HEDGE = /(?<![\p{L}])(?:chưa|không|khó)(?![\p{L}])/iu;
+const LISTED = /^\**(?:\s*\[\d+\])*\s*(?:,|(?<=\s)(?:và|hoặc|hay)(?![\p{L}]))\s*(?:(?:mã|nhóm|phân\s+nhóm)\s+)?\**\d/iu;
+const unknownCondition = (s: string, m: RegExpExecArray): boolean => {
+  const from = Math.max(0, m.index - 120);
+  const before = s.slice(from, m.index);
+  const open = [...before.matchAll(OPENER)].pop();
+  if (!open || (open.index === 0 && /\p{L}/u.test(s[from - 1] ?? ''))) return false;
+  const [condition, then = '', ...more] = before.slice(open.index + open[0].length).split(BREAK);
+  const after = s.slice(m.index + m[0].length, m.index + m[0].length + 60);
+  return !more.length && IGNORANCE.test(condition!) && !HEDGE.test(then) && !LISTED.test(after) && after.split(/[,;:]/)[0]!.search(OPENER) < 0;
+};
+
 /**
  * Sentences settling goods under one heading or code (R2, R3, R5): "phải (xét/khai/thuộc)", "nên (là/thuộc)", "chắc chắn
  * thuộc", "chốt (là)", "đề xuất", "kết luận" before a heading or code, outside a "nếu/tùy/trừ khi/khi đó" or "khi/trường
- * hợp … thì" condition; and any "độ tin cậy". Observed 2026-09-14 on "miếng dán bàn chân ngải cứu": "chưa xác định được
- * công dụng cụ thể … nên phải xét vào 38.24". Conditional reasoning ("nếu có chỉ định điều trị thì hướng về 30.04",
- * "… khi đó phải xét tiếp nhóm 38.24") and a heading still to check ("nên xét thêm nhóm 38.24") pass.
+ * hợp … thì" condition or inside one saying what is not known; and any "độ tin cậy". Observed 2026-09-14 on "miếng dán bàn
+ * chân ngải cứu": "chưa xác định được công dụng cụ thể … nên phải xét vào 38.24". Conditional reasoning ("nếu có chỉ định
+ * điều trị thì hướng về 30.04", "… khi đó phải xét tiếp nhóm 38.24") and a heading still to check ("nên xét thêm nhóm
+ * 38.24") pass.
  */
 export const settlementClaims = (text: string): string[] =>
-  splitSentences(text).filter((s) => CONFIDENCE.test(s) || (HEADING_OR_CODE.test(s) && SETTLING.test(s) && !CONDITIONAL.test(s)));
+  splitSentences(text).filter((s) => {
+    if (CONFIDENCE.test(s)) return true;
+    if (!HEADING_OR_CODE.test(s)) return false;
+    const conditional = CONDITIONAL.test(s);
+    return settlingIn(s).some((m) => !conditional || unknownCondition(s, m));
+  });
 
 const digits = (s: string): string => s.replace(/\D/g, '');
 

@@ -248,6 +248,12 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
       'Trước khi có nhãn thì mình chốt 38.24 [2].',
       'Hàng khiếu nại thì chắc chắn thuộc 38.24 [2].',
       'Đã đủ căn cứ để chốt 38.24 [2].',
+      // A condition saying what is not known settles as if there were none: the verb's own condition, from the last
+      // "nếu/khi/trường hợp" before it to its "thì" or comma.
+      'Khi chưa rõ công dụng thì phải xét 38.24 [2].',
+      'Nếu chưa xác định được công dụng, thì nên khai 38.24 [2].',
+      'Trường hợp chưa có thông tin về dược chất thì chỉ có thể thuộc 38.24 [2].',
+      'Nếu chưa rõ công dụng thì khi đó phải xét 38.24 [2].',
     ]) {
       const r = verify(draft(`${lead} ${s}`, [q1, q2]), [en3005, en3824], ctx());
       expect([r.answerMd, r.violations]).toEqual([lead, [expect.objectContaining({ rule: 'G4', sentence: s })]]);
@@ -267,8 +273,33 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
       'Để chốt 30.05 hay 38.24, cần biết công dụng.',
       'Sau khi có nhãn, nếu có dược chất thì phải xét 30.05 [1].',
       'Khi có nhãn ghi công dụng điều trị thì phải xét 30.04 [1].',
+      // A trait that is absent is a fact; what is not known before no settling verb, or in another case of the sentence, passes.
+      'Nếu không có dược chất thì xét 38.24 [2].',
+      'Nếu không có dược chất thì phải xét 38.24 [2].',
+      'Nếu chưa rõ công dụng thì cần bổ sung tài liệu [1].',
+      'Nếu chưa rõ công dụng thì chưa thể chốt 38.24.',
+      'Nếu có dược chất thì phải xét 30.05, còn nếu chưa rõ công dụng thì cần bổ sung tài liệu [1].',
+      'Nếu chưa rõ công dụng thì cần bổ sung tài liệu, còn nếu có dược chất thì phải xét 30.05 [1].',
+      // After what is not known: a hedge before the verb, headings listed after it, a condition of its own after it.
+      'Nếu chưa rõ công dụng thì chưa nên vội chốt 38.24 [2].',
+      'Nếu chưa rõ công dụng thì chưa thể khẳng định chắc chắn thuộc 38.24 [2].',
+      'Khi chưa xác định được dược chất thì không được chốt 30.05 [1].',
+      'Khi chưa có tài liệu kỹ thuật thì rất khó kết luận 30.05 hay 38.24 [1] [2].',
+      'Nếu chưa rõ công dụng thì phải xét nhóm 30.05 và nhóm 38.24 song song [1] [2].',
+      'Nếu chưa rõ công dụng thì chỉ nên khai 30.05 khi có chứng từ chứng minh dược chất [1].',
+      // Known ceilings: a condition after the verb is not read, as on main; nor is ignorance in other words.
+      'Hàng phải xét 38.24 nếu chưa rõ công dụng [2].',
+      'Nếu thông tin chưa đủ để xác định công dụng thì phải xét 38.24 [2].',
     ];
     expect(settlementClaims(prose.join(' '))).toEqual([]);
+    // Known ceilings, cut and left to repair where main let them pass: a finding reads as ignorance; "nên xét 30.05 trước"
+    // settles as it does with no condition at all.
+    const ceilings = [
+      'Nếu kết quả kiểm nghiệm không xác định được dược chất nào thì phải xét 38.24 [2].',
+      'Nếu chưa rõ công dụng thì nên xét 30.05 trước, vì Chú giải Chương 38 loại trừ hàng thuộc Chương 30 [1] [2].',
+    ];
+    expect(settlementClaims(ceilings.join(' '))).toEqual(ceilings);
+    expect(settlementClaims('Nên xét 30.05 trước [1].')).toHaveLength(1);
   });
 
   it('G4: two candidates with no missing fact is a violation for repair only', () => {
