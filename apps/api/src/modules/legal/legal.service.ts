@@ -511,6 +511,8 @@ export function evidenceSource(e: RetrievedEvidence, asOf: string, codes: string
     hs: { heading: e.hsHeading, chapter: e.hsChapter, codes: e.hsCodes },
     meta: {
       ...e.meta,
+      // The walkthrough prints standing in words from this (walkthrough.ts row()); without it a SEN row read as binding.
+      authority: e.authority,
       hs_codes: e.hsCodes,
       document_number: e.documentNumber,
       anchor: e.meta.anchor ?? e.title,

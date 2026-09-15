@@ -421,9 +421,10 @@ describe('LegalService.scope and gather — the halves POST /answer calls (plan 
       hs_codes: [], document_number: '69/2018/NĐ-CP', anchor: 'Khoản 2 Điều 73', effective_from: '2018-05-15', effective_to: null,
       effectiveness: 'con_hieu_luc', verification: 'verified',
     });
+    // `authority` travels too: the walkthrough prints an evidence row's standing in words from it (walkthrough.ts row()).
     expect(sources[1]!.meta).toEqual({
       anchor: 'Phụ lục II', hs_codes: ['6506', '6506.10', '6506.10.10'], document_number: '36/2026/TT-BKHCN', effective_from: '2026-07-01',
-      effective_to: null, effectiveness: 'con_hieu_luc', verification: 'auto_unverified',
+      effective_to: null, effectiveness: 'con_hieu_luc', verification: 'auto_unverified', authority: 'binding',
     });
     // Passed through untouched: hs2022 travels in meta, not as a field of its own.
     expect(sources[2]!.meta).toMatchObject({ case_id: 'c#1', ahtn_2022: { trang_thai: 'hien_hanh' }, hs2022: '8509.40' });

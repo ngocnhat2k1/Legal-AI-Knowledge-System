@@ -743,7 +743,7 @@ function conversation() {
     globalThis.fetch = async (url, init = {}) => {
       const u = new URL(url);
       const body = init.body ? JSON.parse(init.body) : undefined;
-      if (u.pathname !== '/conversation') calls.push({ path: u.pathname, body });
+      if (u.pathname !== '/conversation') calls.push({ path: u.pathname, body, hs: u.searchParams.get('hs') });
       const out = u.pathname === '/conversation' ? memo : await api(u.pathname, body, u);
       return { ok: out != null, status: out != null ? 200 : 404, json: async () => out };
     };
@@ -786,6 +786,18 @@ test('Việc 12 (1): tra thuế trần không qua bước kế hoạch; văn xu�
   const [sent] = render(run.r.text);
   assert.ok(sent.msg.startsWith(`${prose}\n\nHàng hóa có mã HS 8481.80.99`), sent.msg.slice(0, 120));
   assert.equal(run.r.tariff.hs, '84818099', 'kết quả tra vẫn được đóng dấu để "đúng"/"sai" dùng được');
+});
+
+test('Việc 12 (D3a): báo cáo phân loại full tra /tariff cho từng mã tariff_ref và in khối do code dựng; brief thì không', async () => {
+  const full = { ...composedHs, depth: 'full', asOf: '2026-09-15', tariffRef: ['3005.10.10', '3824.99.99'] };
+  const run = await conversation().say(PHOTO_Q, fakeApi({ planned: plannedOf(plan08()), composed: full }));
+  const looked = run.calls.filter((x) => x.path === '/tariff');
+  assert.deepEqual(looked.map((x) => x.hs), ['30051010', '38249999'], 'một lượt tra cho mỗi mã walkthrough trỏ tới');
+  assert.ok(run.text.includes('MFN'), 'khối thuế do code dựng nằm dưới báo cáo (R1)');
+
+  const brief = await conversation().say(PHOTO_Q, fakeApi({ planned: plannedOf(plan08()), composed: { ...full, depth: 'brief' } }));
+  assert.equal(brief.calls.filter((x) => x.path === '/tariff').length, 0, 'brief không tra thuế');
+  assert.ok(!brief.text.includes('MFN'));
 });
 
 test('Việc 12 (2): câu hỏi mã có hợp với hàng: planOnly rồi soạn trên đúng kế hoạch đó; ack đúng một lần, không chữ số; state không giữ mã người dùng', async () => {

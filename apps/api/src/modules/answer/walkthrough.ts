@@ -194,7 +194,10 @@ export function normalizeWalkthrough(draft: unknown, input: ClassifyInput): Walk
       const id = hash || !list.length ? n : list[n - 1];
       return typeof id === 'number' && rows.has(id) ? `[${hash || list.length ? '#' : '?'}${id}]` : undefined;
     };
+    // NFC, as the section checks read it (nfc in walkthrough.checks): on NFD output every sentence validateWalkthrough
+    // named would match nothing in cutSentences or repairItems, and the rules only those checks own would cut nothing.
     const md = String(s.markdown ?? '')
+      .normalize('NFC')
       .replace(MARKER, (m) => {
         const tokens = [...new Set(refsIn(m).map(token))].filter(Boolean);
         return tokens.length ? lead(m) + tokens.join('') : '';
