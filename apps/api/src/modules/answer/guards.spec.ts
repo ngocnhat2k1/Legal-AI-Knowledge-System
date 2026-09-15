@@ -302,6 +302,25 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     expect(settlementClaims('Nên xét 30.05 trước [1].')).toHaveLength(1);
   });
 
+  it('G4: a verdict label before one lone heading settles; a list or an explanation after the label passes, as on main', () => {
+    for (const s of ['**Kết luận:** nhóm 38.24 [2].', 'Kết luận: 38.24 [2].', 'Đề xuất: 38.24 [2].', '**Đề xuất:** khai mã 38.24 [2].']) {
+      const r = verify(draft(`${lead} ${s}`, [q1, q2]), [en3005, en3824], ctx());
+      expect([r.answerMd, r.violations]).toEqual([lead, [expect.objectContaining({ rule: 'G4', sentence: s })]]);
+    }
+    const prose = [
+      'Kết luận: 30.05 hoặc 38.24 [1] [2].',
+      '**Kết luận:** nhóm 30.05 hoặc nhóm 38.24, tùy công dụng ghi trên nhãn [1] [2].',
+      'Kết luận: cần thêm dữ kiện để phân biệt 30.05 và 38.24.',
+      '**Kết luận:** mã 3005.10.10 chỉ áp dụng cho băng, gạc có lớp dính [1].',
+      '**Kết luận:** nhóm 30.05 chỉ nhận hàng đã thấm tẩm dược chất [1].',
+      // Known ceilings: words after the heading, a longer label, goods named before "thuộc".
+      'Kết luận: 38.24 vì hàng không có dược chất [2].',
+      '**Kết luận sơ bộ:** 38.24 [2].',
+      '**Kết luận:** hàng thuộc nhóm 38.24 [2].',
+    ];
+    expect(settlementClaims(prose.join(' '))).toEqual([]);
+  });
+
   it('G4: two candidates with no missing fact is a violation for repair only', () => {
     const d = draft('Hai hướng [1] [2].', [q1, q2], { candidates: [{ hs: '30.05', evidence: [1] }, { hs: '38.24', evidence: [2] }] });
     const r = verify(d, [en3005, en3824], ctx());

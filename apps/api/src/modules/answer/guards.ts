@@ -30,12 +30,20 @@ const HEADING_OR_CODE = /(?<![\d.,/])(?:\d{2}\.\d{2}|\d{4}(?:\.\d{2}){0,2}|\d{8}
 // A settling verb, any of "phải/xét/khai/áp/vào/là/thuộc", an optional "mã/nhóm (số/HS)", then the heading: "phải khai
 // 38.24", "Mình chốt là 38.24". After "có/không/chưa (thể)" the verb asks or denies: "có phải 38.24 không" settles nothing;
 // nor does "để" + verb opening the sentence or after an earlier "chưa/không" in its clause ("Để chốt 30.05 hay 38.24, cần …",
-// "Chưa đủ căn cứ để chốt 38.24"), while "Đã đủ căn cứ để chốt 38.24" settles. Bounds: at most 8 spaces between words
-// the lookbehinds read, "chưa/không" at most 120 characters before "để", four verbs in a chain.
+// "Chưa đủ căn cứ để chốt 38.24"), while "Đã đủ căn cứ để chốt 38.24" settles. Group 1 is a verdict label's ":" and stars
+// right after the verb ("**Kết luận:** nhóm 38.24"); stars and spaces never share a quantifier. Bounds: at most 8 spaces
+// between words the lookbehinds read, "chưa/không" at most 120 characters before "để", four verbs in a chain.
 const SETTLING = new RegExp(
-  `(?<![\\p{L}])(?<!(?:có|không|chưa)(?:\\s{1,8}thể)?\\s{1,8})(?<!^\\s{0,8}\\**\\s{0,8}để\\s{1,8})(?<!(?<![\\p{L}])(?:chưa|không)(?![\\p{L}])[^,;:]{0,120}\\sđể\\s{1,8})(?:(?:phải|nên|chỉ\\s+có\\s+thể|chắc\\s+chắn|chốt|đề\\s+xuất|kết\\s+luận)(?:\\s+(?:phải|xét|khai|áp|vào|là|thuộc)){0,4}(?:\\s+(?:mã|nhóm)(?:\\s+(?:số|HS))?)?\\s+\\**${HEADING_OR_CODE.source}|thuộc\\s+hẳn(?![\\p{L}]))`,
+  `(?<![\\p{L}])(?<!(?:có|không|chưa)(?:\\s{1,8}thể)?\\s{1,8})(?<!^\\s{0,8}\\**\\s{0,8}để\\s{1,8})(?<!(?<![\\p{L}])(?:chưa|không)(?![\\p{L}])[^,;:]{0,120}\\sđể\\s{1,8})(?:(?:phải|nên|chỉ\\s+có\\s+thể|chắc\\s+chắn|chốt|đề\\s+xuất|kết\\s+luận)(:?\\**)(?:\\s+(?:phải|xét|khai|áp|vào|là|thuộc)){0,4}(?:\\s+(?:mã|nhóm)(?:\\s+(?:số|HS))?)?\\s+\\**${HEADING_OR_CODE.source}|thuộc\\s+hẳn(?![\\p{L}]))`,
   'giu',
 );
+// After a label the heading settles only alone, markers and end punctuation at most: "Kết luận: 30.05 hoặc 38.24" and
+// "**Kết luận:** mã 3005.10.10 chỉ áp dụng cho …" pass as on main. Known ceiling: "Kết luận: 38.24 vì …".
+const LONE = /^[\s*.;!?]*(?:\[\d+\][\s*.;!?]*)*$/;
+const lone = (s: string, m: RegExpExecArray): boolean => {
+  const rest = s.slice(m.index + m[0].length);
+  return rest.length <= 40 && LONE.test(rest);
+};
 /** Every SETTLING match in `s`, overlapping ones too: each position is tried once, as `test` would try it. */
 const settlingIn = (s: string): RegExpExecArray[] => {
   const out: RegExpExecArray[] = [];
@@ -88,7 +96,7 @@ export const settlementClaims = (text: string): string[] =>
     if (CONFIDENCE.test(s)) return true;
     if (!HEADING_OR_CODE.test(s)) return false;
     const conditional = CONDITIONAL.test(s);
-    return settlingIn(s).some((m) => !conditional || unknownCondition(s, m));
+    return settlingIn(s).some((m) => (!m[1] || lone(s, m)) && (!conditional || unknownCondition(s, m)));
   });
 
 const digits = (s: string): string => s.replace(/\D/g, '');
