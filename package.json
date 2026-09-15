@@ -15,6 +15,7 @@
     "start:dev": "nest start --watch",
     "start:prod": "node dist/apps/api/main.js",
     "test": "jest",
+    "test:growth": "jest --runInBand --testRegex \"\\.growth\\.spec\\.ts$\"",
     "test:watch": "jest --watch",
     "test:bot": "node --test \"apps/zalo-bot/*.test.mjs\"",
     "test:parser": "python3 -m unittest discover -s research/legal-loader -p 'test_*.py' && python3 -m unittest discover -s research/fta-loader -p 'test_*.py' && python3 -m unittest discover -s research/inbox-loader -p 'test_*.py'",
@@ -56,7 +57,7 @@
       "ts"
     ],
     "rootDir": ".",
-    "testRegex": ".*\\.spec\\.ts$",
+    "testRegex": ".*(?<!\\.growth)\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },

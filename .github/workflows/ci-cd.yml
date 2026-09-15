@@ -51,6 +51,9 @@ jobs:
       # A seeded DATABASE_URL turns on db/seed/golden.spec.ts; legal-golden also needs an embedder and stays skipped.
       - run: yarn db:migrate && yarn db:seed
       - run: yarn test
+      # The growth specs read a ratio off a wall clock, so they run alone: beside parallel jest workers one side
+      # of the ratio loses its core and a linear function reads as a regression.
+      - run: yarn test:growth
       - run: yarn test:bot
       - run: yarn test:parser
 
