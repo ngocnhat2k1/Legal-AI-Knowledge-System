@@ -189,6 +189,48 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
     - Thứ tự pin: hs_note đứng trước SEN. Hệ quả đã ghi ở §2.4: nhóm hỏi trải từ 3 chương trở lên thì không còn chỗ cho SEN.
     - Row 19: `stateOf` nêu văn bản của nguồn đã trích; `normalizePlan` giữ `scope.doc` khớp với văn bản đó.
     - Tài liệu plan 08 §0, §2.4, §4.2, §6.2 đã cập nhật.
+  - **`plan08/guards-minimal` đã rà lại đạt ở `990d02f`** (8 commit + 1 sửa; jest 356 qua).
+    - Mọi guard chạy tuyến tính. Ở 5k ký tự: main mất 46–401 ms, nhánh mất 0,2–9 ms.
+    - Vòng rà bắt được 2 ReDoS (trim số hiệu văn bản trong numberMarkers; đầu mệnh đề của G6), G1 dò bằng Array, G2 chuẩn hoá thân nguồn lặp lại, và luật `LISTED` gây hồi quy. Tất cả đã sửa.
+    - AMOUNT chỉ coi là số tiền khi có đơn vị tiền theo sau; TARIFF_WORDS thêm thuế/VAT/GTGT.
+    - Quoted criteria chỉ lấy từ nguồn chính câu đó đánh dấu; anchors chỉ neo vào nguồn còn quote.
+    - Đang chạy vòng dọn: AMOUNT với số lượng kèm markdown/dấu câu; trần chi phí item 6; export `dotted('')` và AMOUNT không cờ g.
+    - **Quyết (R10 không nới):** câu pháp lý đổi "20.000.000 đồng" thành "20 triệu đồng" thì văn xuôi bị bỏ, chỉ còn trích dẫn. Prompt compose và legal thêm dòng "viết số tiền/%/ngày đúng như nguồn".
+  - **Việc 12, vòng danh sách lệnh đóng** (`333173a`, `d20860a`, `9a27e85`, `94d9725`, sửa ở `33ed479`; bot 139).
+    - Sổ chỉ ghi qua `ruling()` với các dạng: một từ phán quyết; "mã này sai"; "HS đúng là X [xuất xứ] [căn cứ]".
+    - Điều kiện:
+      - chữ có dấu phải khớp đúng dấu; có "?", "à" hoặc "hả" thì không ghi;
+      - bảng đang mở, tin trả lời gần nhất của bot trong luồng là cho chính người đó, và bảng chưa có phán quyết;
+      - quote phải là tin tra có "Tra theo ngày" đúng ngày; quote câu mời hoặc tin ứng viên không bao giờ ghi.
+    - Nhãn khối mixed đi cùng dòng mở đầu; R18 in "(trích tự động, chưa đối chiếu)" trên dòng nguồn; "còn từ Nhật thì sao" có prose.
+    - Rà lại: 150 kịch bản tấn công, không có lần ghi ngoài dự kiến; sweep render 942.566 phần, 0 vi phạm.
+    - Còn 1 blocker: "xuất xứ jp/nhat ban…" khớp cú pháp nhưng `detectOrigin` không đọc được, nên ghi sai xuất xứ.
+    - Đang sửa theo hướng không ghi:
+      - không đọc được xuất xứ thì không ghi; danh sách nước phải trùng với `detectOrigin`;
+      - bỏ các dạng không dấu mơ hồ ("dung a", "khong dung", "nhầm mã");
+      - lưu bộ nhớ lỗi thì đóng bảng ngay trong tiến trình.
+  - **`plan08/guards-minimal`, vòng dọn `2f08e09`:** 5 lỗi nhỏ đã đúng. Gồm: AMOUNT không coi số lượng kèm markdown/dấu câu là tiền; item 6 chuẩn hoá một lần + trần 20 span/câu; export không cờ g, `dotted('')` = ''; prompt compose và legal có dòng "chép đúng như nguồn, không quy đổi đơn vị".
+    - Rà lại chưa đạt vì một lý do: test thời gian "< 50 ms" chập chờn khi full jest chạy song song (có từ `2aea4ea`). CI chạy full jest trước deploy, nên không được gộp như vậy.
+    - Đang sửa: đổi sang kiểm tỉ lệ tăng t(20k)/t(10k) < 3 và chứng minh vẫn bắt được code bậc hai; full jest phải qua 5 lần liên tiếp. Kèm các việc nhỏ: trần span theo cả lượt `verify`, ghi giới hạn AMOUNT, sửa câu prompt compose cho khỏi mâu thuẫn.
+    - **`plan08/api-mask-minors` rà lại đạt ở `32b7a7b`.** Đã sửa lỗi lọt: danh sách mã dừng ở số tiền/năm; so với main 0 hồi quy che mã, 0 lần lọt vào prompt.
+      - Tôi đổi test thời gian "< 50 ms" sang kiểm tỉ lệ tăng. Full jest trượt với tỉ lệ 4,5–7,8. Không phải chập chờn: callback của `maskCodes` chạy bậc hai (`HS_WORD_BEFORE` quét lại cả đoạn trước, `codes.indexOf`, `codes.some`).
+      - Trên production vẫn dưới 1 ms vì q ≤ 2000 ký tự, nhưng lượt hội thoại và state cũng đi qua `maskCodes`.
+      - Đang sửa cho tuyến tính. Điều kiện gộp: kết quả battery và attack giống hệt `32b7a7b`, test tăng trưởng đo xen kẽ, full jest 5 lần có tải.
+  - **Việc 12 `f1256fe`:** đã đóng lỗi ghi sai xuất xứ khi ô "xuất xứ" không đọc được; bỏ các dạng không dấu mơ hồ; lưu bộ nhớ lỗi thì đóng bảng. Bot 143 test.
+    - Rà lại vẫn còn cùng họ lỗi, người rà đã kiểm cách sửa trên bản sao:
+      - Blocker: lệnh có mã, không có ô xuất xứ, nhưng số hiệu căn cứ chứa mã nước ("CV 12/HQ-CN") → ghi phán quyết dưới xuất xứ CN.
+      - Major: lưu bộ nhớ lỗi ở lượt tra/soạn thì bảng cũ vẫn mở, nên "đúng" ghi cho bảng cũ.
+      - Minor: "mã undefined" ở bảng ứng viên; các dạng không dấu mơ hồ ("dung nhe", "nay sai", "hs dung la X").
+    - Đang chạy vòng cuối. Theo hướng không ghi: đọc được xuất xứ ngoài ô thì không ghi; lưu lỗi ở bất kỳ lượt nào cũng đóng đường không quote; lệnh có mã viết không dấu không ghi.
+  - **Đã gộp `1b62d71`: `plan08/guards-minimal`.**
+    - Kiểm chức năng (bỏ riêng test thời gian): jest 365 qua, `tsc` sạch, bot 83.
+    - Test thời gian vẫn chập chờn sau vòng `eac5808`: trượt 4/10 lần full jest. So 10k với 20k thì tỉ lệ ~2 (tuyến tính) và ~4 (bậc hai) quá sát nhau, trong khi máy đang gánh tải 5–6/10 core từ các phiên khác.
+    - Đang chạy `plan08/timing-growth` từ main: một helper dùng chung, khoảng cách đo rộng (vd 2,5k so với 40k), cân nhắc đo bằng CPU time. Yêu cầu full jest xanh 10 lần liên tiếp, xanh khi có tải, và vẫn bắt được code bậc hai.
+    - `plan.spec` chuyển sang helper này sau khi gộp nhánh che mã.
+    - **CHẶN PUSH:** full jest phải xanh ổn định.
+  - **CHẶN PUSH — ReDoS có sẵn trên `main` (`451809c`):** GAP trong lookbehind từ khoá của `maskCodes` có ba `\s*` liền nhau. Số đo: 800 dấu cách mất 410 ms, 10k dấu cách + một chữ số treo nhiều giờ; trần q 2000 ký tự vẫn tốn vài giây mỗi tin. Đã sửa ở `plan08/api-mask-minors` (`3e94301`), nên nhánh này phải gộp trước khi push.
+    - Vòng 2 (`addb765`): dấu gạch chỉ được nằm giữa mọi cặp số, nên khoảng năm/số lượng/số hiệu tiêu chuẩn không bị che.
+    - Rà lại chưa đạt, 1 major (lọt R4 mới): `JOINED` đặt `NOT_HEADING` trong mục danh sách, nên danh sách dừng ở số tiền/năm và mã phía sau không được che. Đang sửa bằng cách kiểm từng mục trong callback.
   - **Đang chạy `plan08/api-mask-minors`:** mã 10 số tách 4+6; `JOINED_HEADING` áp `NOT_HEADING`; dấu nháy đơn, "hs số", các từ nối với/hay là/"/"/"-"; dấu gạch làm dấu tách mã ("8481-80-99", vẫn giữ nguyên ngày ISO); ghi chú HS 2002/2007; row 19 nhận số hiệu văn bản không có phần cơ quan ban hành.
   - **Việc API đợt 2** (sau khi workflow trước deploy xong, vì cùng đụng `plan.ts`):
     - (a) `maskCodes` che mã 6 số viết liền sau từ khoá ("mã hs 848180") — blocker R4.
