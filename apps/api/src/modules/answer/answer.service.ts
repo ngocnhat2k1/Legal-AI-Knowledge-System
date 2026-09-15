@@ -52,6 +52,8 @@ import {
   type HeadingLines,
   ORDER,
   factsBlock,
+  unfinished,
+  CUT_ALL,
   policyBlock,
   repairItems,
   verifySections,
@@ -62,8 +64,8 @@ import {
 export const CLAUDE_RUNNER = Symbol('CLAUDE_RUNNER');
 
 const MAX_Q_CHARS = 2000;
-/** The p95 gate of a composed turn (owner decision Q3): `deadlineAt` is clamped to it. */
-const BUDGET_MS = 120_000;
+/** The p95 gate of a composed turn (owner decision Q3, raised 2026-09-15): `deadlineAt` is clamped to it. */
+const BUDGET_MS = 150_000;
 const MAX_SOURCES = 12;
 /**
  * NĐ 169/2026/NĐ-CP (in force 2026-07-01, khoản 2 Điều 38) ends 128/2020/NĐ-CP in full and Điều 2 of 102/2021/NĐ-CP, yet
@@ -77,11 +79,13 @@ const ENDED_PENALTY_DOCS = ['128/2020/NĐ-CP', '102/2021/NĐ-CP'].map(foldDocNum
 const PROSE = ['hs', 'legal', 'status', 'mixed'];
 const LEGAL = ['legal', 'status', 'mixed'];
 /**
- * Compose budget the walkthrough needs before it may ask for `full`. Its author measured brief at 62–83 s and full at
- * 82–107 s against this same 100 s cap, so full runs only when the whole cap is there; anything shorter is brief, which
- * still reads as the sectioned report (the section titles are printed by code) but points at no tariff block (D3(a)).
+ * Compose budget the walkthrough needs before it may ask for `full`: full's own slowest measured run (107 s; brief 62–83 s)
+ * plus a little. It is deliberately NOT the compose cap. The bot spends one /answer call on planning first, so the second
+ * call never sees the whole cap — gating on the cap would make full unreachable through the bot, which is how `full` went
+ * unused until 2026-09-15. Anything shorter is brief, still the sectioned report (code prints the titles) but pointing at
+ * no tariff block (D3(a)).
  */
-const FULL_DEPTH_MS = 100_000;
+const FULL_DEPTH_MS = 110_000;
 
 export interface AnswerRequest {
   q: string;
@@ -92,7 +96,7 @@ export interface AnswerRequest {
   /** The plan a planOnly call returned; skips claude #1. */
   plan?: unknown;
   forceIntent?: string | null;
-  /** ISO time or epoch ms: when the bot got the message, plus 120 s. */
+  /** ISO time or epoch ms: when the bot got the message, plus the bot's ANSWER_BUDGET_MS; clamped here to BUDGET_MS. */
   deadlineAt?: string | number | null;
 }
 
@@ -413,7 +417,8 @@ export class AnswerService {
     // (§10 risk 1, G7). No prose cites them, so they claim no quote (R10).
     const listed = sources.slice(0, 3);
     const sourcesOnly = { ...common, citations: listed.map((s, i) => citationOf(i + 1, s, [])), warnings: warningsOf(listed) };
-    const timeoutMs = Math.min(100_000, deadline - Date.now() - 5_000);
+    // 125 s, not 100: the walkthrough's slow tail is what overran, and a run that overruns loses everything it wrote.
+    const timeoutMs = Math.min(125_000, deadline - Date.now() - 5_000);
     if (timeoutMs < 15_000) return finish({ ...sourcesOnly, reason: 'deadline' });
 
     if (mode === 'hs') {
@@ -495,7 +500,9 @@ export class AnswerService {
         leakDrops.push(...drops);
         return !drops.length;
       });
-    if (items.length && Date.now() - start < 90_000 && deadline - Date.now() >= 30_000) {
+    // Only the deadline bounds the repair: it is clamped to start + BUDGET_MS, so a second wall clock sized for the old
+    // 120 s turn just blocked the repair ~15 s early, in exactly the slow turn it exists for.
+    if (items.length && deadline - Date.now() >= 30_000) {
       calls++;
       const out = await timed('repair', () =>
         this.run(buildRepairPrompt(items), { timeoutMs: Math.min(30_000, deadline - Date.now() - 3_000), model: 'sonnet', effort: 'low' }),
@@ -596,7 +603,10 @@ export class AnswerService {
       }),
     );
     const parsed = reply && !reply.isError ? looseJson(reply.text) : null;
-    if (!parsed) return { part: { ...o.sourcesOnly, reason: 'compose_failed' } };
+    // The walkthrough never came back (timeout, unreadable JSON). The asker still gets what code knows without it: what
+    // they told us and what is still open (R3/R5). A bare source list is what a slow run used to return, and it is
+    // useless to read (owner decision 2026-09-15).
+    if (!parsed) return { part: { ...o.sourcesOnly, reason: 'compose_failed', answerMd: unfinished(o.goods) } };
 
     const guardSources = sources.map(guardSource);
     const rows = sources.map((s, i) => evidenceRow(s, i, asOf));
@@ -625,7 +635,7 @@ export class AnswerService {
       o.leakDrops.push(...drops);
       return !drops.length;
     });
-    if (items.length && Date.now() - o.start < 90_000 && o.deadline - Date.now() >= 30_000) {
+    if (items.length && o.deadline - Date.now() >= 30_000) {
       o.bump();
       const out = await timed('repair', () =>
         this.run(buildRepairPrompt(items), { timeoutMs: Math.min(30_000, o.deadline - Date.now() - 3_000), model: 'sonnet', effort: 'low' }),
@@ -644,7 +654,7 @@ export class AnswerService {
     checked = await timed('verify', async () => verifySections(output, guardSources, ctx));
     // Nothing of the model's prose stood: the sources alone, as compose falls back, so the bot still prints them and their
     // end-of-force lines instead of "thử lại sau ít phút".
-    if (!checked.sections.length) return { part: { ...o.sourcesOnly, reason: 'compose_failed' } };
+    if (!checked.sections.length) return { part: { ...o.sourcesOnly, reason: 'compose_failed', answerMd: unfinished(o.goods) } };
 
     // §4.1, as compose: the answer's own first sentence cut, or more than a third of what it wrote.
     const cut = said - checked.said + checked.cut;
@@ -682,7 +692,14 @@ export class AnswerService {
     // R1, R4: a missing fact stating a rate or filling in a masked code must not reach the bot this way; one that merely
     // runs past 12 words is still a true missing fact and stays (R3, R5).
     const badFacts = new Set(after.flatMap((v) => (v.sentence && v.rule !== 'walkthrough-item-length' ? [v.sentence.normalize('NFC')] : [])));
-    const answerMd = dropped ? '' : flatten(checked.sections, policyBlock(POLICY_LISTS, rows, tariffRef, asOf), factsBlock(o.goods));
+    // §4.1 doubts the MODEL's prose; the facts and policy sections are code's and stand either way, so a dropped answer
+    // still opens with the goods and what is still open instead of a bare source list.
+    const policy = policyBlock(POLICY_LISTS, rows, tariffRef, asOf);
+    // A dropped reply keeps code's sections, so it reads as a finished report unless it says otherwise — and the bot's own
+    // "một phần bị lược" note would be false when all of it was. Empty stays empty, so a drop with no goods and no policy
+    // still falls through to the bot's NO_PROSE opener.
+    const kept = dropped ? flatten([], policy, factsBlock(o.goods)) : '';
+    const answerMd = dropped ? (kept ? `${kept}\n\n${CUT_ALL}` : '') : flatten(checked.sections, policy, factsBlock(o.goods));
     const lines = await timed('verify', () => this.hsLines(users.map((u) => digits(u.code))));
     for (const h of headings) lines.set(digits(h.heading), h.headingText);
     return {
@@ -693,12 +710,14 @@ export class AnswerService {
         candidates,
         ruling: await timed('verify', () => this.rulingFor(o.goods.facts, candidates).catch(() => null)),
         missingFacts: conclusion.missing_facts.filter((f) => !badFacts.has(f.normalize('NFC'))),
-        coverage: !answerMd ? 'none' : candidates.length === 1 && !conclusion.needs_advance_ruling && !conclusion.missing_facts.length ? 'full' : 'partial',
+        // How much of the question the answer actually reasons about, so it reads the MODEL's prose standing, not
+        // `answerMd`: since §4.1 the latter also holds the goods section code writes, which covers nothing on its own.
+        coverage: dropped ? 'none' : candidates.length === 1 && !conclusion.needs_advance_ruling && !conclusion.missing_facts.length ? 'full' : 'partial',
         cut,
         repaired,
         depth,
-        tariffRef: answerMd ? tariffRef : [],
-        warnings: warningsOf(answerMd ? cited : sources.slice(0, 3)),
+        tariffRef: dropped ? [] : tariffRef,
+        warnings: warningsOf(cited),
       },
       lines,
     };
@@ -769,7 +788,7 @@ const headingOf = (s: string): string => {
   return `${d.slice(0, 2)}.${d.slice(2, 4)}`;
 };
 
-/** `deadlineAt` as ISO or epoch ms, never later than now + 120 s; absent or unreadable = now + 120 s. */
+/** `deadlineAt` as ISO or epoch ms, never later than now + BUDGET_MS; absent or unreadable = now + BUDGET_MS. */
 function deadlineOf(raw: unknown, now: number): number {
   const cap = now + BUDGET_MS;
   if (raw == null || raw === '') return cap;

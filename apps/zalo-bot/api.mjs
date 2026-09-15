@@ -66,8 +66,8 @@ export const postConfirm = (payload) => postJson('/tariff/confirm', payload).the
 
 // --- Answer path (plan 08) --------------------------------------------------
 
-/** POST /answer (plan 08 §2.4). The API stops at `deadlineAt` (120 s after the message); 5 s more leaves its reply room to arrive. */
-export const answer = (body, timeoutMs = 125_000) => postJson('/answer', body, timeoutMs);
+/** POST /answer (plan 08 §2.4). The API stops at `deadlineAt` (ANSWER_BUDGET_MS after the message); 5 s more leaves its reply room to arrive. */
+export const answer = (body, timeoutMs = 155_000) => postJson('/answer', body, timeoutMs);
 
 // --- Legal ------------------------------------------------------------------
 
