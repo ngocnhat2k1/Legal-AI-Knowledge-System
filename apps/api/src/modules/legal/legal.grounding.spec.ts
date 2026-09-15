@@ -84,6 +84,9 @@ describe('numberMarkers — [n] points at citations[n-1], and the numbers beside
     const src = ['Điều 1\nPhạt tiền từ 20 triệu đồng'];
     expect(numberMarkers('Phạt **20 triệu đồng** [1].', [1], src, '').answer).toBe('Phạt **20 triệu đồng** [1].');
     for (const s of ['Phạt 30 triệu đồng [1].', 'Phạt 1 tỷ [1].', 'Phạt 500 nghìn đồng [1].']) expect(numberMarkers(s, [1], src, '').answer).toBe('');
+    // A count is no amount; a paraphrase of "20.000.000 đồng" is one, against the prompt's "copy figures as written".
+    expect(numberMarkers('Men vi sinh chứa 1 tỷ CFU mỗi gói [1]. Lô gồm 20 nghìn miếng [1].', [1], src, '').answer).toBe('Men vi sinh chứa 1 tỷ CFU mỗi gói [1]. Lô gồm 20 nghìn miếng [1].');
+    expect(numberMarkers('Phạt từ 20 triệu đồng [1].', [1], ['Điều 8\nPhạt tiền từ 20.000.000 đồng'], '').answer).toBe('');
   });
 
   it('reads a leading zero as the same document number', () => {

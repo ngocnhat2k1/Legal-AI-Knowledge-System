@@ -18,6 +18,7 @@ import {
 describe('digits, dotted and HEADING_OR_CODE — shared with the classification walkthrough', () => {
   it('spells a code both ways and finds a heading or code only on digit boundaries', () => {
     expect([digits('3005.10.10'), dotted('3005'), dotted('300510'), dotted('30051010')]).toEqual(['30051010', '30.05', '3005.10', '3005.10.10']);
+    expect([dotted('3005.10.10'), dotted('38.24')]).toEqual(['3005.10.10', '38.24']);
     expect(['nhóm 38.24', 'mã 3005.10.10', '30051010'].map((s) => HEADING_OR_CODE.test(s))).toEqual([true, true, true]);
     expect(['38.245', '15/07/2023', '3,5%', '138.24'].map((s) => HEADING_OR_CODE.test(s))).toEqual([false, false, false, false]);
   });
@@ -34,8 +35,9 @@ describe('ratesInProse — rates live in the code-built block, never in prose (o
     ]);
   });
 
-  it('flags an amount with a unit word between the number and the currency', () => {
-    const prose = 'Phạt 20 triệu đồng [1]. Mức 1 tỷ. Phí 500 nghìn đồng. Phạt 1,5 tỷ VND. Hàng có 20 thành phần. Tỷ lệ dược chất cao.';
+  it('flags an amount with a unit word between the number and the currency; a count with a unit word is none', () => {
+    const prose =
+      'Phạt 20 triệu đồng [1]. Mức 1 tỷ. Phí 500 nghìn đồng. Phạt 1,5 tỷ VND. Hàng có 20 thành phần. Tỷ lệ dược chất cao. Sản phẩm men vi sinh chứa 1 tỷ CFU mỗi gói [1]. Lô hàng gồm 20 nghìn miếng dán [1].';
     expect(ratesInProse(prose)).toEqual(['Phạt 20 triệu đồng [1].', 'Mức 1 tỷ.', 'Phí 500 nghìn đồng.', 'Phạt 1,5 tỷ VND.']);
   });
 
@@ -143,6 +145,11 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     expect(r.cut).toBe(1);
   });
 
+  it('G1: a count with a unit word stands: "1 tỷ CFU", "20 nghìn miếng"', () => {
+    const prose = `${lead} Sản phẩm men vi sinh chứa 1 tỷ CFU mỗi gói [1]. Lô hàng gồm 20 nghìn miếng dán [1].`;
+    expect(verify(draft(prose, [q1]), [en3005], ctx()).answerMd).toBe(prose);
+  });
+
   it('G1: "Đúng, 5% [1]" against a body with only 10% drops the whole prose, sources stay', () => {
     const tariff = source({ kind: 'annex_table', label: 'Biểu thuế', body: 'Thuế suất ưu đãi 10% cho mã này.' });
     const r = verify(draft('Đúng, 5% [1]. Cần C/O mẫu E [1].', [{ n: 1, quotes: ['Thuế suất ưu đãi 10%'] }]), [tariff], ctx());
@@ -240,6 +247,11 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     const r = verify(d(`${prose} Nhóm 33.07 cần đối chiếu thêm [1].`), [en3005, ruling], ctx({ anchors: ['38.24', '30051010'] }));
     expect(r.answerMd).toBe(prose);
     expect(r.violations).toEqual([expect.objectContaining({ rule: 'G3', sentence: 'Nhóm 33.07 cần đối chiếu thêm [1].' })]);
+    // Anchors stand beside the labels of sources a quote holds: with no quote left, marked or not, the heading is cut.
+    for (const dead of ['Nhóm 38.24 cần đối chiếu [2].', 'Nhóm 38.24 cần đối chiếu.']) {
+      const cut = verify(draft(dead, [{ n: 2, quotes: ['không có trong thân'] }]), [en3005, ruling], ctx({ anchors: ['38.24'] }));
+      expect([cut.answerMd, cut.violations]).toEqual(['', [expect.objectContaining({ rule: 'G2' }), expect.objectContaining({ rule: 'G3', sentence: dead })]]);
+    }
   });
 
   it('G4: cuts the over-conclusion from the 14/09 log, "phải xét vào 38.24" and "phải xét 38.24" alike', () => {
@@ -313,17 +325,27 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
       'Khi chưa xác định được dược chất thì không được chốt 30.05 [1].',
       'Khi chưa có tài liệu kỹ thuật thì rất khó kết luận 30.05 hay 38.24 [1] [2].',
       'Nếu chưa rõ công dụng thì phải xét nhóm 30.05 và nhóm 38.24 song song [1] [2].',
+      'Nếu chưa rõ công dụng thì phải xét nhóm 30.05 (hàng có dược chất) và nhóm 38.24 (chế phẩm hóa chất) [1] [2].',
+      'Nếu chưa rõ công dụng thì phải xét 30.05 hay là 38.24 tùy kết quả giám định [1] [2].',
       'Nếu chưa rõ công dụng thì chỉ nên khai 30.05 khi có chứng từ chứng minh dược chất [1].',
+      // Long clauses: "chưa" 131 characters before "để", "Khi" 212 characters before "thì".
+      'Hiện hồ sơ chưa thể hiện đầy đủ thành phần hoạt chất và hàm lượng từng chất trong miếng dán cũng như công dụng được công bố trên nhãn sản phẩm để chốt 38.24 [2].',
+      'Khi miếng dán có chứa tinh dầu ngải cứu, long não, bạc hà cùng các thành phần thảo dược khác được tẩm trên nền vải không dệt có lớp keo dính, đóng gói bán lẻ với nhãn ghi công dụng giảm đau và lưu thông khí huyết thì phải xét nhóm 30.05 [1].',
       // Known ceilings: a condition after the verb is not read, as on main; nor is ignorance in other words.
       'Hàng phải xét 38.24 nếu chưa rõ công dụng [2].',
       'Nếu thông tin chưa đủ để xác định công dụng thì phải xét 38.24 [2].',
     ];
     expect(settlementClaims(prose.join(' '))).toEqual([]);
-    // Known ceilings, cut and left to repair where main let them pass: a finding reads as ignorance; "nên xét 30.05 trước"
-    // settles as it does with no condition at all.
+    // Known ceilings, cut and left to repair where main let them pass: a finding, a fact about the label or a Chapter test
+    // reads as ignorance; a heading still to check settles after ignorance as it does with no condition at all.
     const ceilings = [
       'Nếu kết quả kiểm nghiệm không xác định được dược chất nào thì phải xét 38.24 [2].',
+      'Nếu nhà sản xuất không xác định công dụng điều trị trên nhãn thì phải xét 38.24 [2].',
+      'Nếu hàng không có thông tin về dược chất trên nhãn, thì hải quan thường phải xét 38.24 [2].',
+      'Nếu không xác định được là hàng thuộc Chương 30 thì phải xét 38.24 [2].',
       'Nếu chưa rõ công dụng thì nên xét 30.05 trước, vì Chú giải Chương 38 loại trừ hàng thuộc Chương 30 [1] [2].',
+      'Nếu chưa rõ công dụng thì phải xét nhóm 38.24 như một khả năng [2].',
+      'Nếu chưa rõ công dụng thì cũng nên xét nhóm 38.24 để loại trừ [2].',
     ];
     expect(settlementClaims(ceilings.join(' '))).toEqual(ceilings);
     expect(settlementClaims('Nên xét 30.05 trước [1].')).toHaveLength(1);
@@ -370,6 +392,25 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     expect(verify(draft(criterion, [settle]), [note], ctx()).answerMd).toBe(criterion);
     const r = verify(draft(criterion.replace(/[“”]/g, ''), [settle]), [note], ctx());
     expect(r.violations).toEqual([expect.objectContaining({ rule: 'G4' })]);
+    // Mixed marks stand, as the walkthrough normaliser reads them; a span shortened with "…" is a known ceiling, cut.
+    const mixed = 'Chú giải chỉ nhận hàng chứa “trên 50% tính theo trọng lượng" là dược chất [1].';
+    expect(verify(draft(mixed, [rate]), [note], ctx()).answerMd).toBe(mixed);
+    const elided = 'Chú giải ghi "Hàng chứa trên 50% … là dược chất" [1].';
+    expect(verify(draft(elided, [rate]), [note], ctx()).violations).toContainEqual(expect.objectContaining({ rule: 'G1', sentence: elided }));
+    // Quoted from the body while the citation quotes another sentence, the figure has no quote to stand on: the prose drops
+    // and the sentence carries its G1 for repair.
+    const dropped = verify(draft(`${quoted} Cần xác nhận công dụng trên nhãn [1].`, [settle]), [note], ctx());
+    expect([dropped.answerMd, dropped.cut]).toEqual(['', 2]);
+    expect(dropped.violations).toContainEqual(expect.objectContaining({ rule: 'G1', sentence: quoted }));
+    // A sentence marking only a tariff table is read whole though a cited note holds the span; so is one with any "thuế".
+    const annex = source({ kind: 'annex_table', label: 'Phụ lục I', body: 'Rượu có hàm lượng cồn trên 50% tính theo trọng lượng' });
+    const fromAnnex = 'Phụ lục ghi “trên 50% tính theo trọng lượng” [2].';
+    const both = verify(draft(`${quoted} ${fromAnnex}`, [rate, { n: 2, quotes: rate.quotes }]), [note, annex], ctx());
+    expect(both.violations).toEqual([expect.objectContaining({ rule: 'G1', sentence: fromAnnex })]);
+    const cv = source({ kind: 'ruling', label: 'CV 3831/TCHQ-TXNK', body: 'Mặt hàng máy bay không người lái thuộc đối tượng chịu thuế GTGT 10%.' });
+    const vat = 'Công văn nêu “máy bay không người lái thuộc đối tượng chịu thuế GTGT 10%” [1].';
+    const tax = verify(draft(vat, [{ n: 1, quotes: ['máy bay không người lái thuộc đối tượng chịu thuế GTGT 10%'] }]), [cv], ctx());
+    expect(tax.violations).toEqual([expect.objectContaining({ rule: 'G1', sentence: vat })]);
   });
 
   it('G4: two candidates with no missing fact is a violation for repair only', () => {
@@ -533,11 +574,20 @@ describe('guards run on every answer in the event loop: linear on 10,000-charact
     fill('38.24, '),
     fill('3005.10.10 thuộc mã '),
     fill('Phải xét 38.24. '),
-    // What a quote is trimmed of, dots, quoted spans.
+    // What a quote is trimmed of, dots, quoted spans in any marks, a document number before a run of dots.
     `x${fill('“”‘’…-,;:')}x`,
     `x${'.'.repeat(N)}x`,
     fill('. '),
     fill('“bông, gạc, băng đã thấm tẩm dược chất” '),
+    fill('“"'),
+    fill(`“${'a'.repeat(299)}`),
+    fill('thuế '),
+    `Theo 31/2022${'.'.repeat(N)}x [1].`,
+    `Số 12/2024${fill('.:')}x [1]`,
+    // Placements of codes other than the user's, or of its heading after the code, and alternating rate sentences.
+    fill('vào mã 1234 '),
+    `Mã 3005.10.10 ${fill('áp mã 30.05 ')}`,
+    fill('1 đ. a b. '),
   ];
   const subject = ctx({ userText: '3005.10.10 gồm những hàng gì', codeRole: 'subject', userCodes: ['3005.10.10'] });
   const guards: Array<[string, (s: string) => unknown]> = [
@@ -546,6 +596,10 @@ describe('guards run on every answer in the event loop: linear on 10,000-charact
     ['settlementClaims', (s) => settlementClaims(s)],
     ['verify at subject role', (s) => verify(draft(s, [q1, q2]), [en3005, en3824], subject)],
     ['verify on a quote as long as the prose', (s) => verify(draft(s, [{ n: 1, quotes: [s] }]), [source({ kind: 'hs_note', body: s })], ctx())],
+    [
+      'verify on the prose cut into quotes of a body four times as long',
+      (s) => verify(draft('Chế phẩm thuộc Chương 38 [1].', [{ n: 1, quotes: s.match(/[^]{1,30}/g) ?? [] }]), [source({ kind: 'hs_note', body: s.repeat(4) })], ctx()),
+    ],
     ['quoteInBody', (s) => quoteInBody(s, s)],
     ['numberMarkers', (s) => [numberMarkers(s, [1], [s], s), numberMarkers(s, [1], [s], s, { cut: true, labels: [s] })]],
   ];

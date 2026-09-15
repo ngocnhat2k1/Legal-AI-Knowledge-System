@@ -68,8 +68,12 @@ export const cutPieces = (pieces: string[], drop: (piece: string) => boolean): s
  * A number is read from its first digit ("(?<!\d)", "\d(?<!\d[.,]*\d)"): the same matches, without rescanning a run of
  * digits from each of its digits (POST /answer checks model prose inside the event loop).
  */
-/** An amount, shared with the answer guards' G1: a currency, or "triệu/tỷ/nghìn/ngàn" (+ "đồng/VND"): "20 triệu đồng", "1 tỷ". */
-export const AMOUNT = /\d(?<!\d[.,]*\d)[\d.,]*\s*(?:(?:triệu|tỷ|nghìn|ngàn)(?:\s+(?:đồng|VND))?|USD|VND|đồng|đ)(?![\p{L}\d])/giu;
+/**
+ * An amount, shared with the answer guards' G1: a currency, or "triệu/tỷ/nghìn/ngàn" before a currency or no word at all:
+ * "20 triệu đồng", "1 tỷ"; a count ("1 tỷ CFU", "20 nghìn miếng") is no amount. In the legal path "20 triệu đồng" against
+ * a source's "20.000.000 đồng" empties the answer: the prompt tells the model to copy figures as the source writes them.
+ */
+export const AMOUNT = /\d(?<!\d[.,]*\d)[\d.,]*\s*(?:(?:triệu|tỷ|nghìn|ngàn)(?:\s{1,8}(?:đồng|VND|USD|đ)|(?!\s{1,8}\p{L}))|USD|VND|đồng|đ)(?![\p{L}\d])/giu;
 
 const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean; label?: true }> = [
   { re: /(?<!\d)\d+(?:[.,]\d+)?\s*%/g, exempt: false, fatal: true },
@@ -77,7 +81,7 @@ const FACTS: Array<{ re: RegExp; exempt: boolean; fatal: boolean; label?: true }
   { re: /\d{1,2}\/\d{1,2}\/\d{4}/g, exempt: true, fatal: false },
   { re: /(?<!\d)\d+\s*(?:ngày|tháng)(?![\p{L}])/giu, exempt: false, fatal: false },
   // The tail stops at emphasis, quotes and brackets: `**08/2015/NĐ-CP**` and `“…”[1]` must still anchor.
-  { re: /\d{1,4}\/(?:\d{4}|VBHN)[^\s,;)*"'“”‘’[\]]*/gi, exempt: true, fatal: false, label: true },
+  { re: /\d{1,4}\/(?:\d{4}|VBHN)[^\s,;)*"'“”‘’[\]]{0,40}/gi, exempt: true, fatal: false, label: true },
   { re: /\d{4}(?:\.\d{2}){1,2}/g, exempt: true, fatal: false, label: true },
 ];
 
@@ -152,7 +156,10 @@ export function numberMarkers(
     let anchored = true;
     for (const { re, exempt, fatal, label } of facts) {
       for (const [fact] of s.matchAll(re)) {
-        const f = norm(fact.replace(/[.:]+$/, ''));
+        // Trimmed by index: `[.:]+$` would rescan a run of dots from each of its positions.
+        let end = fact.length;
+        while (end > 0 && (fact[end - 1] === '.' || fact[end - 1] === ':')) end--;
+        const f = norm(fact.slice(0, end));
         if (hay.some((h) => figureIn(h, f)) || (label && labels.some((h) => figureIn(h, f))) || (exempt && userWrote(fact, f, label))) continue;
         if (fatal) return { answer: '', order: [] };
         anchored = false;
