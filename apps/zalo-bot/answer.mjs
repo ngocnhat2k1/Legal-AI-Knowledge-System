@@ -491,7 +491,7 @@ export async function handleCorrection(tariff, text, senderName, quote) {
   if (!(await postConfirm({ hs: fix.hs, origin: origin || null, date: fix.date, verdict: 'correct', staffName: senderName, note: rulingNote, snapshot: data }))) return failed;
   if (old?.hs && !(await wrong())) {
     return {
-      text: [L(['Đã ghi nhận mã ', [fix.dotted, 'b'], ` là đúng (theo ${senderName}), nhưng chưa ghi được mã `, [old.dotted, 'b'], ' là chưa đúng vì lỗi ghi sổ. Muốn ghi nốt, bạn tra lại mã ', [old.dotted, 'b'], ' rồi nhắn "sai" nhé.'])],
+      text: [L(['Đã ghi nhận mã ', [fix.dotted, 'b'], ` là đúng (theo ${senderName}), nhưng chưa ghi được mã `, [old.dotted, 'b'], ' là chưa đúng vì lỗi ghi sổ. Mình dừng ghi cho lượt này để khỏi ghi trùng.'])],
       topic: 'tariff',
       tariff: null,
     };

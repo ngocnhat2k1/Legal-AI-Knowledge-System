@@ -158,6 +158,7 @@ mời thì ghi được. Có `?` ở bất cứ đâu, hay gõ "à"/"á"/"hả",
 dài hơn: mỗi vòng review heuristic cũ đều tìm ra một cách nói nghi ngờ mới vẫn ghi sổ ("mã đúng là X thì thuế bao nhiêu", "… thì
 phải", "… hay sao ấy", "sai rồi, sao lại ra mã này", "đúng?"). Câu khác đi bước kế hoạch, và lời mời ở đó nói đúng lệnh cần gửi.
 Bỏ sót một phán quyết tốn một lượt nhắn lại; ghi nhầm một câu nghi ngờ thì nằm lại trong sổ cho người sau đọc (R18).
+Chặn theo số công văn chỉ bắt mã nước viết **in hoa**, vì `detectOrigin` chỉ đọc mã nước in hoa: "theo CV 12/hq-cn" vẫn ghi, với xuất xứ rỗng — hướng nào cũng an toàn.
 
 | Dạng (cả tin) | Ghi | Khi nào |
 |---|---|---|
