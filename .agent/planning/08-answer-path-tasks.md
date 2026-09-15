@@ -919,15 +919,20 @@ Thiết bị ghi đi kèm chỉ đi theo máy khi ‹điều kiện về bộ ph
 
 ### Việc 13: Xoá lớp khuôn mẫu và regex định tuyến
 
-- [ ] **File:** xoá theo bảng "Xoá" ở §7 (các dòng Việc 13), gồm `answer.mjs`, `format.mjs`, `dispatch.mjs`, `router.mjs`, `api.mjs` và `index.mjs`. Trong `tariffByClues`, bỏ `lead` và `withLead`.
-- [ ] **Chuyển test:** trong `dispatch.test.mjs` có 27 chỗ dùng symbol bị xoá.
-  - Ca còn giá trị chuyển sang `plan.spec.ts` (che mã, cue), `guards.spec.ts` hoặc test của `formatAnswerMd`.
-  - Ca còn lại xoá.
-- [ ] **Chứng minh:**
+- [x] **File:** xoá theo bảng "Xoá" ở §7 (các dòng Việc 13), gồm `answer.mjs`, `format.mjs`, `dispatch.mjs`, `router.mjs`, `api.mjs` và `index.mjs`. Trong `tariffByClues`, bỏ `lead` và `withLead`.
+- [x] **Chuyển test:** trong `dispatch.test.mjs` có 27 chỗ dùng symbol bị xoá.
+  - Ca còn giá trị đã có chỗ khác giữ: che mã và cue FIT ở `plan.spec.ts` (`maskCodes`, `codeRole`, `defaultPlan`), khối nguồn và
+    dòng đỏ/cam ở `render.test.mjs` (`formatAnswerMd`).
+  - Ca còn lại xoá: 10 ca chỉ kiểm code đã xoá; 1 ca viết lại (`lead` của `tariffByClues` không còn, dòng ứng viên cố định vẫn là dòng đầu);
+    1 ca mới ở `render.test.mjs` cho `redLines` (gộp dòng đỏ theo văn bản và hiệu lực), vì chỉ test của `formatLegal` giữ nó.
+- [x] **Chứng minh:**
   - `grep -rn "answerCodeCheck\|formatLegal\|withLead\|codebook\|asksCodeFit\|legalAboutCode\|fallbackIntent\|route(" apps/zalo-bot` không ra gì.
   - `test:bot` xanh.
   - `wc -l` các file `apps/zalo-bot/*.mjs` (không tính test) giảm; ghi số dòng trước/sau vào commit.
-- [ ] **Xong khi:** CI xanh và bot mới đã deploy.
+- [ ] **Xong khi:** CI xanh và bot mới đã deploy. *(code xong trên nhánh, chờ gộp + deploy.)*
+- **Kết quả:** grep không ra gì; `test:bot` 146 → 137 xanh; `*.mjs` không tính test 3.279 → 2.861 dòng
+  (`answer.mjs` 588→426, `api.mjs` 118→95, `dispatch.mjs` 422→340, `format.mjs` 601→551, `index.mjs` 515→539 vì nhận
+  `missingDocAnswer`, `router.mjs` 202→77).
 
 ### Việc 14: Hiệu chỉnh model, effort và cỡ prompt trên server
 

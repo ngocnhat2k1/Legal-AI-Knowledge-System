@@ -32,7 +32,7 @@ Chỉ cần người dùng **bấm reply** là `inContext = true`; `CORRECTION_C
 
 Gốc rễ sâu hơn: trạng thái duy nhất bot giữ là `lastLookup` — một `Map` trong RAM nhớ **mã HS tra
 gần nhất**, TTL 30 phút. Không có lịch sử lượt nói, không có chủ đề đang bàn, không có trạng thái
-pháp luật. Mỗi tin nhắn là một phiên độc lập, nên `route()` phân loại một câu tinh chỉnh không chủ ngữ
+pháp luật. Mỗi tin nhắn là một phiên độc lập, nên bộ định tuyến phân loại một câu tinh chỉnh không chủ ngữ
 mà không biết nó tinh chỉnh cái gì.
 
 ## Nguyên tắc: tín hiệu tiếp nối được đọc THEO CHỦ ĐỀ
@@ -45,8 +45,8 @@ Cùng một cụm từ mang nghĩa khác nhau tuỳ hội thoại:
 | "đúng" | xác nhận mức thuế (ghi vào sổ) | chỉ là đồng ý, **không ghi gì** |
 
 Vì vậy: **một tín hiệu không khớp chủ đề không bao giờ được chạm tới handler ghi vào sổ kiểm chứng.**
-Quy tắc này áp cho cả regex đường tắt lẫn kết quả của LLM router — mô hình cũng có thể nói "correction"
-trên một luồng không có mã HS nào để sửa.
+Quy tắc này áp cho cả regex đường tắt lẫn kế hoạch LLM đọc được từ `POST /answer` — mô hình cũng có thể
+nói "correction" trên một luồng không có mã HS nào để sửa.
 
 ## Kiến trúc
 
@@ -57,9 +57,9 @@ Bot tách từ một file 873 dòng thành các module, để phần ra quyết 
 | [index.mjs](../../apps/zalo-bot/index.mjs) | kết nối Zalo, listener, điều phối |
 | [dispatch.mjs](../../apps/zalo-bot/dispatch.mjs) | **quyết định nhánh** — nơi sửa bug; thuần, không I/O |
 | [conversation.mjs](../../apps/zalo-bot/conversation.mjs) | bộ nhớ hội thoại (đọc/ghi qua API), ngưỡng còn hiệu lực |
-| [router.mjs](../../apps/zalo-bot/router.mjs) | một bước Claude đọc CẢ hội thoại; vision cho ảnh |
+| [router.mjs](../../apps/zalo-bot/router.mjs) | vision cho ảnh (`claudeVision`); tin chữ đã chuyển sang `POST /answer` |
 | [answer.mjs](../../apps/zalo-bot/answer.mjs) | tạo câu trả lời (số liệu luôn từ DB) |
-| [format.mjs](../../apps/zalo-bot/format.mjs) | ghép lời dẫn LLM lên khối tất định + **guard** |
+| [format.mjs](../../apps/zalo-bot/format.mjs) | dựng khối tất định dưới văn xuôi của API + **guard** |
 | [parse.mjs](../../apps/zalo-bot/parse.mjs) | tách mã HS / xuất xứ / số hiệu văn bản |
 | [api.mjs](../../apps/zalo-bot/api.mjs) | client API, mọi lời gọi fail-soft |
 
@@ -85,34 +85,26 @@ giữ hai hội thoại riêng; ngữ cảnh chéo người vẫn đến qua tin
 `state.tariff.at` đóng dấu thời điểm tạo ra kết quả thuế, nên "còn hiệu lực" tính theo CHÍNH nó
 (2 giờ) chứ không theo độ tươi của cuộc chat.
 
-## Router có ngữ cảnh + viết lại câu hỏi
-
-`route()` nhận thêm: transcript 6 lượt gần nhất, tóm tắt `state`, và **danh mục văn bản trong kho**
-(`GET /legal/documents`) để không hứa văn bản không có.
-
-Trường quan trọng nhất là `search_query`: câu hỏi được **viết lại thành độc lập**. *"không phải câu
-trả lời tôi muốn, tìm đúng thông tư"* tự nó là rác với retriever; chỉ khi ghép ngữ cảnh nó mới thành
-câu tra được. Đây là cách chuẩn để chữa RAG nhiều lượt.
-
-### Có mã HS trong câu chưa chắc là hỏi thuế (2026-09-14)
+## Có mã HS trong câu chưa chắc là hỏi thuế (2026-09-14)
 
 *"e có miếng dán bàn chân ngải cứu, e tham khảo mã này không biết được không ạ 30051010"* hỏi **mã có hợp
 với hàng không**, và bot đã trả MFN + FTA vì mọi tin có mã 8 số đi thẳng vào tra thuế. Nay:
 
 - Tra thẳng chỉ khi tin **chỉ gồm** mã + xuất xứ + ngày + từ tra thuế (`isBareLookup` trong dispatch.mjs).
-  Câu có nội dung khác thì router đọc trước.
-- Router thấy mã người dùng dưới dạng `[mã người dùng nêu]` (`maskHs`), cả trong các lượt trước —
-  [R4](../business-rules.md): mã ưa thích không bao giờ là tiền đề.
-- Intent `check_code` → `answerCodeCheck`: nhóm ứng viên lấy từ **mô tả hàng**, `/legal` đọc chú giải của
-  đúng các nhóm đó rồi lập luận, còn so mã người dùng với ứng viên là việc của **code**. Chủ đề ghi là
-  `legal`, để một câu "sai" sau đó không ghi mã người dùng là sai vào sổ ([R13](../business-rules.md)).
-- Câu hỏi giải nghĩa mã/nhóm, chú giải, GRI thuộc intent `legal`. `/legal` giữ luôn Chú giải chi tiết của
+  Câu có nội dung khác thì bước kế hoạch của API đọc trước.
+- Bước kế hoạch thấy mã người dùng dưới dạng `[mã n]` (`maskCodes` trong `apps/api/.../answer/plan.ts`), cả trong các
+  lượt trước — [R4](../business-rules.md): mã ưa thích không bao giờ là tiền đề. Chỉ ảnh còn che ở bot
+  (`captionForVision` trong answer.mjs), vì vision chạy ở bot.
+- Câu "mã này có hợp không" là chế độ `hs` của `/answer`: nhóm ứng viên lấy từ **mô tả hàng**, bằng chứng là chú giải
+  của đúng các nhóm đó, còn so mã người dùng với ứng viên là việc của **code** (`formatAnswerMd`, `userCodes`). Chủ đề ghi
+  là `legal` hoặc bàn ứng viên, để một câu "sai" sau đó không ghi mã người dùng là sai vào sổ ([R13](../business-rules.md)).
+- Câu hỏi giải nghĩa mã/nhóm, chú giải, GRI thuộc chế độ `legal`. `/legal` giữ luôn Chú giải chi tiết của
   nhóm được nêu và chú giải chương của nó (`headingSections`), vì "3005.10.10" không khớp tiêu đề
   "nhóm 30.05" theo cả từ khoá lẫn vector — mô hình đã từ chối trong khi chú giải nằm sẵn trong kho.
 
 ## Luồng `POST /answer` và bộ nhớ ứng viên (kế hoạch 08, Việc 12)
 
-Từ Việc 12, bot không còn gọi `route()` cho tin chữ. Luồng đầy đủ ở
+Từ Việc 12, bot không còn định tuyến tin chữ bằng LLM của riêng nó; Việc 13 đã xoá hẳn `route()` và lớp khuôn mẫu đi cùng. Luồng đầy đủ ở
 [kế hoạch 08 §2.1](../planning/08-answer-path-tasks.md); phần liên quan tới bộ nhớ:
 
 - **Bot gửi ngữ cảnh, API che mã.** Bước kế hoạch nhận `context = {topic, state, turns}` thô; API che mọi mã trước
@@ -127,8 +119,8 @@ Từ Việc 12, bot không còn gọi `route()` cho tin chữ. Luồng đầy đ
   `ctx.tariff = state.tariff`, để `handleCorrection` giữ được `desc` cho note của phán quyết.
 - **`state.legal` sau câu soạn legal/status/mixed** = `{question, asOf, citations ≤ 5 {label, kind, instrument,
   documentNumber}, missingDoc: null, pendingIngest: null}`. Mỗi citation mang thêm `provisionLabel` = `label`, cầu tạm cho
-  tới khi bước kế hoạch của API đọc `label` (hàng 19). Văn bản kho không có vẫn đi `missingDocAnswer` (lưu
-  `query` + `pendingIngest`).
+  tới khi bước kế hoạch của API đọc `label` (hàng 19). Văn bản kho không có vẫn đi `missingDocAnswer` (từ Việc 13 nằm trong
+  index.mjs, lưu `query` + `pendingIngest`).
 - **`state.answer` sau mọi câu soạn** = `{mode, question, goods: {facts}, at}` — lượt trước cho câu tinh chỉnh.
   `question` là câu đã che của kế hoạch, bỏ cả nhãn `[mã n]`, mọi dãy 6 tới 10 chữ số liền ("mã hs 848180", gõ thừa một số)
   và mọi mã 4-2-2 nối gạch ("8481-80-99", trừ ngày ISO) mà mặt nạ API bỏ sót; `goods.facts` và `keywords` lọc y như vậy. **Không mã người dùng nào vào `state`.** Một câu trả lời

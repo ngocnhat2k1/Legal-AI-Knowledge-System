@@ -21,13 +21,13 @@ import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 
-import { answerByHs, answerImage, codeOffer, handleConfirm, handleCorrection, missingDocAnswer } from './answer.mjs';
+import { answerByHs, answerImage, codeOffer, handleConfirm, handleCorrection } from './answer.mjs';
 import { ackIngestReports, answer, confirmations, ingestReports, legalProvision, lookupFull, requestIngest, verifyDocument } from './api.mjs';
 import { loadContext, nextState, saveContext, stampTariff } from './conversation.mjs';
 import { fastPath, fold, guardIntent, isBareLookup, isOkay, parseVerifyDocCommand, plainVerdict, readsAsQuestion, unlikeTariffReply } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
-import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatProvisions, sanitizeLead } from './format.mjs';
-import { parseQuery, stripMentions, todayVN } from './parse.mjs';
+import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatMissingDoc, formatProvisions, sanitizeLead } from './format.mjs';
+import { missingKind, parseQuery, stripMentions, todayVN } from './parse.mjs';
 import { L, render, toText } from './render.mjs';
 
 const API = process.env.API_URL || 'http://api:3000';
@@ -120,6 +120,30 @@ const noCodes = (s) =>
     .replace(/\s+/g, ' ')
     .trim();
 const asked = (plan) => noCodes(plan.question);
+
+/**
+ * Answer for a document we do not hold, carrying whatever the gazette catalogue knows.
+ * `pendingIngest` is what lets the next turn act on "nạp" — the offer and the thing
+ * being offered have to survive between messages, which is what conversation memory is for.
+ */
+function missingDocAnswer(query, label, apiAnswer, asOf) {
+  // A catalogue hit equal to the number asked for IS that document: offer it, never list it as another one.
+  const { kind, matches } = missingKind(label, apiAnswer?.gazetteMatches ?? [], apiAnswer?.gazetteMatchKind ?? 'none');
+  // Only an EXACT catalogue hit may be offered for ingest. A near-miss by number is a
+  // different document, and an ambiguous year is a question for the user — fetching
+  // either would answer something nobody asked.
+  const hit = kind === 'exact' ? (matches[0] ?? null) : null;
+  return {
+    text: formatMissingDoc(label, matches, kind),
+    topic: 'legal',
+    legal: {
+      query,
+      asOf: asOf ?? null,
+      missingDoc: label,
+      pendingIngest: hit ? { number: hit.number, title: hit.title, sourceUrl: hit.sourceUrl } : null,
+    },
+  };
+}
 
 /** What the next plan may point at after a legal answer (plan 08 §6.1). */
 const legalMemory = (plan, cites, asOf) => ({

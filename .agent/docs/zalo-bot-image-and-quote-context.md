@@ -1,7 +1,7 @@
 ---
 type: doc
 status: active
-updated: 2026-07-20
+updated: 2026-09-15
 related:
   - ../architecture-decisions/2026-07-17-no-llm-on-tariff-numbers.md
   - ../architecture-decisions/2026-07-18-self-hosted-zalo-bot.md
@@ -23,7 +23,7 @@ Quan sát thực tế (2026-07-20):
 
 ## Nguyên tắc bất biến (không vi phạm)
 
-Vision **chỉ nhận diện mặt hàng** → xuất ra `keywords` / `hs_hints` / `origin` — đúng vai trò `route()` đang làm cho text — rồi đẩy vào đường tra `tariffByClues` **tất định** (khóa chính xác trên DB). **Không LLM nào tính ra con số thuế.** Ràng buộc [no-llm-on-tariff-numbers](../architecture-decisions/2026-07-17-no-llm-on-tariff-numbers.md) và HS-là-ứng-viên không đổi.
+Vision **chỉ nhận diện mặt hàng** → xuất ra `keywords` / `hs_hints` / `origin` — rồi đẩy vào đường tra `tariffByClues` **tất định** (khóa chính xác trên DB). **Không LLM nào tính ra con số thuế.** Ràng buộc [no-llm-on-tariff-numbers](../architecture-decisions/2026-07-17-no-llm-on-tariff-numbers.md) và HS-là-ứng-viên không đổi.
 
 ## Khả thi đã kiểm chứng
 
@@ -45,8 +45,8 @@ tin đến
  │    · tariffByClues(clues, caption)     ← đường thuế tất định như cũ
  │    · vision không ra mặt hàng → xin mô tả bằng chữ; xoá file tạm
  └─ nếu KHÔNG ảnh nhưng có quote.msg:
-      effectiveText = mergeQuote(content, quote)   (ghép "ngữ cảnh + câu hỏi")
-      → answer(effectiveText)   ← parseQuery/route tự bắt HS/origin
+      quote đi kèm câu hỏi mới (ghép "ngữ cảnh + câu hỏi")
+      → respond(text, quote)   ← parseQuery soi câu mới, bước kế hoạch đọc cả quote
 ```
 
 ## Quyết định (chốt với chủ dự án 2026-07-20)
@@ -54,7 +54,7 @@ tin đến
 - **Độ trễ ảnh**: gửi ack "🔍 Đang xem ảnh…" trước, rồi trả kết quả HS (không im lặng chờ).
 - **Ảnh không có xuất xứ trong caption**: trả **MFN + các mức FTA có điều kiện + nhắc gửi xuất xứ** (nhất quán với đường text hiện tại), KHÔNG chặn lại hỏi xuất xứ trước.
 - **Ảnh luôn coi là intent tariff** (ảnh sản phẩm → tra HS). Không suy luận ý định legal từ ảnh trong v1.
-- **Quote chỉ bổ sung ngữ cảnh** cho câu hỏi mới; luồng xác nhận "đúng/sai" (`confirmVerdict` + `lastLookup`) giữ nguyên, không đụng.
+- **Quote chỉ bổ sung ngữ cảnh** cho câu hỏi mới; luồng xác nhận "đúng/sai" giữ nguyên, không đụng.
 
 ## Bảo mật — prompt injection qua caption (BẮT BUỘC)
 
@@ -69,7 +69,7 @@ Caption ảnh do người dùng kiểm soát và được nhúng vào prompt c�
 
 ## An toàn regex khi ghép quote
 
-`mergeQuote` chỉ đưa ngữ cảnh cho **bộ định tuyến LLM** (`route`), **KHÔNG** cho regex HS/ngày (`parseQuery`). Vì câu trả lời cũ của bot luôn chứa mã HS + ngày; nếu cho regex soi cả ngữ cảnh, một câu hỏi legal ("thủ tục nhập cái này") reply vào tin có "8481.10.11" sẽ bị bắt nhầm thành tra thuế. Do đó `answer(text, routerText)`: `parseQuery(text)` soi câu MỚI, `route(routerText)` thấy ngữ cảnh.
+Ngữ cảnh của tin được quote chỉ đi vào **bước đọc câu hỏi bằng LLM**, **KHÔNG** vào regex HS/ngày (`parseQuery`). Vì câu trả lời cũ của bot luôn chứa mã HS + ngày; nếu cho regex soi cả ngữ cảnh, một câu hỏi legal ("thủ tục nhập cái này") reply vào tin có "8481.10.11" sẽ bị bắt nhầm thành tra thuế. Do đó `respond` gửi `quote` riêng cho `POST /answer` còn `parseQuery(text)` chỉ soi câu MỚI.
 
 ## Nhận diện ảnh chặt (loại video/file)
 

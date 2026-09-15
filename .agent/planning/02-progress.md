@@ -232,7 +232,14 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
     - Rà lại đạt: 150 kịch bản tấn công không có lần ghi sai, sweep render 942.566 phần 0 vi phạm, 56 kịch bản mới của người rà cũng sạch.
     - Sổ phán quyết chỉ ghi từ danh sách lệnh đóng; số hiệu công văn đọc ra mã nước thì không ghi; lưu bộ nhớ lỗi thì đóng bảng.
     - Trên `main`: jest chức năng 365, bot 146, `tsc` sạch.
-  - **Đang chạy:** Việc 13 (xoá lớp câu mẫu, agent riêng) và vòng che mã tuyến tính. Test thời gian chạy sau, khi máy rảnh để đo đúng.
+  - **Việc 13 xong, nhánh `plan08/viec13-delete-templates`:** xoá lớp khuôn mẫu và lưới regex định tuyến của bot — `answerCodeCheck`,
+    `answerLegal`, `missingDocAnswer` (chuyển vào `index.mjs`), `formatLegal`, `withLead`, `excerpt`, `codebook`/`unmaskCodes`/
+    `asksCodeFit`/`legalAboutCode`/`fallbackIntent` và cả bộ `route()` của `router.mjs` (còn `claudeVision` + `normalize` cho ảnh),
+    `legalAnswer`/`legalDocuments` của `api.mjs`; `tariffByClues` không còn `lead`. Ảnh vẫn che mã trước khi vào vision
+    (`captionForVision` tự giữ mặt nạ, vì `maskCodes` nằm ở API). Bot `*.mjs` không tính test: 3.279 → 2.861 dòng. Bot 137 test
+    (146 − 10 ca chỉ kiểm code đã xoá, 1 viết lại, 1 thêm cho `redLines`); che mã và cue FIT nay do `plan.spec.ts` giữ, khối
+    nguồn và dòng đỏ/cam do `render.test.mjs`.
+  - **Đang chạy:** vòng che mã tuyến tính. Test thời gian chạy sau, khi máy rảnh để đo đúng.
   - **CHẶN PUSH — ReDoS có sẵn trên `main` (`451809c`):** GAP trong lookbehind từ khoá của `maskCodes` có ba `\s*` liền nhau. Số đo: 800 dấu cách mất 410 ms, 10k dấu cách + một chữ số treo nhiều giờ; trần q 2000 ký tự vẫn tốn vài giây mỗi tin. Đã sửa ở `plan08/api-mask-minors` (`3e94301`), nên nhánh này phải gộp trước khi push.
     - Vòng 2 (`addb765`): dấu gạch chỉ được nằm giữa mọi cặp số, nên khoảng năm/số lượng/số hiệu tiêu chuẩn không bị che.
     - Rà lại chưa đạt, 1 major (lọt R4 mới): `JOINED` đặt `NOT_HEADING` trong mục danh sách, nên danh sách dừng ở số tiền/năm và mã phía sau không được che. Đang sửa bằng cách kiểm từng mục trong callback.
