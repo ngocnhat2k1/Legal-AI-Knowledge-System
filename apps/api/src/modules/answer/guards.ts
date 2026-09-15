@@ -164,6 +164,11 @@ export interface VerifyContext {
   userCodes: string[];
   /** Dotted four-digit headings with lines in hs_description. */
   headings: Set<string>;
+  /**
+   * Headings and 8-digit codes the runner put in the prompt from code (candidate headings and their lines): G3 holds them
+   * anchored as it holds a label; G5 and G6 do not read them.
+   */
+  anchors?: string[];
 }
 
 /** `sentence` is as the draft wrote it, so a repair can replace it; `repairOnly` asks for a repair and cuts nothing. */
@@ -291,7 +296,9 @@ export function verify(draft: Draft, sources: Source[], ctx: VerifyContext): Ver
   const dropped = rates.length > 0 && !numberMarkers(rates.join(' '), cited, quoteText, userText).answer;
   if (dropped) violations.push({ rule: 'G1', detail: 'a rate or amount its quote lacks: prose dropped' });
   const kept = dropped ? '' : cutPieces(draft.answerMd.split(SENTENCE_END), (p) => bad.has(p.trim()));
-  const labels = sources.map((s, i) => (quotes.has(i + 1) ? s.label : ''));
+  // Anchors came from code, not from the model: they stand beside every source's label, dotted as FACTS reads codes.
+  const anchors = (ctx.anchors ?? []).map(digits).filter(Boolean).map(dotted).join(' ');
+  const labels = sources.map((s, i) => `${quotes.has(i + 1) ? s.label : ''} ${anchors}`);
   const numbered = numberMarkers(kept, cited, quoteText, userText, { cut: true, labels });
   const unanchored = numbered.cut ?? [];
   for (const sentence of unanchored) violations.push({ rule: 'G3', detail: 'a figure neither its quotes nor its label hold', sentence });

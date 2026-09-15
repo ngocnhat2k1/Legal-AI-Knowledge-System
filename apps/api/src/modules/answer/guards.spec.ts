@@ -215,6 +215,17 @@ describe('verify — the code guards over a compose draft (plan 08 §4.1)', () =
     expect(verify(draft(`${lead} Nhóm 30.04 gồm thuốc [1].`, [q1]), [en3005], c).answerMd).toBe(lead);
   });
 
+  it('G3: headings and codes the runner put in the prompt from code (anchors) stand like labels; others still need a quote', () => {
+    const ruling = source({ kind: 'ruling', label: 'Công văn phân loại', body: 'Mặt hàng miếng dán hạ sốt phân loại vào mã số 3005.10.10.' });
+    const d = (answerMd: string) =>
+      draft(answerMd, [q1, { n: 2, quotes: ['phân loại vào mã số 3005.10.10'] }], { candidates: [{ hs: '3005.10.10', evidence: [2] }], missingFacts: ['công dụng'] });
+    const prose = 'Nhóm 38.24 cần đối chiếu thêm [1]. Mã 3005.10.10 gồm băng có lớp dính [1].';
+    expect(verify(d(prose), [en3005, ruling], ctx()).answerMd).toBe('');
+    const r = verify(d(`${prose} Nhóm 33.07 cần đối chiếu thêm [1].`), [en3005, ruling], ctx({ anchors: ['38.24', '30051010'] }));
+    expect(r.answerMd).toBe(prose);
+    expect(r.violations).toEqual([expect.objectContaining({ rule: 'G3', sentence: 'Nhóm 33.07 cần đối chiếu thêm [1].' })]);
+  });
+
   it('G4: cuts the over-conclusion from the 14/09 log, "phải xét vào 38.24" and "phải xét 38.24" alike', () => {
     for (const settle of ['nên phải xét vào 38.24', 'phải xét 38.24']) {
       const r = verify(draft(`${lead} Miếng dán chưa rõ công dụng, ${settle} [2].`, [q1, q2]), [en3005, en3824], ctx());
