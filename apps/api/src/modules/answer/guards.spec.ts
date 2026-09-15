@@ -1,4 +1,5 @@
 import { numberMarkers } from '../legal/legal.grounding';
+import { LARGE, SMALL, superLinear } from './growth.probe';
 import {
   digits,
   dotted,
@@ -685,33 +686,10 @@ describe('guards run on every answer in the event loop: linear in the length of 
     ['numberMarkers', (s) => [numberMarkers(s, [1], [s], s), numberMarkers(s, [1], [s], s, { cut: true, labels: [s] })]],
   ];
 
-  const ms = (f: () => unknown): number => {
-    const t = performance.now();
-    f();
-    return performance.now() - t;
-  };
-  const [at10k, at20k] = [inputsAt(10_000), inputsAt(20_000)];
-  const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[xs.length >> 1]!;
-  // Growth, not a wall-clock budget: under full jest the CPU is shared and a thread can move to a slower core for seconds.
-  // A best-of-three per length failed there twice (10 → 44 ms, 7 → 21 ms) on "38.24 để phải …", which alone takes 5.4 →
-  // 11 ms and doubles exactly up to 80,000 characters. Doubling the prose doubles a linear guard's time and quadruples a
-  // quadratic one's, so each input runs at 10,000 then at once 20,000 characters, up to five pairs, and the median ratio
-  // of the pairs must stay under 3: a slowdown skews only the pairs it overlaps. Under 5 ms at both lengths (best runs)
-  // passes too. The first super-linear input ends the test; a run over 1,000 ms at 20,000 characters, a hang, at once.
+  const [small, large] = [inputsAt(SMALL), inputsAt(LARGE)];
+  // growth.probe.ts holds the method, the calibration and the limit; the first super-linear input ends the test.
   it.each(guards)('%s grows linearly with the length of each input', (_, guard) => {
     guard('Nếu chưa rõ công dụng thì phải xét 38.24 [1].');
-    for (const [i, small] of at10k.entries()) {
-      const [t10, t20]: number[][] = [[], []];
-      const fast = (): boolean => Math.min(...t10) < 5 && Math.min(...t20) < 5;
-      const ratios = (): number[] => t20.map((t, k) => t / t10[k]!);
-      for (let k = 0; k < 5; k++) {
-        t10.push(ms(() => guard(small)));
-        t20.push(ms(() => guard(at20k[i]!)));
-        // Three passing pairs already fix the verdict of five.
-        if (t20[k]! >= 1000 || (k >= 2 && (fast() || ratios().filter((r) => r < 3).length >= 3))) break;
-      }
-      const linear = Math.max(...t20) < 1000 && (fast() || median(ratios()) < 3);
-      expect(linear ? [] : [JSON.stringify(small.slice(0, 24)), Math.round(Math.min(...t10)), Math.round(Math.min(...t20)), +median(ratios()).toFixed(1)]).toEqual([]);
-    }
+    for (const [i, input] of small.entries()) expect(superLinear(guard, input, large[i]!)).toEqual([]);
   }, 300_000);
 });
