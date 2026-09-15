@@ -21,13 +21,13 @@ import { dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 
-import { answerByHs, answerImage, codeOffer, handleConfirm, handleCorrection, missingDocAnswer } from './answer.mjs';
+import { answerByHs, answerImage, codeOffer, handleConfirm, handleCorrection, noCodes } from './answer.mjs';
 import { ackIngestReports, answer, confirmations, ingestReports, legalProvision, lookupFull, requestIngest, verifyDocument } from './api.mjs';
 import { loadContext, nextState, saveContext, stampTariff } from './conversation.mjs';
 import { fastPath, fold, guardIntent, isBareLookup, isOkay, parseVerifyDocCommand, plainVerdict, readsAsQuestion, unlikeTariffReply } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
-import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatProvisions, sanitizeLead } from './format.mjs';
-import { parseQuery, stripMentions, todayVN } from './parse.mjs';
+import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatMissingDoc, formatProvisions, sanitizeLead } from './format.mjs';
+import { missingKind, parseQuery, stripMentions, todayVN } from './parse.mjs';
 import { L, render, toText } from './render.mjs';
 
 const API = process.env.API_URL || 'http://api:3000';
@@ -108,18 +108,32 @@ const LEGAL_MODES = ['legal', 'status', 'mixed'];
 /** Owner decision Q1 takes about 40 s of prose above a rate; past this the block goes out alone and the API stops too. */
 const PROSE_BUDGET_MS = 45_000;
 
-/**
- * Plan text as memory may keep it (R4): masked by the API, its [mã n] labels dropped, and a run the API mask missed dropped too:
- * 6 to 10 joined digits ("mã hs 848180", a 9-digit typo) or 4-2-2 joined by dashes ("8481-80-99", not an ISO date). A year or a
- * document number is shorter or carries a slash.
- * ponytail: a 6- to 10-digit amount or phone number goes as well; the real fix is the API mask.
- */
-const noCodes = (s) =>
-  String(s ?? '')
-    .replace(/\[mã \d+\]|(?<![\d/.-])(?:\d{6,10}|(?!(?:19|20)\d{2}-[01]\d-[0-3]\d(?![\d-]))\d{4}-\d{2}-\d{2}(?:-\d{2})?)(?![\d/-])/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+/** Plan text as memory may keep it (R4): masked by the API, its [mã n] labels dropped, and the runs that mask misses too (noCodes). */
 const asked = (plan) => noCodes(plan.question);
+
+/**
+ * Answer for a document we do not hold, carrying whatever the gazette catalogue knows.
+ * `pendingIngest` is what lets the next turn act on "nạp" — the offer and the thing
+ * being offered have to survive between messages, which is what conversation memory is for.
+ */
+function missingDocAnswer(query, label, apiAnswer, asOf) {
+  // A catalogue hit equal to the number asked for IS that document: offer it, never list it as another one.
+  const { kind, matches } = missingKind(label, apiAnswer?.gazetteMatches ?? [], apiAnswer?.gazetteMatchKind ?? 'none');
+  // Only an EXACT catalogue hit may be offered for ingest. A near-miss by number is a
+  // different document, and an ambiguous year is a question for the user — fetching
+  // either would answer something nobody asked.
+  const hit = kind === 'exact' ? (matches[0] ?? null) : null;
+  return {
+    text: formatMissingDoc(label, matches, kind),
+    topic: 'legal',
+    legal: {
+      query,
+      asOf: asOf ?? null,
+      missingDoc: label,
+      pendingIngest: hit ? { number: hit.number, title: hit.title, sourceUrl: hit.sourceUrl } : null,
+    },
+  };
+}
 
 /** What the next plan may point at after a legal answer (plan 08 §6.1). */
 const legalMemory = (plan, cites, asOf) => ({

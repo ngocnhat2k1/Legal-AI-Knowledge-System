@@ -159,9 +159,10 @@ services:
       ZALO_SESSION_PATH: /session/zalo-session.json
       # Comma-separated Zalo threadIds allowed to query (empty = answer everyone).
       ALLOWED_THREADS: "${ALLOWED_THREADS:-}"
-      # Subscription credential for the Claude Code CLI: the intent router and image
-      # vision both need it. Empty = the bot stays on its regex fast paths and
-      # fallbackIntent, which answers, but only within the current topic.
+      # Subscription credential for the Claude Code CLI. Since plan 08 Việc 12–13 the bot
+      # uses it for IMAGE VISION only: typed messages go to the API's POST /answer, which
+      # holds its own token. Empty = photos fall back to "mô tả hàng bằng chữ"; typed
+      # messages are unaffected.
       CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN:-}"
     volumes:
       - zalo_session:/session

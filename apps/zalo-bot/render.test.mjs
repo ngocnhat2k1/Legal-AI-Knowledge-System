@@ -401,6 +401,25 @@ test('formatAnswerMd status: văn xuôi nói "còn hiệu lực" vẫn in dòng 
   assert.ok(!toText(lines).includes('Ứng viên') && !rowsOf(lines).includes(HINT));
 });
 
+test('formatAnswerMd: dòng đỏ hiệu lực gộp theo (văn bản, hiệu lực), mang mọi dấu [n] của nó, dù văn xuôi nói gì (R8)', () => {
+  // Tới Việc 13 rule này nằm trong test của câu trả lời pháp luật cũ; `redLines` nay chỉ còn `formatAnswerMd` gọi.
+  const clause = (n, doc, effectiveness) =>
+    cite(n, { kind: null, label: `Khoản 1 Điều ${n} ${doc}`, instrument: doc, documentNumber: doc, authority: 'binding', note: null, verification: 'verified', effectiveness });
+  const lines = formatAnswerMd({
+    ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [],
+    answerMd: 'Hàng gia công được miễn thuế [1], trừ khi bán nội địa [2] [3]; chú giải nhóm nói thêm [4].',
+    citations: [
+      clause(1, 'VB-A', 'con_hieu_luc'), clause(2, 'VB-B', 'het_hieu_luc_mot_phan'), clause(3, 'VB-B', 'het_hieu_luc_mot_phan'),
+      // Mục bằng chứng (Chú giải chi tiết, SEN, phụ lục…) mang tình trạng trên DÒNG NGUỒN của nó (R18): dù dữ liệu gắn
+      // `effectiveness` gì, nó không bao giờ sinh một dòng đỏ hiệu lực như một điều khoản văn bản.
+      cite(4, { effectiveness: 'het_hieu_luc_mot_phan' }),
+    ],
+  });
+  const red = all(lines, ST.red);
+  assert.deepEqual(red, ['[2] [3] VB-B hết hiệu lực một phần — kiểm tra điều khoản còn áp dụng.']);
+  assert.ok(!red.some((l) => l.includes('CV 1810')), red.join('\n'));
+});
+
 test('formatAnswerMd: văn bản bot tự nạp, cảnh báo của API và dòng phạm vi biểu thuế gộp thành đúng một dòng cam', () => {
   const clause = (n, doc) => cite(n, { kind: null, label: `Khoản 1 Điều ${n} ${doc}`, instrument: doc, documentNumber: doc, authority: 'binding', note: null, quotes: ['Hàng hóa nhập khẩu để gia công được miễn thuế nhập khẩu.'] });
   const res = {

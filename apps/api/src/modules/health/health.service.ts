@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 
 import { DATABASE_CONNECTION, type Database } from '../../shared/adapters/database';
-import { probeLlm, type LlmStatus } from './health.llm';
+import { probeLlm, probeLlmDeep, type LlmDeepStatus, type LlmStatus } from './health.llm';
 
 export interface HealthReport {
   /** `ok` only when the database is reachable AND pgvector is installed. */
@@ -18,6 +18,13 @@ export interface HealthReport {
    * cannot lose the model layer unnoticed, which is what happened before it existed.
    */
   llm: LlmStatus;
+  /**
+   * The deep probe's verdict, present only when the caller asked for it with `?llm=deep`.
+   * Kept beside `llm` rather than replacing it: everything that already reads `llm` (deploy.sh,
+   * apps/eval, the runbook) keeps working, and the default call stays free. Like `llm` it is
+   * reported, not judged — a spent subscription must not 503 the tariff path.
+   */
+  llmDeep?: LlmDeepStatus;
 }
 
 /**
@@ -31,17 +38,20 @@ export interface HealthReport {
 export class HealthService {
   constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
 
-  async check(): Promise<HealthReport> {
-    const llm = await probeLlm();
+  async check(deep = false): Promise<HealthReport> {
+    const llm = probeLlm();
+    // Started here, awaited below: the probe and the query run side by side, so `?llm=deep` costs max(probe, db)
+    // rather than probe + db. Awaiting it first would add the probe's whole budget to every deep health call.
+    const probe = deep ? probeLlmDeep() : undefined;
     try {
       const result = await this.db.execute(
         sql`select extversion from pg_extension where extname = 'vector' limit 1`,
       );
       const rows = result as unknown as ReadonlyArray<{ extversion: string | null }>;
       const pgvector = rows.length > 0 ? rows[0]!.extversion : null;
-      return { status: pgvector ? 'ok' : 'degraded', db: 'up', pgvector, llm };
+      return { status: pgvector ? 'ok' : 'degraded', db: 'up', pgvector, llm, ...(probe && { llmDeep: await probe }) };
     } catch {
-      return { status: 'degraded', db: 'down', pgvector: null, llm };
+      return { status: 'degraded', db: 'down', pgvector: null, llm, ...(probe && { llmDeep: await probe }) };
     }
   }
 }

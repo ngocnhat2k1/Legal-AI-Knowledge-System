@@ -23,17 +23,16 @@ const SAMPLES = [
   'Thuế nhập khẩu 2710.12.21 ngày 2026-05-15',
 ];
 
-/** Fixed sentences of the template-built replies; plan 08 drives their count to zero. */
+/**
+ * Fixed sentences of the template-built replies. Việc 13 deleted the template layer for typed messages, so what is left here
+ * can only come from the PHOTO path (`tariffByClues` in answer.mjs) and the first-lookup confirm invite: the metric now
+ * measures how much of a photo answer is still stitched from fixed sentences. Six strings no code can produce went with the
+ * layer — counting them would report a zero the code never earned.
+ */
 export const TEMPLATE_STRINGS = [
-  'Căn cứ phân loại',
   'Với mô tả',
   'trả lời "đúng"',
-  'Danh mục mô tả mã này',
-  'Nhóm ứng viên theo mô tả hàng',
-  'Đây là gợi ý để đối chiếu',
-  'Mình đang đọc chú giải',
   'Chốt mã đúng',
-  '(trích đoạn đầu)',
   'Mặt hàng có thể thuộc nhiều nhóm',
 ];
 

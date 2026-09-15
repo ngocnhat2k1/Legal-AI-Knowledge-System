@@ -10,20 +10,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { asksCodeFit, codebook, COUNTRY, fallbackIntent, fastPath, guardIntent, isBareLookup, legalAboutCode, parseVerifyDocCommand, ruling, tariffReply, unmaskCodes } from './dispatch.mjs';
-import { answerByHs, answerCodeCheck, answerLegal, captionForVision, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
-import {
-  CAPABILITIES,
-  formatAnswer,
-  formatGeneral,
-  formatLegal,
-  formatMissingDoc,
-  formatProvisions,
-  sanitizeLead,
-  withLead,
-} from './format.mjs';
+import { COUNTRY, fastPath, guardIntent, isBareLookup, parseVerifyDocCommand, ruling, tariffReply } from './dispatch.mjs';
+import { answerByHs, captionForVision, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
+import { CAPABILITIES, formatAnswer, formatGeneral, formatMissingDoc, formatProvisions, sanitizeLead } from './format.mjs';
 import { L, render, toText } from './render.mjs';
-import { cleanGazetteTitle, detectOrigin, docNumberStatedIn, missingKind, parseDocRef, parseQuery, parseQuotedTariff, sameDocNumber, statedDocNumber, todayVN } from './parse.mjs';
+import { cleanGazetteTitle, detectOrigin, docNumberStatedIn, missingKind, parseQuery, parseQuotedTariff, sameDocNumber, statedDocNumber, todayVN } from './parse.mjs';
 import { ThreadType } from 'zca-js';
 
 import { loadContext, nextState } from './conversation.mjs';
@@ -38,15 +29,6 @@ const TARIFF_ANSWER_QUOTE =
   `Tra theo ngày ${todayVN().split('-').reverse().join('/')} · [1] NĐ 26/2023/NĐ-CP — Biểu thuế nhập khẩu ưu đãi (MFN, Mục I)`;
 /** Tariff memory right after today's lookup reply, no origin: a one-word verdict may answer it (conversation.mjs nextState). */
 const OPEN = { hs: '84818099', origin: null, date: todayVN(), open: true };
-
-test('mã HS trong câu hỏi về danh mục văn bản là câu hỏi pháp luật; có dấu hiệu thuế thì vẫn tra thuế', () => {
-  assert.equal(legalAboutCode('Mũ bảo hiểm mã 6506.10.10 thuộc danh mục rủi ro nào theo Thông tư 36/2026?'), true);
-  assert.equal(legalAboutCode('Bóng đèn 8539.31.10 có phải kiểm tra hiệu suất năng lượng không'), true);
-  assert.equal(legalAboutCode('Thuế nhập khẩu mã 8481.80.99 xuất xứ Trung Quốc là bao nhiêu phần trăm?'), false);
-  assert.equal(legalAboutCode('8481.80.99 TQ'), false);
-  assert.equal(legalAboutCode('Thuế 8481.80.99 theo Nghị định 26/2023'), false);
-  assert.equal(legalAboutCode('Thông tư 36/2026 quy định gì về mũ bảo hiểm'), false, 'không có mã HS thì router quyết');
-});
 
 test('THE REGRESSION: disagreeing with a LEGAL answer is not an HS correction', () => {
   // Exactly the message from the 2026-08-13 screenshot: a reply (so the old
@@ -139,12 +121,6 @@ test('an unknown intent falls back to tariff, the historical default', () => {
   assert.equal(guardIntent('check_code', { topic: null }), 'tariff', 'kế hoạch 08 không còn intent check_code');
 });
 
-test('without an LLM the bot stays on the current topic instead of keyword-searching', () => {
-  assert.equal(fallbackIntent({ topic: 'legal', text: 'không phải cái đó' }), 'legal');
-  assert.equal(fallbackIntent({ topic: 'tariff', text: 'van bi từ TQ' }), 'tariff');
-  assert.equal(fallbackIntent({ topic: null, text: 'Nghị định 69/2018/NĐ-CP còn áp dụng không' }), 'legal', 'số hiệu văn bản rõ ràng không đi tra mã HS');
-});
-
 // --- The lead/facts split ---------------------------------------------------
 
 test('a lead stating a rate is dropped — an LLM may never produce a tariff number', () => {
@@ -162,30 +138,6 @@ test('a lead citing an HS code is kept only if the block returned it', () => {
   const block = '📋 8481.80.99 · CN';
   assert.equal(sanitizeLead('Mình tra mã 8481.80.99 nhé.', block), 'Mình tra mã 8481.80.99 nhé.');
   assert.equal(sanitizeLead('Mình tra mã 8523.52.00 nhé.', block), '');
-});
-
-test('withLead falls back to the deterministic block alone', () => {
-  const block = [L(['BLOCK'])];
-  assert.equal(withLead('Thuế là 15%.', block), block);
-  assert.equal(toText(withLead('Đây bạn nhé.', block)), 'Đây bạn nhé.\n\nBLOCK');
-  assert.equal(withLead(null, block), block);
-});
-
-// --- Document references ----------------------------------------------------
-
-test('a named Thông tư is read as a document reference', () => {
-  const ref = parseDocRef('cho mình hỏi Thông tư 38/2015/TT-BTC quy định gì');
-  assert.equal(ref.core, '38/2015');
-  assert.equal(ref.docType, 'thong_tu');
-  assert.equal(ref.confident, true);
-  assert.equal(ref.label, '38/2015/TT-BTC');
-});
-
-test('a bare number in a sentence is NOT a document reference', () => {
-  // Otherwise an ordinary question mentioning a form or lot number would be answered
-  // with "we do not hold that document".
-  assert.equal(parseDocRef('lô hàng 09/2018 đã về chưa').confident, false);
-  assert.equal(parseDocRef('không có số nào ở đây'), null);
 });
 
 // --- The router may recognise an identifier, never mint one ------------------
@@ -453,16 +405,6 @@ test('chế độ ứng viên: câu dẫn có điều kiện, không xanh, khôn
   for (const s of ['AANZFTA (form AANZ)', 'ATIGA (form D)', 'EVFTA (form EUR.1/REX)']) assert.ok(lineWith(p, s), `thiếu dòng ${s}`);
 });
 
-test('lời dẫn LLM có mã HS vẫn không thay được dòng ứng viên cố định', () => {
-  const lines = [
-    L(['Với mô tả ', ['van điều áp', 'i'], ', mình tra được các mã ứng viên dưới đây — đây là ứng viên để bạn chốt, chưa phải mã đã xác định.']),
-    ...formatAnswer(CN, tariff8481({ origin: 'CN' }), null, { candidate: true, showFooter: false }),
-  ];
-  const text = toText(withLead('Sản phẩm này thuộc mã 8481.80.99', lines));
-  assert.ok(text.startsWith('Sản phẩm này thuộc mã 8481.80.99'), 'lời dẫn khớp khối thì được giữ');
-  assert.ok(text.includes('đây là ứng viên để bạn chốt, chưa phải mã đã xác định'));
-});
-
 test('cổng văn xuôi LLM: phần trăm, số hiệu, mã HS mọi dạng chỉ qua khi khối tất định có', () => {
   assert.equal(sanitizeLead('khoảng mười phần trăm', 'MFN 10%'), '');
   assert.equal(sanitizeLead('thuộc nhóm 8481 nhé', ''), '');
@@ -523,23 +465,12 @@ test('ứng viên HS: MFN từ /tariff/search (giá hôm nay) không in dưới 
   assert.match(now, /8481\.80\.91 · MFN 5% ·/, 'ngày tra là hôm nay thì in MFN ứng viên');
 });
 
-test('ứng viên HS: lời dẫn LLM nêu mã HS bị bỏ, dòng đầu vẫn là dòng ứng viên cố định (R2)', async () => {
+test('ứng viên HS: không lời dẫn LLM nào đứng trên danh sách ứng viên, dòng đầu vẫn là dòng cố định (R2)', async () => {
+  // Việc 13 bỏ hẳn `lead`: mô hình không còn viết câu nào của câu trả lời này, kể cả khi vision trả về `lead`.
   const named = await byClues({ hsHints: ['8481', '7307'], date: '2026-09-13', lead: 'Sản phẩm này thuộc mã 7307.99.90 là hợp lý nhất.' });
   assert.ok(named.startsWith('Với mô tả van'), named.slice(0, 80));
+  assert.ok(!named.includes('7307.99.90 là hợp lý nhất'), named.slice(0, 120));
   assert.equal(parseQuotedTariff(named).hs, '84818099', 'tin quote lại phải chỉ về mã đầu, không về mã lời dẫn nêu');
-  const plain = await byClues({ hsHints: ['8481'], date: '2026-09-13', lead: 'Mình tra theo mô tả bạn gửi.' });
-  assert.ok(plain.startsWith('Mình tra theo mô tả bạn gửi.'), plain.slice(0, 80));
-});
-
-test('pháp luật: API không trả lời thì không nói văn bản "không có trên Công báo"', async () => {
-  const real = globalThis.fetch;
-  globalThis.fetch = async () => { throw new Error('ECONNREFUSED'); };
-  try {
-    const text = toText((await answerLegal('Nghị định 69/2018/NĐ-CP còn áp dụng không')).text);
-    assert.ok(!text.includes('không tìm thấy') && text.includes('Không gọi được'), text);
-  } finally {
-    globalThis.fetch = real;
-  }
 });
 
 test('answerByHs: lỗi tra cứu viết tiếng Việt, ngày dd/mm/yyyy, không lộ thông điệp API', async () => {
@@ -575,46 +506,59 @@ test('chỉ mã + xuất xứ + từ tra thuế mới tra thẳng; mã nằm tro
   }
 });
 
-test('router không thấy chữ số của mã nào (R4); mỗi mã một nhãn, trả về đúng mã; số hiệu văn bản và ngày không bị che', () => {
-  const book = codebook();
-  assert.equal(book.mask('tham khảo nhóm 3005, mã 30051010 và 3005.90.10; lại mã 3005.10.10'), 'tham khảo nhóm [mã 1], mã [mã 2] và [mã 3]; lại mã [mã 2]');
-  assert.equal(book.mask('mã HS vừa tra: 3005.10.10'), 'mã HS vừa tra: [mã 2]', 'cùng mã ở dòng trạng thái cùng nhãn');
-  assert.equal(unmaskCodes('phân biệt [mã 2] và [mã 3]', book.codes), 'phân biệt 3005.10.10 và 3005.90.10');
-  assert.equal(book.mask('Nghị định 26/2023/NĐ-CP ngày 31/05/2023, năm 2026'), 'Nghị định 26/2023/NĐ-CP ngày 31/05/2023, năm 2026');
-  for (const [text, masked] of [
-    ['khai 3005.10 được không', 'khai [mã 1] được không'],
-    ['e nghĩ là 30.05 được không', 'e nghĩ là [mã 1] được không'],
-    ['HS: 3005', 'HS: [mã 1]'],
-    ['mã số 30.05.10.10', 'mã số [mã 1]'],
-    ['nhóm hàng 3005 hay 3824', 'nhóm hàng [mã 1] hay [mã 2]'],
-    ['nhóm 3005 hoặc 3824, và 3926', 'nhóm [mã 1] hoặc [mã 2], và [mã 3]'],
-    ['đổi mã 3005 sang 3824.', 'đổi mã [mã 1] sang [mã 2].'],
-    ['thuộc chương 30', 'thuộc chương [mã 1]'],
-    ['nhóm 3005'.normalize('NFD'), 'nhóm [mã 1]'],
-    ['ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu', 'ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu'],
-  ]) {
-    assert.equal(codebook().mask(text), masked, text);
-  }
-  assert.equal(asksCodeFit('vì sao miếng dán ngải cứu vào mã 30051010'), true);
-  assert.equal(asksCodeFit('mã 3005.10.10 gồm những hàng gì, khác 3005.90 chỗ nào'), false);
-  for (const t of [
-    'vi sao mieng dan ngai cuu vao ma 30051010',
-    'mã 30051010 dùng cho miếng dán ngải cứu được ko',
-    'miếng dán ngải cứu mã 30051010 đc k',
-    'e có mặt hàng miếng dán, e đang tham khảo mã này không biết được không ạ 30051010',
-    'mã 30.05.10.10 dùng được không',
-  ]) {
-    assert.equal(asksCodeFit(t), true, t);
-  }
-  assert.equal(asksCodeFit('Xe 8703.23.51 đã qua sử dụng nhập khẩu được không'), false);
-  assert.equal(asksCodeFit('Mũ bảo hiểm mã 6506.10.10 thuộc danh mục rủi ro nào theo Thông tư 36/2026?'), false);
-});
-
 test('lời chào trả danh sách năng lực ngay, không qua router; chú thích ảnh không mang mã vào vision (R4)', () => {
   for (const t of ['hi', 'Chào bot!', 'xin chào', 'Hello']) assert.equal(fastPath({ text: t })?.action, 'greeting', t);
   assert.equal(fastPath({ text: 'hi, mã 8481.80.99 thuế bao nhiêu' }), null);
   assert.equal(fastPath({ text: 'hi', hasImage: true }), null);
   assert.equal(captionForVision('e tham khảo mã 30051010 được không, nhóm 3005 hay 3824'), 'e tham khảo mã được không, nhóm hay');
+});
+
+/**
+ * Bảng này là bảng của `codebook().mask` trước Việc 13. Xoá lớp khuôn mẫu xong, `captionForVision` là chỗ CHE MÃ DUY NHẤT
+ * còn lại ở bot (tin chữ do `plan.ts` của API che), nên nó phải giữ nguyên cả bảng: bỏ trống một nhánh regex mà 137 test
+ * vẫn xanh nghĩa là nhánh đó không có ai canh.
+ */
+test('chú thích ảnh: mọi cách viết mã đều bị che trước khi tới vision; ngày, tỷ lệ, giờ, tiền và số hiệu văn bản giữ nguyên (R4)', () => {
+  for (const [caption, masked] of [
+    ['e tham khảo mã 30051010 được không', 'e tham khảo mã được không'],
+    ['mã 3005 10 10', 'mã'],
+    ['khai 3005.10 được không', 'khai được không'],
+    ['e nghĩ là 30.05 được không', 'e nghĩ là được không'],
+    ['HS: 3005', 'HS:'],
+    ['hs code 3005', 'hs code'],
+    ['mã số 30.05.10.10', 'mã số'],
+    ['nhóm hàng 3005 hay 3824', 'nhóm hàng hay'],
+    ['nhóm 3005 hoặc 3824, và 3926', 'nhóm hoặc , và'],
+    ['đổi mã 3005 sang 3824.', 'đổi mã sang .'],
+    ['thuộc chương 30', 'thuộc chương'],
+    // Unikey gõ "Unicode tổ hợp": chuỗi NFD phải được NFC trước, không thì lookbehind từ khoá trượt.
+    ['nhóm 3005'.normalize('NFD'), 'nhóm'],
+    // Không phải mã — vision cần chúng để đọc đúng chú thích: ngày, tỷ lệ, giờ, số tiền, số hiệu văn bản.
+    ['ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu', 'ngày 30.05 nộp 12.50% lúc 08.30 sáng, phạt 12.50 triệu'],
+    ['Nghị định 26/2023/NĐ-CP ngày 31/05/2023, năm 2026', 'Nghị định 26/2023/NĐ-CP ngày 31/05/2023, năm 2026'],
+    ['Thông tư 38/2015/TT-BTC quy định gì', 'Thông tư 38/2015/TT-BTC quy định gì'],
+  ]) {
+    assert.equal(captionForVision(caption), masked, caption);
+  }
+});
+
+/**
+ * Cùng đai an toàn `noCodes` mà `index.mjs` đã dùng cho state lưu lại: chuỗi 6–10 chữ số dính liền và mã 4-2-2(-2) nối
+ * bằng gạch — hai cách viết `HS_TOKEN` đọc thiếu ("848180" còn nguyên, "8481809900" còn lại "00"). Che thừa một chú thích
+ * ảnh là vô hại (vision chỉ cần mô tả hàng), nên chỗ này thà chặt tay.
+ */
+test('chú thích ảnh: mã dính liền và mã nối gạch cũng không tới vision; ngày ISO và năm vẫn nguyên (R4)', () => {
+  for (const [caption, masked] of [
+    ['mã hs 848180', 'mã hs'],
+    ['mã hs 8481809900', 'mã hs'],
+    ['van bi 8481-80-99 bằng đồng', 'van bi bằng đồng'],
+    ['ngày 2026-09-15', 'ngày 2026-09-15'],
+    ['biểu thuế năm 2026', 'biểu thuế năm 2026'],
+    // ponytail: đai này nuốt luôn một cụm 6–10 chữ số không phải mã (số điện thoại, số tiền) — xem `noCodes` ở answer.mjs.
+    ['0912 345678', '0912'],
+  ]) {
+    assert.equal(captionForVision(caption), masked, caption);
+  }
 });
 
 test('một câu HỎI mã có sai/đúng không không bao giờ ghi sổ (R13); "mã đúng là <mã cũ>" vẫn xác nhận', async () => {
@@ -671,147 +615,16 @@ test('câu đối chiếu mã được quote kèm "sai rồi" không ghi mã ng�
   assert.equal(fastPath({ text: 'mã này sai', quoteText: TARIFF_ANSWER_QUOTE, topic: 'tariff', tariffFresh: true, table: OPEN })?.action, 'correction');
 });
 
-async function codeCheck(q, clues) {
-  const real = globalThis.fetch;
-  let legalQ = null;
-  globalThis.fetch = async (url) => {
-    const u = new URL(url);
-    if (u.pathname === '/legal') legalQ = u.searchParams.get('q');
-    const body =
-      u.pathname === '/tariff/search' ? CANDS[u.searchParams.get('prefix')] ?? []
-      : u.pathname === '/tariff' ? { ...tariff8481({}), goods: { heading: 'Van', path: 'Vòi, van › Van loại khác' } }
-      : u.pathname === '/legal'
-        ? { asOf: '2026-09-14', answer: 'Van điều chỉnh dòng chảy vào **84.81** [1].', citations: [{ documentNumber: 'CV 1810/TCHQ-TXNK', provisionLabel: 'Chú giải chi tiết HS 2022 · nhóm 84.81', verbatimText: '84.81 - Vòi, van', kind: 'en', effectiveness: 'con_hieu_luc' }] }
-        : null;
-    return { ok: body !== null, status: body !== null ? 200 : 404, json: async () => body };
-  };
-  try {
-    const r = await answerCodeCheck(q, { keywords: ['van'], date: '2026-09-14', ...clues }, `van này dùng mã ${q.dotted} được không`);
-    return { r, text: toText(r.text), legalQ };
-  } finally {
-    globalThis.fetch = real;
-  }
-}
-const hasOrange = (lines) => lines.some((l) => l.segs.some((s) => Array.isArray(s) && s.includes('orange')));
-
-test('đối chiếu mã người dùng nêu: mã không vào câu hỏi gửi LLM (R4), nhóm lệch ứng viên thì báo cam, căn cứ đọc từ /legal', async () => {
-  const off = await codeCheck(
-    { hs: '73079990', dotted: '7307.99.90', origin: null, date: '2026-09-14' },
-    { hsHints: ['8481'], searchQuery: 'Căn cứ phân loại van điều chỉnh, mã [mã 1]', lead: 'Mã bạn tham khảo phù hợp với van.' },
-  );
-  assert.ok(!off.text.includes('phù hợp với van'), 'lời dẫn router viết trước khi có căn cứ không được in');
-  assert.equal(off.r.tariff, null, 'mã người dùng không vào trí nhớ để thành tiền đề lượt sau');
-  assert.match(off.legalQ, /phân biệt: 84\.81, 73\.07\. Nêu tiêu chí phân biệt/, 'nhóm người dùng chỉ là một nhóm nữa để so, sau các ứng viên');
-  assert.match(off.legalQ, /chưa đủ dữ kiện thì không chốt nhóm\.$/, 'hỏi tiêu chí, không đòi phán quyết');
-  assert.doesNotMatch(off.legalQ, /7307\.99\.90|73079990|\[mã|bạn|người dùng/, 'mã người dùng không được thành tiền đề');
-  assert.match(off.text, /Mã 7307\.99\.90 thuộc nhóm 73\.07, chưa nằm trong các nhóm mình tra từ mô tả hàng/);
-  assert.match(off.text, /Căn cứ phân loại\n[\s\S]*84\.81 \[1\][\s\S]*Chú giải chi tiết HS 2022/);
-  assert.ok(!hasOrange(off.r.text), 'ứng viên do mô hình xếp, dao động giữa các lần: vắng mặt không phải cảnh báo');
-  assert.equal(off.r.topic, 'legal', 'một "sai" sau đó bàn về lập luận, không ghi mã người dùng là sai vào sổ');
-
-  const same = await codeCheck({ hs: '84818099', dotted: '8481.80.99', origin: null, date: '2026-09-14' }, { hsHints: ['8481', '7307'] });
-  assert.doesNotMatch(same.legalQ, /8481\.80\.99|84818099/);
-  assert.match(same.text, /thuộc nhóm 84\.81, trùng một nhóm ứng viên/);
-  assert.match(same.text, /84\.81 · .*\(nhóm của mã bạn tham khảo\)/);
-  assert.ok(!hasOrange(same.r.text));
-
-  const fourth = await codeCheck({ hs: '84818099', dotted: '8481.80.99', origin: null, date: '2026-09-14' }, { hsHints: ['7307', '3926', '4016', '8481'] });
-  assert.match(fourth.text, /thuộc nhóm 84\.81, trùng một nhóm ứng viên/, 'thứ hạng router dao động: nhóm thứ tư vẫn là ứng viên');
-  assert.match(fourth.text, /84\.81 · .*\(nhóm của mã bạn tham khảo\)/);
-  assert.ok(!hasOrange(fourth.r.text));
-
-  const bare = await codeCheck({ hs: '84818099', dotted: '8481.80.99', origin: null, date: '2026-09-14' }, { keywords: [], hsHints: [] });
-  assert.match(bare.text, /chưa tìm được nhóm ứng viên nào từ mô tả/);
-  assert.equal(bare.legalQ, null, 'không mô tả hàng thì không tra từ khoá rác, không gọi /legal');
-});
-
 test('ứng viên HS không còn mô tả nào sau cổng thì không in "Với mô tả" rỗng', async () => {
   const text = await byClues({ keywords: [], hsHints: ['8481'], note: 'thuế suất 20%', date: '2026-09-13' }, null, '');
   assert.ok(text.startsWith('Mình tra được các mã ứng viên dưới đây'), text.slice(0, 80));
 });
 
-// --- Legal reply (spec §5b.6) ----------------------------------------------------
-
-test('pháp luật: in đủ năm nguồn, một dòng cam cho văn bản tự nạp, dòng đỏ gộp theo văn bản và hiệu lực, trích đoạn giữ vế ngoại lệ', () => {
-  const clause =
-    'Hàng hóa nhập khẩu để gia công cho thương nhân nước ngoài theo hợp đồng gia công đã ký kết và đã đăng ký với cơ quan hải quan nơi làm thủ tục được miễn thuế nhập khẩu, trừ trường hợp hàng hóa đó được bán hoặc tiêu thụ nội địa. ' +
-    'Phần còn lại của khoản quy định hồ sơ, thủ tục và thời hạn thông báo cho cơ quan hải quan. '.repeat(5);
-  assert.ok(clause.indexOf('trừ trường hợp') > 140, 'fixture: vế ngoại lệ phải nằm sau ký tự 140');
-  const cite = (n, doc, over = {}) => ({
-    documentNumber: doc, documentTitle: 't', articleLabel: `Điều ${n} ${doc}`, provisionLabel: `Khoản 1 Điều ${n} ${doc}`,
-    verbatimText: `Nội dung khoản ${n}.`, path: '', effectiveness: 'con_hieu_luc', effectiveFrom: '2020-01-01', effectiveTo: null,
-    gazetteUrl: `https://congbao.chinhphu.vn/van-ban/${n}`, verification: 'verified', ...over,
-  });
-  const r = {
-    asOf: '2026-09-13',
-    answer: 'Hàng gia công được **miễn thuế** [1], trừ khi bán nội địa [2] [4].',
-    citations: [
-      cite(1, 'VB-A', { verbatimText: clause }),
-      cite(2, 'VB-B', { effectiveness: 'het_hieu_luc_mot_phan' }),
-      cite(3, 'VB-C', { verification: 'auto_unverified' }),
-      cite(4, 'VB-B', { effectiveness: 'het_hieu_luc_mot_phan' }),
-      cite(5, 'VB-D', { verification: 'auto_unverified' }),
-    ],
-  };
-  const lines = formatLegal(r);
-  const text = toText(lines);
-  for (const n of [1, 2, 3, 4, 5]) assert.ok(text.includes(`[${n}] Khoản 1 Điều ${n}`), `thiếu nguồn [${n}] — dấu trong câu trả lời sẽ mồ côi`);
-  const parts = render(lines);
-  const all = (st) => parts.flatMap((p) => styled(p, st));
-  assert.equal(all(ORANGE).length, 1, 'một dòng cảnh báo');
-  assert.ok(all(ORANGE)[0].includes('VB-C') && all(ORANGE)[0].includes('VB-D'));
-  assert.deepEqual(all(RED), ['[2] [4] VB-B hết hiệu lực một phần — kiểm tra điều khoản còn áp dụng.']);
-  const src1 = text.split('\n').find((l) => l.startsWith('[1] '));
-  assert.ok(src1.includes('trừ trường hợp') && src1.endsWith('(trích đoạn đầu)'), src1);
-  assert.deepEqual(all('b'), ['miễn thuế']);
-});
-
-test('formatLegal: mục bằng chứng mang nhãn trên dòng nguồn, không bị báo "bot tự nạp", không sinh dòng hiệu lực đỏ', () => {
-  const ev = (over) => ({
-    documentNumber: '69/2018/NĐ-CP', documentTitle: 't', articleLabel: 'Tình trạng hiệu lực — 69/2018/NĐ-CP',
-    provisionLabel: 'Tình trạng hiệu lực — 69/2018/NĐ-CP', verbatimText: '69/2018/NĐ-CP hết hiệu lực từ 05/09/2026.', path: '',
-    effectiveness: 'con_hieu_luc', effectiveFrom: '2026-09-05', effectiveTo: null, gazetteUrl: null, verification: 'auto_unverified',
-    kind: 'status', instrument: '69/2018/NĐ-CP', note: null, ...over,
-  });
-  const r = {
-    asOf: '2026-09-14',
-    answer: 'Nghị định này đã hết hiệu lực [1]; ghi chú dự án giải thích thêm [2].',
-    citations: [
-      ev({}),
-      ev({ kind: 'note', documentNumber: '.agent/business-rules.md', provisionLabel: 'Quy tắc nghiệp vụ — R5', effectiveFrom: null,
-        note: 'ghi chú nghiệp vụ hoặc tài liệu nội bộ, không phải căn cứ pháp lý', effectiveness: 'het_hieu_luc' }),
-    ],
-  };
-  const lines = formatLegal(r);
-  const parts = render(lines);
-  const all = (st) => parts.flatMap((p) => styled(p, st));
-  assert.equal(all(ORANGE).length, 0, 'mục bằng chứng không phải văn bản bot tự nạp');
-  assert.equal(all(RED).length, 0, 'nhãn của mục bằng chứng nằm trên dòng nguồn');
-  const text = toText(lines);
-  assert.ok(text.includes('[2] Quy tắc nghiệp vụ — R5 (ghi chú nghiệp vụ hoặc tài liệu nội bộ, không phải căn cứ pháp lý)'), text);
-});
-
-test('formatLegal: mục tình trạng đã hết hiệu lực in một dòng đỏ từ dữ liệu, dù văn xuôi nói gì', () => {
-  const r = {
-    asOf: '2026-09-14',
-    answer: 'Nghị định 43/2017/NĐ-CP vẫn còn hiệu lực [1].', // the model's slip seen on 14/09/2026
-    citations: [{
-      documentNumber: '43/2017/NĐ-CP', documentTitle: 't', articleLabel: 'Tình trạng hiệu lực — 43/2017/NĐ-CP',
-      provisionLabel: 'Tình trạng hiệu lực — 43/2017/NĐ-CP', verbatimText: '43/2017/NĐ-CP hết hiệu lực từ 23/01/2026.', path: '',
-      effectiveness: 'con_hieu_luc', effectiveFrom: '2026-01-23', effectiveTo: null, gazetteUrl: null, verification: 'auto_unverified',
-      kind: 'status', instrument: '43/2017/NĐ-CP', note: null,
-      expired: '43/2017/NĐ-CP ĐÃ HẾT HIỆU LỰC từ 23/01/2026 theo 37/2026/NĐ-CP',
-    }],
-  };
-  const reds = render(formatLegal(r)).flatMap((p) => styled(p, RED));
-  assert.deepEqual(reds, ['[1] 43/2017/NĐ-CP ĐÃ HẾT HIỆU LỰC từ 23/01/2026 theo 37/2026/NĐ-CP.']);
-});
-
 // --- 69/2018 (spec §5b.8) ------------------------------------------------------------
 
 test('HỒI QUY 69/2018: số hiệu đầy đủ đi nguyên vẹn; văn bản đúng số không bị liệt kê như của cơ quan khác', () => {
-  assert.equal(parseDocRef('Nghị định 69/2018/NĐ-CP còn áp dụng không').full, '69/2018/NĐ-CP');
-  assert.equal(parseDocRef('69/2018').full, null);
+  // Đọc số hiệu ra `{core, full, docType}` nay là việc của API (`legal.scope.ts parseDocRef`, có spec riêng): bản sao ở bot
+  // không còn ai gọi từ Việc 12. Phần bot còn giữ là so số hiệu và trình bày văn bản chưa nạp.
   assert.equal(sameDocNumber('69/2018/ND-CP', '69/2018/NĐ-CP'), true);
   assert.equal(sameDocNumber('8/2015/ND-CP', '08/2015/NĐ-CP'), true);
   assert.equal(sameDocNumber('69/2018/TT-BTC', '69/2018/NĐ-CP'), false);
@@ -832,11 +645,6 @@ test('cùng số, khác cơ quan ban hành: vẫn là văn bản khác và khôn
 });
 
 // --- Task 5 fix round ------------------------------------------------------------
-
-test('HỒI QUY QH13: đoạn cơ quan ban hành có chữ số vẫn thuộc số hiệu', () => {
-  assert.equal(parseDocRef('Luật 107/2016/QH13').full, '107/2016/QH13');
-  assert.equal(parseDocRef('Nghị quyết 1234/2021/NQ-UBTVQH14, còn hiệu lực không').full, '1234/2021/NQ-UBTVQH14');
-});
 
 test('nguyên văn theo trích dẫn: văn bản tự nạp có đúng một dòng cam (R18); hết hiệu lực toàn bộ không kèm "kiểm tra điều khoản"', () => {
   const row = (over) => ({

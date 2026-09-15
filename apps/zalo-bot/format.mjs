@@ -1,11 +1,10 @@
 /**
  * Turning API payloads into chat messages.
  *
- * The shape of every answer is: an LLM-written LEAD (one or two natural sentences,
- * so the bot stops reading like a form letter) followed by a DETERMINISTIC BLOCK
- * built here from database values only. The split is the whole point — the prose is
- * allowed to be fluent because it is not allowed to carry facts.
- * See the no-llm-on-tariff-numbers ADR.
+ * Model PROSE and DETERMINISTIC BLOCKS are kept apart: the prose (composed by POST
+ * /answer, or the ack above it) is allowed to be fluent because it is not allowed to
+ * carry facts — every rate, code, document number and date on the page is written here
+ * from API fields. See the no-llm-on-tariff-numbers ADR.
  */
 
 import { unlikeTariffReply } from './dispatch.mjs';
@@ -47,12 +46,6 @@ export function sanitizeLead(lead, block = '', max = 400) {
   const codes = (hay.match(/(?<![\d/])\d{4}(?:\.?\d{2}){0,3}(?![\d/])/g) ?? []).map((b) => b.replace(/\./g, ''));
   for (const [, code] of low.matchAll(HS_ANY_RE)) if (!codes.some((b) => b.startsWith(code.replace(/\./g, '')))) return '';
   return text.slice(0, max);
-}
-
-/** A gated lead as its own line above the reply; it never replaces a line of the reply. */
-export function withLead(lead, lines) {
-  const clean = sanitizeLead(lead, toText(lines));
-  return clean ? [L([clean]), L([]), ...lines] : lines;
 }
 
 /** 2026-09-13 → 13/09/2026 */
@@ -296,29 +289,11 @@ function unverifiedLines(rows) {
 }
 
 /**
- * The opening of a provision, cut at the first sentence or clause boundary between 140 and 480
- * characters: Vietnamese provisions put the exception after the first clause ("được miễn thuế …
- * trừ trường hợp …"), and a hard cut there can read as the opposite rule.
- */
-export function excerpt(raw, min = 140, max = 480) {
-  const text = String(raw ?? '').normalize('NFC').trim();
-  const flat = (s) => s.replace(/\s+/g, ' ').trim();
-  const whole = flat(text);
-  if (whole.length <= max) return { text: whole, cut: false };
-  for (const m of text.matchAll(/[.;:](?=\s)|\n(?=\s*(?:[a-zđ]\)|\d+\.)\s)/g)) {
-    const head = flat(text.slice(0, m.index + (m[0] === '\n' ? 0 : 1)));
-    if (head.length > max) break;
-    if (head.length >= min) return { text: `${head.replace(/[.;:]$/, '')}…`, cut: true };
-  }
-  return { text: `${whole.slice(0, max)}…`, cut: true };
-}
-
-/**
- * "Nguồn:" block, small italic. items: { n, label, note?, quote?, cut?, url?, auto? }. A standing note repeated on every source
+ * "Nguồn:" block, small italic. items: { n, label, note?, quote?, url?, auto? }. A standing note repeated on every source
  * ("tài liệu hướng dẫn áp dụng…" three times) is printed once, then "như [n]". Links are de-duplicated per document and
  * capped at three. `auto`: an evidence row extracted by machine that no person has checked yet (R18).
  */
-export function sourceLines(items) {
+function sourceLines(items) {
   if (!items.length) return [];
   const urls = [...new Set(items.map((x) => x.url).filter(Boolean))].slice(0, 3);
   const firstWithNote = new Map();
@@ -327,7 +302,7 @@ export function sourceLines(items) {
     if (x.note && !same) firstWithNote.set(x.note, x.n);
     const note = !x.note ? '' : same ? ` (như [${same}])` : ` (${x.note})`;
     const auto = x.auto ? ' (trích tự động, chưa đối chiếu)' : '';
-    return L([`[${x.n}] ${x.label}${note}${auto}${x.quote ? ` — “${x.quote}”${x.cut ? ' (trích đoạn đầu)' : ''}` : ''}`], 'note');
+    return L([`[${x.n}] ${x.label}${note}${auto}${x.quote ? ` — “${x.quote}”` : ''}`], 'note');
   };
   return [
     L(['Nguồn:'], 'note'),
@@ -354,31 +329,6 @@ function redLines(cites) {
     // A status row's end of force, compared with the as-of date by the API.
     ...cites.flatMap((c, i) => (c.kind && c.expired ? [L([`[${c.n ?? i + 1}] ${c.expired}.`], 'red')] : [])),
   ];
-}
-
-/** Grounded legal answer: md(prose with [n]) + effectiveness + unverified warning + every source. */
-export function formatLegal(r) {
-  const cites = r.citations ?? [];
-  const lines = r.answer
-    ? md(r.answer)
-    : [L(['Mình chưa tổng hợp được câu trả lời chắc chắn; đây là các điều khoản liên quan nhất để bạn đối chiếu:'])];
-  lines.push(L([]), ...redLines(cites));
-
-  // Evidence sections are not documents the bot fetched: their standing is on the source line, not in this warning.
-  lines.push(...unverifiedLines(cites.filter((c) => !c.kind)));
-
-  const items = cites.map((c, i) => {
-    const ex = excerpt(c.verbatimText);
-    const late = c.effectiveTo || (c.effectiveFrom && r.asOf && c.effectiveFrom > r.asOf);
-    const window =
-      !c.kind && late && c.effectiveFrom
-        ? ` · hiệu lực ${c.effectiveTo ? `${dmy(c.effectiveFrom)}–${dmy(c.effectiveTo)}` : `từ ${dmy(c.effectiveFrom)}`}`
-        : '';
-    const label = c.kind === 'en' ? enLabel(c.provisionLabel) : c.provisionLabel;
-    return { n: i + 1, label: `${label}${window}`, note: c.note, quote: ex.text, cut: ex.cut, url: c.gazetteUrl };
-  });
-  lines.push(...sourceLines(items));
-  return lines;
 }
 
 // --- Composed answer (POST /answer) ----------------------------------------------
