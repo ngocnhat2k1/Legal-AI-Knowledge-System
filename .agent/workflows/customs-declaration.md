@@ -1,7 +1,7 @@
 ---
 type: workflow
 status: active
-updated: 2026-07-17
+updated: 2026-09-15
 related:
   - ../project-context.md
   - ../business-rules.md
@@ -62,11 +62,11 @@ Bề mặt sản phẩm được cố ý giới hạn ở bước 1 và bước 
 
 **Vì sao điều này được nhấn mạnh dữ dội như vậy:** gần như toàn bộ dữ liệu huấn luyện trước 2026, các bài blog, và thói quen của người hành nghề đều mô tả cách lập hồ sơ theo TT 38/2015 + TT 39/2018. **Bất kỳ logic lập hồ sơ nào cũng phải nhắm tới TT 121, chứ không phải TT 38/39 như đã biết trước đây.** Một tác nhân "biết" hồ sơ TT 38/39 sẽ tạo ra đầu ra lỗi thời một cách đầy tự tin.
 
-Liên quan: **Quyết định 117/QĐ-CHQ (2026)**, Quy trình xác định trước mã số nội bộ áp dụng từ khoảng 01/02/2026, được xây dựng trên nguyên tắc **mỗi hàng hóa có đúng một mã HS** và trên một cơ sở dữ liệu phân loại thống nhất toàn ngành — cơ sở dữ liệu đó là **nội bộ**, đừng cho rằng nó sẽ được công khai (đã xác minh 2026-07-17, nguồn: https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Quyet-dinh-117-QD-CHQ-2026-Quy-trinh-Xac-dinh-truoc-ma-so-Kiem-tra-ten-hang-mo-ta-hang-hoa-692998.aspx; research 09 gắn cờ toàn văn là không tải được/bị chặn phí, nên hãy coi chi tiết là mức độ tin cậy trung bình).
+Liên quan: **Quyết định 117/QĐ-CHQ (2026)**, Quy trình xác định trước mã số nội bộ áp dụng từ khoảng 01/02/2026, được xây dựng trên nguyên tắc **mỗi hàng hóa có đúng một mã HS** và trên một cơ sở dữ liệu phân loại thống nhất toàn ngành (đã xác minh 2026-07-17, nguồn: https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Quyet-dinh-117-QD-CHQ-2026-Quy-trinh-Xac-dinh-truoc-ma-so-Kiem-tra-ten-hang-mo-ta-hang-hoa-692998.aspx; research 09 gắn cờ toàn văn là không tải được/bị chặn phí, nên hãy coi chi tiết là mức độ tin cậy trung bình). Từ 15/09/2026: "Một mặt hàng có một mã số duy nhất theo Danh mục hàng hóa xuất khẩu, nhập khẩu Việt Nam" là quy phạm (khoản 1 Điều 4 TT 85/2026/TT-BTC) — §4 của [Phân loại mã HS](../concepts/hs-classification.md#4-vì-sao-phân-loại-thực-sự-khó) vẫn cho thấy thực tế không tuân theo. TT 85/2026 liệt kê nguồn của "Cơ sở dữ liệu về Danh mục hàng hóa xuất khẩu, nhập khẩu Việt Nam" (Điều 13, gồm Thông báo kết quả xác định trước mã số, Thông báo kết quả phân tích, phân loại) và buộc Cục Hải quan công khai các thông tin đó trên trang thông tin điện tử (khoản 3 Điều 14). Chưa rõ đó có phải cơ sở dữ liệu QĐ 117 nói tới, chưa kiểm trang đó tra cứu hay tải hàng loạt được không; TT 85 giao Cục trưởng ban hành "Quy trình phân loại hàng hoá, áp dụng mức thuế…" (khoản 1 Điều 17) nhưng không nói QĐ 117 bị thay.
 
 ## Quản lý chuyên ngành (specialized management) — bước 2
 
-**Không có một danh mục tổng thể duy nhất nào cả.** Mỗi bộ ban hành thông tư "bảng mã số HS" của riêng mình, và **chính thông tư đó là khóa nối (join key)** giữa một mã HS và một yêu cầu. Một tính năng hứa hẹn "cho tôi biết cần những giấy phép gì" thực chất là lời hứa tập hợp và duy trì các thông tư bảng HS riêng biệt của khoảng 6 bộ, mà sự thật gốc nằm ở các phụ lục PDF/Word (đã xác minh 2026-07-17, nguồn: research 08 §3 và §8).
+**Không có một danh mục tổng thể duy nhất nào cả.** Mỗi bộ ban hành thông tư "bảng mã số HS" của riêng mình, và **chính thông tư đó là khóa nối (join key)** giữa một mã HS và một yêu cầu. Khi mã trong danh mục quản lý chuyên ngành khác mã theo Danh mục XNK Việt Nam, thực hiện theo Danh mục XNK Việt Nam và pháp luật hải quan (khoản 4 Điều 6 TT 85/2026/TT-BTC, từ 15/09/2026). Một tính năng hứa hẹn "cho tôi biết cần những giấy phép gì" thực chất là lời hứa tập hợp và duy trì các thông tư bảng HS riêng biệt của khoảng 6 bộ, mà sự thật gốc nằm ở các phụ lục PDF/Word (đã xác minh 2026-07-17, nguồn: research 08 §3 và §8).
 
 Nghị định khung **từng là NĐ 69/2018/NĐ-CP** (hàng cấm, hàng theo giấy phép, hàng có điều kiện, TNTX/chuyển khẩu); ngày 2026-07-17 nó còn hiệu lực và bản thay thế mới là dự thảo (nguồn: https://vanban.chinhphu.vn/?pageid=27160&docid=193756). **Cập nhật 2026-09-10:** NĐ 69/2018 đã bị **NĐ 292/2026/NĐ-CP thay thế từ 05/09/2026** (khoản 1 Điều 65 NĐ 292/2026, đã đọc toàn văn trên Công báo).
 
@@ -141,7 +141,7 @@ Yêu cầu chữ ký số và sự vắng mặt của API cùng nhau có nghĩa 
 Được tái hiện nguyên vẹn về mặt tinh thần từ chính các cờ cảnh báo của research 08. Đừng "rửa" bất kỳ điều nào trong số này thành một khẳng định đầy tự tin.
 
 - **TT 15/2026/TT-BCT, TT 26/2026/TT-BCT, và VBHN 47/VBHN-BCT (4/6/2026)** — một trích xuất đơn lẻ có độ tin cậy thấp (luatvietnam) mô tả VBHN 47 hợp nhất TT 12/2018 với TT 42/2019, TT 08/2023, TT 38/2025, TT 15/2026 và TT 26/2026. Hai thông tư năm 2026 đến từ chính một trích xuất đó. **Hãy xác minh trước khi sử dụng.**
-- **NĐ 169/2026/NĐ-CP** (xử phạt hải quan, hiệu lực 1/7/2026, được cho là thay thế NĐ 128/2020) và **NĐ 153/2026/NĐ-CP** (địa bàn hoạt động hải quan, hiệu lực 5/7/2026) — chỉ một nguồn tóm tắt tìm kiếm; **cách đánh số đáng ngờ**. Hãy xác nhận trước khi trích dẫn. Cho đến khi được xác nhận, nghị định xử phạt còn hiệu lực vẫn là **NĐ 128/2020/NĐ-CP được sửa đổi bởi NĐ 102/2021/NĐ-CP**.
+- **NĐ 169/2026/NĐ-CP — ĐÃ XÁC NHẬN 2026-09-15** trên Công báo (số 293 ngày 31/05/2026; ký 15/05/2026; hiệu lực 01/07/2026); làm hết hiệu lực NĐ 128/2020/NĐ-CP và Điều 2 NĐ 102/2021/NĐ-CP (khoản 2 Điều 38) — văn bản nói "hết hiệu lực", không nói "thay thế". Còn chưa xác minh: **NĐ 153/2026/NĐ-CP** (địa bàn hoạt động hải quan, hiệu lực 5/7/2026) — chỉ một nguồn tóm tắt tìm kiếm; **cách đánh số đáng ngờ**. Hãy xác nhận trước khi trích dẫn.
 - **VBHN 67/VBHN-BNNMT (2026)** về kiểm dịch động vật trên cạn — một nguồn duy nhất.
 - **"Danh mục hàng hóa nhóm 2 bị bãi bỏ từ 2026"** theo Luật 78/2025 — **gây tranh cãi, có tính quyết định, và chỉ dựa trên một nguồn thương mại duy nhất** (extendmax), nguồn này cũng khẳng định rằng công bố hợp quy được *tái cấu trúc, chứ không phải bị bãi bỏ*. Khẳng định này sẽ thay đổi hình dạng của bất kỳ bộ máy quy tắc nào. **Hãy xác minh với văn bản luật và nghị định hướng dẫn của nó trước khi xây dựng bất cứ điều gì trên đó.**
 - **Liệu một thông tư của BNNMT đã thay thế TT 01/2024/TT-BNNPTNT hay chưa** — không tìm thấy bản thay thế nào được xác nhận.

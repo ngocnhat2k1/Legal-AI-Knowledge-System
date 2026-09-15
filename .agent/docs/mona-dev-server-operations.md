@@ -1,7 +1,7 @@
 ---
 type: runbook
 status: active
-updated: 2026-09-14
+updated: 2026-09-15
 related:
   - ../planning/06-deploy-mona-dev-server.md
   - ../architecture-decisions/2026-09-13-host-on-mona-dev-server.md
@@ -244,12 +244,15 @@ server (mục 4).
 
 1. Cài Docker (compose v2, plugin hay bản standalone đều được) và git.
 2. `git clone https://github.com/ngocnhat2k1/Legal-AI-Knowledge-System.git <thư mục stack>`.
-3. Tạo `.env` theo mục 3 (`chmod 600`); thêm override nếu máy dùng chung cần giới hạn RAM.
+3. Tạo `.env` theo mục 3 (`chmod 600`); thêm override nếu máy dùng chung cần giới hạn RAM, kể cả dòng `seed-evidence`.
 4. Thêm dòng khoá ở bảng trên vào `authorized_keys`, sửa đường dẫn `deploy.sh` cho khớp thư mục stack.
 5. Sửa secret `DEPLOY_HOST` và `DEPLOY_KNOWN_HOSTS` (lấy bằng `ssh-keyscan <host>`, đối chiếu fingerprint trên máy thật).
    Khoá giữ nguyên.
 6. Tab Actions → run mới nhất của `main` → Re-run job `deploy`. Server chưa có `DEPLOYED_COMMIT`, nên script chạy `up -d`
-   cả chuỗi: db → migrate → seed → seed-legal (nhúng corpus, ~20 phút) → api, bot.
+   cả chuỗi: db → migrate → seed → seed-legal (nhúng corpus, ~20 phút) → api, bot. `up -d` không kèm tên service nên
+   cũng bật `seed-evidence` ngay sau `seed-legal`. Seed này chạy nền khoảng 2 giờ, sau khi job deploy đã xanh; theo dõi
+   bằng `docker-compose logs -f seed-evidence` tới dòng `Evidence seed complete`. Cả kho tri thức dựng lại từ git, xem
+   "Dựng lại kho tri thức trên server mới" ở cuối mục này.
 7. Quét QR cho bot (mục 6). Làm nginx + basic auth và sao lưu theo [README](../../README.md#triển-khai-máy-chủ); phục hồi
    `lookup_confirmation` theo bước 7 ở đó.
 8. Gỡ server cũ theo mục 8.
@@ -275,7 +278,8 @@ recreate bằng image cũ (2026-09-14). Lần deploy tự động kế tiếp s�
 
 ### Nạp lại kho pháp lý (`FORCE_RESEED`)
 
-Chỉ làm khi `db/seed/data/legal/*.ndjson` đổi, ví dụ sau khi gộp corpus của kế hoạch 05. Những điều cần biết trước:
+Chỉ làm khi `documents.ndjson`, `provisions.ndjson` hoặc `chunks.ndjson` trong `db/seed/data/legal/` đổi, vì `seed-legal`
+chỉ đọc ba file đó (các file còn lại do `seed-evidence` nạp). Những điều cần biết trước:
 
 - `seed-legal` chạy `TRUNCATE legal_chunk, legal_provision, legal_document RESTART IDENTITY CASCADE`. Lệnh này xoá cả
   những văn bản worker ingest đã nạp theo yêu cầu và trạng thái `verification`/`verified_by`. Hãy xuất trạng thái xác minh trước.
@@ -290,19 +294,34 @@ FORCE_RESEED=1 docker-compose run --rm --no-deps seed-legal
 docker-compose up -d --no-deps --force-recreate api
 ```
 
-Mất khoảng 18 phút cho 2.806 chunk. Muốn theo dõi RAM thì mở `docker stats customs-assistant-embedder-1` ở terminal khác.
+Mất khoảng 18 phút cho 2.806 chunk (2026-09-13). Bản trong git ngày 2026-09-15 có 3.196 chunk, nên dự kiến khoảng 20 phút.
+Muốn theo dõi RAM thì mở `docker stats customs-assistant-embedder-1` ở terminal khác.
 Nếu embedder bị OOM, làm theo Task 6 Step 4 của kế hoạch 06 (hạ `EMBED_BATCH`).
 
 ### Nạp tầng bằng chứng (`seed-evidence`)
 
-`evidence_section` giữ chú giải HS, GRI, Chú giải chi tiết, SEN, công văn, bảng phụ lục, mục tình trạng hiệu lực,
-tài liệu chỉ có trong notebook và ghi chú nghiệp vụ, mỗi đơn vị trích dẫn một dòng (kế hoạch 05 Mảng 2). Khác
-`seed-legal`, seed này **không TRUNCATE**: nó upsert theo `(kind, instrument, source_ref)`, chỉ nhúng dòng mới hoặc dòng
-có `embed_text` đổi, ghi từng lô ngay khi nhúng xong, và cuối cùng xoá dòng builder không còn sinh. Dừng giữa chừng
-thì chạy lại, seed làm tiếp phần còn thiếu.
+`evidence_section` giữ chú giải HS, GRI, Chú giải chi tiết, SEN, công văn phân loại và các case tách từ chúng, bảng phụ
+lục, mục tình trạng hiệu lực, tài liệu chỉ có trong notebook và ghi chú nghiệp vụ, mỗi đơn vị trích dẫn một dòng (kế
+hoạch 05 Mảng 2). Mục Chú giải chi tiết, SEN hoặc công văn dài hơn 6.800 ký tự có thêm các dòng cửa sổ, mỗi dòng tối đa
+4.000 ký tự cắt nguyên văn từ mục cha. Khác `seed-legal`, seed này **không TRUNCATE**: nó upsert theo `(kind, instrument,
+source_ref)`, chỉ nhúng dòng mới hoặc dòng có `embed_text` đổi, ghi từng lô ngay khi nhúng xong, và cuối cùng xoá dòng
+builder không còn sinh. Dừng giữa chừng thì chạy lại, seed làm tiếp phần còn thiếu.
 
-- Lần đầu 1.989 mục mất **73,5 phút** (2026-09-14); embedder lên ~2,6 GB, RAM trống của host thấp nhất 1.417 MB (số đo ở
-  spec §2.6). Api không chờ seed này. Lần chạy lại khi dữ liệu không đổi chỉ cập nhật cột, không nhúng.
+`source_ref` mang số dòng trong file, nên thêm một dòng vào giữa một `.ndjson` làm đổi khoá của mọi dòng sau nó. Vì vậy,
+khi md5 của `embed_text` đã có vector lưu trong bảng, seed dùng lại vector đó thay vì nhúng (log `… moved (vector reused)`).
+`FORCE_RESEED=1` bỏ qua bước này và nhúng lại mọi dòng. Đường dùng lại đã qua `tsc` nhưng chưa chạy trên CSDL thật
+(2026-09-15).
+
+- Lần đầu 1.989 mục mất **73,5 phút** (2026-09-14), tức 2,22 giây/mục; embedder lên ~2,6 GB, RAM trống của host thấp nhất
+  1.417 MB (số đo ở spec §2.6). Api không chờ seed này. Lần chạy lại khi dữ liệu không đổi chỉ cập nhật cột, không nhúng.
+- **Bản dữ liệu 2026-09-15** (Chú giải chi tiết và SEN trích lại, 36 case, 8 văn bản mới, dòng cửa sổ): builder sinh
+  3.082 mục, chưa kể mục nghị định biểu thuế thêm lúc seed. So với bản build ở `a62b4f9` thì 2.448 mục phải nhúng (174
+  mục khác dùng lại được vector theo md5), ước **83–90 phút** (97 phút nếu không dùng lại được vector). Nạp từ đầu (`FORCE_RESEED=1` hoặc server mới) ước **114
+  phút**. Hai con số là ước lượng theo 2,22 giây/mục, chưa đo; số thật còn tuỳ bản đang nằm trong bảng trên server.
+- **Chỉ chạy sau khi deploy đã xong:** `cat DEPLOYED_COMMIT` phải ra đúng sha vừa push, và `pgrep -f deploy.sh` không in
+  gì. Seed đọc dữ liệu có sẵn trong image `customs-assistant:local`, mà image này chỉ mang `.ndjson` mới sau khi
+  `deploy.sh` kéo về và gắn lại tên. Chạy khi script chưa xong thì `migrate` hoặc việc tạo lại embedder có thể xảy ra
+  giữa chừng seed.
 - **Phải có `--no-deps`**, cùng lý do như `seed-legal`, và embedder phải đang healthy.
 - Override cần một dòng cho service này, không thì container chạy không giới hạn RAM và không xoay vòng log:
   `seed-evidence: { mem_limit: 1g, logging: *logging }`.
@@ -319,6 +338,31 @@ docker-compose exec -T db psql -U app -d customs_assistant -c "select kind, coun
 Sửa một ghi chú trong `.agent/` (6 file liệt kê ở `db/seed/data/legal/nghiep-vu.json`) thì chạy
 `yarn tsx db/seed/evidence.ts --export-notes`, commit `repo-notes.ndjson`, deploy, rồi chạy lại seed. Image không có `.agent/`
 (`.dockerignore`), và `evidence-build.spec.ts` báo lỗi khi file xuất lệch với ghi chú.
+
+### Dựng lại kho tri thức trên server mới: chỉ cần nhúng lại
+
+Chủ dự án yêu cầu (2026-09-14) rằng chuyển server thì không phải trích xuất lại gì. Mọi thứ bot tra và đọc đều nằm trong
+git dưới dạng JSON/NDJSON ở `db/seed/data/`, và image mang theo chúng (`.dockerignore` không loại gì trong `db/seed/data/`).
+Vector không commit: seed nhúng lại bằng embedder, model nằm sẵn trong image `legal-embedder`.
+
+| Seed | Đọc từ `db/seed/data/` | Nhúng | Thời gian |
+|---|---|---|---|
+| `seed` (biểu thuế) | `hs-descriptions.ndjson`, `nd26-muc1.ndjson`, `nd26-chapter98.ndjson`, `nd26-annex-iv.json`, `fta-*.ndjson`; vài dòng thuế viết thẳng trong `db/seed/index.ts` | không | ~30 giây |
+| `seed-legal` | `legal/documents`, `provisions`, `chunks.ndjson` (2026-09-15: 23 văn bản, 7.598 điều khoản, 3.196 chunk) | chunk | ~20 phút |
+| `seed-evidence` | `legal/hs-notes`, `hs-gri`, `hs-explanatory-notes`, `hs-sen`, `classification-rulings`, `classification-cases`, `annex-tables`, `documents` + `relations`, `notebook-only`, `repo-notes`; mục nghị định đọc từ bảng biểu thuế vừa seed | mọi mục | ≈ 114 phút (ước lượng) |
+
+`legal/policy-lists.json` (sổ danh mục khoá theo mã HS) và `fta-members.json` (thành viên FTA) không qua seed: API đọc thẳng file trong image lúc chạy.
+
+Không nằm trong JSON, nên không tự dựng lại:
+
+- **Phán quyết mã HS của chuyên viên** (`lookup_confirmation`) và **trạng thái xác minh do người cấp**: lấy từ sao lưu
+  (mục 7). Seed lấy `verification` từ `documents.ndjson`; dòng không ghi trường này nhận `verified`.
+- **Văn bản worker ingest nạp theo yêu cầu, chỉ mục Công báo, hội thoại, session Zalo, `.env` và override**: xem bảng
+  "Không sao lưu" ở mục 7.
+- **Bốn nghị định biểu thuế chưa từng nạp** (144/2024, 108/2025, 199/2025, 201/2026): đây là dữ liệu còn thiếu, không phải
+  dữ liệu mất khi đổi server.
+- **File gốc** mà các `.ndjson` được trích ra (PDF, scan, `.doc` Công báo): không cần để dựng server, chỉ cần khi trích lại
+  ([đường ống hộp thư đến](inbox-ingest-workflow.md)).
 
 ## 6. Bot Zalo
 

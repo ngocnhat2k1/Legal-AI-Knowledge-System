@@ -1,7 +1,7 @@
 ---
 type: architecture-decision
 status: approved
-updated: 2026-07-18
+updated: 2026-09-15
 related:
   - ../concepts/tariff-system.md
   - ../concepts/hs-classification.md
@@ -49,6 +49,8 @@ tờ khai ràng buộc về mặt pháp lý do nhân viên của chúng ta nộp
   xuất xứ, và thuế suất FTA bị thu hồi có hiệu lực trở về trước.
 - Leo thang thành **trốn thuế** (Điều 14): 1×–3× số thuế trốn, có thể bị chuyển
   hồ sơ hình sự. Thuế và tiền lãi có thể bị truy thu trong **10 năm** kể từ khi phát hiện.
+
+> Ghi chú 2026-09-15: từ 01/07/2026 NĐ 128/2020/NĐ-CP hết hiệu lực (khoản 2 Điều 38 NĐ 169/2026/NĐ-CP). 10%/20% nay ở Điều 10 khoản 2, 3; trốn thuế 01–03 lần ở Điều 15 khoản 2; 10 năm ở điểm b khoản 1 Điều 5; mức 0,03%/ngày không có trong NĐ 169/2026 lẫn NĐ 128/2020.
 
 Tiền lệ cho rủi ro đuôi: vào tháng 12 năm 2014, hải quan được cho là đã phân loại lại
 Anhydrous Milk Fat từ 0405.90.10 sang 0405.90.90, phá hủy tính đủ điều kiện 0% của

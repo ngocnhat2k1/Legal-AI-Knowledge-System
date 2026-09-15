@@ -1,7 +1,7 @@
 ---
 type: concept
 status: active
-updated: 2026-07-18
+updated: 2026-09-15
 related:
   - ../project-context.md
   - ../business-rules.md
@@ -85,6 +85,12 @@ các cấp độ không thể thay thế cho nhau trong một lập luận trư�
   không tự nó có tính ràng buộc độc lập** — một lập luận dựa trên SEN mà mâu thuẫn với EN của HS là yếu
   về mặt pháp lý. (đã xác minh
   2026-07-17, nguồn: https://thuvienxuatnhapkhau.com/wp-content/uploads/2023/07/3866_Chu-giai-SEN-2022.pdf)
+- **Căn cứ Việt Nam (TT 85/2026/TT-BTC, từ 15/09/2026)**: khi phân loại "phải tuân thủ" Điều 26 Luật Hải
+  quan, Điều 16 NĐ 08/2015/NĐ-CP, Danh mục hàng hóa XNK Việt Nam, Biểu thuế, 6 quy tắc tổng quát và hướng
+  dẫn của Thông tư (khoản 2 Điều 4); Chú giải chi tiết HS, Tuyển tập ý kiến phân loại WCO, SEN và Cơ sở
+  dữ liệu Danh mục được sử dụng khi đã áp Điều 4 mà chưa xác định được mã số duy nhất (khoản 1 Điều 6); mô tả
+  tại Danh mục Việt Nam khác Danh mục HS/AHTN thì áp dụng trực tiếp mô tả HS/AHTN (khoản 2 Điều 6).
+  (nguồn: Công báo số 409 ngày 18/07/2026)
 
 Tại sao điều này quan trọng đối với sản phẩm: một chồng trích dẫn dẫn đầu bằng SEN và không bao giờ
 đạt đến một Chú giải Chương trông có vẻ thuyết phục nhưng lại mỏng về mặt pháp lý. Hãy xếp hạng và gắn
@@ -244,30 +250,34 @@ mã số; theo dõi các sai lệch HS giữa FTA/C/O.
 
 ## 7. Hậu quả riêng của Việt Nam khi sai mã
 
-Chế tài theo **Nghị định 128/2020/NĐ-CP** (sửa đổi bởi **102/2021/NĐ-CP**):
+Chế tài theo **Nghị định 169/2026/NĐ-CP** (hiệu lực 01/07/2026; NĐ 128/2020/NĐ-CP và Điều 2 NĐ
+102/2021/NĐ-CP hết hiệu lực từ ngày đó — khoản 2 Điều 38; vi phạm trước ngày đó xem Điều 39):
 
 | Tình huống | Hậu quả |
 |---|---|
-| Sai HS, **không ảnh hưởng thuế** | 1–2 triệu VND (Điều 8 khoản 1) |
-| Sai HS → nộp thiếu thuế, tự phát hiện và khai bổ sung trong các thời hạn của Điều 9 khoản 2 | **10%** phần thiếu |
-| Sai HS → nộp thiếu thuế, **bị hải quan phát hiện** | **20%** phần thiếu (Điều 9 khoản 3) |
-| Bị quy kết là **trốn thuế** (Điều 14) | **1×–3×** số thuế trốn; có thể chuyển hồ sơ hình sự |
-| Tất cả những điều trên | Truy thu toàn bộ phần thiếu + tiền chậm nộp **0.03%/ngày** |
+| Sai HS, **không ảnh hưởng thuế** | **NĐ 169/2026 không nêu mức phạt riêng**: các hành vi khai hải quan tại Điều 9 không còn "mã số hàng hóa". Mức 1–2 triệu là của NĐ 128/2020 Điều 8 khoản 1 điểm b, đã hết hiệu lực. Chưa đánh giá Điều 16–23 khi mã sai kéo theo vi phạm chính sách mặt hàng. |
+| Sai HS → thiếu thuế, **tự phát hiện** & khai bổ sung trong các trường hợp của Điều 10 khoản 2 | **10%** số tiền thuế khai thiếu |
+| Sai HS → thiếu thuế, **bị hải quan phát hiện** khi làm thủ tục, hoặc khi kiểm tra sau thông quan, thanh tra, kiểm toán, kiểm tra | **20%** số tiền thuế khai thiếu (Điều 10 khoản 3); các điểm b, c, d mà không tự nguyện nộp đủ thuế trước khi lập biên bản thì xử phạt theo điểm c khoản 1 Điều 15 (Điều 10 khoản 4) |
+| Bị coi là **trốn thuế** (Điều 15); với sai mã: khi đã được Bộ Tài chính, cơ quan hải quan hướng dẫn mã cho hàng có cùng tên hàng, mã số (khoản 1 điểm b, khoản 5), hoặc khi rơi vào điểm b, c, d khoản 3 Điều 10 mà không tự nguyện nộp đủ thuế trước khi lập biên bản (điểm c khoản 1 Điều 15; khoản 4 Điều 10) | **01 lần** số thuế trốn, mỗi tình tiết tăng nặng +0,2 lần, **tối đa 03 lần**, nếu không bị truy cứu trách nhiệm hình sự (Điều 15 khoản 2) |
+| Tất cả những điều trên | **Buộc nộp đủ** số tiền thuế thiếu (Điều 10 khoản 5) / số tiền thuế trốn (Điều 15 khoản 3). Mức tiền chậm nộp không có trong NĐ 169/2026 (con số 0,03%/ngày cũng không có trong NĐ 128/2020) — chưa đối chiếu luật quản lý thuế, đừng trích. |
 
-(đã xác minh 2026-07-17, nguồn: https://hethongphapluat.com/nghi-dinh-128-2020-nd-cp-quy-dinh-ve-xu-phat-vi-pham-hanh-chinh-trong-linh-vuc-hai-quan/dieu-8 và .../dieu-9)
+(đã đối chiếu 2026-09-15, nguồn: Công báo số 293 ngày 31/05/2026, https://congbao.chinhphu.vn/van-ban/nghi-dinh-so-169-2026-nd-cp-469561.htm)
 
-- **Mức tối thiểu (de minimis)**: không phạt nếu chênh lệch thuế dưới **500.000đ (cá nhân) / 2.000.000đ
-  (tổ chức)**.
-- **Giảm 50%** khi người khai tự phát hiện và nộp khai bổ sung muộn (Điều 8 khoản 6).
-- **Thời hiệu**: **5 năm** đối với chế tài hành chính, nhưng **thuế + tiền lãi có thể truy thu trong 10
-  năm** kể từ khi phát hiện. Sự bất đối xứng chính là điểm mấu chốt — tiền phạt hết hiệu lực từ lâu
+- **Mức tối thiểu (de minimis)**: xử phạt theo Điều 10 chỉ áp dụng khi chênh lệch thuế
+  **từ 500.000 đồng/tờ khai (cá nhân) / 2.000.000 đồng/tờ khai (tổ chức)** (Điều 10 khoản 6).
+- Vi phạm khai hải quan tại Điều 9 tự phát hiện, khai bổ sung quá hạn: phạt theo khung riêng tại Điều 9
+  khoản 6 — không áp cho sai HS vì Điều 9 không còn hành vi đó.
+- **Thời hiệu**: **05 năm** cho trốn thuế và khai sai dẫn đến thiếu thuế (02 năm cho vi phạm hải quan
+  khác), nhưng **thuế + tiền chậm nộp vẫn phải nộp trong thời hạn 10 năm trở về trước** kể từ ngày phát
+  hiện (Điều 5 khoản 1, 2). Sự bất đối xứng chính là điểm mấu chốt — tiền phạt hết hiệu lực từ lâu
   trước khi khoản tiền hết hiệu lực.
 - **Thiệt hại dây chuyền lấn át tiền phạt**: mất **mức thuế ưu đãi FTA** do sai lệch C/O, bị truy áp
   **thuế chống bán phá giá** hồi tố, và bị gắn cờ **luồng đỏ / rủi ro cao** trong hệ thống quản lý rủi
   ro. (đã xác minh 2026-07-17, nguồn: https://thuvienphapluat.vn/tintuc/vn/thoi-su-phap-luat/tai-chinh/20921/xu-ly-khi-co-khac-biet-ma-so-hs-tren-c-o)
 
-Tại sao điều này định hình v1: chi phí kỳ vọng của một gợi ý sai không phải là khoản phạt 1–2 triệu. Đó
-là một cửa sổ truy thu 10 năm cộng với việc phá hủy điều kiện hưởng FTA trên mọi lô hàng trong quá khứ
+Tại sao điều này định hình v1: chi phí kỳ vọng của một gợi ý sai không nằm ở tiền phạt khai hải quan. Đó
+là nghĩa vụ nộp đủ thuế thiếu và tiền chậm nộp trong 10 năm trở về trước (NĐ 169/2026/NĐ-CP điểm b
+khoản 1 Điều 5) cộng với việc phá hủy điều kiện hưởng FTA trên mọi lô hàng trong quá khứ
 của mặt hàng đó. Đây là điều khiến cho "top-1, tự động" không thể bảo vệ được ở bất kỳ độ chính xác nào
 mà các báo cáo nghiên cứu đưa ra.
 
@@ -294,6 +304,12 @@ và bổ sung khoản 6 Điều 7 về hồ sơ/mẫu xác định trước, và
 01b-Thay the XDTMS / 01c-Huy XDTMS**. (đã xác minh 2026-07-17, nguồn:
 https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Thong-tu-121-2025-TT-BTC-sua-doi-cac-Thong-tu-ve-thu-tuc-hai-quan-giam-sat-hai-quan-633118.aspx
 và https://www.pwc.com/vn/vn/publications/news-brief/251223-new-customs-procedures-effective-from-1-february-2026.html)
+
+Mẫu 02/PTNYCPT/2026 của TT 85/2026/TT-BTC ghi: "Trường hợp Phiếu yêu cầu phân tích hàng hóa đề nghị xác
+định trước mã số, không yêu cầu điền các thông tin tờ khai hải quan". TT 38/2015 Điều 7 trong kho
+(25/VBHN-BTC, hợp nhất 2018) còn trỏ "Điều 10 Thông tư số 14/2015/TT-BTC" cho mẫu hàng xác định trước;
+TT 14/2015 bị thay thế từ 15/09/2026 (khoản 1 Điều 15 TT 85/2026). TT 85 không nói điều nào thay thế
+Điều 10 đó; chưa biết TT 121/2025 đã sửa tham chiếu này chưa.
 
 ## 9. Thực tế hành nghề
 
@@ -339,9 +355,13 @@ lặng lẽ bỏ sót một nửa kho tài liệu.
 mã số, mức thuế, đơn vị tính* nội bộ mới, áp dụng từ **~01/02/2026**, xây dựng trên nguyên tắc **mỗi
 mặt hàng có đúng một mã HS** và trên một **cơ sở dữ liệu phân loại thống nhất toàn ngành**. (đã xác minh
 2026-07-17, nguồn: https://thuvienphapluat.vn/van-ban/Xuat-nhap-khau/Quyet-dinh-117-QD-CHQ-2026-Quy-trinh-Xac-dinh-truoc-ma-so-Kiem-tra-ten-hang-mo-ta-hang-hoa-692998.aspx)
-**Cơ sở dữ liệu đó là một hệ thống NỘI BỘ — đừng cho rằng nó sẽ bao giờ được phơi bày ra ngoài.** Lưu ý
-mâu thuẫn đáng nêu ra với chủ sở hữu: "mỗi mặt hàng có đúng một mã HS" là một nguyên tắc hành chính, và
-§4 của ghi chú này là bằng chứng cho thấy thực tế không tuân theo.
+Từ 15/09/2026: "Một mặt hàng có một mã số duy nhất theo Danh mục hàng hóa xuất khẩu, nhập khẩu Việt
+Nam" là quy phạm (khoản 1 Điều 4 TT 85/2026/TT-BTC) — §4 vẫn cho thấy thực tế không tuân theo. TT 85/2026
+liệt kê nguồn của "Cơ sở dữ liệu về Danh mục hàng hóa xuất khẩu, nhập khẩu Việt Nam" (Điều 13, gồm Thông
+báo kết quả xác định trước mã số, Thông báo kết quả phân tích, phân loại) và buộc Cục Hải quan công khai
+các thông tin đó trên trang thông tin điện tử (khoản 3 Điều 14). Chưa rõ đó có phải cơ sở dữ liệu QĐ 117
+nói tới, chưa kiểm trang đó tra cứu hay tải hàng loạt được không; TT 85 giao Cục trưởng ban hành "Quy
+trình phân loại hàng hoá, áp dụng mức thuế…" (khoản 1 Điều 17) nhưng không nói QĐ 117 bị thay.
 
 ## 11. Khả năng sẵn có của dữ liệu làm bằng chứng phân loại
 
@@ -356,14 +376,20 @@ Việt Nam **không có tương đương với CROSS/EBTI** — không có kho c
   hiện vật khác nhau trên cùng một tên miền; chỉ cái đầu tiên có giá trị pháp lý. Xem
   [Nguồn dữ liệu](data-sources.md) và [Hệ thống thuế quan](tariff-system.md).
 - **Chú giải chi tiết HS (WCO EN)** — EN của WCO **có bản quyền và không thể tải xuống miễn phí**.
-- **Thông báo xác định trước mã số**: chỉ được công bố một phần. VNTR
+- **Thông báo kết quả xác định trước mã số**: từ 15/09/2026 là nguồn của Cơ sở dữ liệu về Danh mục
+  (khoản 5 Điều 13 TT 85/2026/TT-BTC) mà Cục Hải quan phải công khai (khoản 3 Điều 14); chưa kiểm mức độ
+  công khai thực tế. Trước đó chỉ được công bố một phần. VNTR
   (`vntr.moit.gov.vn/administrative_rulings`) phản chiếu các phán quyết dưới dạng một **bảng HTML gồm
   các liên kết — không API, không tải hàng loạt, không tập dữ liệu có cấu trúc**, tập mẫu hiển thị là
   ~tháng 9/2021–tháng 1/2022, và nó được ghi rõ ràng là "chỉ dành cho mục đích tham khảo". (đã xác minh
   2026-07-17, nguồn: https://vntr.moit.gov.vn/administrative_rulings)
-- **Thông báo kết quả phân loại** (Cục Kiểm định Hải quan, mẫu 04/TBKQPT-PL/2017) đi vào **Customslab**,
-  một hệ thống nội bộ có thể tìm kiếm bởi các đơn vị hải quan, không dành cho công chúng. Khối lượng
-  nhỏ: **~2,500 mẫu đã xử lý**; nửa đầu 2026 → **257 hồ sơ tiếp nhận, 143 thông báo phân loại được ban
+- **Thông báo kết quả phân tích, phân loại**: từ 15/09/2026 do Đội trưởng Đội Kiểm định hải quan ban hành
+  (khoản 1 Điều 12 TT 85/2026/TT-BTC) theo mẫu số 04/TBKQPTPL/2026, không quá 05 ngày làm việc (không quá
+  20 ngày nếu mẫu phức tạp) kể từ ngày tiếp nhận đủ hồ sơ và mẫu (khoản 3); gửi giám định thì không quá 05
+  (08) ngày làm việc kể từ khi có kết quả giám định (khoản 4); là cơ sở xác định mức thuế, chính sách quản
+  lý hàng hóa và được công khai trên trang thông tin điện tử của Cục Hải quan, trừ phần phụ lục (khoản 6);
+  mẫu ghi "có giá trị đối với mẫu yêu cầu phân tích". Trước đó (mẫu 04/TBKQPT-PL/2017) đi vào Customslab,
+  không dành cho công chúng. Khối lượng nhỏ: **~2,500 mẫu đã xử lý**; nửa đầu 2026 → **257 hồ sơ tiếp nhận, 143 thông báo phân loại được ban
   hành**. (đã xác minh 2026-07-17, nguồn: https://thuehaiquan.tapchikinhtetaichinh.vn/hai-quan-xu-ly-gan-2-500-mam-phan-tich-phan-loai-hang-hoa-xuat-nhap-khau-160924.html)
 
 **Chất lượng truy xuất bị giới hạn bởi khả năng truy cập dữ liệu, không phải bởi mô hình.** Đây là trở

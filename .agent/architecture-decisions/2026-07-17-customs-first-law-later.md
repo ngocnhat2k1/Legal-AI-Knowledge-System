@@ -45,6 +45,8 @@ Một lần phân tích ngây thơ nghị định MFN báo **94% thành công v�
 
 Phía HS có cùng thuộc tính, được đặt tên: các lỗi của HSCodeComp áp đảo là **"Error but Valid"** — mô hình phát ra một mã HS có thật, trông hợp lệ, mà lại sai, không có ngoại lệ, không có lỗi phân tích, không có cờ đỏ nào (đã xác minh 2026-07-17, nguồn: https://arxiv.org/html/2510.19631). Nó chảy vào VNACCS, được chấp nhận, và nổi lên ba năm sau dưới dạng một cuộc kiểm tra sau thông quan ở mức **20% của phần thiếu** cộng với lãi **0.03%/ngày** (đã xác minh 2026-07-17, nguồn: https://hethongphapluat.com/nghi-dinh-128-2020-nd-cp-quy-dinh-ve-xu-phat-vi-pham-hanh-chinh-trong-linh-vuc-hai-quan/dieu-9).
 
+> Ghi chú 2026-09-15: từ 01/07/2026 NĐ 128/2020/NĐ-CP hết hiệu lực (khoản 2 Điều 38 NĐ 169/2026/NĐ-CP). Mức 20% nay ở khoản 3 Điều 10 NĐ 169/2026; con số 0,03%/ngày không có trong NĐ 169/2026 lẫn NĐ 128/2020 — xem R3 trong [Quy tắc nghiệp vụ](../business-rules.md).
+
 Cả hai chế độ hỏng đều không bị bắt bởi test, bởi một schema, hay bởi một điểm số độ tin cậy. Nó bị bắt bởi một chuyên gia lĩnh vực, người biết rằng 0301.11.10 là 15% khi nhập khẩu và thấy công cụ nói 0%. Chủ dự án là chuyên gia đó và anh ấy mở công cụ mỗi ngày làm việc. Customs-trước mua cho chúng ta **phát hiện lỗi trong một tuần thay vì sáu tháng**, trên đúng lớp lỗi mà dự án có khả năng tạo ra nhất.
 
 **2. Cả hai tính năng v1 đều có một hợp đồng đầu ra tốt-đã-biết; tính năng RAG thì chưa.**

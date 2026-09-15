@@ -1,7 +1,7 @@
 ---
 type: doc
 status: active
-updated: 2026-07-18
+updated: 2026-09-15
 related:
   - ../concepts/hs-classification.md
   - ../concepts/tariff-system.md
@@ -375,7 +375,7 @@ Cả hai agent đồng ý ở hai điểm: `www.customs.gov.vn/robots.txt` trả
 - **"Faithful Passage Grounding" loại bỏ 63% trích dẫn ảo giác** — **chỉ từ snippet tìm kiếm**; nguồn gốc chính chưa được xác minh. Đừng trích dẫn như một biện minh thiết kế.
 - **arXiv:2606.00898 "Citation Grounding via Legal Citation Graphs"** và **arXiv:2606.21155 "Who Checks the Citations?"** — **chỉ có snippet, chưa fetch.**
 - **VLegal-Bench** — chỉ có snippet, chưa xác minh.
-- **Quyết định 117/QĐ-CHQ (2026)** chi tiết cơ sở dữ liệu phân loại nội bộ — không thể fetch toàn văn (tường phí/403). **Độ tin cậy trung bình.** "Cơ sở dữ liệu phân loại thống nhất toàn ngành" của nó là một hệ thống *nội bộ*; **đừng cho rằng nó sẽ được phơi bày ra ngoài.**
+- **Quyết định 117/QĐ-CHQ (2026)** chi tiết cơ sở dữ liệu phân loại nội bộ — không thể fetch toàn văn (tường phí/403). **Độ tin cậy trung bình.** Từ 15/09/2026: "Một mặt hàng có một mã số duy nhất theo Danh mục hàng hóa xuất khẩu, nhập khẩu Việt Nam" là quy phạm (khoản 1 Điều 4 TT 85/2026/TT-BTC) — §4 của [Phân loại mã HS](../concepts/hs-classification.md#4-vì-sao-phân-loại-thực-sự-khó) vẫn cho thấy thực tế không tuân theo. TT 85/2026 liệt kê nguồn của "Cơ sở dữ liệu về Danh mục hàng hóa xuất khẩu, nhập khẩu Việt Nam" (Điều 13, gồm Thông báo kết quả xác định trước mã số, Thông báo kết quả phân tích, phân loại) và buộc Cục Hải quan công khai các thông tin đó trên trang thông tin điện tử (khoản 3 Điều 14). Chưa rõ đó có phải cơ sở dữ liệu QĐ 117 nói tới, chưa kiểm trang đó tra cứu hay tải hàng loạt được không; TT 85 giao Cục trưởng ban hành "Quy trình phân loại hàng hoá, áp dụng mức thuế…" (khoản 1 Điều 17) nhưng không nói QĐ 117 bị thay.
 - **SAT-Graph RAG (arXiv:2505.00039)** — tham chiếu kiến trúc theo thời gian — **không báo cáo đánh giá định lượng nào.** Nó là một đề xuất kiến trúc, không phải một kết quả thực nghiệm. Áp dụng mô hình dữ liệu; **đừng trích dẫn nó như bằng chứng về hiệu năng.**
 
 ### Các giới hạn cấu trúc mà không điểm đánh giá nào có thể che lấp

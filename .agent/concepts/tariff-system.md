@@ -1,7 +1,7 @@
 ---
 type: concept
 status: active
-updated: 2026-07-18
+updated: 2026-09-15
 related:
   - data-sources.md
   - hs-classification.md
@@ -163,9 +163,13 @@ thuế" là một lỗi sẽ đuổi theo một bóng ma ở đây; một pipeli
   2026-07-17, nguồn: nghiên cứu 12 §6).
 
 Riêng biệt nhưng thường bị nhầm lẫn: **Thông tư 85/2026/TT-BTC (hiệu lực 15/9/2026)** điều chỉnh việc
-*phân loại hàng hóa và phân tích để phân loại* — nó thay thế TT 14/2015 + TT 17/2021. **Nó là QUY TRÌNH
-phân loại, không phải danh pháp.** Nó không thay đổi các mã là gì. (đã xác minh 2026-07-17, nguồn:
-nghiên cứu 10 §2, https://thuehaiquan.tapchikinhtetaichinh.vn/doi-moi-quy-dinh-phan-loai-phan-tich-hang-hoa-xuat-nhap-khau-161123.html)
+*phân loại hàng hóa và phân tích để phân loại* — nó thay thế TT 14/2015/TT-BTC và TT 17/2021/TT-BTC
+(khoản 1 Điều 15). **Nó là QUY TRÌNH phân loại, không phải danh pháp.** Nó không thay đổi các mã là gì.
+(đã đối chiếu 2026-09-15, nguồn: Công báo số 409 ngày 18/07/2026,
+https://congbao.chinhphu.vn/van-ban/thong-tu-so-85-2026-tt-btc-469982.htm) Hai quy tắc xung đột: mô tả
+Danh mục Việt Nam khác Danh mục HS/AHTN thì áp dụng trực tiếp mô tả HS/AHTN (khoản 2 Điều 6); mã tại
+danh mục quản lý chuyên ngành khác mã theo Danh mục XNK Việt Nam thì thực hiện theo Danh mục XNK Việt
+Nam và pháp luật về hải quan (khoản 4 Điều 6).
 
 Tham chiếu chéo: phương pháp luận phân loại (GRI, bằng chứng, xác định trước) nằm trong
 [Phân loại mã HS](hs-classification.md). Ghi chú này chỉ bao quát phía mức thuế.

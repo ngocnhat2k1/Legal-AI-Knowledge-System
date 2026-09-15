@@ -1,7 +1,7 @@
 ---
 type: concept
 status: active
-updated: 2026-07-18
+updated: 2026-09-15
 related:
   - ../project-context.md
   - ../business-rules.md
@@ -302,6 +302,8 @@ Văn bản điều chỉnh đã 17 năm tuổi mà không có cập nhật trong
 - **08/2015/NĐ-CP** — thủ tục HQ, kiểm tra, giám sát, kiểm soát HQ. Bị sửa đổi nhiều (**59/2018**, **167/2025**) → **dùng 46/VBHN-BTC**.
 - **167/2025/NĐ-CP** (hiệu lực **15/08/2025**) — sửa NĐ 08/2015, triển khai Luật 90/2025. Bổ sung **Điều 22a — trị giá hải quan cho mục đích thống kê**; làm lại trị giá hải quan; tái tổ chức mô hình tổ chức hải quan. Hướng dẫn triển khai: **CV 21067/CHQ-GSQL**.
 - **38/2015/TT-BTC** — lõi vận hành (thủ tục HQ; kiểm tra, giám sát; thuế XNK; quản lý thuế hàng XNK). Sửa đổi bởi **39/2018/TT-BTC** và **121/2025/TT-BTC** (18/12/2025, hiệu lực **01/02/2026**) — được mô tả là bản cập nhật thủ tục hải quan lớn nhất trong nhiều năm: chuẩn hóa hồ sơ, cắt giảm chứng từ, đẩy trao đổi dữ liệu qua VNSW. **Mọi logic thành phần hồ sơ phải nhắm tới TT 121, không phải TT 38/39 như đã biết trước đây.**
+- **85/2026/TT-BTC** — phân loại hàng hóa, phân tích để phân loại, cơ sở dữ liệu Danh mục hàng hóa XNK; ký 30/06/2026, hiệu lực **15/09/2026**; thay thế **14/2015/TT-BTC** và **17/2021/TT-BTC** (khoản 1 Điều 15); Công báo số 409 ngày 18/07/2026.
+- **169/2026/NĐ-CP** — xử phạt vi phạm hành chính trong lĩnh vực hải quan; ký 15/05/2026, hiệu lực **01/07/2026**; làm hết hiệu lực **128/2020/NĐ-CP** và **Điều 2 của 102/2021/NĐ-CP** (khoản 2 Điều 38); Công báo số 293 ngày 31/05/2026.
 - **39/2015/TT-BTC** (+ TT 60/2019) — trị giá hải quan.
 - **31/2022/TT-BTC** — Danh mục hàng hóa XNK Việt Nam (**HS code**).
 - **85/2019/NĐ-CP** — cơ chế một cửa quốc gia / ASEAN + kiểm tra chuyên ngành. Xương sống hải quan điện tử; gắn kiểm tra chuyên ngành với một cửa.
@@ -373,7 +375,7 @@ Tái tạo từ các cờ F1–F10 của research 03 và danh sách chưa xác m
 ### Từ research 08 (quản lý chuyên ngành)
 
 - **TT 15/2026/TT-BCT, TT 26/2026/TT-BCT, VBHN 47/VBHN-BCT** — trích xuất đơn lẻ, tin cậy thấp.
-- **NĐ 169/2026/NĐ-CP** (xử phạt hải quan, hiệu lực 01/07/2026, thay thế NĐ 128/2020) và **NĐ 153/2026/NĐ-CP** (địa bàn hoạt động hải quan, hiệu lực 05/07/2026) — nguồn tóm tắt tìm kiếm đơn lẻ; **số hiệu đáng ngờ**. Xác nhận trước khi viện dẫn.
+- **NĐ 169/2026/NĐ-CP — ĐÃ XÁC NHẬN 2026-09-15** trên Công báo (số 293 ngày 31/05/2026; ký 15/05/2026; hiệu lực 01/07/2026); làm hết hiệu lực NĐ 128/2020/NĐ-CP và Điều 2 NĐ 102/2021/NĐ-CP (khoản 2 Điều 38) — văn bản nói "hết hiệu lực", không nói "thay thế". Còn chưa xác minh: **NĐ 153/2026/NĐ-CP** (địa bàn hoạt động hải quan, hiệu lực 05/07/2026) — nguồn tóm tắt tìm kiếm đơn lẻ; **số hiệu đáng ngờ**. Xác nhận trước khi viện dẫn.
 - **VBHN 67/VBHN-BNNMT** (kiểm dịch động vật trên cạn) — nguồn đơn lẻ.
 - **"Danh mục hàng hóa nhóm 2 bị xóa bỏ từ 2026"** theo **Luật 78/2025/QH15** (sửa Luật Chất lượng sản phẩm hàng hóa, hiệu lực 01/01/2026) — **gây tranh cãi, chịu lực cho bất kỳ engine quy tắc nào, và dựa trên một nguồn thương mại duy nhất**. Cái *được* xác nhận về Luật 78/2025: nó bãi bỏ Điều 7; khoản 4 Điều 13; khoản 2,3 Điều 17; Điều 19, 20, 24, 25, 26, 27, 29, 30, 31, 35, 36, 37, 55, và giới thiệu **phân loại theo rủi ro (thấp/trung bình/cao)**. Việc công bố hợp quy bị *tái cấu trúc* hay *bãi bỏ* thì **chưa ngã ngũ**.
 - Liệu có **thông tư nào của BNNMT thay thế TT 01/2024/TT-BNNPTNT** (bảng HS chủ) — chưa xác nhận; coi 01/2024 là hiện hành nhưng cần xác minh lại.

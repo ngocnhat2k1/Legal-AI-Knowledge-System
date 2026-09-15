@@ -1,8 +1,9 @@
 ---
 type: design
 status: active
-updated: 2026-09-10
+updated: 2026-09-15
 related:
+  - mona-dev-server-operations.md
   - ../architecture-decisions/2026-09-10-notebook-sources-as-google-docs.md
   - ../architecture-decisions/2026-09-10-received-file-is-a-pointer-not-a-source.md
   - ../architecture-decisions/2026-09-10-drafts-and-cong-van-outside-legal-corpus.md
@@ -240,9 +241,83 @@ Hộp thư đến (thư mục bất kỳ)
 **Không có Postgres trong đường ống này.** Bộ sinh markdown đọc thẳng từ
 `db/seed/data/legal/*.ndjson`, không truy vấn database — nên toàn bộ chạy được trên máy trạm.
 
-`.ndjson` vẫn là dạng chuẩn bền. Khi có hạ tầng trở lại, `yarn db:seed:legal` nạp cả kho **kèm
-mọi văn bản bổ sung trong giai đoạn không server**. Đây đúng ranh giới dự án đã chọn từ
-2026-07-18: *"Tách nạp khỏi parse. Extract `.ndjson` commit là ranh giới bền giữa hai bên."*
+`.ndjson` vẫn là dạng chuẩn bền. Đây đúng ranh giới dự án đã chọn từ 2026-07-18: *"Tách nạp khỏi
+parse. Extract `.ndjson` commit là ranh giới bền giữa hai bên."* Hạ tầng đã có lại (server MONA dev,
+2026-09-13): `seed-legal` nạp văn bản, `seed-evidence` nạp mọi file còn lại vào `evidence_section`.
+Chủ dự án yêu cầu (2026-09-14) rằng chuyển server chỉ cần nhúng lại, không trích xuất lại. Vì vậy
+**mọi tri thức bot đọc phải nằm trong một file commit dưới `db/seed/data/`**, không chỉ nằm trong
+CSDL hay trên máy trạm ([runbook server §5](mona-dev-server-operations.md#5-deploy-bản-mới)).
+
+### Bộ trích xuất và file chúng ghi (2026-09-15)
+
+| Script | Ghi vào `db/seed/data/legal/` | Ghi chú |
+|---|---|---|
+| `ingest_congbao.py` | `documents`, `provisions`, `chunks`, `annex-tables.ndjson` | 16 trong 23 văn bản (7 văn bản còn lại nạp tay từ trước, script chỉ giữ nguyên); cách đọc bảng Word ở mục dưới |
+| `extract_explanatory_notes.py` | `hs-explanatory-notes.ndjson` | Chú giải chi tiết, một dòng mỗi nhóm 4 số (1.228) cộng một dòng chung mỗi chương (96), tổng 1.324 dòng; **không còn ghi SEN** |
+| `extract_sen.py` | `hs-sen.ndjson` | SEN 2022, một dòng mỗi chú giải (425 dòng), kèm `codes`, `subheadings`, `headings`, `title` |
+| `merge_rulings.py` | `classification-rulings.ndjson` | 29 công văn phân loại, đọc kép |
+| không có script sinh; `check_cases.py` kiểm | `classification-cases.ndjson` | 36 case từ 26/29 công văn |
+| `collect_notebook_only.py` | `notebook-only.ndjson` | Lớp B/C/D; ẩn trường riêng tư trước khi ghi |
+| chép tay từ toàn văn | `relations.ndjson` | 37 cạnh: hết hiệu lực 18, bãi bỏ 8, sửa đổi 6, thay thế 5 |
+| không có script sinh; `policy.spec.ts` kiểm | `policy-lists.json` | Sổ danh mục khoá theo mã HS, mục dưới |
+
+Lệnh chạy từng script nằm ở [runbook nạp tài liệu](../../research/inbox-loader/README.md).
+
+### `ingest_congbao.py` đọc bảng Word (2026-09-15)
+
+Tám văn bản mới của đợt này (33/2026/TT-BCT, 41 và 49/2026/TT-BXD, 27/2026/TT-BNNMT, 27/2026/TT-BYT,
+125/2026/TT-BCA, 169/2026/NĐ-CP, 85/2026/TT-BTC) là lý do nhánh bảng phải đọc Word kỹ hơn. Mỗi quy tắc
+dưới đây đều có một văn bản thật từng bị đọc sai theo cách cũ:
+
+- **Ô bảng lấy từ `w:tc` thô, không lấy từ `row.cells`.** Một ô gộp (`gridSpan`, `vMerge`) chỉ được ghi
+  một lần, ở cột đầu và hàng đầu mà nó phủ (bẫy 22).
+- **Neo phụ lục.** Nhận tiêu đề "Phụ lục" trần (33/2026/TT-BCT, 125/2026/TT-BCA). Tiêu đề bậc "A. Danh
+  mục…", "B. Danh mục…" được nối vào neo để tách hai bảng của cùng một phụ lục (125/2026/TT-BCA). Tiêu đề
+  phụ lục gộp ngang hàng 1 của chính bảng (49/2026/TT-BXD Phụ lục I) trở thành neo và bị bỏ khỏi các hàng.
+  Trong phụ lục, "Điều" của biểu mẫu không làm dời neo (NĐ 37/2026 Phụ lục VII). Với `.doc` cũ, "DANH MỤC"
+  trần chỉ được coi là neo khi đứng sau Điều cuối.
+- **Bảng quốc hiệu và khối chữ ký bị bỏ.** Các bảng còn lại giữ số thứ tự theo vị trí trong văn bản.
+- **Văn xuôi sau bảng phụ lục** ("Ghi chú", chú thích) được giữ ở trường `notes` của bảng. Tầng bằng
+  chứng chưa in trường này vào thân mục.
+- **Khoản do Word đánh số tự động** được khôi phục số từ `numbering.xml` (bẫy 21).
+- **`gazette_issue`, `gazette_date`** lấy từ dòng chú thích "Công báo số … ngày …" trên trang văn bản (bẫy 26).
+- **`.doc` cũ:** với bảng mà textutil nhận ra, bản txt mất dấu ô `\x07`. Script đọc thêm bản HTML để lấy
+  hình bảng rồi khớp từng dòng với bản txt; không khớp thì từ chối ghi. Nhờ vậy QĐ 18/2019/QĐ-TTg lấy lại
+  được Phụ lục I (nhóm HS → tuổi thiết bị tối đa).
+- `--only <số hiệu>` nạp lại riêng một văn bản; `--out <thư mục>` ghi bốn file ra chỗ khác để xem trước.
+  Test ở `test_ingest_congbao.py`.
+
+### Chú giải chi tiết và SEN: hai bộ trích xuất riêng
+
+`extract_explanatory_notes.py` từng ghi cả SEN, mỗi chương một dòng, và chỉ giữ dòng có chữ tiếng Việt.
+Nhãn mã mở đầu mỗi chú giải SEN ("0210.99.10", "87.02  87.03") không có chữ tiếng Việt nên bị bỏ: 646/667
+mã mất, và không chú giải nào còn cho biết nó giải thích phân nhóm nào. Nay `extract_sen.py` chạy riêng, và
+mỗi nhãn mã mở một dòng mới. Chú giải chi tiết cũng được trích lại (2026-09-14, ghi lần cuối 2026-09-15), mỗi nhóm một dòng cộng một dòng chung mỗi chương; các lỗi
+đã sửa ghi ở bẫy 27. Bản PDF SEN không có Chương 86: chỗ thiếu này nằm ở nguồn.
+
+### Công văn phân loại tách thành case
+
+Một case là **một kết luận** của một công văn: một mã kèm điều kiện hoặc khoảng thời gian. Case chỉ gồm
+**trích dẫn nguyên văn** từ `noi_dung` (sự kiện hàng hoá, căn cứ, nhóm ứng viên và nhóm bị loại, kết luận),
+vì câu trả lời dạy phân loại từng bước chỉ được dẫn thứ có nguyên văn trong nguồn
+([ADR bảng bằng chứng](../architecture-decisions/2026-09-13-evidence-sections-and-long-form-answers.md)).
+`check_cases.py` kiểm mọi khoá `trich…` là chuỗi con nguyên văn, và tự tính lại trạng thái mã theo AHTN 2022
+bằng `merge_rulings.grade` thay vì tin giá trị ghi trong file. Case ở `auto_unverified` cho tới khi một người
+có tên thẩm tra (R18).
+
+### Danh mục khoá theo mã HS: `policy-lists.json` là dữ liệu
+
+Bot phải trả lời được "mã này có nằm trong danh mục X không". Mẫu trả lời chủ dự án gửi (2026-09-14) đã
+điền ô "Không" cho cả những danh mục kho không có. Chỉ một sổ đăng ký mới phân biệt được "không có trong
+danh mục" với "danh mục chưa nạp". Vì vậy `policy-lists.json` ghi mỗi danh mục một mục: văn bản, neo phụ
+lục, bộ quản lý, hiệu lực, `loaded` (bảng nào trong `annex-tables.ndjson`; `null` là chưa nạp), mã hoãn áp
+dụng (`deferred`), điều kiện áp dụng (`applies_when`) và mã in không đọc được (`unreadable`, bẫy 25).
+`apps/api/src/modules/answer/policy.ts` đọc sổ này và trả `LISTED`, `NOT_LISTED`, `NOT_LOADED` hoặc
+`UNCERTAIN`; `evidence-build.spec.ts` kiểm seed và `policy.ts` đọc ô bảng như nhau. Ngày 2026-09-15, sổ có
+26 danh mục, trong đó 9 danh mục chưa nạp.
+
+Nạp thêm một văn bản danh mục thì cập nhật luôn `loaded` của nó trong sổ. Sổ không đổi thì bot vẫn báo
+`NOT_LOADED` cho một bảng đã nằm trong kho.
 
 ### 🔻 Bộ sinh hiện nằm NGOÀI repo
 
@@ -549,7 +624,7 @@ Ba mục cuối quan trọng nhất. Nhãn nằm trong file mà mô hình không
 ban hành" — với `09-bvhttdl.pdf` thì mục đó sẽ **nghiệm thu chính cái sai**. Nay tiêu chí gắn
 thêm điều kiện phải có bản ghi tra cứu Công báo.*
 
-## Bẫy đã gặp khi chạy thật (đợt đầu 2026-09-10)
+## Bẫy đã gặp khi chạy thật (1–17: đợt đầu 2026-09-10; từ 18: đợt 2026-09-14/15)
 
 1. **pypdf làm vỡ âm tiết tiếng Việt** (`"truy ền ho ặc"`) trên 85/100 file Chú giải — trông vẫn có
    chữ, nhưng tìm "hoặc" không khớp. pymupdf: 0,004 chỗ/1000 ký tự. pdfplumber không vỡ âm tiết
@@ -597,14 +672,64 @@ thêm điều kiện phải có bản ghi tra cứu Công báo.*
     nhờ một đợt kiểm độc lập (5 góc nhìn, 23 agent, mỗi phát hiện có một agent phản biện): so số khoản với dữ
     liệu Công báo, so tập hợp mọi con số, và một agent chuyên tìm chỗ bộ chuẩn hoá che lỗi. Nay phía Doc
     không bị chuẩn hoá gì ngoài dấu chấm đầu dòng; phía cục bộ chỉ bỏ nhấn mạnh đúng dạng renderer viết.
+18. **Lớp text trống không chứng minh văn bản không mang số** (2026-09-14). Nhãn cũ của file BNV ghi *"tên
+    file ghi '16/2026' nhưng văn bản không mang số nào"*. Thực ra đó là bản ký số của Cổng Thông tin điện tử
+    Chính phủ (29/07/2026), mang dấu "16", "28", "7"; danh mục trên vanban.chinhphu.vn ghi TT 16/2026/TT-BNV
+    ngày 28/07/2026. Ô số hiệu và ngày chỉ trống trong lớp text. Lần này tên file đúng, còn lớp text gây hiểu
+    sai. Cả hai chỉ là manh mối: đọc trang 1 bằng mắt.
+19. **PDF lai, lần nữa.** Công văn 4778/TB-TCHQ có lớp text lỗi mã hoá font (7 chỗ `[?]`) cộng thêm ảnh, mà
+    bản ghi vẫn để `scanned=false`. Quy tắc vẫn là kiểm từng trang (bẫy 5). Bản ghi này chưa sửa (2026-09-15).
+20. **Công báo đăng muộn tới 205 ngày.** 15/2024/TT-BYT ký 19/09/2024, đăng 12/04/2025; 11 và 12/2026/TT-BYT
+    ký 15/05/2026, đăng 29/08/2026 (106 ngày). Một nhóm agent từng lập luận "đã quá độ trễ 51 ngày" để nghi
+    văn bản không tồn tại, và lập luận đó sai. Văn bản đã ký mà chưa lên Công báo (16/2026/TT-BNV; 24, 26,
+    28/2026/TT-BYT; 126/2026/TT-BQP; dò ngày 2026-09-14) thì **chờ** theo R16 và dò lại, không nạp từ file
+    trong tay.
+21. **Số do Word đánh tự động không nằm trong chữ.** Khoản gõ thành danh sách đánh số giữ "1." trong
+    `numbering.xml`, nên python-docx chỉ đọc được " Phạt tiền từ …" và parser không thấy khoản 1
+    (169/2026/NĐ-CP Điều 9, 85/2026/TT-BTC Điều 1). `restore_auto_numbers` ghi lại số, nhưng chỉ cho định
+    dạng decimal và `w:numPr` gắn trực tiếp.
+22. **`row.cells` của python-docx lặp ô gộp vào mọi cột và hàng mà ô đó phủ.** Ở TT 125/2026/TT-BCA, tên nhóm
+    "Pháo hoa" rơi vào cột Mã HS, và một ô chứa 13 mã (8525.81.10–8525.89.90) bị chép sang bảy mặt hàng.
+    Danh mục vẫn đọc được, đúng định dạng, nhưng sai nội dung (R3).
+23. **textutil làm lệch cột dưới ô gộp của `.doc` cũ.** Ở bản thử 15/2024/TT-BYT (nguồn mã HS cho
+    27/2026/TT-BYT), ít nhất 3/188 mã (1702.90.40, 2821.10.00, 2925.11.00) nằm ở cột "Tên tiếng Anh" thay vì
+    cột "Mã HS", và phần lớn ô STT trống. Văn bản này chưa nạp; 988/QĐ-BYT (đính chính 15/2024) cũng chưa đọc.
+24. **Chữ NFD được lưu đúng như gõ.** Quốc hiệu của TT 36/2026 viết "CỘNG" bằng dấu chấm tổ hợp;
+    169/2026/NĐ-CP có hai đoạn NFD (Điều 7 khoản 2 điểm b, Điều 10 khoản 4 điểm b). Mẫu nhận dạng (quốc hiệu,
+    "Điều", "DANH MỤC") so trên bản NFC, còn bản văn giữ nguyên. Code nào so chữ trên dữ liệu này phải tự
+    chuẩn hoá NFC.
+25. **Mã in sai trên Công báo được giữ nguyên và gắn cờ.** Ví dụ "404.29.90" (33/2026/TT-BCT, in giữa
+    9404.29.20 và 9404.30.00), "410.90.00" (41/2026/TT-BXD), "080.2" (27/2026/TT-BNNMT), và mã không có trong
+    AHTN 2022 như "8507.60.10" (36/2026/TT-BKHCN). Tổng cộng 15 mục `unreadable` trong `policy-lists.json`.
+    Không sửa thành mã "chắc là đúng": mã thuộc tiền tố đó được báo `UNCERTAIN`, không bao giờ `NOT_LISTED`.
+26. **Đường dẫn `_signed.pdf` mang ngày tải lên, không phải ngày Công báo.** NĐ 292/2026 nằm ở `/2026/7/31/`,
+    nhưng Công báo ghi 2026-08-03. Số và ngày Công báo lấy từ dòng chú thích "Công báo số … ngày …" trên trang
+    văn bản; văn bản trải qua nhiều số ghi dạng "đầu…cuối".
+27. **Bộ trích xuất Chú giải từng làm mất dữ liệu mà kết quả vẫn trông ổn.** Với SEN, 646/667 nhãn mã bị bỏ
+    (mục "Chú giải chi tiết và SEN" ở trên). Với Chú giải chi tiết có bốn lỗi. Tiêu đề nhóm in nhiều kiểu
+    ("32.08.-", "84.81.", "84. 82", không có gạch như "52.05") nên chữ của nhóm rơi vào nhóm trước. Có số hiệu
+    in sai ("868.08" thay cho 68.08). Trang phụ lục chữ Latin (Chương 29, 33, 44, 71) lọt vào. "(lều)" bị coi
+    là đầu mục danh sách. Kiểm bằng diff từng dòng với bản cũ, không kiểm bằng số dòng.
+28. **Bản in tác nghiệp chứa thông tin riêng.** `ds-hang-qua-kvgs` (lớp D) có tên doanh nghiệp, mã số thuế,
+    số tờ khai và số quản lý hàng hóa. Repo công khai, nên `collect_notebook_only.py` thay các giá trị này bằng "[đã ẩn …]". Mẫu thay
+    khớp theo **nhãn trường**, nên giá trị không bị ghi vào code; nếu một nhãn không còn khớp thì script dừng.
+    Bản sao `.pushed/` của nguồn 91, và nhiều khả năng cả Google Doc của nó, vẫn là bản chưa ẩn.
+29. **Lần đẩy notebook tới sẽ bị chặn trên nhiều nguồn** (đo 2026-09-15: render dữ liệu hiện tại ra thư mục
+    nháp rồi so với `.pushed/` bằng `manifest.is_extension`). Ngoài ba nguồn phái sinh, chữ đã đẩy bị đổi ở
+    13–16 (văn bản và bảng phụ lục trích lại), 50–57 (Chú giải chi tiết), 58 (SEN), 90 (nhãn
+    16/2026/TT-BNV) và 91 (ẩn thông tin riêng). Nguồn 21 và 23–27 (biểu thuế) đã bị chặn từ trước, vì bản render
+    từ HEAD `a62b4f9` cũng bị chặn. Mỗi nguồn cần `--force-file <tên>.md` đích danh. Chưa agent nào đẩy; việc
+    đẩy do chủ dự án quyết.
 
 ## Chưa xác minh / không được dựa vào
 
-- **Bài test golden (recall@k) chưa đo lại** với kho 15 văn bản — cần DB. Kho lớn hơn có thể làm
-  recall trên câu hỏi cũ dịch chuyển.
+- **Bài test golden (recall@k) chưa đo lại** với kho 15 văn bản, nay đã là 23 văn bản (2026-09-15). Kho lớn
+  hơn có thể làm recall trên câu hỏi cũ dịch chuyển.
+- **15/2024/TT-BYT và 988/QĐ-BYT chưa nạp** (bẫy 23), nên danh mục của 27/2026/TT-BYT chưa có mã HS nguồn.
+- **36 case phân loại chưa ai thẩm tra**; tất cả ở `auto_unverified`.
+- **Phụ lục chữ Latin của Chú giải chi tiết** (Chương 29, 33, 44, 71) cố ý chưa nạp, chờ chủ dự án quyết.
 - **Tình trạng hiệu lực của 52/2018, 18/2019, 72/2022, 11/2024** chỉ dựa trên ngày hiệu lực đã tới —
   không biết sau đó đã bị sửa/thay chưa. Nhãn `auto_unverified` gánh phần này.
-- **16 bản ghi Chú giải chi tiết** mang nhãn "có thể gồm cả nhóm X".
 - **3 tài liệu lớp C** (TT BNV, CV lưỡng dụng, `09-bvhttdl.pdf`): không tìm thấy bản đã ký — có thể
   chưa ban hành, cũng có thể đã ban hành với số khác. Chưa có lịch rà định kỳ.
 - **`client_id` dùng chung của rclone** đang bị khai tử trong 2026.
@@ -620,4 +745,5 @@ thêm điều kiện phải có bản ghi tra cứu Công báo.*
 - [Văn bản pháp luật Việt Nam](../concepts/vietnamese-legal-documents.md)
 - [Bot Zalo: hiểu ảnh + tin quote](zalo-bot-image-and-quote-context.md) — mẫu confine Read cho bậc 4
 - [Runbook — lần sau làm thế nào](../../research/inbox-loader/README.md)
+- [Runbook server, mục 5](mona-dev-server-operations.md#5-deploy-bản-mới) — `seed-legal`, `seed-evidence`, dựng lại kho trên server mới
 - [ADR nạp bản tiếng Việt Chú giải chi tiết và SEN](../architecture-decisions/2026-09-10-load-vietnamese-explanatory-notes.md)
