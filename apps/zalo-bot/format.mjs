@@ -418,7 +418,14 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false } = {
   const hs = res.mode === 'hs';
   const rate = res.mode === 'tariff';
   const written = Boolean(String(res.answerMd ?? '').trim());
-  const prose = written ? md(unlikeTariffReply(res.answerMd)) : cites.length ? [L([NO_PROSE])] : [];
+  // Reworded as rendered: "Hàng hóa có **mã HS X**" reads as the tariff lead once md() drops the asterisks (§6.3). A reworded
+  // line loses its bold and italic.
+  const unlike = (ln) => {
+    const said = toText([ln]);
+    const reworded = unlikeTariffReply(said);
+    return reworded === said ? ln : L([reworded], ...(ln.marks ?? []));
+  };
+  const prose = written ? md(res.answerMd).map(unlike) : cites.length ? [L([NO_PROSE])] : [];
   const lines = [...prose, L([])];
 
   // Never orange: the user's code outside the candidates is a comparison, not a finding (R4). Only the two sentences

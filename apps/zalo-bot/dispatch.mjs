@@ -24,21 +24,29 @@
  * so a cue that does not match the current topic is never allowed to reach a handler
  * that would write to the audit trail.
  */
-import { HS_RE, hasHs, parseDocRef, parseQuotedTariff } from './parse.mjs';
+import { HS_RE, hasHs, ORIGIN_LABEL, parseDocRef } from './parse.mjs';
 
-/** Whole-message confirmations. Matched EXACTLY, so a real caption never trips them. */
+/**
+ * Whole-message confirmations. Matched EXACTLY, so a real caption never trips them. "ok" is not one: staff send it for
+ * "noted", and after "Đã ghi nhận sai…" it recorded the opposite verdict (re-review 2026-09-15).
+ */
 export const CONFIRM_WORDS = {
-  correct: ['đúng', 'dung', 'chuẩn', 'chuan', 'chính xác', 'chinh xac', 'đúng rồi', 'dung roi', 'chuẩn rồi', 'ok', 'oke', 'okie', 'okay', 'đúng vậy', 'chuẩn luôn', 'chính xác rồi'],
+  correct: ['đúng', 'dung', 'chuẩn', 'chuan', 'chính xác', 'chinh xac', 'đúng rồi', 'dung roi', 'đúng rồi ạ', 'dung r', 'chuẩn rồi', 'đúng vậy', 'chuẩn luôn', 'chính xác rồi'],
   wrong: ['sai', 'sai rồi', 'sai roi', 'không đúng', 'ko đúng', 'khong dung', 'ko dung', 'không chính xác', 'sai bét', 'sai rồi nhé'],
   unsure: ['không chắc', 'ko chắc', 'khong chac', 'chưa chắc', 'chua chac', 'không rõ', 'khong ro', 'chưa rõ', 'chưa chắc chắn'],
 };
 
+const wholeMessage = (text) => String(text ?? '').toLowerCase().normalize('NFC').replace(/[.!,?…\s]+$/g, '').trim();
+
 /** 'correct' | 'wrong' | 'unsure' when the WHOLE message is one confirmation word; else null. */
 export function confirmVerdict(text) {
-  const t = String(text ?? '').toLowerCase().normalize('NFC').replace(/[.!,?…\s]+$/g, '').trim();
+  const t = wholeMessage(text);
   for (const [verdict, words] of Object.entries(CONFIRM_WORDS)) if (words.includes(t)) return verdict;
   return null;
 }
+
+/** "ok", "oke": seen, noted. Agreement on any topic, never a verdict. */
+export const isOkay = (text) => ['ok', 'oke', 'okie', 'okay'].includes(wholeMessage(text));
 
 /**
  * "This answer is wrong" — in a multi-word message. Topic-neutral by nature: these
@@ -163,60 +171,105 @@ export const isGreeting = (text) => GREETINGS.includes(fold(text).replace(/[.!,?
 const TARIFF_LINE =
   /^(?:(?:Đối với h|H)àng hóa có mã HS|Đã ghi nhận(?: (?:đúng|sai|chưa chắc) cho|:)? mã|Đã xác nhận mã) \d{4}\.\d{2}\.\d{2}|^Đã ghi nhận đính chính từ /m;
 const COMPOSED = /^(?:Ứng viên để chuyên viên chốt:|Thuế của mã trong câu hỏi:|Nếu hàng thuộc mã |(?:Mã|Nhóm) [\d.]+ bạn nêu)/m;
-/** The date-and-decrees line closing every rate block: a long reply's later message still belongs to its lookup. */
-const BLOCK_END = /^Tra theo ngày \d{2}\/\d{2}\/\d{4}/m;
 export const tariffReply = (quoteText) => {
   const q = String(quoteText ?? '').normalize('NFC');
   return hasHs(q) && TARIFF_LINE.test(q) && !COMPOSED.test(q);
 };
 
+/** The tariff lead line: its code, then the rest of the line, where the origin is named ("có xuất xứ Trung Quốc"). */
+const LEAD = /^(?:Đối với h|H)àng hóa có mã HS (\d{4})\.(\d{2})\.(\d{2})(.*)$/m;
+/** A verdict or correction reply ("Đã ghi nhận sai cho mã …", "Đã xác nhận mã …"); not the history line "Đã xác nhận đúng 2 lần". */
+const ACK = /^Đã (?:ghi nhận|xác nhận mã )/m;
+
+/**
+ * Does the quoted message show the lookup memory holds? Only a tariff lead line can say so, read from that line: its code,
+ * the origin it names and the "Tra theo ngày" date, when printed, must be the ones in memory. A verdict or correction reply
+ * names the code too, and quoting it disputes or thanks that reply, even after the code is looked up again (R13).
+ */
+function showsLookup(quoted, table) {
+  const lead = quoted.match(LEAD);
+  if (!lead || !table?.hs || lead.slice(1, 4).join('') !== table.hs || ACK.test(quoted) || COMPOSED.test(quoted)) return false;
+  const origin = Object.keys(ORIGIN_LABEL).find((k) => lead[4].includes(`xuất xứ ${ORIGIN_LABEL[k]}`));
+  const d = quoted.match(/^Tra theo ngày (\d{2})\/(\d{2})\/(\d{4})/m);
+  return (!origin || origin === table.origin) && (!d || `${d[3]}-${d[2]}-${d[1]}` === (table.snapshot?.date ?? table.date));
+}
+
+/**
+ * An offer to record a ruling (codeOffer, a photo's candidate reply): code-written, it spells out 'nhắn "HS đúng là …"', so a
+ * coded ruling quoting it answers it. Composed prose saying the same is reworded (unlikeTariffReply).
+ */
+const OFFER = /"HS đúng là (?:<mã>|\d{4}\.\d{2}\.\d{2})"/;
+export const offerReply = (quoteText) => OFFER.test(String(quoteText ?? '').normalize('NFC'));
+
 /**
  * Composed prose may repeat an opener only the bot writes: a subject code is unmasked into the compose prompt, so a legal
  * answer can say "Hàng hóa có mã HS 6506.10.10 thuộc danh mục…". formatAnswerMd rewords every TARIFF_LINE opener wherever it
- * stands in the prose (render may start a message mid-paragraph), keeping the meaning: "Hàng có mã HS", "Có ghi nhận" (§6.3).
+ * stands in a rendered line (render may start a message mid-paragraph), keeping the meaning: "Hàng có mã HS", "Có ghi nhận";
+ * and an offer's straight quotes become curly ones (§6.3).
  */
 export const unlikeTariffReply = (prose) =>
   String(prose ?? '')
     .normalize('NFC')
     .replace(/([Hh])àng hóa có mã HS/g, '$1àng có mã HS')
-    .replace(/Đã (?=ghi nhận(?: (?:đúng|sai|chưa chắc) cho|:)? mã \d|ghi nhận đính chính từ |xác nhận mã \d)/g, 'Có ');
+    .replace(/Đã (?=ghi nhận(?: (?:đúng|sai|chưa chắc) cho|:)? mã \d|ghi nhận đính chính từ |xác nhận mã \d)/g, 'Có ')
+    .replace(/"(HS đúng là [^"\n]*)"/g, '“$1”');
 
 /** "HS đúng là X hay Y ạ": two codes to choose between. */
 const ALT_CODE = new RegExp(`(?:^|\\s)(?:hay|hoac)\\s+(?:la\\s+)?(?:ma\\s+)?${HS_RE.source}`);
 
 /**
- * A question, not a verdict: "8481.80.99 có sai không ạ", "mã này đúng chưa?", "ma nay sai k", "mã đúng là X hay Y ạ". The
- * disagreement cue matched "sai" and the correction path recorded 'correct' for the very code the user was doubting (R13).
- * Unaccented endings are read folded; "à" only as typed, since folded it is the "ạ" of "sai rồi ạ".
+ * A question, not a verdict: "8481.80.99 có sai không ạ", "mã này đúng chưa?", "ma nay sai k", "hs dung la X phai hk", "mã
+ * đúng là X hay Y ạ". The disagreement cue matched "sai" and the correction path recorded 'correct' for the very code the user
+ * was doubting (R13). Unaccented endings are read folded; "à" only as typed, since folded it is the "ạ" of "sai rồi ạ".
  */
 export function readsAsQuestion(text) {
   const t = String(text ?? '').toLowerCase().normalize('NFC').trim();
   const f = fold(t);
   return (
     /\?|(?<![\p{L}])(không|ko|chưa|hả|à|nhỉ)(\s+(ạ|vậy|nhỉ|nhé|a|em|anh|chị|bạn))?\s*[.!…]*$/u.test(t) ||
-    /(?:^|\s)(khong|ko|k|hong|chua|ha|nhi|sao)(\s+(a|vay|nhi|nhe|em|anh|chi|ban))?\s*[.!…]*$/.test(f) ||
+    /(?:^|\s)(khong|ko|k|hong|hk|hok|khg|chua|ha|nhi|sao|chang)(\s+(a|vay|nhi|nhe|em|anh|chi|ban))?\s*[.!…]*$/.test(f) ||
     ALT_CODE.test(f)
   );
 }
 
 /**
  * "The code on the table is wrong", in a message with no code of its own: the whole message or its leading clause, holding
- * nothing but that ruling ("sai rồi", "mã này không đúng", "sai rồi, không phải loại này"). "em gõ sai", "hỏi sai câu rồi",
- * "mình ghi nhầm" tell of the user's own slip; "không phải", "ý tôi là" point at the question (R13).
+ * nothing but that ruling ("sai rồi", "mã HS này không đúng", "chưa đúng", "sai r"). "em gõ sai", "hỏi sai câu rồi", "mình ghi
+ * nhầm" tell of the user's own slip; "không phải", "ý tôi là" point at the question (R13).
  */
 const WRONG_CLAUSE =
-  /^(?:(?:ma|hs|code|ket qua)(?: (?:nay|do|vua tra))? )?(?:sai(?: ma| bet)?|khong dung|ko dung|k dung|khong chinh xac|ko chinh xac|nham ma)(?: (?:roi|nhe|nha|a|ban|bot|oi|luon|het))*$/;
-const rulesWrong = (text) => WRONG_CLAUSE.test(fold(text).split(/[,;.!?…\n]/)[0].trim());
+  /^(?:(?:ma(?: hs)?|hs|code|ket qua)(?: (?:nay|do|vua tra))? )?(?:sai(?: ma| bet)?|khong dung|ko dung|k dung|chua dung|khong chinh xac|ko chinh xac|nham ma)(?: (?:roi|r|nhe|nha|a|ban|bot|oi|luon|het))*$/;
+/** Folded words only: punctuation and emoji ("sai rồi 😅") rule nothing. */
+const words = (s) => fold(s).replace(/[^a-z0-9]+/g, ' ').trim();
+/** What may follow the ruling: the goods or the code ("không phải loại này"); a rate, a form or a provision is about the prose. */
+const AT_GOODS = /(?:^| )(?:loai|hang|mat hang|san pham|ma|nhom|code)(?: hang| hs)? (?:nay|do)(?: |$)/;
+const ABOUT_PROSE = /thue|%|phan tram|xuat xu|c\/o|mfn|fta|uu dai|bieu|form|dieu|khoan/;
+const rulesWrong = (text) => {
+  const [head, ...rest] = fold(text).split(/[,;.!?…\n]/);
+  const tail = rest.join(' ');
+  return WRONG_CLAUSE.test(words(head)) && (!words(tail) || (AT_GOODS.test(words(tail)) && !ABOUT_PROSE.test(tail)));
+};
+
+/** The words right before the code of a ruling: "HS đúng là", "mã đúng:", "mã đúng phải là", "đúng là", "mã chuẩn là". */
+const CUE = /(?:(?:ma|hs|code)(?: hs)? (?:dung|chuan|chinh xac)(?: phai)?(?: la)?|(?:dung|chuan|chinh xac)(?: phai)? la) ?:? ?(?:ma ?)?$/;
 
 /**
- * "HS đúng là 8422.90.90", "mã đúng: …": a confirming word right before the code — a ruling typed on purpose. "8481.80.99
- * có sai không" names a code too, and is a doubt (R13).
+ * "HS đúng là 8422.90.90", "sai rồi, mã đúng: …": a ruling typed on purpose opens the message, or follows one leading clause
+ * that is only a wrong ruling ("sai rồi,") or a "không phải,". Anything else before it reads the cue as a premise: "nếu HS đúng
+ * là X thì thuế bao nhiêu", "hình như mã đúng là X", "không phải HS đúng là X đâu" (R13). "8481.80.99 có sai không" names a
+ * code too, and is a doubt.
  */
 export function confirmingCue(text) {
-  const t = fold(text);
+  const t = fold(text).replace(/\s+/g, ' ');
   const at = t.search(HS_RE);
-  return at > 0 && /(dung la|ma dung|hs dung|chinh xac la|chuan la)\s*(la|:)?\s*(ma\s*)?$/.test(t.slice(0, at));
+  const cue = at > 0 ? t.slice(0, at).match(CUE) : null;
+  if (!cue) return false;
+  const lead = t.slice(0, cue.index);
+  const clause = words(lead);
+  return !clause || (/[,;.!…] ?$/.test(lead) && /^(?:khong|ko|k)(?: phai)?$/.test(clause)) || (/[\s,;.!…]$/.test(lead) && WRONG_CLAUSE.test(clause));
 }
+
+const dotted = (hs) => `${hs.slice(0, 4)}.${hs.slice(4, 6)}.${hs.slice(6)}`;
 
 /**
  * The pre-router fast path. Returns an action when a cheap, unambiguous reading
@@ -229,10 +282,11 @@ export function confirmingCue(text) {
  * @param {?string} input.topic      what the conversation was about: 'tariff'|'legal'|'general'
  * @param {boolean} input.tariffFresh a recent tariff lookup is still referable
  * @param {boolean} input.candidatesFresh a composed hs reply's candidate headings are still referable (no code)
- * @param {?string} input.tableHs    the code of the lookup memory holds, fresh or not; null after a 404 or candidates
+ * @param {?object} input.table      state.tariff, fresh or not: {hs, origin, date, snapshot, open}; no `hs` after a 404 or
+ *   candidates. `open` is set by the reply that showed the lookup and cleared by any other (conversation.mjs nextState)
  * @param {boolean} input.pendingIngest the bot has offered to fetch a document and is awaiting a yes
  */
-export function fastPath({ text, hasImage = false, quoteText = '', topic = null, tariffFresh = false, candidatesFresh = false, tableHs = null, pendingIngest = false }) {
+export function fastPath({ text, hasImage = false, quoteText = '', topic = null, tariffFresh = false, candidatesFresh = false, table = null, pendingIngest = false }) {
   const onTariff = topic === 'tariff';
 
   // Checked BEFORE the image branch on purpose: replying to a photo and typing exactly
@@ -243,21 +297,22 @@ export function fastPath({ text, hasImage = false, quoteText = '', topic = null,
   if (pendingIngest && topic === 'legal' && isAcceptIngest(text) && !hasImage) return { action: 'ingest' };
   if (!hasImage && isGreeting(text)) return { action: 'greeting' };
 
-  // A quoted message is the tariff result on the table only by its code, never by wording: a tariff reply naming the code
-  // memory holds, or a later message of that reply with no code (its "Tra theo ngày" line) while the lookup is fresh. Anything
-  // else quoted (a composed answer, an offer, an older lookup) is what the reply is about, whatever memory holds (R13). A
-  // reply to a photo is about the photo.
+  // A quoted message is the tariff result on the table only when it shows that lookup (showsLookup). Anything else quoted (a
+  // verdict or correction reply, a composed answer, an offer, an older lookup, a later message with no code) is what the reply
+  // is about, whatever memory holds (R13). A reply to a photo is about the photo.
   const quoted = String(quoteText ?? '').normalize('NFC');
-  const onTable = tariffReply(quoted)
-    ? Boolean(tableHs) && parseQuotedTariff(quoted)?.hs === tableHs
-    : tariffFresh && !hasHs(quoted) && BLOCK_END.test(quoted) && !COMPOSED.test(quoted);
+  const onTable = showsLookup(quoted, table);
   const elsewhere = Boolean(quoted) && !hasImage && !onTable;
+  // With no quote, a ruling with no code answers only the reply right before it. After NEEDS_CODE, an offer about another code or
+  // "Đã ghi nhận sai…", an "ok" or "đúng" answers that reply, and it recorded the opposite verdict for the code two messages up. A
+  // failed write leaves open only the verdict that failed, so resending it works.
+  const open = (verdict) => table?.open === true || table?.open === verdict;
 
   const verdict = confirmVerdict(text);
   if (verdict) {
     // A bare "đúng" only means "confirm that rate" when there IS a rate on the table.
     // On a legal thread it is ordinary agreement and must write nothing to the trail.
-    if (onTariff && tariffFresh && !elsewhere) return { action: 'confirm', verdict };
+    if (onTariff && tariffFresh && !elsewhere && (onTable || open(verdict))) return { action: 'confirm', verdict };
     return null;
   }
 
@@ -270,10 +325,16 @@ export function fastPath({ text, hasImage = false, quoteText = '', topic = null,
   // On a candidates thread only "HS đúng là <mã>" is one: there is no old code, and a quoted composed reply names only
   // candidates or the user's own code, neither of which may be recorded as wrong (plan 08 §6.3).
   const coded = hasHs(text);
-  // A coded ruling quoting an offer still rules on the table; quoting another lookup it would record the code in memory as wrong.
   const ruled = coded ? confirmingCue(text) : rulesWrong(text);
-  const onResult = candidatesFresh ? coded : elsewhere ? coded && tariffFresh : tariffFresh || onTable;
-  if (ruled && !readsAsQuestion(text) && onTariff && onResult && !(elsewhere && tariffReply(quoted))) return { action: 'correction' };
+  // A coded ruling quoting another message answers it only when that message is an offer naming the code in memory: quoting a
+  // composed answer or another lookup it would record the code in memory as wrong.
+  const offered = Boolean(table?.hs) && offerReply(quoted) && quoted.includes(dotted(table.hs));
+  const onResult = candidatesFresh
+    ? coded && !(elsewhere && tariffReply(quoted))
+    : coded
+      ? elsewhere ? tariffFresh && offered : tariffFresh || onTable
+      : !elsewhere && (onTable || (tariffFresh && open('wrong')));
+  if (ruled && !readsAsQuestion(text) && onTariff && onResult) return { action: 'correction' };
   return null;
 }
 
@@ -284,10 +345,7 @@ export function fastPath({ text, hasImage = false, quoteText = '', topic = null,
  */
 const ACCEPT_WORDS = ['nạp', 'nap', 'có', 'co', 'ok', 'oke', 'okay', 'đồng ý', 'dong y', 'nạp đi', 'nap di', 'lấy về', 'lay ve', 'ừ', 'u', 'yes'];
 
-export function isAcceptIngest(text) {
-  const t = String(text ?? '').toLowerCase().normalize('NFC').replace(/[.!,?…\s]+$/g, '').trim();
-  return ACCEPT_WORDS.includes(t);
-}
+export const isAcceptIngest = (text) => ACCEPT_WORDS.includes(wholeMessage(text));
 
 /**
  * "xác nhận văn bản 36/2025/TT-BKHCN" — a person vouching for a document the bot

@@ -128,8 +128,8 @@ Từ Việc 12, bot không còn gọi `route()` cho tin chữ. Luồng đầy đ
   tới khi bước kế hoạch của API đọc `label` (hàng 19). Văn bản kho không có vẫn đi `missingDocAnswer` (lưu
   `query` + `pendingIngest`).
 - **`state.answer` sau mọi câu soạn** = `{mode, question, goods: {facts}, at}` — lượt trước cho câu tinh chỉnh.
-  `question` là câu đã che của kế hoạch, bỏ cả nhãn `[mã n]` và mọi dãy 6, 8 hoặc 10 chữ số liền mà mặt nạ API bỏ sót
-  ("mã hs 848180"); `goods.facts` và `keywords` lọc y như vậy. **Không mã người dùng nào vào `state`.** Một câu trả lời
+  `question` là câu đã che của kế hoạch, bỏ cả nhãn `[mã n]`, mọi dãy 6 tới 10 chữ số liền ("mã hs 848180", gõ thừa một số)
+  và mọi mã 4-2-2 nối gạch ("8481-80-99", trừ ngày ISO) mà mặt nạ API bỏ sót; `goods.facts` và `keywords` lọc y như vậy. **Không mã người dùng nào vào `state`.** Một câu trả lời
   đặt `topic` mà không soạn (tra thuế, văn bản thiếu, đính chính…) xoá `state.answer`: refine chỉ trỏ về câu soạn ngay
   trước. Refine gửi kế hoạch nguyên vẹn, không `forceIntent`: API tự đổi sang `state.answer.mode` và giữ câu hỏi trước.
 - `index.mjs` và `dry-run.mjs` ghi state qua `nextState(state, result)`: thiếu khoá `tariff`/`legal`/`answer` =
@@ -147,21 +147,38 @@ Từ Việc 12, bot không còn gọi `route()` cho tin chữ. Luồng đầy đ
 Kế hoạch `confirm`/`correction` không bao giờ tự ghi sổ: sổ chỉ được ghi từ cue tường minh ở `fastPath`, và cue đó phải
 là phán quyết gõ có chủ đích về kết quả đang trên bàn:
 
-- Tin có mã chỉ ghi khi có cue xác nhận ngay trước mã; "tôi muốn hỏi thuế 8481.80.91", "không phải, 6307.90.90 cơ" đi bước
-  kế hoạch (hàng 10: lời mời). Tin không mã chỉ ghi `wrong` khi cả tin hoặc vế đầu chỉ là lời phán sai ("sai rồi", "mã
-  này không đúng", "sai rồi, không phải loại này"); "em gõ sai", "hỏi sai câu rồi", "mình ghi nhầm" kể lỗi của người dùng,
-  "ý tôi là …", "không phải …" chỉ vào câu hỏi: đều đi bước kế hoạch.
-- Câu hỏi đọc cả dạng không dấu, viết tắt ("sai k", "ma nay sai khong", "… hay sao", "X hay Y ạ").
-- Tin được quote là kết quả trên bàn **theo mã, không theo chữ**: `fastPath` nhận `tableHs` = `state.tariff.hs` (còn mới
-  hay đã cũ). Quote chỉ là kết quả đó khi là `tariffReply` và `parseQuotedTariff(quote).hs === tableHs`, hoặc là tin sau
-  của câu tra thuế dài không mang mã (dòng "Tra theo ngày …", không dấu câu soạn) khi kết quả còn mới. Mọi quote khác (câu
-  soạn, lời mời, một lượt tra cũ hơn) thì "đúng"/"sai" hay lời phản đối không mã không ghi gì; "HS đúng là X" quote lời mời
-  vẫn ghi, quote một lượt tra khác thì không. Tra 404 hay sau ứng viên (`tableHs` null) thì quote không bao giờ tự đứng làm
+- **Phán quyết không mã chỉ trả lời câu ngay trước nó.** `stampTariff` đặt `state.tariff.open = true` ở câu tra thuế;
+  `nextState` đóng lại (`open: false`, giữ bộ nhớ) ở mọi câu trả lời không mang khoá `tariff`: NEEDS_CODE, NEEDS_GOODS,
+  NOT_READ, lời mời về mã khác, câu ghi nhận "Đã ghi nhận sai…", câu báo lỗi. Không quote thì "đúng"/"sai" hay "sai rồi" chỉ
+  ghi khi `open`; trước đây một chữ "ok" cảm ơn sau "Đã ghi nhận sai…" ghi `correct` cho chính mã vừa bị báo sai. Lời mời hỏi
+  "đúng"/"sai" về chính mã vừa tra (`codeOffer` cùng mã hoặc không mã) mở lại; ghi sổ lỗi chỉ để ngỏ đúng phán quyết vừa lỗi
+  (`open: 'wrong'`), để gửi lại thì ghi được mà chữ ngược lại thì không. "ok", "oke", "okay", "okie" không phải phán quyết:
+  ở đâu cũng là "đã xem" (câu `AGREED`, không qua bước kế hoạch).
+- Tin có mã chỉ ghi khi cue xác nhận ("HS đúng là", "mã đúng:", "mã đúng phải là", "mã chuẩn là") **mở đầu tin**, hoặc đứng
+  sau đúng một vế phán sai ("sai rồi, ", "sai rồi 😅 ") hay "không phải, " có dấu câu. "nếu HS đúng là X thì…", "hình như
+  mã đúng là X", "em nghĩ…", "có phải…", "không phải HS đúng là X đâu" đọc cue như tiền đề: bước kế hoạch, lời mời.
+  "tôi muốn hỏi thuế 8481.80.91", "không phải, 6307.90.90 cơ" cũng vậy (hàng 10).
+- Tin không mã chỉ ghi `wrong` khi vế đầu chỉ là lời phán sai ("sai rồi", "sai r", "chưa đúng", "mã HS này không đúng") và vế
+  sau trống hoặc chỉ vào hàng, mã ("sai rồi, không phải loại này"). Vế sau nói thuế, %, C/O, form, điều khoản, hay không chỉ
+  vào đâu ("sai rồi, form E không bắt buộc đâu", "sai rồi, thuế MFN phải 5% chứ", "sai rồi, bạn xem lại đi") là tranh luận
+  với câu trả lời: bước kế hoạch, hàng 22 không bao giờ ghi. "em gõ sai", "hỏi sai câu rồi", "mình ghi nhầm" kể lỗi của
+  người dùng; "ý tôi là …", "không phải …" chỉ vào câu hỏi: đều đi bước kế hoạch.
+- Câu hỏi đọc cả dạng không dấu, viết tắt ("sai k", "ma nay sai khong", "… phai hk", "… chăng", "… hay sao", "X hay Y ạ").
+- Tin được quote là kết quả trên bàn **chỉ khi nó cho thấy đúng lượt tra đang nhớ**: `fastPath` nhận `table` =
+  `state.tariff` (còn mới hay đã cũ). Quote phải có dòng dẫn khối thuế ("Hàng hóa có mã HS X…", "Đối với hàng hóa có mã HS
+  X…") với X là mã đang nhớ, đọc từ chính dòng đó; xuất xứ dòng đó nêu và ngày "Tra theo ngày …" (khi có) phải khớp bộ nhớ;
+  và không có dòng ghi nhận ("Đã ghi nhận…", "Đã xác nhận mã…"), kể cả khi mã đó vừa được tra lại. Tin sau không mã của một
+  câu dài không còn được coi là của lượt tra: quote nó thì gửi lại không quote. Mọi quote khác (câu ghi nhận, câu soạn, lời
+  mời, lượt tra cũ hơn hay khác xuất xứ) thì "đúng"/"sai" hay lời phản đối không mã không ghi gì. "HS đúng là X" quote tin
+  khác chỉ ghi khi tin đó là lời mời (chữ code viết `"HS đúng là <mã>"` hoặc `"HS đúng là 1234.56.78"`) nêu đúng mã đang
+  nhớ; quote câu soạn (hs, pháp luật) thì không. Tra 404 hay sau ứng viên (không `hs`) thì quote không bao giờ tự đứng làm
   kết quả.
 - `tariffReply` chỉ nhận dòng bot tự viết (câu dẫn khối thuế, câu ghi nhận), không nhận "MFN"/"Cảm ơn"/"bạn nêu". Văn xuôi
-  soạn có thể chép câu dẫn ("Hàng hóa có mã HS 6506.10.10 thuộc danh mục…" khi mã chủ đề được mở cho bước soạn), nên
-  `formatAnswerMd` đổi các câu mở đó ở mọi chỗ trong văn xuôi, giữ nghĩa ("Hàng có mã HS", "Có ghi nhận"): không tin nào
-  của câu soạn khớp `tariffReply`, ở chế độ nào và tách tin ở đâu cũng vậy.
+  soạn có thể chép câu dẫn ("Hàng hóa có mã HS 6506.10.10 thuộc danh mục…" khi mã chủ đề được mở cho bước soạn), kể cả có
+  markdown chen giữa ("Hàng hóa có **mã HS X**"), nên `formatAnswerMd` đổi các câu mở đó **trên dòng đã qua `md()`**, giữ
+  nghĩa ("Hàng có mã HS", "Có ghi nhận"; dòng bị đổi mất đậm/nghiêng), và đổi ngoặc thẳng của `"HS đúng là …"` thành ngoặc
+  cong: không tin nào của câu soạn khớp `tariffReply` hay `offerReply`, ở chế độ nào và tách tin ở đâu cũng vậy. Lời báo đã
+  hiểu câu hỏi (`ack`, chữ mô hình) cũng qua `unlikeTariffReply` trước khi gửi.
 - Đính chính kèm mã mới ghi `correct` cho mã mới trước, rồi `wrong` cho mã cũ. `correct` lỗi thì không ghi gì, giữ bộ nhớ để
   gửi lại; `wrong` lỗi sau đó thì nói rõ đã ghi được gì, bỏ bộ nhớ để gửi lại không ghi trùng.
 - Lời mời nạp văn bản chỉ nhận "có"/"nạp" khi chủ đề còn là pháp luật.

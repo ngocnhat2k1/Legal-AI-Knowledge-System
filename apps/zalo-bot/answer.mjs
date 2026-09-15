@@ -389,7 +389,8 @@ export async function handleConfirm(tariff, verdict, senderName) {
     staffName: senderName,
     snapshot: tariff.snapshot,
   });
-  if (!ok) return { text: 'Ghi nhận xác nhận bị lỗi, thử lại sau nhé.', topic: 'tariff' };
+  // Sending the same word again writes it; the opposite word, or "ok" as thanks, must not (R13).
+  if (!ok) return { text: 'Ghi nhận xác nhận bị lỗi, thử lại sau nhé.', topic: 'tariff', tariff: { ...tariff, open: verdict } };
   const label = verdict === 'correct' ? 'đúng' : verdict === 'wrong' ? 'sai' : 'chưa chắc';
   return {
     text: [L(['Đã ghi nhận ', [label, 'b'], ' cho mã ', [tariff.dotted, 'b'], ` (${tariff.origin ? `xuất xứ ${tariff.origin}, ` : ''}ngày ${dmy(tariff.date)}). Cảm ơn ${senderName}.`])],
@@ -443,12 +444,13 @@ export async function handleCorrection(tariff, text, senderName, quote) {
     return {
       text: [L(['Đã xác nhận mã ', [old.dotted, 'b'], `${old.origin ? ` (xuất xứ ${old.origin})` : ''} là đúng. Cảm ơn ${senderName}.`])],
       topic: 'tariff',
-      tariff: tariff?.hs ? stampTariff({ ...old, desc: prodDesc || undefined, keywords: prevKw }) : null,
+      // An acknowledgement is not the lookup: a "đúng"/"ok" after it thanks the reply.
+      tariff: tariff?.hs ? { ...stampTariff({ ...old, desc: prodDesc || undefined, keywords: prevKw }), open: false } : null,
     };
   }
 
   if (!fix) {
-    if (!old?.hs || !(await wrong())) return failed;
+    if (!old?.hs || !(await wrong())) return tariff?.hs ? { ...failed, tariff: { ...tariff, open: 'wrong' } } : failed;
     return {
       text: [L(['Đã ghi nhận: mã ', [old.dotted, 'b'], ` chưa đúng (theo ${senderName}). Bạn gửi mã HS đúng, hoặc mô tả hay ảnh mặt hàng để mình tra lại nhé.`])],
       topic: 'tariff',
@@ -499,9 +501,11 @@ export async function codeOffer(tariff, fix) {
       text: [
         L([
           'Mình chưa ghi nhận gì. Muốn ghi nhận mã đúng', ...forDesc, ', nhắn "HS đúng là <mã>" (kèm số công văn nếu có)',
-          ...(tariff?.hs ? ['; mã ', [tariff.dotted, 'b'], ' vừa tra đúng với lô hàng thì nhắn "đúng".'] : ['.']),
+          ...(tariff?.hs ? ['; mã ', [tariff.dotted, 'b'], ' vừa tra: đúng với lô hàng thì nhắn "đúng", chưa đúng thì nhắn "sai".'] : ['.']),
         ]),
       ],
+      // It asks "đúng"/"sai" about the lookup, so it leaves that lookup open to them; nextState closes every other offer (R13).
+      ...(tariff?.hs ? { tariff: { ...tariff, open: true } } : {}),
     };
   }
   const row = (await searchByPrefix(fix.hs)).find((c) => c.hs === fix.hs);
@@ -519,7 +523,7 @@ export async function codeOffer(tariff, fix) {
         // "HS đúng là" on this thread also records the code just looked up as wrong: say so before it is sent.
         ? [...named, ' khác mã ', [tariff.dotted, 'b'], ' vừa tra. Muốn ghi nhận ', [tariff.dotted, 'b'], ' chưa đúng và ', [fix.dotted, 'b'], ' là mã đúng', ...record]
         : [...named, ': muốn mình ghi nhận mã này', ...record];
-  return { text: [L(said)] };
+  return { text: [L(said)], ...(tariff?.hs === fix.hs ? { tariff: { ...tariff, open: true } } : {}) };
 }
 
 // --- Image --------------------------------------------------------------------

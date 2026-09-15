@@ -10,7 +10,7 @@ import { test } from 'node:test';
 
 import { TextStyle } from 'zca-js';
 
-import { tariffReply } from './dispatch.mjs';
+import { offerReply, tariffReply } from './dispatch.mjs';
 import { formatAnswer, formatAnswerMd } from './format.mjs';
 import { L, md, render, ST, toText } from './render.mjs';
 
@@ -270,11 +270,20 @@ test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp 
 
 test('bất biến R13: câu pháp luật, tình trạng và hs không ứng viên có "Cảm ơn"/"MFN"/"bạn nêu" hay mở dòng bằng câu dẫn khối thuế không khớp tariffReply, tách tin ở đâu cũng vậy; khối thuế thật vẫn khớp', () => {
   // Re-review 2026-09-15: a subject code is unmasked into the compose prompt, so prose can open a line with the tariff lead.
+  // Re-review round 2: markdown inside an opener ("Hàng hóa có **mã HS …**") went through the reword, then md() dropped the
+  // asterisks; an offer's wording ('nhắn "HS đúng là …"') would let a coded ruling quoting the reply write too.
   const lead = [
     'Hàng hóa có mã HS 8481.80.99 thuộc danh mục phải kiểm tra chất lượng trước thông quan [1].',
     'Đối với hàng hóa có mã HS 8481.80.99 có xuất xứ Trung Quốc, hồ sơ cần C/O mẫu E [1].',
     'Đã xác nhận mã 8481.80.99 cho hàng tương tự.',
     'Đã ghi nhận sai cho mã 8481.80.99 trước đây [1].',
+    'Hàng hóa có **mã HS 8481.80.99** thuộc danh mục kiểm tra chuyên ngành [1].',
+    '**Hàng hóa** có mã HS 8481.80.99 thuộc danh mục kiểm tra chuyên ngành [1].',
+    '*Đối với hàng hóa có mã HS* 8481.80.99, hồ sơ cần C/O mẫu E [1].',
+    'Đã xác nhận mã **8481.80.99** cho hàng tương tự trong danh mục [1].',
+    'Đã **ghi nhận** sai cho mã 8481.80.99 trước đây [1].',
+    'Muốn đổi mã thì nhắn "HS đúng là 8481.80.99" kèm công văn [1].',
+    '- Nếu cần, nhắn **"HS đúng là <mã>"** [1].',
   ];
   const prose = `Cảm ơn bạn đã mô tả thêm. Thuế MFN không đổi theo mô tả; mã bạn nêu cần đối chiếu chú giải [1].\n${lead.join('\n')}`;
   const noCands = { ...HS_PHOTO, candidates: [], userCodes: [{ ...HS_PHOTO.userCodes[0], exists: false, inCandidates: false }] };
@@ -285,7 +294,10 @@ test('bất biến R13: câu pháp luật, tình trạng và hs không ứng vi�
   const modes = { noCands, legal, status: { ...legal, mode: 'status' } };
   const noTariffReply = (answerMd, label) => {
     for (const [name, res] of Object.entries(modes)) {
-      for (const msg of render(formatAnswerMd({ ...res, answerMd })).map((p) => p.msg)) assert.equal(tariffReply(msg), false, `${name} ${label}: ${msg.slice(0, 120)}`);
+      for (const msg of render(formatAnswerMd({ ...res, answerMd })).map((p) => p.msg)) {
+        assert.equal(tariffReply(msg), false, `${name} ${label}: ${msg.slice(0, 120)}`);
+        assert.equal(offerReply(msg), false, `lời mời ${name} ${label}: ${msg.slice(0, 120)}`);
+      }
     }
   };
   const filler = 'Văn bản này quy định hồ sơ, thủ tục và thời hạn kiểm tra đối với hàng hóa nhập khẩu [1]. ';

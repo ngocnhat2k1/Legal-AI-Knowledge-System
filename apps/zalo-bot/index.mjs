@@ -24,7 +24,7 @@ import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 import { answerByHs, answerImage, codeOffer, handleConfirm, handleCorrection, missingDocAnswer } from './answer.mjs';
 import { ackIngestReports, answer, confirmations, ingestReports, legalProvision, lookupFull, requestIngest, verifyDocument } from './api.mjs';
 import { loadContext, nextState, saveContext, stampTariff } from './conversation.mjs';
-import { confirmVerdict, fastPath, fold, guardIntent, isBareLookup, parseVerifyDocCommand, readsAsQuestion } from './dispatch.mjs';
+import { confirmVerdict, fastPath, fold, guardIntent, isBareLookup, isOkay, parseVerifyDocCommand, readsAsQuestion, unlikeTariffReply } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
 import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatProvisions, sanitizeLead } from './format.mjs';
 import { parseQuery, stripMentions, todayVN } from './parse.mjs';
@@ -109,11 +109,16 @@ const LEGAL_MODES = ['legal', 'status', 'mixed'];
 const PROSE_BUDGET_MS = 45_000;
 
 /**
- * Plan text as memory may keep it (R4): masked by the API, its [mã n] labels dropped, and a joined 6-, 8- or 10-digit run the
- * API mask missed ("mã hs 848180") dropped too. A year or a document number is shorter or carries a slash.
- * ponytail: a 6-digit amount goes as well; the real fix is the API mask.
+ * Plan text as memory may keep it (R4): masked by the API, its [mã n] labels dropped, and a run the API mask missed dropped too:
+ * 6 to 10 joined digits ("mã hs 848180", a 9-digit typo) or 4-2-2 joined by dashes ("8481-80-99", not an ISO date). A year or a
+ * document number is shorter or carries a slash.
+ * ponytail: a 6- to 10-digit amount or phone number goes as well; the real fix is the API mask.
  */
-const noCodes = (s) => String(s ?? '').replace(/\[mã \d+\]|(?<![\d/.-])\d{6}(?:\d{2}){0,2}(?![\d/])/g, ' ').replace(/\s+/g, ' ').trim();
+const noCodes = (s) =>
+  String(s ?? '')
+    .replace(/\[mã \d+\]|(?<![\d/.-])(?:\d{6,10}|(?!(?:19|20)\d{2}-[01]\d-[0-3]\d(?![\d-]))\d{4}-\d{2}-\d{2}(?:-\d{2})?)(?![\d/-])/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 const asked = (plan) => noCodes(plan.question);
 
 /** What the next plan may point at after a legal answer (plan 08 §6.1). */
@@ -180,7 +185,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     topic: ctx.topic,
     tariffFresh: ctx.tariffFresh,
     candidatesFresh: ctx.candidatesFresh,
-    tableHs: ctx.state?.tariff?.hs ?? null,
+    table: ctx.state?.tariff ?? null,
     pendingIngest: Boolean(pending),
   });
   if (fast?.action === 'ingest') {
@@ -209,8 +214,8 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   if (direct && isBareLookup(text)) {
     return { ...(await rateWithProse(direct, { q: text, quote: quoted, deadlineAt }, !ctx.tariffFresh)), intent: 'tariff' };
   }
-  // "đúng", "ok" sau bất cứ gì không phải kết quả tra thuế là đồng ý: không có gì để ghi, không soạn lại câu cũ.
-  if (confirmVerdict(text) === 'correct' && ctx.topic !== 'tariff') return { text: AGREED, intent: 'general' };
+  // "ok" ở đâu cũng là "đã xem"; "đúng" sau bất cứ gì không phải kết quả tra thuế là đồng ý: không có gì để ghi, không soạn lại câu cũ.
+  if (isOkay(text) || (confirmVerdict(text) === 'correct' && ctx.topic !== 'tariff')) return { text: AGREED, intent: 'general' };
   // POST /answer từ chối câu quá 2.000 ký tự: "thử lại sau" không bao giờ giúp được.
   if (text.length > 2000) return { text: TOO_LONG, intent: 'general' };
 
@@ -274,7 +279,8 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   if (planned === 'hs' && res.codeRole === 'premise' && !plan.goods?.facts?.length && !ctx.candidatesFresh) return { text: NEEDS_GOODS, intent };
 
   // 6. Sắp soạn: báo đã hiểu câu hỏi, đúng một lần.
-  const ack = sanitizeLead(res.ack, text).replace(/[.!?…\s]+$/u, '');
+  // Model text: quoted later, it must not read as the tariff lead or a verdict reply (§6.3).
+  const ack = unlikeTariffReply(sanitizeLead(res.ack, text)).replace(/[.!?…\s]+$/u, '');
   const clause = planned === 'hs' ? 'mình đọc chú giải các nhóm liên quan rồi trả lời, khoảng một phút nhé.' : 'mình tra văn bản rồi trả lời nhé.';
   await notify?.(ack ? `${ack} — ${clause}` : clause[0].toUpperCase() + clause.slice(1));
 

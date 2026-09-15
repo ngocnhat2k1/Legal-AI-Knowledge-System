@@ -37,17 +37,23 @@ export async function loadContext(threadId, userId) {
   };
 }
 
-/** Stamp a tariff result with the time it was produced, so freshness is about IT, not the chat. */
-export const stampTariff = (lookup) => (lookup ? { ...lookup, at: new Date().toISOString() } : null);
+/**
+ * Stamp a tariff result with the time it was produced, so freshness is about IT, not the chat. `open`: this reply shows the
+ * lookup, so a "đúng"/"sai" right after it answers it (fastPath).
+ */
+export const stampTariff = (lookup) => (lookup ? { ...lookup, at: new Date().toISOString(), open: true } : null);
 
 /**
  * The state a reply leaves: `tariff`/`legal`/`answer` absent from the result = keep that memory, null = clear it. A reply
  * that sets a topic without composing clears `answer`: a refine points at the last composed reply, never one further back.
+ * A reply that leaves `tariff` out keeps the lookup but closes it to a ruling with no code: an "ok" or "đúng" after NEEDS_CODE,
+ * an offer about another code or "Đã ghi nhận sai…" answers that reply, not the rates further up (R13).
  */
 export function nextState(state, result) {
   const next = { ...(state || {}) };
   if ('topic' in result && !('answer' in result)) next.answer = null;
   for (const k of ['tariff', 'legal', 'answer']) if (k in result) next[k] = result[k];
+  if (!('tariff' in result) && next.tariff?.open) next.tariff = { ...next.tariff, open: false };
   return next;
 }
 
