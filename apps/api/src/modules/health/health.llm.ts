@@ -67,11 +67,12 @@ const DEEP_FAIL_TTL_MS = 30_000;
 /**
  * Best effort, and deliberately loose. The CLI has no machine-readable quota field; the limit arrives as
  * prose in the `result` string of the `--output-format json` envelope — runClaude's `text`. The wording
- * recorded on 2026-09-14 was "org's monthly spend limit" (.agent/planning/02-progress.md). Matched with or
+ * recorded on 2026-09-14 was "org's monthly spend limit" (.agent/planning/02-progress.md); on 2026-09-17 a subscription's
+ * "You've hit your weekly limit · resets Sep 20, 9pm (UTC)". Matched with or
  * without `is_error`, because which of the two carries the refusal is not guaranteed; a wrong guess only
  * costs a `quota` where `error` was meant, and both mean "the model did not answer".
  */
-const QUOTA = /spend limit|usage limit|quota|credit balance|out of credit/i;
+const QUOTA = /spend limit|usage limit|weekly limit|hit your .*limit|quota|credit balance|out of credit/i;
 
 interface DeepCache {
   /** An expiry, not a start: the verdict decides how long it is worth, and only once it arrives. */

@@ -81,6 +81,10 @@ describe('probeLlmDeep (only when /health?llm=deep asks)', () => {
     jest.resetModules();
     mockRunClaude.mockResolvedValue(envelope('Claude AI usage limit reached, resets at 09:00'));
     await expect(load().probeLlmDeep()).resolves.toBe('quota');
+
+    jest.resetModules();
+    mockRunClaude.mockResolvedValue(envelope("You've hit your weekly limit · resets Sep 20, 9pm (UTC)", true));
+    await expect(load().probeLlmDeep()).resolves.toBe('quota');
   });
 
   /**

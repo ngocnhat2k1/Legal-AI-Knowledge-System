@@ -1,7 +1,7 @@
 ---
 type: planning
 status: active
-updated: 2026-09-15
+updated: 2026-09-17
 related:
   - ../index.md
   - ../business-rules.md
@@ -61,6 +61,25 @@ Thêm một mục mới ở **đầu** phần này vào cuối mỗi phiên làm
 ngắn gọn. Ghi lại cái gì đã thay đổi, cái gì đã học được, và cái gì mà agent tiếp theo sẽ khám phá lại một cách khó
 khăn. **Bất ngờ và ngõ cụt là thứ giá trị nhất ở đây** — một kế hoạch cho bạn biết cái gì được
 dự định, chỉ cái này cho bạn biết địa hình thực sự đã làm gì.
+
+---
+
+### 2026-09-17 — Hết hạn mức tuần của Claude: bot đòi mã HS cho một câu đã mô tả hàng; giờ bot nói đúng lỗi
+
+- **Triệu chứng.** Nhóm Zalo hỏi mã HS cho "Smart Voice Control Panel" (mô tả đủ chức năng), bot đáp câu mẫu "nhắn giúp
+  mình mã HS 8 số". Log API 16:33–16:34 (giờ VN): ba lượt `"fallback":true`, plan ~2 s (bình thường 6–8 s).
+- **Gốc.** `claude -p` trong container trả `is_error` + `api_error_status: 429`, `result` = `You've hit your weekly limit ·
+  resets Sep 20, 9pm (UTC)`. `runClaude` bỏ lời đó, `planStep` thay bằng `defaultPlan` (không bao giờ có `keywords`), bot
+  đọc "tariff, không tên hàng" → `NEEDS_CODE`. Vision cũng giấu y hệt: CLI chế độ chữ in lời từ chối ra stdout, thoát 1,
+  `normalize` ra null → "chưa nhận ra mặt hàng". `/health?llm=deep` cũng chỉ ra `error`, vì `QUOTA` không có chữ "weekly limit".
+- **Sửa.** `ClaudeResult.apiError` giữ và log lời từ chối (`[claude] API refused 429: …`); `planStep` trả `llmError`
+  (`refused` kèm lời, `timeout`, `failed`), `/answer` chuyển tiếp; bot thấy `llmError` thì in `formatModelDown` thay vì
+  hành động trên kế hoạch đoán. Vision trả cùng dạng lỗi khi CLI thoát khác 0. `QUOTA` thêm "weekly limit". Runbook có mục
+  đổi tài khoản Claude.
+- **Chưa phủ.** Hạn mức hết *giữa* lượt (plan xong, bước soạn bị từ chối) vẫn ra `NOT_COMPOSED`/khối nguồn — lượt sau sẽ
+  vấp ở bước kế hoạch và báo đúng. `defaultPlan` giờ chỉ còn dùng cho `forceIntent` và khi latch bỏ tin nhắn.
+- **Bài học.** Token OAuth dùng chung hạn mức với mọi nơi tài khoản đó chạy; hết hạn mức là hỏng im lặng thứ ba (sau
+  thiếu token 2026-08-14, hạn mức tháng tổ chức 2026-09-14).
 
 ---
 

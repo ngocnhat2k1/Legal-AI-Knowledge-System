@@ -320,6 +320,18 @@ export interface PlanStepResult {
   calls: number;
   /** The model gave no usable plan; defaultPlan stood in. */
   fallback: boolean;
+  /** Why, when the model call was made and gave no usable plan; null otherwise. */
+  llmError: LlmError | null;
+}
+
+/**
+ * A failed plan call, for the bot to say what failed instead of acting on defaultPlan's guess — on 2026-09-17 a usage limit
+ * turned a described product into "send me the HS code". `refused`: the API said no, `message` in its words; `timeout`:
+ * no answer within PLAN_TIMEOUT_MS; `failed`: the CLI died, is_error, or the reply held no usable plan.
+ */
+export interface LlmError {
+  kind: 'refused' | 'timeout' | 'failed';
+  message: string | null;
 }
 
 /** Measured on the server 2026-09-14: a plan-size prompt at sonnet/low took 22–30 s. */
@@ -443,14 +455,19 @@ export async function planStep(input: PlanInput, run: Runner): Promise<PlanStepR
   const { parts, codes } = planParts(input);
   // Premise spellings whatever the role: the plan may still tighten it to premise, and every code here is masked anyway.
   const { parts: kept, leakDrops } = assertNoUserCodes(parts, users, 'premise');
-  const done = (plan: Plan | null, calls: number): PlanStepResult => {
+  const done = (plan: Plan | null, calls: number, llmError: LlmError | null = null): PlanStepResult => {
     const final = plan ?? defaultPlan(input.text, input.topic);
-    return { plan: final, codes, codeRole: codeRole(input.text, final), userCodes: users, leakDrops, calls, fallback: !plan };
+    return { plan: final, codes, codeRole: codeRole(input.text, final), userCodes: users, leakDrops, calls, fallback: !plan, llmError };
   };
   if (!kept.some((p) => p.name === 'message')) return done(null, 0);
+  const startedAt = Date.now();
   const res = await run(buildPlanInput(kept, input.documents), { timeoutMs: PLAN_TIMEOUT_MS, systemPrompt: PLAN_SYSTEM, model: 'sonnet', effort: 'low' });
   const userTexts = [input.text, input.quote ?? '', ...input.turns.filter((t) => t.role === 'user').map((t) => t.body)];
-  return done(res && !res.isError ? normalizePlan(looseJson(res.text), userTexts, citedDocs(input.state)) : null, 1);
+  const plan = res && !res.isError ? normalizePlan(looseJson(res.text), userTexts, citedDocs(input.state)) : null;
+  if (plan) return done(plan, 1);
+  // runClaude's null is a timeout or a dead CLI; the clock tells them apart, as the deep health probe does.
+  const kind = res?.apiError ? 'refused' : !res && Date.now() - startedAt >= PLAN_TIMEOUT_MS - 1_000 ? 'timeout' : 'failed';
+  return done(null, 1, { kind, message: res?.apiError ?? null });
 }
 
 /**

@@ -28,6 +28,7 @@ import {
   defaultPlan,
   type Intent,
   INTENTS,
+  type LlmError,
   maskCodes,
   normalizePlan,
   type Plan,
@@ -148,6 +149,8 @@ export interface AnswerResponse {
   tariff: TariffResponse | null;
   /** defaultPlan stood in for the plan step (no result, timeout, is_error, no usable plan); false when no plan step ran. */
   fallback: boolean;
+  /** Why the plan step's model call failed when it did; the bot says so rather than answer on defaultPlan. */
+  llmError: LlmError | null;
   /** Why a turn bound for compose has no prose; null for every other turn and once prose was composed, even if later cut. */
   reason: 'no_sources' | 'compose_failed' | 'deadline' | 'latch' | null;
   calls: number;
@@ -221,6 +224,7 @@ export class AnswerService {
     };
     let calls = 0;
     let fallback = false;
+    let llmError: LlmError | null = null;
     let sourceCount = 0;
     const leakDrops: string[] = [];
 
@@ -250,6 +254,7 @@ export class AnswerService {
       plan = step.plan;
       calls += step.calls;
       fallback = step.fallback;
+      llmError = step.llmError;
       leakDrops.push(...step.leakDrops);
     }
     if (forced) plan = { ...plan, intent: forced };
@@ -309,13 +314,14 @@ export class AnswerService {
         reason: null,
         ...part,
         fallback,
+        llmError,
         calls,
         timingMs,
       };
       // One line per turn and no user text in it (R14): dropped prompt parts by name only.
       this.log.log(
         JSON.stringify({
-          mode, intent: plan.intent, codeRole: role, calls, sources: sourceCount, cut: res.cut, repaired: res.repaired, fallback, reason: res.reason, leakDrops, timingMs,
+          mode, intent: plan.intent, codeRole: role, calls, sources: sourceCount, cut: res.cut, repaired: res.repaired, fallback, llmError: llmError?.kind ?? null, reason: res.reason, leakDrops, timingMs,
         }),
       );
       return res;

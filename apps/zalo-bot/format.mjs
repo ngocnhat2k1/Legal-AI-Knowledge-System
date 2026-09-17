@@ -546,6 +546,16 @@ export const CAPABILITIES = [
   L([['Ví dụ: "thuế nhập khẩu 8481.80.99 xuất xứ Trung Quốc"', 'i']]),
 ];
 
+/**
+ * Claude could not run a step ({ kind: 'refused' | 'timeout' | 'failed', message }): say what failed, in the provider's words
+ * when it gave any — a usage limit names when it resets. Never a guess in its place: on 2026-09-17 a used-up weekly limit
+ * made a described product read as "send me the HS code". A lookup by code needs no model, so it is offered meanwhile.
+ */
+export function formatModelDown(error) {
+  const why = error?.message ? `báo lỗi "${String(error.message).slice(0, 300)}"` : error?.kind === 'timeout' ? 'không phản hồi kịp' : 'gặp lỗi';
+  return `Mình tạm thời chưa trả lời được: dịch vụ AI (Claude) ${why}. Trong lúc chờ, tra thuế theo mã HS 8 số (kèm xuất xứ) vẫn dùng được.`;
+}
+
 /** The router's free reply (intent general): gated like any LLM prose, then md() on the original text; `fallback` when it fails. */
 export function formatGeneral(reply, fallback = CAPABILITIES) {
   // sanitizeLead collapses whitespace, so it is only the gate; md() reads the original line breaks.

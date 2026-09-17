@@ -11,7 +11,7 @@ import { unlinkSync } from 'node:fs';
 
 import { confirmations, confirmationsMatch, lookupFull, postConfirm, searchByPrefix, searchGoods, tariffResponse } from './api.mjs';
 import { stampTariff } from './conversation.mjs';
-import { confirmFooter, dmy, formatAnswer, rulingLine, sanitizeLead } from './format.mjs';
+import { confirmFooter, dmy, formatAnswer, formatModelDown, rulingLine, sanitizeLead } from './format.mjs';
 import { downloadImage, VISION_DIR } from './images.mjs';
 import { ruling } from './dispatch.mjs';
 import { citationFrom, cleanGazetteTitle, detectOrigin, HS_RE, keywordFrom, ORIGIN_LABEL, parseQuery, parseQuotedTariff, todayVN as today } from './parse.mjs';
@@ -425,6 +425,7 @@ export async function answerImage(imageUrls, caption) {
   }
   try {
     const clues = await claudeVision(file, captionForVision(caption), VISION_DIR);
+    if (clues?.kind) return { text: formatModelDown(clues), topic: 'tariff', tariff: null };
     if (!clues || (!clues.keywords.length && !clues.hsHints.length)) {
       return {
         text: 'Mình chưa nhận ra mặt hàng trong ảnh. Bạn mô tả bằng chữ (tên hàng + chất liệu + công dụng) kèm xuất xứ giúp mình nhé.',

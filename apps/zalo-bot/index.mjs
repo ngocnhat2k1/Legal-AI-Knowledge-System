@@ -26,7 +26,7 @@ import { ackIngestReports, answer, confirmations, ingestReports, legalProvision,
 import { loadContext, nextState, saveContext, stampTariff } from './conversation.mjs';
 import { fastPath, fold, guardIntent, isBareLookup, isOkay, parseVerifyDocCommand, plainVerdict, readsAsQuestion, unlikeTariffReply } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
-import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatMissingDoc, formatProvisions, sanitizeLead } from './format.mjs';
+import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatMissingDoc, formatModelDown, formatProvisions, sanitizeLead } from './format.mjs';
 import { missingKind, parseQuery, stripMentions, todayVN } from './parse.mjs';
 import { L, render, toText } from './render.mjs';
 
@@ -252,6 +252,8 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   const res = await answer({ ...base, planOnly: true });
   const plan = res?.plan;
   if (!plan) return { text: NOT_READ, intent: 'general' };
+  // Claude failed and defaultPlan stood in: say what failed rather than answer on the guess.
+  if (res.llmError) return { text: formatModelDown(res.llmError), intent: 'general' };
 
   // 5. Nhánh tất định. Refine chạy lại chế độ API đã đọc từ câu soạn trước (res.mode, API tự đổi nên không forceIntent);
   // mọi kế hoạch khác qua rào chủ đề.

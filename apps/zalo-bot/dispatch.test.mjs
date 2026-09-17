@@ -904,6 +904,45 @@ test('Việc 12 (9): /answer không trả lời thì một câu thật, không t
   assert.equal(notices.length, 0);
 });
 
+test('2026-09-17: Claude hết lượt ở bước kế hoạch → bot nói đúng lỗi, không đoán theo defaultPlan (không đòi mã HS khi hàng đã được mô tả)', async () => {
+  const limit = "You've hit your weekly limit · resets Sep 20, 9pm (UTC)";
+  const fallback = plan08({ intent: 'tariff', understanding: null, goods: { facts: [], missing: [] }, keywords: [] });
+  const q = 'HS mặt hàng SMART VOICE CONTROL PANEL, bảng điều khiển trung tâm nhà thông minh, kết nối Zigbee, Bluetooth hoặc Wi-Fi';
+  for (const [llmError, want] of [
+    [{ kind: 'refused', message: limit }, limit],
+    [{ kind: 'timeout', message: null }, 'không phản hồi kịp'],
+    [{ kind: 'failed', message: null }, 'gặp lỗi'],
+  ]) {
+    const { text, calls, notices, answers } = await conversation().say(q, fakeApi({ planned: plannedOf(fallback, { codeRole: 'none', ack: null, fallback: true, llmError }) }));
+    assert.ok(text.includes('Claude') && text.includes(want), text);
+    assert.ok(!text.includes('mã HS 8 số của hàng (kèm xuất xứ) để mình tra thuế'), 'không phải câu xin mã');
+    assert.equal(answers.length, 1, 'không soạn trên kế hoạch đoán');
+    assert.ok(!calls.some((x) => x.path.startsWith('/tariff')));
+    assert.equal(notices.length, 0);
+  }
+});
+
+test('2026-09-17: vision gặp CLI thoát lỗi (hết lượt) → trả lỗi của CLI, không phải "chưa nhận ra mặt hàng"', async () => {
+  const { mkdtempSync, writeFileSync, chmodSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { claudeVision } = await import('./router.mjs');
+  const dir = mkdtempSync(join(tmpdir(), 'fake-claude-'));
+  const env0 = { PATH: process.env.PATH, token: process.env.CLAUDE_CODE_OAUTH_TOKEN };
+  try {
+    writeFileSync(join(dir, 'claude'), `#!/bin/sh\ncat >/dev/null\necho "You've hit your weekly limit · resets Sep 20, 9pm (UTC)"\nexit 1\n`);
+    chmodSync(join(dir, 'claude'), 0o755);
+    process.env.PATH = `${dir}:${env0.PATH}`;
+    process.env.CLAUDE_CODE_OAUTH_TOKEN = 'test';
+    assert.deepEqual(await claudeVision(join(dir, 'a.jpg'), '', dir), { kind: 'failed', message: "You've hit your weekly limit · resets Sep 20, 9pm (UTC)" });
+  } finally {
+    process.env.PATH = env0.PATH;
+    if (env0.token === undefined) delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
+    else process.env.CLAUDE_CODE_OAUTH_TOKEN = env0.token;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('Việc 12: văn bản kho không có (ở bước kế hoạch hay bước soạn) → lời mời nạp giữ cho lượt sau; xin nguyên văn Điều → tra theo trích dẫn, không soạn', async () => {
   const hit = { number: '36/2025/TT-BKHCN', title: 'Thông tư 36/2025/TT-BKHCN tiêu đề', sourceUrl: 'https://congbao.chinhphu.vn/van-ban/x' };
   const noGoods = { goods: { facts: [], missing: [] }, keywords: [] };
