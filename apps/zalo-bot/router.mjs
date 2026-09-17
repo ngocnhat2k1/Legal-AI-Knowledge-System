@@ -10,7 +10,10 @@ import { spawn } from 'node:child_process';
 
 const TIMEOUT_MS = 45_000;
 
-/** Run `claude -p` with the prompt on STDIN (argv has a 128KB limit; transcripts grow). */
+/**
+ * Run `claude -p` with the prompt on STDIN (argv has a 128KB limit; transcripts grow). A run that does not exit 0 resolves
+ * { kind, message }: in text mode the CLI prints its refusal (a usage limit) on stdout and exits 1.
+ */
 function runClaude(prompt, extraArgs = [], opts = {}) {
   return new Promise((resolve) => {
     const child = spawn('claude', ['-p', ...extraArgs], {
@@ -21,7 +24,12 @@ function runClaude(prompt, extraArgs = [], opts = {}) {
     let out = '';
     child.stdout.on('data', (d) => (out += d));
     child.on('error', () => resolve(null));
-    child.on('close', () => resolve(out));
+    child.on('close', (code, killedBy) => {
+      if (code === 0) return resolve(out);
+      const message = killedBy ? null : out.replace(/sk-ant-\S+/g, '[token]').trim().slice(0, 300) || null;
+      console.warn(`[vision] claude ${killedBy ? `killed (${killedBy}), likely the ${TIMEOUT_MS / 1000} s timeout` : `exited ${code}: ${message}`}`);
+      resolve({ kind: killedBy ? 'timeout' : 'failed', message });
+    });
     child.stdin.on('error', () => {});
     child.stdin.end(prompt);
   });
@@ -73,5 +81,7 @@ export function claudeVision(imagePath, caption, visionDir) {
     '"note":"MỘT câu ≤22 từ: mặt hàng là gì + chức năng chính"}\n' +
     'Nếu KHÔNG nhận ra mặt hàng cụ thể, trả keywords rỗng và note "không nhận ra mặt hàng".';
 
-  return runClaude(prompt, ['--allowedTools', `Read(//${visionDir.replace(/^\/+/, '')}/**)`], { cwd: visionDir }).then(normalize);
+  return runClaude(prompt, ['--allowedTools', `Read(//${visionDir.replace(/^\/+/, '')}/**)`], { cwd: visionDir }).then((out) =>
+    out?.kind ? out : normalize(out),
+  );
 }

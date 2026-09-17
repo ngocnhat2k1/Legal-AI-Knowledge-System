@@ -123,6 +123,22 @@ docker-compose up -d --no-deps api zalo-bot   # chỉ liệt kê service đọc 
 
 Recreate `embedder` thì model phải nạp lại khoảng 2 phút. Trong lúc đó `/legal` trả 400, còn tra biểu thuế vẫn chạy.
 
+### Đổi tài khoản Claude (hết hạn mức, đổi thuê bao)
+
+Token gắn với **một** tài khoản Claude, dùng chung hạn mức với mọi nơi tài khoản đó đang chạy (cả Claude Code trên máy
+cá nhân). Ngày 2026-09-17 tài khoản hết hạn mức tuần (`You've hit your weekly limit · resets …`), mọi câu hỏi chữ và ảnh
+đều không trả lời được. Đổi sang tài khoản khác:
+
+1. Trên máy có trình duyệt: `claude setup-token`, đăng nhập **tài khoản mới** ở trang OAuth hiện ra (cửa sổ ẩn danh nếu
+   trình duyệt đang đăng nhập tài khoản cũ). Lệnh in một token `sk-ant-oat01-…` dùng khoảng một năm. Không dán vào chat.
+2. Trên server: `cd /opt/docker-projects/customs-assistant && nano .env`, thay giá trị `CLAUDE_CODE_OAUTH_TOKEN=`.
+3. `docker-compose up -d --no-deps api zalo-bot` (restart không nhận biến mới). Session Zalo nằm trong volume, không cần
+   quét QR lại.
+4. `curl -s 'http://127.0.0.1:3060/health?llm=deep'` phải ra `"llmDeep":"up"`.
+
+Chỉ hỗ trợ token thuê bao: `ANTHROPIC_API_KEY` không được truyền vào container, và `/health`, bot đều kiểm
+`CLAUDE_CODE_OAUTH_TOKEN`.
+
 Muốn xem cấu hình đã gộp thì luôn lọc qua `grep`. `docker-compose config` không lọc sẽ in cả token:
 
 ```bash
@@ -170,7 +186,7 @@ rảnh: 3,6–10,9 giây cả lệnh, trong đó 1,7–3,6 giây là mô hình; 
 | `llmDeep` | Nghĩa | Làm gì |
 |---|---|---|
 | `up` | mô hình đã trả lời thật | không phải làm gì |
-| `quota` | câu trả lời mang chữ kiểu "spend limit" / "usage limit": hết hạn mức thuê bao. Nhận dạng bằng chuỗi, **chỉ là phỏng đoán** — CLI không có trường máy đọc được | chờ hạn mức reset; trong lúc đó bot vẫn chạy nhưng chỉ ở chế độ trích dẫn |
+| `quota` | câu trả lời mang chữ kiểu "spend limit" / "usage limit" / "weekly limit": hết hạn mức thuê bao. Nhận dạng bằng chuỗi, **chỉ là phỏng đoán** — CLI không có trường máy đọc được | chờ hạn mức reset hoặc [đổi tài khoản](#đổi-tài-khoản-claude-hết-hạn-mức-đổi-thuê-bao). Log API có dòng `[claude] API refused 429: <lời từ chối>`; trong nhóm, bot trả nguyên văn lời đó (kèm giờ reset) thay vì đoán câu trả lời, tra thuế theo mã 8 số vẫn chạy |
 | `error` | mô hình chạy nhưng báo lỗi (`is_error`, token sai…), **hoặc** CLI chết ngay mà không in JSON: crash, bị OOM giết, in lỗi dạng chữ thường | `docker-compose logs --tail 50 api` — tìm dòng `[claude] exited … without a result: …`, đó là chỗ **duy nhất** đọc được stderr của CLI (kể cả khi chữ báo hết hạn mức chỉ ra ở đó). Không thấy gì thì xem mục RAM/OOM ngay dưới |
 | `timeout` | hết 30 giây vẫn chưa có câu trả lời: mô hình chậm/kẹt, hoặc cả 2 suất tiến trình đang bận soạn câu trả lời cho bot | thử lại sau một phút (kết quả hỏng chỉ nhớ ~30 giây nên lần sau là đo thật); vẫn `timeout` lúc bot rảnh thì kiểm CLI như `no_cli` |
 | `no_token` / `no_cli` | như bảng trên (kiểm sâu không spawn gì trong hai trường hợp này) | như bảng trên |

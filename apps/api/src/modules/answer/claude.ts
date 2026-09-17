@@ -20,11 +20,16 @@ export interface ClaudeOpts {
   model?: string;
 }
 
-/** The `--output-format json` envelope: `result`, `is_error`, `duration_ms`. */
+/** The `--output-format json` envelope: `result`, `is_error`, `duration_ms`, `api_error_status`. */
 export interface ClaudeResult {
   text: string;
   isError: boolean;
   durationMs: number;
+  /**
+   * The API's refusal when it rejected the call (`api_error_status` set: a usage limit, an expired token, overload), in the
+   * provider's words — e.g. "You've hit your weekly limit · resets Sep 20, 9pm (UTC)" on 2026-09-17. Never model output.
+   */
+  apiError?: string | null;
 }
 
 /**
@@ -93,12 +98,16 @@ export async function runClaude(prompt: string, opts: ClaudeOpts): Promise<Claud
         resolve(null);
       });
       child.on('close', (code, killedBy) => {
-        const res = firstJson<{ result?: unknown; is_error?: unknown; duration_ms?: unknown }>(out);
+        const res = firstJson<{ result?: unknown; is_error?: unknown; duration_ms?: unknown; api_error_status?: unknown }>(out);
         if (!res) {
           if (!signal.aborted) console.warn(`[claude] exited ${code ?? killedBy} without a result: ${err.slice(0, 200)}`);
           return resolve(null);
         }
-        resolve({ text: String(res.result ?? ''), isError: Boolean(res.is_error) || code !== 0, durationMs: Number(res.duration_ms) || 0 });
+        // Scrubbed of anything token-shaped: this text reaches the log and the chat.
+        const apiError =
+          res.api_error_status == null ? null : String(res.result ?? '').replace(/sk-ant-\S+/g, '[token]').slice(0, 300) || `HTTP ${res.api_error_status}`;
+        if (apiError) console.warn(`[claude] API refused ${res.api_error_status}: ${apiError}`);
+        resolve({ text: String(res.result ?? ''), isError: Boolean(res.is_error) || code !== 0, durationMs: Number(res.duration_ms) || 0, apiError });
       });
       child.stdin.on('error', () => {}); // ignore EPIPE if claude exits early
       child.stdin.end(prompt);

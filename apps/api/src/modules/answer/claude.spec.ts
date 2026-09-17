@@ -34,6 +34,9 @@ const fs = require('fs');
 const dir = ${JSON.stringify(dir)};
 let prompt = '';
 process.stdin.on('data', (d) => (prompt += d)).on('end', () => {
+  if (prompt === 'quota') {
+    return process.stdout.write(JSON.stringify({ type: 'result', result: "You've hit your weekly limit · resets Sep 20, 9pm (UTC)", is_error: true, api_error_status: 429, duration_ms: 1 }));
+  }
   if (prompt === 'sleep') {
     fs.writeFileSync(dir + '/sleep-' + process.pid, '');
     return setTimeout(() => {}, 5000);
@@ -59,8 +62,19 @@ process.stdin.on('data', (d) => (prompt += d)).on('end', () => {
   });
 
   it('maps the envelope to text, isError and durationMs', async () => {
-    await expect(runClaude('câu hỏi', { timeoutMs: 10_000 })).resolves.toEqual({ text: 'đáp: câu hỏi', isError: false, durationMs: 1234 });
-    await expect(runClaude('fail', { timeoutMs: 10_000 })).resolves.toMatchObject({ isError: true });
+    await expect(runClaude('câu hỏi', { timeoutMs: 10_000 })).resolves.toEqual({ text: 'đáp: câu hỏi', isError: false, durationMs: 1234, apiError: null });
+    await expect(runClaude('fail', { timeoutMs: 10_000 })).resolves.toMatchObject({ isError: true, apiError: null });
+  });
+
+  it('keeps and logs the API refusal (a usage limit), which is the provider\'s words and never model output', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const limit = "You've hit your weekly limit · resets Sep 20, 9pm (UTC)";
+      await expect(runClaude('quota', { timeoutMs: 10_000 })).resolves.toMatchObject({ isError: true, apiError: limit });
+      expect(warn.mock.calls.flat().join('\n')).toContain(`429: ${limit}`);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('passes the flags on argv and the prompt on stdin, from a fresh empty temp dir it removes afterwards', async () => {

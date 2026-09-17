@@ -13,11 +13,11 @@ describe('planStep — claude call #1 (Việc 6)', () => {
     ],
     documents: [{ number: '08/2015/NĐ-CP', title: 'Quy định chi tiết thủ tục hải quan', consolidates: null }],
   };
-  const runner = (reply: { text: string; isError?: boolean } | null) => {
+  const runner = (reply: { text: string; isError?: boolean; apiError?: string } | null) => {
     const calls: Array<{ prompt: string; opts: ClaudeOpts }> = [];
     const run = async (prompt: string, opts: ClaudeOpts) => {
       calls.push({ prompt, opts });
-      return reply && { text: reply.text, isError: reply.isError ?? false, durationMs: 1 };
+      return reply && { text: reply.text, isError: reply.isError ?? false, durationMs: 1, apiError: reply.apiError ?? null };
     };
     return { run, calls };
   };
@@ -47,8 +47,23 @@ describe('planStep — claude call #1 (Việc 6)', () => {
   it('falls back to defaultPlan on no result, is_error, no JSON or an unknown intent', async () => {
     for (const reply of [null, { text: '{"intent":"hs"}', isError: true }, { text: 'không có JSON' }, { text: '{"intent":"check_code"}' }]) {
       const out = await planStep({ ...screenshot, quote: null, turns: [], state: {} }, runner(reply).run);
-      expect(out).toMatchObject({ fallback: true, calls: 1 });
+      expect(out).toMatchObject({ fallback: true, calls: 1, llmError: { kind: 'failed', message: null } });
       expect(out.plan.intent).toBe('hs'); // defaultPlan: a code the message doubts
+    }
+  });
+
+  it('says why the model gave no plan: the API refusal in its own words, or a timeout; nothing when the plan is usable', async () => {
+    const input = { ...screenshot, quote: null, turns: [], state: {} };
+    const limit = "You've hit your weekly limit · resets Sep 20, 9pm (UTC)";
+    expect((await planStep(input, runner({ text: limit, isError: true, apiError: limit }).run)).llmError).toEqual({ kind: 'refused', message: limit });
+    expect((await planStep(input, runner({ text: '{"intent":"hs"}' }).run)).llmError).toBeNull();
+    const t0 = Date.now();
+    const now = jest.spyOn(Date, 'now').mockReturnValue(t0);
+    try {
+      const slow = async () => (now.mockReturnValue(t0 + PLAN_TIMEOUT_MS), null);
+      expect((await planStep(input, slow)).llmError).toEqual({ kind: 'timeout', message: null });
+    } finally {
+      now.mockRestore();
     }
   });
 

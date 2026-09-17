@@ -282,9 +282,9 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
   it('fallback is true only when defaultPlan stood in for the plan step', async () => {
     // No model result, or a reply naming no known intent.
     for (const plan of [undefined, { intent: 'check_code' }]) {
-      expect(await setup({ plan }).svc.answer({ q: LEGAL_Q, planOnly: true })).toMatchObject({ fallback: true, calls: 1 });
+      expect(await setup({ plan }).svc.answer({ q: LEGAL_Q, planOnly: true })).toMatchObject({ fallback: true, calls: 1, llmError: { kind: 'failed' } });
     }
-    expect((await setup({ plan: LEGAL_PLAN }).svc.answer({ q: LEGAL_Q, planOnly: true })).fallback).toBe(false);
+    expect(await setup({ plan: LEGAL_PLAN }).svc.answer({ q: LEGAL_Q, planOnly: true })).toMatchObject({ fallback: false, llmError: null });
     // The plan step never ran: a client plan, even one naming no known intent, and forceIntent without a plan.
     expect((await setup().svc.answer({ q: LEGAL_Q, plan: { intent: 'check_code' }, planOnly: true })).fallback).toBe(false);
     expect((await setup().svc.answer({ q: LEGAL_Q, forceIntent: 'legal', planOnly: true })).fallback).toBe(false);
