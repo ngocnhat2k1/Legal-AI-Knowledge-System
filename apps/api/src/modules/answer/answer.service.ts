@@ -17,7 +17,7 @@ import { TariffService } from '../tariff/tariff.service';
 import type { RateView, TariffResponse } from '../tariff/tariff.types';
 import type { Effort } from './claude';
 import { buildComposeInput, buildRepairPrompt, type ComposeMode, looseJson, parseDraft, parseRepair, SYSTEM } from './compose';
-import { EVIDENCE_KINDS, type Source as GuardSource, names, quoteInBody, splitSentences, verify } from './guards';
+import { dotted, EVIDENCE_KINDS, type Source as GuardSource, names, quoteInBody, splitSentences, verify } from './guards';
 import { POLICY_LISTS } from './policy';
 import {
   assertNoUserCodes,
@@ -41,7 +41,7 @@ import {
   type UserCode,
   userCodes,
 } from './plan';
-import { buildWalkthroughPrompt, normalizeWalkthrough, validateWalkthrough } from './walkthrough';
+import { buildWalkthroughPrompt, lineText, normalizeWalkthrough, validateWalkthrough } from './walkthrough';
 import {
   applyRepair,
   assessedOf,
@@ -138,7 +138,17 @@ export interface AnswerResponse {
   asOf: string | null;
   answerMd: string;
   citations: AnswerCitation[];
-  candidates: Array<{ hs: string; level: number; title: string | null; evidence: number[] }>;
+  candidates: Array<{
+    hs: string;
+    level: number;
+    title: string | null;
+    evidence: number[];
+    /**
+     * The one 8-digit line the walkthrough picked under this heading, with its hs_description wording; printed under the
+     * heading for the specialist to decide (R2), never a rate. Null when the facts do not pick one.
+     */
+    line?: { code: string; text: string } | null;
+  }>;
   /** A code a person confirmed for similar goods under a candidate heading (G11): printed by the bot, never prompted. */
   ruling: { dotted: string; staffName: string; note: string | null } | null;
   missingFacts: string[];
@@ -146,9 +156,9 @@ export interface AnswerResponse {
   warnings: string[];
   cut: number;
   repaired: boolean;
-  /** The walkthrough's depth; every other mode stays 'brief'. At 'full' the bot prints a tariff block per `tariffRef` (D3(a)). */
+  /** The walkthrough's depth; every other mode stays 'brief'. At 'full' the bot also prints a tariff block per `tariffRef` (D3(a)). */
   depth: 'brief' | 'full';
-  /** Candidate lines the walkthrough points at, at most two, dotted; the bot looks each up and prints a code-built block. */
+  /** At full only: the candidates' picked lines, at most two, never the user's own, dotted; the bot looks each up and prints a code-built block. */
   tariffRef: string[];
   missingDoc: string | null;
   gazetteMatchKind: DocScope['gazetteMatchKind'];
@@ -176,6 +186,8 @@ interface WalkthroughRun {
   users: UserCode[];
   keys: UserCode[];
   role: CodeRole;
+  /** Codes the user typed in earlier turns: "phân tích chi tiết giúp mình" still asks about them, with no code of its own. */
+  earlier: UserCode[];
   goods: { facts: string[]; missing: string[] };
   pins: GatherOpts;
   timeoutMs: number;
@@ -438,6 +450,7 @@ export class AnswerService {
     if (mode === 'hs') {
       const walked = await this.walkthrough({
         q, asOf, sources, sourcesOnly, users, role, keys, goods, pins, timeoutMs, deadline, start, timed, leakDrops,
+        earlier: turns.filter((t) => t.role === 'user').flatMap((t) => userCodes(t.body)),
         question: kept('walkQuestion')[0] || kept('walkMessage')[0] || '',
         goodsFacts: kept('walkGoods').join('; '),
         bump: () => void (calls += 1),
@@ -582,31 +595,10 @@ export class AnswerService {
     // Full measured 82–107 s by its author against this 100 s cap, brief 62–83 s: full runs only with the whole cap, and a
     // run that still overruns falls to the sources (reason 'compose_failed'), which is what the bot prints either way.
     const depth = o.timeoutMs >= FULL_DEPTH_MS && WANTS_FULL.test(fold(o.q)) ? 'full' : 'brief';
-    // R4: a premise code is never looked up, and a heading that holds one of the user's own leaves gets no line at all — a
-    // sibling would put the policy block and the duty block on a leaf the report never argued for. tariffShown() then prints
-    // no DÒNG THUẾ (fail closed), which is what the comment on this block always promised.
-    // ponytail: one line per heading, its first; leaves of a heading whose rates differ are not shown.
-    const mine = new Set(keys.filter((u) => u.level === 8).map((u) => digits(u.code)));
-    const looked =
-      depth === 'full'
-        ? await timed('retrieve', () =>
-            Promise.all(
-              headings.map(async (h) => {
-                const code = h.lines.some((l) => mine.has(digits(l.code))) ? undefined : h.lines[0]?.code;
-                const t = code ? await this.lookup(digits(code), null, asOf) : null;
-                return t && code ? rateLines(t).map((line) => ({ code, line })) : [];
-              }),
-            ),
-          )
-        : [];
-    // The same latch every spawn passes, so a sub-line spelling ("3005.10.10.10") drops the line as the code itself would.
-    const tariffLines = looked.flat().filter((t) => {
-      const drops = assertNoUserCodes([{ name: 'walkTariff', text: `${t.code}\n${t.line}` }], keys, role).leakDrops;
-      o.leakDrops.push(...drops);
-      return !drops.length;
-    });
-
-    const input = classifyInput({ question: o.question, goodsFacts: o.goodsFacts, depth, asOf, headings, sources, tariffLines });
+    // No DÒNG THUẾ (review 2026-09-22): it could only hold each heading's first line, looked up before the model picks one,
+    // and the full report's duty sentence then spoke of another line than the block under it (R6). The blocks the bot prints
+    // under the picked lines carry their own conditions.
+    const input = classifyInput({ question: o.question, goodsFacts: o.goodsFacts, depth, asOf, headings, sources, tariffLines: [] });
     o.bump();
     const reply = await timed('compose', () =>
       this.run(buildWalkthroughPrompt(input), {
@@ -674,9 +666,6 @@ export class AnswerService {
     const cut = said - checked.said + checked.cut;
     const dropped = checked.firstCut || gone.has(opener) || cut * 3 > said || !checked.sections.length;
     const conclusion = conclusionOf(output);
-    // D3(a)/R1: only a line under a heading the walkthrough still concludes. walkthrough-tariff-ref names the rest but
-    // carries no sentence, so neither the repair pass nor the cut above ever acts on it.
-    const tariffRef = (output.tariff_ref ?? []).filter((c) => conclusion.headings.some((h) => digits(c).startsWith(digits(h)))).slice(0, 2);
     const at = new Map(checked.citations.map((c) => [c.source + 1, c.n]));
     const assessed = new Map(assessedOf(output).map((c) => [c.heading, c]));
     const block = new Map(input.candidates.map((c) => [c.heading, new Set(c.evidence.map((r) => r.id))]));
@@ -691,17 +680,39 @@ export class AnswerService {
       const qs = checked.citations.find((c) => c.source === id - 1)?.quotes ?? [];
       return s.hsHeading === h || s.hsCodes.some((c) => digits(c).startsWith(digits(h))) || [s.label, ...qs].some((t) => names(t, digits(h)));
     };
-    // R2: the headings the walkthrough left standing, each with the evidence a quote still holds; never a bare 8-digit code.
+    // Owner 2026-09-22 ("hs code 8 số"): the one LINES line the model picked under a heading, printed by the bot under that
+    // candidate with its catalogue wording; never in prose (G5 cuts it there). Two picks mean the facts do not decide the
+    // line, so none (R5). walkthrough-tariff-ref names a pick outside the concluded headings but carries no sentence, so
+    // only this filter keeps it out.
+    // R4 (ADR 2026-07-17 point 4): under a heading holding a code the user typed — this turn as a premise, or an earlier
+    // turn — a blind pick reads as a verdict on their code at 8 digits, confirming or correcting it, and its lines are their
+    // code filled in. That heading shows no line and has none looked up, whether the pick matches theirs or not: hiding only
+    // a match would tell them the comparison.
+    const typed = new Set([...(role === 'premise' ? keys : []), ...o.earlier].filter((u) => u.level >= 4).map((u) => digits(u.code).slice(0, 4)));
+    const lineOf = (h: string): { code: string; text: string } | null => {
+      if (typed.has(digits(h))) return null;
+      const picks = (output.tariff_ref ?? []).filter((c) => digits(c).startsWith(digits(h)));
+      const l = picks.length === 1 ? known.get(h)!.lines.find((x) => digits(x.code) === digits(picks[0]!)) : undefined;
+      return l ? { code: dotted(l.code), text: lineText(l.path, known.get(h)!.headingText) } : null;
+    };
+    // R2: the headings the walkthrough left standing, each with the evidence a quote still holds; a picked line rides under
+    // its heading, never replaces it.
     const candidates = conclusion.headings
       .filter((h) => chosen.includes(h))
       .map((h) => ({
         hs: h,
         level: 4,
         title: known.get(h)!.headingText,
+        line: lineOf(h),
         evidence: [...new Set((assessed.get(h)?.cite_ids ?? []).flatMap((id) => (backs(h, id) && at.has(id) ? [at.get(id)!] : [])))],
       }))
       .filter((c) => c.evidence.length)
       .slice(0, 3);
+    // D3(a)/R1: at full the bot prints a block per picked line, at most two, and the policy block reads them — also on a
+    // dropped reply, whose code-built sections stand. Never a line the rate latch drops: a premise's whole heading, a key's
+    // own code (R4, ADR hs-candidates: a user's code is no lookup key; a 6-digit premise's lines are that code filled in).
+    const keyable = (code: string): boolean => !assertNoUserCodes([{ name: 'walkTariff', text: code }], keys, role).leakDrops.length;
+    const tariffRef = depth === 'full' ? candidates.flatMap((c) => (c.line && keyable(c.line.code) ? [c.line.code] : [])).slice(0, 2) : [];
     const cited = checked.citations.map((c) => sources[c.source]!);
     // R1, R4: a missing fact stating a rate or filling in a masked code must not reach the bot this way; one that merely
     // runs past 12 words is still a true missing fact and stays (R3, R5).
@@ -722,7 +733,8 @@ export class AnswerService {
         asOf,
         answerMd,
         citations: checked.citations.map((c) => citationOf(c.n, sources[c.source]!, c.quotes)),
-        candidates,
+        // A dropped reply's picks came with the prose §4.1 doubts: no line prints under its candidates.
+        candidates: dropped ? candidates.map((c) => ({ ...c, line: null })) : candidates,
         ruling: await timed('verify', () => this.rulingFor(o.goods.facts, candidates).catch(() => null)),
         missingFacts: conclusion.missing_facts.filter((f) => !badFacts.has(f.normalize('NFC'))),
         // How much of the question the answer actually reasons about, so it reads the MODEL's prose standing, not

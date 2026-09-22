@@ -64,6 +64,22 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 
 ---
 
+### 2026-09-22 (tiếp) — "hs code 8 số nhưng nó mới trả lời 4 số"
+
+- **Gốc.** Bản gọn dừng ở nhóm 4 số. Và báo cáo `full` cũng chưa từng ra mã 8 số có lập luận: G5 cắt mọi mã 8 số trong văn
+  xuôi walkthrough (mỗi mục kiểm với `candidates: []`), còn khối thuế chỉ tra dòng **đầu** của nhóm (`h.lines[0]`; với
+  lưỡi dao là 8208.10.00 "gia công kim loại" — sai hàng).
+- **Sửa.** `tariff_ref` = mô hình chọn một dòng trong LINES cho mỗi nhóm còn đứng; code kiểm rồi in `↳ 8208.90.00 · Loại
+  khác` dưới nhóm; `full` tra thuế đúng dòng đã chọn. [ADR](../architecture-decisions/2026-09-22-hs-line-under-candidate.md).
+  Thiết kế qua workflow 3 người đọc + 3 phương án + chấm điểm (phương án "mô hình chọn, code in" 8,6/10).
+- **Review bắt được 3 lỗi, đã sửa:** câu chữ dòng bị cắt mất phần lá (6.637/11.822 dòng danh mục mất tên, 5.211 in trùng
+  với dòng anh em); câu bị lược mất khối chính sách; dòng dưới mã tiền đề 6 số thành khoá tra thuế (R4) — nay dùng lại
+  `assertNoUserCodes` như mọi dòng thuế cũ.
+- **Review quy tắc (vòng 2), đã sửa:** mã tiền đề ở lượt trước thành khoá tra khi lượt sau chỉ nói "phân tích chi tiết";
+  dòng ↳ dưới nhóm của mã người hỏi đọc như phán quyết 8 số (R4) — nay nhóm đó không có dòng ↳; câu thuế văn xuôi `full`
+  nói về dòng đầu còn khối là dòng đã chọn (R6) — bỏ bước tra DÒNG THUẾ trước mô hình.
+- **Chưa kiểm trên Zalo:** cách Zalo hiển thị dòng `↳` giữa các gạch đầu dòng; lựa chọn của mô hình có hợp lý không.
+
 ### 2026-09-22 — "Trả lời lại đi" trả lời nhầm câu cũ; câu trả lời quá dài
 
 - **Ngữ cảnh nhóm.** Chi hỏi mã HS lưỡi dao răng cưa, bot báo lỗi 401 (token Claude bị thu hồi). Chủ dự án reply tin lỗi

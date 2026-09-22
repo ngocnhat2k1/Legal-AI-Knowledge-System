@@ -33,11 +33,11 @@ Mỗi mục dưới đây là một phần tử của sections, gắn đúng key
 const DEPTH: Record<ClassifyInput['depth'], string> = {
   // Owner, 2026-09-22: the default reply. Every section written in full came out as four Zalo messages of filler.
   brief:
-    'Độ sâu brief: tối đa khoảng 170 từ kể cả phần chép nguyên văn, 2–3 đoạn liền, không "## ". Chỉ viết mục nào có điều cần nói cho câu hỏi này (thường là nature, explanation, conclusion); bỏ mục không có gì, không viết câu kiểu "chưa có nhóm nào phải loại trừ", không nhắc lại mô tả hàng người hỏi đã viết. Mỗi nhóm còn đứng ở conclusion có ít nhất một câu kèm [#id] nói vì sao nó còn đứng.',
+    'Độ sâu brief: tối đa khoảng 170 từ kể cả phần chép nguyên văn, 2–3 đoạn liền, không "## ". Chỉ viết mục nào có điều cần nói cho câu hỏi này (thường là nature, explanation, conclusion); bỏ mục không có gì, không viết câu kiểu "chưa có nhóm nào phải loại trừ", không nhắc lại mô tả hàng người hỏi đã viết. Mỗi nhóm còn đứng ở conclusion có ít nhất một câu kèm [#id] nói vì sao nó còn đứng. Nhóm nào có mã ở tariff_ref thì một câu nói dữ kiện nào dẫn tới dòng đó, gọi dòng bằng câu chữ của nó, không viết mã 8 số.',
   // 300 words asked came back as 526 in 103 s on crimper, 220 words with quotes in 107 s (2026-09-15); the model overshoots
   // word caps by 30–75%, and quotes add length.
   full:
-    'Độ sâu full: viết đủ tám mục, mỗi mục một phần tử riêng của sections, đúng thứ tự nature, candidates, exclusions, gir, levels, explanation, risk, conclusion; mục nào chưa có gì để nói thì nói thẳng là chưa có ("Chưa có nhóm nào phải loại trừ"). Phần thông tin hàng hóa do hệ thống in từ dữ kiện người hỏi đã viết, đừng chép lại. Không gộp mục, không bỏ mục nào, không tự viết dòng "## ": hệ thống in tiêu đề của từng mục. Mỗi mục 2–4 câu, khoảng 40–55 từ; cả bài khoảng 420 từ kể cả phần chép nguyên văn. levels liệt kê chương, nhóm, phân nhóm và mã của nhóm đứng nhất, mỗi cấp một gạch đầu dòng, câu chữ chép từ LINES. Thuế nhiều nhất một câu, chỉ khi có DÒNG THUẾ: loại thuế nào áp khi nào, C/O hay tên biểu chỉ khi dòng đó nêu; không nêu số, số hiệu văn bản hay mã, không đoán xuất xứ.',
+    'Độ sâu full: viết đủ tám mục, mỗi mục một phần tử riêng của sections, đúng thứ tự nature, candidates, exclusions, gir, levels, explanation, risk, conclusion; mục nào chưa có gì để nói thì nói thẳng là chưa có ("Chưa có nhóm nào phải loại trừ"). Phần thông tin hàng hóa do hệ thống in từ dữ kiện người hỏi đã viết, đừng chép lại. Không gộp mục, không bỏ mục nào, không tự viết dòng "## ": hệ thống in tiêu đề của từng mục. Mỗi mục 2–4 câu, khoảng 40–55 từ; cả bài khoảng 420 từ kể cả phần chép nguyên văn. levels liệt kê chương, nhóm và phân nhóm của nhóm đứng nhất, mỗi cấp một gạch đầu dòng, câu chữ chép từ LINES; mã 8 số không viết ở đây: hệ thống in dòng theo tariff_ref. Không viết câu nào về thuế: hệ thống in khối thuế dưới dòng đã chọn.',
 };
 
 // Citations are [#id] with a quote in the same sentence: numbering left to the model ran on across sections and its cite_ids
@@ -62,7 +62,7 @@ JSON:
 - candidates: mỗi NHÓM in bên dưới đúng một mục, không bỏ nhóm nào. phu_hop: dữ kiện đã có khớp câu chữ nhóm và chú giải; co_the_neu: khớp nếu một dữ kiện chưa rõ đúng; loai: Chú giải hoặc Chú giải chi tiết đã dẫn loại nhóm (có cite_ids); chua_du_du_kien: dữ kiện đã có chưa đủ để xét. cite_ids của nhóm: id của Chú giải, GIR, dòng in dưới nhóm đó hoặc dòng có nêu nhóm đó.
 - conclusion: headings tối đa 3 nhóm còn đứng, không nhóm nào đứng thì []; needs_advance_ruling true khi ≥2 nhóm cùng phu_hop hoặc thiếu dữ kiện quyết định.
 - deciding_facts ≤3, missing_facts ≤3, mỗi mục ≤12 từ.
-- tariff_ref: mã trong DÒNG THUẾ thuộc nhóm ở kết luận; không có DÒNG THUẾ thì [].
+- tariff_ref: mỗi nhóm ở conclusion nhiều nhất một mã, là dòng trong LINES của nhóm đó mà dữ kiện người hỏi đã viết dẫn tới; dữ kiện chưa đủ để chọn một dòng thì không ghi mã nào cho nhóm đó. Hệ thống in mã và câu chữ của dòng dưới nhóm; trong sections không viết mã 8 số, gọi dòng bằng câu chữ của nó trong LINES.
 Chỉ trả một dòng JSON; cite_ids là số nguyên, deciding_facts và missing_facts là mảng; xuống dòng trong markdown viết \\n:
 {"sections":[{"key":"nature|candidates|exclusions|gir|levels|explanation|risk|conclusion","markdown":"…"}],"candidates":[{"heading":"00.00","assessment":"phu_hop|co_the_neu|loai|chua_du_du_kien","deciding_facts":["…"],"cite_ids":[0]}],"conclusion":{"headings":["00.00"],"needs_advance_ruling":false,"missing_facts":["…"]},"tariff_ref":["0000.00.00"]}`;
 
@@ -104,18 +104,23 @@ function row(r: EvidenceRow): string {
 }
 
 /**
- * Whether the prompt prints DÒNG THUẾ, which tariff_ref may only point into. Fail closed (R4): the runner drops the user's
+ * Whether the prompt prints DÒNG THUẾ, for the full report's duty sentence. Fail closed (R4): the runner drops the user's
  * own code from tariffLines, so a heading left without a line is the heading the user named.
  */
 const tariffShown = (input: ClassifyInput): boolean =>
   input.tariffLines.length > 0 && input.candidates.every((c) => input.tariffLines.some((t) => digits(t.code).startsWith(digits(c.heading))));
 
+/**
+ * A LINES entry as the prompt prints it, and as the bot prints a picked line: the hs_description path after the heading
+ * text printed just above it (repeating that text was 18 of 26 k chars of LINES on moxa).
+ */
+export const lineText = (path: string, headingText: string): string => (path.startsWith(headingText) && path.slice(headingText.length).replace(/^\s*›\s*/, '')) || path;
+
 function candidateBlock(c: CandidateHeading, shared: (r: EvidenceRow) => boolean): string {
   return [
     `NHÓM ${c.heading}: "${c.headingText}"`,
     'LINES:',
-    // hs_description paths open with the heading text printed just above: repeating it was 18 of 26 k chars of LINES on moxa.
-    ...c.lines.map((l) => `- ${dotted(l.code)} · ${(l.path.startsWith(c.headingText) && l.path.slice(c.headingText.length).replace(/^\s*›\s*/, '')) || l.path}`),
+    ...c.lines.map((l) => `- ${dotted(l.code)} · ${lineText(l.path, c.headingText)}`),
     ...c.evidence.filter((r) => !shared(r)).map((r) => `\n${row(r)}`),
   ].join('\n');
 }
@@ -174,8 +179,8 @@ const lead = (m: string): string => /^[ \t]*/.exec(m)![0];
  * this answer (candidates' evidence or policyRows) loses its marker, and a marker no quote survives for keeps its cite with
  * quotes: []. Drift read as meant: [# id]; lists; an old-style [n] as the section's own cite_ids (or cites) [n-1], one out of
  * range dropped; a bare [id] only where its sentence quotes that row, since a per-section [1] may be a small GRI id; a
- * section's quotes map {"id": [...]} under the same body check. tariff_ref is [] unless DÒNG THUẾ was printed, then the
- * given lines it names, dotted; candidates keep only given cite_ids.
+ * section's quotes map {"id": [...]} under the same body check. tariff_ref is the given LINES codes it names, dotted and
+ * deduped; candidates keep only given cite_ids.
  */
 export function normalizeWalkthrough(draft: unknown, input: ClassifyInput): WalkthroughOutput {
   const o = asObj(coerce(asObj(draft), SCHEMA));
@@ -276,7 +281,9 @@ export function normalizeWalkthrough(draft: unknown, input: ClassifyInput): Walk
   const candidates = asList(o.candidates).map((c) =>
     c !== null && typeof c === 'object' && !Array.isArray(c) ? { ...c, cite_ids: [...new Set(intList((c as Obj).cite_ids).filter((id) => typeof id === 'number' && rows.has(id)))] } : c,
   );
-  const lines = new Set(input.tariffLines.map((t) => digits(t.code)));
-  const tariff_ref = tariffShown(input) ? [...new Set(asList(o.tariff_ref).map((c) => digits(String(c))))].filter((d) => lines.has(d)).map(dotted) : [];
+  // Owner 2026-09-22 ("hs code 8 số"): tariff_ref is the model's pick among LINES; the runner keeps one per standing candidate.
+  // A code outside LINES (a masked user code guessed) goes.
+  const lines = new Set(input.candidates.flatMap((c) => c.lines.map((l) => digits(l.code))));
+  const tariff_ref = [...new Set(asList(o.tariff_ref).map((c) => digits(String(c))))].filter((d) => lines.has(d)).map(dotted);
   return { sections, candidates, conclusion: o.conclusion, tariff_ref } as WalkthroughOutput;
 }

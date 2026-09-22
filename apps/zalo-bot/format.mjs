@@ -350,6 +350,17 @@ function redLines(cites, numbered = true) {
 // --- Composed answer (POST /answer) ----------------------------------------------
 
 const ADVANCE_RULING = 'Hàng khó chốt thì có thể đề nghị hải quan xác định trước mã số.';
+/**
+ * A catalogue path under its heading cut from the left: the last segment names the line, so it always shows, and its parents
+ * only as room allows. Cut from the right, a laptop's 8471.30.20 and its sibling "Loại khác" printed the same words.
+ */
+function pathTail(text, max = 60) {
+  const segs = String(text).split(/\s*›\s*/).filter(Boolean);
+  let out = segs.pop() ?? '';
+  while (segs.length && out.length + segs.at(-1).length + 3 <= max) out = `${segs.pop()} › ${out}`;
+  return `${segs.length ? '… › ' : ''}${cleanGazetteTitle('', out, max)}`;
+}
+
 /** With the source list hidden, the one place an unchecked evidence row still says so (R18). */
 const UNCHECKED_SOURCES = 'Có nguồn trích tự động, chưa có người đối chiếu; nhắn "nguồn" để xem.';
 /** Heads a mixed-mode tariff block; dispatch.mjs tariffReply reads it as a composed-answer marker (R13). */
@@ -418,7 +429,13 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false, sour
     lines.push(
       L(['Ứng viên để chuyên viên chốt:']),
       // 49 leaves room for the ellipsis: a heading of at most 50 characters.
-      ...cands.map((c) => L([[c.hs, 'b'], ` · ${cleanGazetteTitle('', c.title, 49)}${cited ? ` · ${c.evidence.map((n) => `[${n}]`).join(' ')}` : ''}`], 'ul')),
+      // Under a heading, the 8-digit line the walkthrough picked for the goods (owner 2026-09-22, "hs code 8 số"): the API
+      // checks it is a line of that heading and writes its wording from hs_description. It never leads (R2), carries no rate
+      // (D3(a)), and opens with "↳", never a tariff-reply opener (R13).
+      ...cands.flatMap((c) => [
+        L([[c.hs, 'b'], ` · ${cleanGazetteTitle('', c.title, 49)}${cited ? ` · ${c.evidence.map((n) => `[${n}]`).join(' ')}` : ''}`], 'ul'),
+        ...(c.line ? [L(['↳ ', [c.line.code, 'b'], ' · ', [pathTail(c.line.text), 'i']])] : []),
+      ]),
       ...(res.ruling ? [rulingLine(res.ruling)] : []),
     );
     // R5: routing to an advance ruling is a feature; said once, and not when the prose already says it.

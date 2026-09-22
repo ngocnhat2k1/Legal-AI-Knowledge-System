@@ -1993,3 +1993,15 @@ test('câu hỏi kèm "căn cứ" thì câu soạn in nguồn ngắn ngay bên d
   const run = await conversation().say(`${PHOTO_Q}, kèm căn cứ giúp mình`, fakeApi({ planned: plannedOf(plan08()), composed: composedHs }));
   assert.ok(run.text.includes('Nguồn:\n[1] Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05'), run.text);
 });
+
+test('câu hs gọn có dòng 8 số dưới nhóm (2026-09-22): không tra /tariff, bộ nhớ chỉ giữ nhóm 4 số, "đúng" sau đó không ghi gì (R2, R13)', async () => {
+  const withLine = { ...composedHs, candidates: composedHs.candidates.map((c, i) => ({ ...c, line: i ? null : { code: '3005.90.90', text: 'Loại khác › Loại khác' } })) };
+  const c = conversation();
+  const run = await c.say(PHOTO_Q, fakeApi({ planned: plannedOf(plan08()), composed: withLine }));
+  assert.ok(run.text.includes('↳ 3005.90.90 · Loại khác › Loại khác'), run.text);
+  assert.ok(!run.calls.some((x) => x.path === '/tariff'), 'bản gọn không tra thuế');
+  assert.deepEqual(c.memo.state.tariff.candidates, ['30.05', '38.24'], 'dòng 8 số không vào bộ nhớ như kết quả tra');
+  assert.equal(c.memo.state.tariff.hs, null);
+  const agree = await c.say('đúng', fakeApi({ planned: plannedOf(plan08({ intent: 'confirm', verdict: 'correct', goods: { facts: [], missing: [] } }), { codeRole: 'none' }) }));
+  assert.equal(agree.confirms.length, 0);
+});

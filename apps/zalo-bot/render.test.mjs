@@ -322,12 +322,17 @@ test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp 
     const answerMd = `${HS_PHOTO.answerMd}\n\n${pad}`;
     const variants = {
       full: formatAnswerMd({ ...HS_PHOTO, answerMd, depth: 'full' }, { tariffLines }),
+      // Owner 2026-09-22: a brief reply names each candidate's picked 8-digit line under it.
+      briefLine: formatAnswerMd({ ...HS_PHOTO, answerMd, candidates: HS_PHOTO.candidates.map((c, i) => ({ ...c, line: { code: ['3005.90.90', '3824.99.99'][i], text: 'Loại khác › Loại khác' } })) }),
       // The walkthrough's own titles split a long reply at different places: sweep them too.
       walk: formatAnswerMd({ ...HS_PHOTO, answerMd: `${WALK_MD}\n\n${pad}`, depth: 'full' }, { tariffLines }),
       mixed: formatAnswerMd({ ...HS_PHOTO, answerMd, mode: 'mixed', userCodes: [], candidates: [] }, { tariffLines: tariffLines.slice(0, 1) }),
     };
     for (const [name, lines] of Object.entries(variants)) {
-      for (const msg of render(lines).map((p) => p.msg)) assert.equal(tariffReply(msg), false, `${name} +${chars}: ${msg.slice(0, 120)}`);
+      for (const msg of render(lines).map((p) => p.msg)) {
+        assert.equal(tariffReply(msg), false, `${name} +${chars}: ${msg.slice(0, 120)}`);
+        assert.equal(offerReply(msg), false, `lời mời ${name} +${chars}: ${msg.slice(0, 120)}`);
+      }
     }
   }
 });
@@ -583,4 +588,55 @@ test('formatAnswerMd: chú giải chưa có hiệu lực / sắp hết hiệu l�
   assert.ok(!hidden.some((l) => l.includes(EN_NOTE)), 'nhãn thẩm quyền không in');
   const shown = rowsOf(formatAnswerMd(res, { sources: true }));
   assert.equal(shown.find((l) => l.startsWith('[1] ')), `[1] Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05 (${when}) (trích tự động, chưa đối chiếu)`);
+});
+
+// --- Owner 2026-09-22: "hs code 8 số nhưng nó mới trả lời 4 số" ------------------------------------------------------------
+
+test('formatAnswerMd: dòng 8 số mô hình chọn nằm ngay dưới nhóm của nó, mã in đậm, không thuế suất, vẫn một tin', () => {
+  const res = { ...HS_PHOTO, candidates: [{ ...HS_PHOTO.candidates[0], line: { code: '3005.90.90', text: 'Loại khác › Loại khác' } }, HS_PHOTO.candidates[1]] };
+  const lines = formatAnswerMd(res);
+  const rows = rowsOf(lines);
+  const at = rows.findIndex((l) => l.startsWith('30.05 · '));
+  assert.equal(rows[at + 1], '↳ 3005.90.90 · Loại khác › Loại khác');
+  assert.ok(rows[at + 2].startsWith('38.24 · '), 'một nhóm không có dòng thì không có dòng ↳');
+  assert.ok(all(lines, ST.b).includes('3005.90.90'));
+  const text = toText(lines);
+  for (const s of ['MFN', 'Nếu hàng thuộc mã ']) assert.ok(!text.includes(s), s);
+  assert.equal(all(lines, ST.green).length, 0);
+  assert.equal(render(lines).length, 1);
+  // Sources asked for: the [n] stays on the heading's row, never on the line's.
+  const asked = rowsOf(formatAnswerMd(res, { sources: true }));
+  const h = asked.findIndex((l) => l.startsWith('30.05 · '));
+  assert.ok(asked[h].endsWith('[1]') && !/\[\d+\]/.test(asked[h + 1]), `${asked[h]}\n${asked[h + 1]}`);
+});
+
+test('formatAnswerMd: câu lưỡi dao răng cưa (2026-09-22) — hai đoạn gọn, hai nhóm, mỗi nhóm một dòng 8 số, vừa một tin', () => {
+  const answerMd = [
+    'Lưỡi này lắp trên máy ghép đùn để cắt màng khi sang cuộn, nên chỗ cần phân định là nó thuộc "dao và lưỡi cắt, dùng cho máy" hay "lưỡi cưa các loại". Nhóm 82.08 còn đứng vì câu chữ nhóm là "Dao và lưỡi cắt, dùng cho máy hoặc dụng cụ cơ khí" [1]; các dòng riêng trong nhóm dành cho gia công kim loại, gỗ, nhà bếp và máy nông nghiệp, còn lưỡi cắt màng nhựa rơi vào dòng "Loại khác".',
+    '',
+    'Nhóm 82.02 vẫn còn đứng vì nhóm kể cả "lưỡi rạch, lưỡi khía răng cưa hoặc lưỡi cưa không răng" [2]; một lưỡi thẳng không dùng cho kim loại như bạn tả ứng với dòng "Lưỡi cưa thẳng". Điều quyết định là lưỡi làm việc như lưỡi cưa hay như dao cắt của máy: bạn xem catalogue hoặc bản vẽ máy ghép đùn gọi bộ phận này là gì.',
+  ].join('\n');
+  const res = {
+    ...HS_PHOTO, userCodes: [], answerMd,
+    citations: [cite(1, { label: 'Chú giải chi tiết HS 2022 · Chương 82 · nhóm 82.08', hsHeading: '82.08' }), cite(2, { label: 'Chú giải chi tiết HS 2022 · Chương 82 · nhóm 82.02', hsHeading: '82.02' })],
+    candidates: [
+      { hs: '82.08', level: 4, title: 'Dao và lưỡi cắt, dùng cho máy hoặc dụng cụ cơ khí', evidence: [1], line: { code: '8208.90.00', text: 'Loại khác' } },
+      { hs: '82.02', level: 4, title: 'Cưa tay; lưỡi cưa các loại (kể cả các loại lưỡi rạch, lưỡi khía răng cưa hoặc lưỡi cưa không răng)', evidence: [2], line: { code: '8202.99.10', text: 'Lưỡi cưa khác › Loại khác › Lưỡi cưa thẳng' } },
+    ],
+  };
+  const parts = render(formatAnswerMd(res));
+  assert.equal(parts.length, 1, parts.map((p) => p.msg).join('\n---\n'));
+  for (const s of ['Ứng viên để chuyên viên chốt:', '↳ 8208.90.00 · Loại khác', '↳ 8202.99.10 · Lưỡi cưa khác › Loại khác › Lưỡi cưa thẳng', R5, UNCHECKED]) assert.ok(parts[0].msg.includes(s), s);
+  assert.ok(!/\[\d+\]/.test(parts[0].msg) && !parts[0].msg.includes('Nguồn:'));
+  assert.equal(tariffReply(parts[0].msg), false);
+});
+
+test('formatAnswerMd: dòng 8 số giữ tên của chính nó (phần lá), cắt các cấp cha từ bên trái (review 2026-09-22)', () => {
+  // Real catalogue paths: cut from the right, both printed "Máy xử lý dữ liệu tự động loại xách tay, có khối lượng…".
+  const parent = 'Máy xử lý dữ liệu tự động loại xách tay, có khối lượng không quá 10 kg, gồm ít nhất một đơn vị xử lý dữ liệu trung tâm, một bàn phím và một màn hình';
+  const row = (code, text) => rowsOf(formatAnswerMd({ ...HS_PHOTO, candidates: [{ ...HS_PHOTO.candidates[0], line: { code, text } }] })).find((l) => l.startsWith('↳ '));
+  assert.equal(row('8471.30.20', `${parent} › Máy tính xách tay kể cả notebook và subnotebook`), '↳ 8471.30.20 · … › Máy tính xách tay kể cả notebook và subnotebook');
+  assert.equal(row('8471.30.90', `${parent} › Loại khác`), '↳ 8471.30.90 · … › Loại khác');
+  // Parents stay while they fit.
+  assert.equal(row('8202.99.10', 'Lưỡi cưa khác › Loại khác › Lưỡi cưa thẳng'), '↳ 8202.99.10 · Lưỡi cưa khác › Loại khác › Lưỡi cưa thẳng');
 });

@@ -85,7 +85,10 @@ export interface WalkthroughOutput {
    * missing facts.
    */
   conclusion: { headings: string[]; needs_advance_ruling: boolean; missing_facts: string[] };
-  /** Candidate codes whose code-built tariff block the reply points at; never a number. */
+  /**
+   * At most one LINES line per concluded heading, the one the goods facts lead to; code prints it under that candidate and,
+   * at full, looks it up for a block. Never a number in prose, never a rate.
+   */
   tariff_ref: string[];
 }
 

@@ -15,7 +15,7 @@
  *  deciding-facts, item-length   name the deciding goods fact (unless a cited note excludes outright), in ≤ 12 words.
  *  conclusion-heading, conclusion-open   R2, R5: an open conclusion names the missing facts or the advance ruling.
  *  rate                  a rate in deciding or missing facts (verify() reads only prose), or rates compared in words (R1).
- *  tariff-ref            a given tariff line under a concluded heading.
+ *  tariff-ref            a LINES line under a concluded heading.
  *  fact-number, mask-expanded   a figure with a unit comes from the user or the cited rows (R3); "[mã n]" stays masked (R4).
  *  exclusion-support, named-source, gir-rule, gir-order, sen-tier   the source named is the source cited, applied in order
  *                        and at its tier (R2, R10).
@@ -311,10 +311,7 @@ export function validateWalkthrough(raw: WalkthroughOutput, input: ClassifyInput
   for (const u of units)
     if ((!u.key && ratesInProse(u.s).length) || RATE_COMPARE.test(u.s))
       add('rate', `${u.where} states or compares a rate or amount; say which duty applies when and leave the figures to the tariff block`, u.s);
-  const tariffCodes = new Set(input.tariffLines.map((t) => digits(t.code)));
-  for (const code of output.tariff_ref)
-    if (!tariffCodes.has(digits(code)) || !concludedLines.has(digits(code)))
-      add('tariff-ref', `tariff_ref ${code} must be a tariff line given and a line of a concluded heading`);
+  for (const code of output.tariff_ref) if (!concludedLines.has(digits(code))) add('tariff-ref', `tariff_ref ${code} must be a line in LINES of a concluded heading`);
 
   // Goods figures come from the user or the rows the paragraph cites, wherever the goods are restated; masks stay masks.
   const userHay = squeeze(inputText);
