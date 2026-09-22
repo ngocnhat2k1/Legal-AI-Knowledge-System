@@ -10,7 +10,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { COUNTRY, fastPath, guardIntent, isBareLookup, parseVerifyDocCommand, ruling, tariffReply } from './dispatch.mjs';
+import { asksSources, COUNTRY, onlyAsksSources, fastPath, guardIntent, isBareLookup, parseVerifyDocCommand, ruling, tariffReply } from './dispatch.mjs';
 import { answerByHs, captionForVision, handleConfirm, handleCorrection, tariffByClues } from './answer.mjs';
 import { CAPABILITIES, formatAnswer, formatGeneral, formatMissingDoc, formatProvisions, sanitizeLead } from './format.mjs';
 import { L, render, toText } from './render.mjs';
@@ -752,6 +752,7 @@ function conversation() {
       const r = await respond({ text, image, quote: quote && { msg: quote }, ctx, senderName: 'Chuyên Viên A', threadId: 't1', userId: 'u1', notify: async (m) => notices.push(m) });
       memo.topic = r.topic ?? memo.topic;
       memo.state = nextState(memo.state, r);
+      memo.turns = [...memo.turns, { role: 'user', body: text }, { role: 'bot', body: render(r.text).map((p) => p.msg).join('\n\n') }];
       const bodies = (path) => calls.filter((x) => x.path === path).map((x) => x.body);
       return { r, text: toText(r.text), calls, notices, answers: bodies('/answer'), confirms: bodies('/tariff/confirm') };
     } finally {
@@ -1923,4 +1924,72 @@ test('R13 (round 8, S01, S03–S05, S08): lưu bộ nhớ lỗi ở bất cứ c
     assert.doesNotMatch(sent.at(-1), /undefined/);
     assert.match(sent.at(-1), /đã ghi nhận phán quyết cho hàng vừa hỏi nên không ghi thêm/, 'S08');
   }, { saveFails: userSaid('HS đúng là 3005.90.00') });
+});
+
+// --- 2026-09-22: a reply to the bot's answer means the question that answer was for ----------------------------------------
+
+test('nhóm: "trả lời lại đi" quote câu bot đáp cho người khác đọc câu hỏi của người đó, không phải hội thoại riêng của người reply', async () => {
+  const CHI_Q = 'hs code Lưỡi dao răng cưa bằng thép không gỉ, kích thước: W105 x L1600 x H2 (mm), dùng để cắt cuộn màng khi sang cuộn ở máy ghép đùn';
+  const DOWN = 'Mình tạm thời chưa trả lời được: dịch vụ AI (Claude) báo lỗi "Failed to authenticate. API Error: 401 OAuth access token has been revoked.". Trong lúc chờ, tra thuế theo mã HS 8 số (kèm xuất xứ) vẫn dùng được.';
+  const c = conversation();
+  // This person's own memory is about other goods: the quote is the only way to the colleague's question.
+  c.memo.turns = [{ role: 'user', body: 'máy sấy ly tâm tự động dùng cho đầu khóa mã gì' }, { role: 'bot', body: 'Máy sấy ly tâm …' }];
+  const looked = [];
+  const api = (path, body, u) => {
+    if (path !== '/conversation/quoted') return fakeApi({ planned: plannedOf(plan08({ question: CHI_Q }), { codeRole: 'none' }), composed: composedHs })(path, body, u);
+    looked.push(u.searchParams.get('text'));
+    return { question: CHI_Q, staffName: 'Chi' };
+  };
+  const run = await c.say('trả lời lại đi', api, DOWN);
+  assert.ok(DOWN.startsWith(looked[0]), 'tra câu hỏi theo chính chữ của tin được quote');
+  for (const a of run.answers) {
+    assert.ok(a.quote.includes(CHI_Q) && a.quote.includes('Chi'), a.quote);
+    assert.ok(a.quote.includes(DOWN), 'vẫn giữ tin được quote');
+  }
+
+  // Not a bot answer the API can place (a colleague's own message, an old reply): the quote goes as it came.
+  const plain = await conversation().say('trả lời lại đi', fakeApi({ planned: plannedOf(plan08()), composed: composedHs }), CHI_Q);
+  assert.equal(plain.answers[0].quote, CHI_Q);
+});
+
+// --- 2026-09-22: sources print only when asked ------------------------------------------------------------------------------
+
+test('asksSources / onlyAsksSources: hỏi nguồn/căn cứ thì đúng; "nguồn" là hàng hóa ("đèn kèm nguồn", "nguồn đầu vào") thì không', () => {
+  // The whole message only asks for sources: answered from memory, no model call.
+  for (const t of ['nguồn?', 'Nguồn', 'căn cứ đâu', 'căn cứ vào đâu vậy', 'cho mình xin nguồn với ạ', 'nguồn ở đâu ạ', 'trích dẫn đi', 'nguon dau', 'link nguồn câu trên', 'kèm căn cứ giúp mình'])
+    assert.equal(onlyAsksSources(t), true, t);
+  // A question with sources asked for: composed, sources printed under it.
+  for (const t of ['căn cứ pháp lý của việc miễn thuế hàng gia công là gì', 'miếng dán ngải cứu mã gì, ghi nguồn giúp mình', 'nguồn gốc xuất xứ căn cứ vào đâu'])
+    assert.equal(asksSources(t) && !onlyAsksSources(t), true, t);
+  // Review 2026-09-22: goods and real questions the first matcher took for a request, each shorter than the old 60-character cap.
+  for (const t of ['đèn LED kèm nguồn mã hs gì', 'adapter kèm nguồn 12V', 'dây dẫn nguồn điện mã gì', 'ổ cắm dẫn nguồn', 'cáp cho nguồn máy chủ', 'nguồn đầu vào 24V thì sao', 'bộ nguồn nào phù hợp', 'adapter nguồn điện 220V', 'hs code Lưỡi dao răng cưa bằng thép không gỉ', 'trả lời lại đi'])
+    assert.equal(asksSources(t), false, t);
+  for (const t of ['hàng này căn cứ nào để khai', 'nguồn gốc xuất xứ căn cứ vào đâu']) assert.equal(onlyAsksSources(t), false, t);
+});
+
+test('câu soạn mặc định không in nguồn; "nguồn?" sau đó in nguồn đã nhớ, không gọi mô hình; quote đúng câu đó cũng vậy, quote câu khác thì không', async () => {
+  const c = conversation();
+  const first = await c.say(PHOTO_Q, fakeApi({ planned: plannedOf(plan08()), composed: composedHs }));
+  assert.ok(!first.text.includes('Nguồn:') && !/\[\d+\]/.test(first.text), first.text);
+
+  const again = await c.say('nguồn đâu?', fakeApi());
+  assert.equal(again.answers.length, 0, 'nguồn lấy từ bộ nhớ, không soạn lại');
+  assert.deepEqual(toText(again.r.text).split('\n'), ['Nguồn:', '[1] Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05']);
+  // Asked twice, still there: printing the sources does not clear the reply they belong to.
+  assert.equal((await c.say('căn cứ đâu', fakeApi(), first.text)).answers.length, 0);
+
+  const other = await c.say('nguồn?', fakeApi({ planned: plannedOf(plan08()), composed: composedHs }), 'Một câu trả lời cũ hơn, không phải câu vừa rồi.');
+  assert.ok(other.answers.length > 0, 'quote câu khác: bộ nhớ không giữ nguồn của nó');
+
+  // Review 2026-09-22: after a reply that is not the composed one ("Dạ, bạn cần gì thêm…"), the remembered sources are not
+  // the ones asked about.
+  const d = conversation();
+  await d.say(PHOTO_Q, fakeApi({ planned: plannedOf(plan08()), composed: composedHs }));
+  await d.say('ok', fakeApi());
+  assert.ok((await d.say('căn cứ đâu', fakeApi({ planned: plannedOf(plan08()), composed: composedHs }))).answers.length > 0);
+});
+
+test('câu hỏi kèm "căn cứ" thì câu soạn in nguồn ngắn ngay bên dưới', async () => {
+  const run = await conversation().say(`${PHOTO_Q}, kèm căn cứ giúp mình`, fakeApi({ planned: plannedOf(plan08()), composed: composedHs }));
+  assert.ok(run.text.includes('Nguồn:\n[1] Chú giải chi tiết HS 2022 · Chương 30 · nhóm 30.05'), run.text);
 });

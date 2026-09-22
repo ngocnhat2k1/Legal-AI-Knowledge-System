@@ -6,9 +6,9 @@
  */
 const API = process.env.API_URL || 'http://api:3000';
 
-async function getJson(path) {
+async function getJson(path, timeoutMs) {
   try {
-    const res = await fetch(`${API}${path}`);
+    const res = await fetch(`${API}${path}`, { signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined });
     return res.ok ? await res.json() : null;
   } catch {
     return null;
@@ -86,6 +86,13 @@ export async function loadConversation(threadId, userId, limit = 8) {
 }
 
 export const recordTurns = (payload) => postJson('/conversation/turn', payload);
+
+/** The question a quoted bot reply answered, anyone's in the thread: `{ question, staffName }` or null. `ts`: the quoted message's. */
+export function quotedQuestion(threadId, text, ts) {
+  const qs = new URLSearchParams({ threadId: String(threadId), text: String(text).replace(/\s+/g, ' ').trim().slice(0, 200) });
+  if (Number(ts) > 0) qs.set('ts', String(ts));
+  return getJson(`/conversation/quoted?${qs}`, 3_000);
+}
 
 // --- On-request corpus growth ----------------------------------------------
 

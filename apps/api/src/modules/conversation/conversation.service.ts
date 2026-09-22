@@ -26,6 +26,9 @@ const MAX_BODY = 4000;
  * A conversation idle this long is deleted whole (its turns cascade).
  */
 const RETENTION_DAYS = 30;
+/** questionFor matches a quote this long at most: a prefix is enough to find the reply, and bounds the query string. */
+const MAX_QUOTE_MATCH = 200;
+const MIN_QUOTE_MATCH = 20;
 /** The idle-conversation sweep is throttled to this interval — it is a background chore. */
 const SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
@@ -51,7 +54,8 @@ interface ConversationRow {
  *
  * Scope note: memory is per PERSON inside a thread, not per group. Two people in one
  * Zalo group hold separate conversations; cross-person context still arrives the way
- * it always did, through the quoted message.
+ * it always did, through the quoted message — and a quoted BOT reply through
+ * `questionFor`, since the reply rarely restates the colleague's question.
  */
 @Injectable()
 export class ConversationService {
@@ -162,6 +166,44 @@ export class ConversationService {
     await this.sweepIdle();
 
     return { conversationId, turns: turns.length };
+  }
+
+  /**
+   * The question a bot reply in this thread answered, whoever asked it: a quote of the bot's reply carries only the reply,
+   * and in a group the question is often a colleague's, outside the replier's own memory (2026-09-22: "trả lời lại đi" on
+   * the bot's error under Chi's question answered the replier's older one). Matched on the quoted text, whitespace folded.
+   * The bot's error and fallback lines read the same for everyone, so `tsRaw` — when the quoted message was sent, ms (or
+   * seconds) since the epoch — picks the reply saved closest to it; without it, the newest.
+   */
+  async questionFor(
+    channelRaw: string | undefined,
+    threadIdRaw: string,
+    textRaw: string,
+    tsRaw?: number,
+  ): Promise<{ question: string; staffName: string | null } | null> {
+    // No user in the key: the question may be anyone's in the thread.
+    const { channel, threadId } = this.key(channelRaw, threadIdRaw, '-');
+    const needle = String(textRaw ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_QUOTE_MATCH);
+    // A short quote ("ok", "Dạ") sits inside any reply: no match beats the wrong question.
+    if (needle.length < MIN_QUOTE_MATCH) return null;
+    const ts = Number(tsRaw);
+    const at = Number.isFinite(ts) && ts > 0 ? (ts < 1e12 ? ts * 1000 : ts) : null;
+    const rows = (await this.db.execute(sql`
+      SELECT u.body AS question, c.staff_name
+      FROM conversation_turn b
+      JOIN conversation c ON c.id = b.conversation_id
+      JOIN LATERAL (
+        SELECT body FROM conversation_turn
+        WHERE conversation_id = b.conversation_id AND role = 'user' AND id < b.id
+        ORDER BY id DESC LIMIT 1
+      ) u ON true
+      WHERE c.channel = ${channel} AND c.thread_id = ${threadId} AND b.role = 'bot'
+        AND strpos(regexp_replace(b.body, '\\s+', ' ', 'g'), ${needle}) > 0
+      ORDER BY ${at === null ? sql`b.id DESC` : sql`abs(extract(epoch FROM b.created_at) * 1000 - ${at}), b.id DESC`}
+      LIMIT 1
+    `)) as unknown as Array<{ question: string; staff_name: string | null }>;
+    const row = rows[0];
+    return row ? { question: row.question, staffName: row.staff_name } : null;
   }
 
   /** Drop conversations nobody has touched inside the retention window. Throttled. */

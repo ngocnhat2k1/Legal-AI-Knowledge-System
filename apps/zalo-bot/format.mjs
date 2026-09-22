@@ -16,6 +16,15 @@ const CITATION_RE = /(?:điều|khoản|điểm)\s*\d+[a-zà-ỹ]?/gi;
 const HS_DOTTED_RE = /\d{4}\.\d{2}\.\d{2}/g;
 const DOC_NO_RE = /\d{1,4}\s*\/\s*(?:\d{4}|vbhn)[^\s,;)]*/gi;
 const HS_ANY_RE = /(?:mã|nhóm|hs)\s*(?:hs\s*)?(\d{4}(?:\.?\d{2}){0,2})(?!\d)/gi;
+/** A run of citation markers in composed prose ("[1]", "[1, 2]", "[1], [2]", "([1])"), with the blanks before it; "[mã 1]" is not one. */
+const MARKERS = /[ \t]*(\()?(\[\d+(?:\s*,\s*\d+)*\](?:[ \t]*,?[ \t]*\[\d+(?:\s*,\s*\d+)*\])*)(\))?/g;
+/** Prose without its markers; a bracketed number that is no citation ("[2022]" in a quote) stays. */
+const unmarked = (text, max) =>
+  String(text).replace(MARKERS, (m, open, run, close) => {
+    if (![...run.matchAll(/\d+/g)].every(([n]) => Number(n) >= 1 && Number(n) <= max)) return m;
+    // "([1])" goes whole; a bracket the run only borders stays ("(xem [1])" keeps its ")").
+    return open && !close ? m.slice(0, m.indexOf('(') + 1) : !open && close ? ')' : '';
+  });
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
@@ -289,33 +298,40 @@ function unverifiedLines(rows) {
 }
 
 /**
- * "Nguồn:" block, small italic. items: { n, label, note?, quote?, url?, auto? }. A standing note repeated on every source
- * ("tài liệu hướng dẫn áp dụng…" three times) is printed once, then "như [n]". Links are de-duplicated per document and
- * capped at three. `auto`: an evidence row extracted by machine that no person has checked yet (R18).
+ * "Nguồn:" block, small italic, printed only when asked (owner, 2026-09-22): each source's label and its link, no quote or
+ * standing note. A link is printed once per document. items: { n, label, when?, url?, auto? }; `when`: an evidence row's
+ * coming start or end of force; `auto`: an evidence row extracted by machine that no person has checked yet says so (R18).
  */
-function sourceLines(items) {
-  if (!items.length) return [];
-  const urls = [...new Set(items.map((x) => x.url).filter(Boolean))].slice(0, 3);
-  const firstWithNote = new Map();
-  const line = (x) => {
-    const same = firstWithNote.get(x.note);
-    if (x.note && !same) firstWithNote.set(x.note, x.n);
-    const note = !x.note ? '' : same ? ` (như [${same}])` : ` (${x.note})`;
-    const auto = x.auto ? ' (trích tự động, chưa đối chiếu)' : '';
-    return L([`[${x.n}] ${x.label}${note}${auto}${x.quote ? ` — “${x.quote}”` : ''}`], 'note');
-  };
-  return [
-    L(['Nguồn:'], 'note'),
-    ...items.map(line),
-    ...(urls.length ? [L([`Toàn văn: ${urls.join(' · ')}`], 'note')] : []),
-  ];
+export function sourceLines(items) {
+  if (!items?.length) return [];
+  const seen = new Set();
+  const link = (url) => (url && !seen.has(url) && seen.add(url) ? ` — ${url}` : '');
+  return [L(['Nguồn:'], 'note'), ...items.map((x) => L([`[${x.n}] ${x.label}${x.when ? ` (${x.when})` : ''}${x.auto ? ' (trích tự động, chưa đối chiếu)' : ''}${link(x.url)}`], 'note'))];
 }
 
 /** An Explanatory Note's title repeats the heading text its quote opens with: keep the part naming the note, and the headings it may also cover. */
 const enLabel = (title) => String(title).replace(/ — .*?( \(có thể gồm cả nhóm [^)]*\))?$/, '$1');
 
-/** Red lines from data, whatever the prose says (R8). A citation is numbered by its `n`, else by position. */
-function redLines(cites) {
+/**
+ * When an evidence row takes or leaves force, from its note (legal.service evidenceSource): the only place it is said, since
+ * redLines prints statute clauses and an ended row's `expired`, never an evidence row's coming dates.
+ */
+const timingOf = (c) => (c.kind ? String(c.note ?? '').split(' · ').filter((p) => /^(?:CHƯA CÓ HIỆU LỰC|sẽ hết hiệu lực)/.test(p)).join(' · ') : '');
+
+/** A composed reply's citations as source-list items: what memory keeps for "nguồn?" and what sourceLines prints. */
+export const sourcesOf = (cites) =>
+  (cites ?? []).map((c, i) => ({
+    n: c.n ?? i + 1,
+    label: c.kind === 'en' ? enLabel(c.label) : c.label,
+    when: timingOf(c),
+    url: c.url ?? null,
+    // Owner decision 2026-09-15: an evidence row (Explanatory Note, SEN, ruling, annex table…) nobody checked says so on its
+    // own source line, never in orange; a statute clause keeps unverifiedLines.
+    auto: Boolean(c.kind) && c.verification === 'auto_unverified',
+  }));
+
+/** Red lines from data, whatever the prose says (R8). A citation is numbered by its `n`, else by position; unnumbered when no source list is printed. */
+function redLines(cites, numbered = true) {
   // One line per (document, effectiveness) — markers share a line only when both match.
   const groups = new Map();
   cites.forEach((c, i) => {
@@ -325,16 +341,17 @@ function redLines(cites) {
     groups.get(key).ns.push(c.n ?? i + 1);
   });
   return [
-    ...[...groups.values()].map(({ c, ns }) => effectLine(c, ns)),
+    ...[...groups.values()].map(({ c, ns }) => effectLine(c, numbered ? ns : [])),
     // A status row's end of force, compared with the as-of date by the API.
-    ...cites.flatMap((c, i) => (c.kind && c.expired ? [L([`[${c.n ?? i + 1}] ${c.expired}.`], 'red')] : [])),
+    ...cites.flatMap((c, i) => (c.kind && c.expired ? [L([`${numbered ? `[${c.n ?? i + 1}] ` : ''}${c.expired}.`], 'red')] : [])),
   ];
 }
 
 // --- Composed answer (POST /answer) ----------------------------------------------
 
 const ADVANCE_RULING = 'Hàng khó chốt thì có thể đề nghị hải quan xác định trước mã số.';
-const TARIFF_HINT = 'Cần xem thuế của mã nào thì nhắn mã đó kèm xuất xứ.';
+/** With the source list hidden, the one place an unchecked evidence row still says so (R18). */
+const UNCHECKED_SOURCES = 'Có nguồn trích tự động, chưa có người đối chiếu; nhắn "nguồn" để xem.';
 /** Heads a mixed-mode tariff block; dispatch.mjs tariffReply reads it as a composed-answer marker (R13). */
 const MIXED_TARIFF = 'Thuế của mã trong câu hỏi:';
 
@@ -346,7 +363,7 @@ export function rulingLine(r) {
 /** The API's warning codes; `unverified` is worded from the citations themselves (unverifiedLines). */
 const WARNING = {
   undetermined: 'Có nguồn chưa xác định được tình trạng hiệu lực — đối chiếu trước khi dùng làm căn cứ.',
-  upcoming: 'Có nguồn chưa có hiệu lực tại ngày tra — xem ngày ở dòng nguồn.',
+  upcoming: 'Có nguồn chưa có hiệu lực tại ngày tra — xem ngày ghi kèm nguồn đó.',
   old_catalog: 'Mã nêu trong công văn cũ theo danh mục cũ — đối chiếu Danh mục hiện hành trước khi khai.',
 };
 
@@ -362,7 +379,7 @@ const NO_PROSE = 'Mình chưa viết được câu trả lời dẫn đủ ngu�
  *   lookups the bot made: the code asked about in mixed mode, the walkthrough's tariff_ref codes in hs mode, the rate asked
  *   for in tariff mode (owner decision Q1), whose block alone keeps the first-lookup invitation (`showFooter`, D3b)
  */
-export function formatAnswerMd(res, { tariffLines = [], showFooter = false } = {}) {
+export function formatAnswerMd(res, { tariffLines = [], showFooter = false, sources = false } = {}) {
   const cites = res.citations ?? [];
   // A candidate with no [n] has nothing standing behind it (R2), and would print "· " with nothing after.
   const cands = (res.candidates ?? []).filter((c) => c.evidence?.length).slice(0, 3);
@@ -376,7 +393,10 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false } = {
     const reworded = unlikeTariffReply(said);
     return reworded === said ? ln : L([reworded], ...(ln.marks ?? []));
   };
-  const prose = written ? md(res.answerMd).map(unlike) : cites.length ? [L([NO_PROSE])] : [];
+  // Sources only when asked; with no prose at all they are the answer (NO_PROSE says so), so they print then too.
+  const cited = sources || !written;
+  const maxN = Math.max(0, ...cites.map((c, i) => c.n ?? i + 1));
+  const prose = written ? md(cited ? res.answerMd : unmarked(res.answerMd, maxN)).map(unlike) : cites.length ? [L([NO_PROSE])] : [];
   const lines = [...prose, L([])];
 
   // Never orange: the user's code outside the candidates is a comparison, not a finding (R4). Only the two sentences
@@ -398,17 +418,19 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false } = {
     lines.push(
       L(['Ứng viên để chuyên viên chốt:']),
       // 49 leaves room for the ellipsis: a heading of at most 50 characters.
-      ...cands.map((c) => L([[c.hs, 'b'], ` · ${cleanGazetteTitle('', c.title, 49)} · ${c.evidence.map((n) => `[${n}]`).join(' ')}`], 'ul')),
+      ...cands.map((c) => L([[c.hs, 'b'], ` · ${cleanGazetteTitle('', c.title, 49)}${cited ? ` · ${c.evidence.map((n) => `[${n}]`).join(' ')}` : ''}`], 'ul')),
       ...(res.ruling ? [rulingLine(res.ruling)] : []),
     );
+    // R5: routing to an advance ruling is a feature; said once, and not when the prose already says it.
     if (cands.length >= 2 && !/xác định trước/i.test(toText(prose))) lines.push(L([ADVANCE_RULING], 'note'));
   }
 
   // D3(a): a candidate's rates only under a full walkthrough, for at most two codes, never green (R2). A rate question
   // (owner decision Q1) prints its own lookup under the prose.
   const blocks = hs ? (res.depth === 'full' ? tariffLines.slice(0, 2) : []) : res.mode === 'mixed' || rate ? tariffLines : [];
-  // A block's [n] continue after the sources, so "[1]" is never both a decree and an Explanatory Note (R10).
-  let refBase = Math.max(0, ...cites.map((c) => c.n ?? 0));
+  // A block's [n] continue after the sources, so "[1]" is never both a decree and an Explanatory Note (R10) — also when the
+  // sources are hidden: a later "nguồn?" prints them as [1..k].
+  let refBase = maxN;
   for (const t of blocks) {
     // After a composed reply no code is on the table to confirm (§6.3): mixed keeps the history of the code asked about
     // (R18) without its "trả lời đúng/sai"; a candidate's history is not printed at all. A rate question IS the lookup.
@@ -422,27 +444,20 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false } = {
     const headed = () => L([`${MIXED_TARIFF} `, ...lead.segs.map((s, k) => (k || typeof s !== 'string' ? s : s[0].toLowerCase() + s.slice(1)))], ...(lead.marks ?? []));
     lines.push(L([]), ...(res.mode === 'mixed' ? [headed(), ...rest] : block));
   }
-  if (hs && cands.length && !blocks.length) lines.push(L([TARIFF_HINT], 'note'));
 
   lines.push(
     L([]),
-    ...redLines(cites),
+    ...redLines(cites, cited),
     // Evidence sections are not documents the bot fetched: their standing is on the source line (R18).
     ...unverifiedLines(cites.filter((c) => !c.kind)),
     ...(res.warnings ?? []).filter((w) => WARNING[w]).map((w) => L([WARNING[w]], 'warn')),
-    ...sourceLines(
-      cites.map((c) => ({
-        n: c.n,
-        label: c.kind === 'en' ? enLabel(c.label) : c.label,
-        note: c.note,
-        // The API keeps only quotes found verbatim in the body; 159 leaves room for the ellipsis.
-        quote: c.quotes?.length ? cleanGazetteTitle('', c.quotes[0], 159) : '',
-        url: c.url,
-        // Owner decision 2026-09-15: an evidence row (Explanatory Note, SEN, ruling, annex table…) nobody checked says so on its
-        // own source line, never in orange; a statute clause keeps unverifiedLines above.
-        auto: Boolean(c.kind) && c.verification === 'auto_unverified',
-      })),
-    ),
+    ...(cited
+      ? sourceLines(sourcesOf(cites))
+      : [
+          // The sources are hidden, their dates are not: a Chú giải not yet in force is said with its date (R8).
+          ...sourcesOf(cites).filter((x) => x.when).map((x) => L([`${x.label}: ${x.when}.`], 'note')),
+          ...(sourcesOf(cites).some((x) => x.auto) ? [L([UNCHECKED_SOURCES], 'note')] : []),
+        ]),
   );
   // All of it cut: the API says so in the answer itself (CUT_ALL) or through NO_PROSE above, and "một phần" would be
   // false. `written` stopped meaning "some prose stood" when a dropped walkthrough began keeping code's own sections;

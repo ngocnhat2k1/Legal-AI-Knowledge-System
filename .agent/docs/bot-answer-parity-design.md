@@ -490,8 +490,9 @@ những gì đã tìm.
   `mixed`/`hs` → `render.mjs`.
 - **`render.mjs`** — **[v3]** bộ trình bày duy nhất, định nghĩa ở [§5b](#5b-trình-bày-kiểu-notebook-trên-zalo-v3):
   `answerMd` đi qua `md()` (tập Markdown con §5b.1 — `**x**` giữ thành chữ đậm bằng `styles` của `zca-js`,
-  không còn bỏ dấu; `## ` → dòng đậm, không in hoa; `- ` → danh sách Zalo; `[n]` giữ); bảng → `a · b · c`;
-  cuối tin danh sách nguồn chữ nhỏ nghiêng `[1] <label> (<instrument>)` + link **chỉ khi có**; trên
+  không còn bỏ dấu; `## ` → dòng đậm, không in hoa; `- ` → danh sách Zalo; `[n]` giữ **chỉ khi người hỏi xin nguồn**,
+  [ADR 2026-09-22](../architecture-decisions/2026-09-22-short-replies-sources-on-request.md)); bảng → `a · b · c`;
+  cuối tin danh sách nguồn chữ nhỏ nghiêng `[1] <label>` + link **chỉ khi được hỏi**; trên
   dòng nguồn in `authority`/`window`/`meta.status` khi không phải `binding`/`current`; `note` in
   "ghi chú nghiệp vụ của dự án — không phải căn cứ pháp lý". Một dòng cảnh báo (cam) từ `warnings`, do
   `render()` cưỡng chế. Khối `candidates` và khối thuế (`formatAnswer`, thêm dòng `Chương 98: <98xx> ↔
@@ -629,7 +630,9 @@ Rút từ câu trả lời notebook mẫu (ví dụ 1 ở §5b.3 là bản bot c
    và nguyên văn theo trích dẫn (`formatProvisions`). Router vẫn trả `lead` (Mảng 3 bỏ, §3.2).
 2. **Gạch đầu dòng chỉ cho lựa chọn thật** (có/không C/O, nhiều biểu, nhiều ứng viên, các trường hợp
    luật liệt kê). Một kết quả duy nhất → một câu.
-3. **`[n]` ngay sau dữ kiện**; danh sách nguồn chữ nhỏ nghiêng ở cuối.
+3. **`[n]` ngay sau dữ kiện**; danh sách nguồn chữ nhỏ nghiêng ở cuối — **từ 2026-09-22 chỉ khi người hỏi xin**
+   ("nguồn?", "kèm căn cứ"); mặc định văn xuôi không số, không khối nguồn
+   ([ADR](../architecture-decisions/2026-09-22-short-replies-sources-on-request.md)).
 4. **Tối đa một dòng cảnh báo** (cam) mỗi câu trả lời — `render()` cưỡng chế qua `warn`. Dòng đỏ (không
    được hưởng, chống bán phá giá, hiệu lực) là **nội dung** làm đổi nghĩa vụ, không tính vào giới hạn.
    Ghi chú dữ liệu từ API là `note`.

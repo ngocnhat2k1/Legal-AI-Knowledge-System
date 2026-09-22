@@ -150,6 +150,23 @@ export function isBareLookup(text) {
   return rest.split(/[^\p{L}\d/%]+/u).filter((w) => w && !LOOKUP_WORDS.has(w)).length === 0;
 }
 
+/**
+ * The message wants the reply's sources printed (owner, 2026-09-22: they print only when asked). "nguồn" is as often the goods
+ * ("đèn kèm nguồn", "dây dẫn nguồn", "nguồn đầu vào 24V"), so it counts only in a phrase that asks for it.
+ */
+const SOURCES_ASK = /\b(?:kem|ghi|xin|gui) (?:can cu|trich dan|dan chung)\b|\b(?:xin|ghi|gui) nguon\b|\btrich dan\b|\bcan cu (?:phap ly|vao dau|o dau|dau|nao|gi)\b|\bnguon (?:o )?dau\b(?! vao| ra)/;
+const words = (text) => fold(text).replace(/[^\p{L}\d]+/gu, ' ').trim();
+export const asksSources = (text) => SOURCES_ASK.test(words(text)) || onlyAsksSources(text);
+
+/** Words a bare request for sources may carry besides the source word itself ("cho mình xin nguồn câu trên với ạ"). */
+const SOURCES_FILLER = new Set('cho minh em toi xin gui ghi voi di nhe nha a vay the dau o vao nao gi cua cau tra loi tren nay do kem lai giup ban bot oi duoc khong k ko co phap ly vua roi'.split(' '));
+/** The whole message only asks for the last reply's sources: the one kind answered from memory, with no model call. */
+export function onlyAsksSources(text) {
+  const t = words(text);
+  if (!/\b(?:nguon|can cu|trich dan|dan chung|link)\b/.test(t)) return false;
+  return t.replace(/\b(?:nguon|can cu|trich dan|dan chung|link)\b/g, ' ').split(' ').every((w) => !w || SOURCES_FILLER.has(w));
+}
+
 /** A bare greeting gets the capabilities at once: "hi" used to go through the router and come back as a product search. */
 const GREETINGS = ['hi', 'hello', 'hey', 'alo', 'chao', 'xin chao', 'chao bot', 'chao ban', 'hi bot', 'hello bot'];
 export const isGreeting = (text) => GREETINGS.includes(fold(text).replace(/[.!,?…\s]+$/g, '').trim());

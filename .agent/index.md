@@ -86,6 +86,7 @@ Mỗi quyết định một file, theo [mẫu](architecture-decisions/template.m
 - [Host trên server dev dùng chung của MONA](architecture-decisions/2026-09-13-host-on-mona-dev-server.md) — thay VPS Contabo đã bị xoá: một compose project cô lập, nginx có sẵn thay Caddy, cổng 3060/5435, sao lưu lên Drive
 - [Dòng 10 số quốc gia của biểu FTA đi kèm mã 8 số; EVFTA chỉ nạp Phụ lục II](architecture-decisions/2026-09-13-fta-national-sublines.md) — dòng con khác mức → `by_subline`, không in một con số; 553 mã EVFTA từng nạp nhầm thuế XK
 - [Chữ định dạng Zalo theo giọng notebook, màu do dữ liệu quyết](architecture-decisions/2026-09-13-zalo-rich-text-notebook-style.md)
+- [Trả lời gọn một tin, nguồn chỉ in khi được hỏi](architecture-decisions/2026-09-22-short-replies-sources-on-request.md) — thay một phần ADR giọng notebook: mã HS mặc định `brief`, báo cáo chín mục chỉ khi xin; `[n]` và "Nguồn:" chỉ khi hỏi
 - [CI/CD: image build trên GitHub, server chỉ kéo về](architecture-decisions/2026-09-14-ci-cd-build-on-github-pull-on-server.md) — thay một phần ADR host 2026-09-13: hết `git archive` và build trên máy dùng chung; khoá deploy chỉ chạy được `deploy.sh`
 
 ## Đánh giá

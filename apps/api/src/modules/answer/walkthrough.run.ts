@@ -435,9 +435,9 @@ export function policyBlock(registry: PolicyList[], rows: EvidenceRow[], codes: 
 
 /**
  * The surviving sections under the owner's titles, in the markdown subset md() renders ("## " is a bold line). The policy
- * block takes its own place in that order.
+ * block takes its own place in that order. `titled: false` is the brief reply: the same order as plain paragraphs.
  */
-export function flatten(sections: VerifiedWalkthrough['sections'], policy: string, facts = ''): string {
+export function flatten(sections: VerifiedWalkthrough['sections'], policy: string, facts = '', titled = true): string {
   const all = [
     ...sections,
     ...(facts.trim() ? [{ key: 'facts' as WalkthroughSectionKey, markdown: facts.trim() }] : []),
@@ -448,6 +448,6 @@ export function flatten(sections: VerifiedWalkthrough['sections'], policy: strin
     .sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key))
     // A model heading on the first line renders at the same weight as the title right above it (md() bolds both), so it
     // keeps its words and loses its "## ". A heading later in a section has prose between them (owner decision 4).
-    .map((s) => `## ${SECTION_TITLES[s.key]}\n${s.markdown.trim().replace(/^#{1,3}\s+/, '')}`)
+    .map((s) => `${titled ? `## ${SECTION_TITLES[s.key]}\n` : ''}${s.markdown.trim().replace(/^#{1,3}\s+/, '')}`)
     .join('\n\n');
 }

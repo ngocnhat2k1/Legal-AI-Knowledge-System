@@ -64,6 +64,23 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 
 ---
 
+### 2026-09-22 — "Trả lời lại đi" trả lời nhầm câu cũ; câu trả lời quá dài
+
+- **Ngữ cảnh nhóm.** Chi hỏi mã HS lưỡi dao răng cưa, bot báo lỗi 401 (token Claude bị thu hồi). Chủ dự án reply tin lỗi
+  "trả lời lại đi", bot trả lời về "máy sấy ly tâm" — câu cũ của *chính chủ dự án*. Gốc: bộ nhớ khoá theo (thread, người),
+  còn quote chỉ mang chữ tin lỗi, không mang câu của Chi. Sửa: `GET /conversation/quoted` tìm câu hỏi mà tin bot được quote
+  đã trả lời (khớp chữ, mọi người trong thread); bot gửi bước kế hoạch `"Chi hỏi: … — bot đáp: …"`; `PLAN_SYSTEM` thêm một
+  dòng: tin được reply đi trước chủ đề cũ. Tin lỗi của bot giống hệt nhau cho mọi người, nên khớp chữ thôi vẫn lấy nhầm
+  lượt mới nhất (review bắt được, tái hiện trên Postgres tạm): chọn lượt gần `quote.ts` nhất. **Chưa kiểm** `quote.ts` của
+  zca-js có đúng là giờ gửi tin được quote không — thiếu thì rơi về lượt mới nhất. Không đọc được DB server (bị chặn quyền).
+- **Câu trả lời ngắn.** Mã HS đi `full` gần như mọi lượt vì độ sâu chọn theo thời gian còn lại → 4 tin. Nay `brief` mặc
+  định (không tiêu đề, không nhắc lại mô tả hàng), `full` chỉ khi xin; `[n]` và "Nguồn:" chỉ khi hỏi, dạng `[n] nhãn — link`;
+  bỏ dòng khuôn "nhắn mã kèm xuất xứ" (dòng xác định trước mã số R5 giữ). Ngõ cụt: nhận "nguồn" trong câu là xin nguồn
+  bắt nhầm "đèn kèm nguồn", "dây dẫn nguồn", "nguồn đầu vào 24V"; "chi tiết/đầy đủ/báo cáo" bắt nhầm "chi tiết máy",
+  "đầy đủ phụ kiện", "bao cao su". [ADR 2026-09-22](../architecture-decisions/2026-09-22-short-replies-sources-on-request.md).
+- **Chưa kiểm trên mô hình thật** (local không có kho dữ liệu). Chờ chủ dự án thử trên Zalo. Chủ dự án chọn giữ dòng R18
+  "Có nguồn trích tự động, chưa có người đối chiếu" khi ẩn nguồn.
+
 ### 2026-09-17 — Hết hạn mức tuần của Claude: bot đòi mã HS cho một câu đã mô tả hàng; giờ bot nói đúng lỗi
 
 - **Triệu chứng.** Nhóm Zalo hỏi mã HS cho "Smart Voice Control Panel" (mô tả đủ chức năng), bot đáp câu mẫu "nhắn giúp
