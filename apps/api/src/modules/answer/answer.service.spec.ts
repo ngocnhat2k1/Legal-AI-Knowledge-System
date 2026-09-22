@@ -156,6 +156,8 @@ const photo = () =>
     lines: [{ prefix: '3005', heading: HEADING_TEXT }, { prefix: '30051010', heading: HEADING_TEXT }],
   });
 const PHOTO_BODY: AnswerRequest = { q: PHOTO, context: { topic: 'tariff', state: { tariff: { dotted: '3005.10.10', desc: 'miếng dán' } }, turns: OLD_TURNS } };
+/** The goods asked about with no code of the asker's: the picked 8-digit line shows under its heading (owner, 2026-09-22). */
+const NO_CODE_Q = 'miếng dán bàn chân ngải cứu thì khai nhóm nào';
 /** The same question asking for the full report: without such a request the walkthrough is brief (owner, 2026-09-22). */
 const PHOTO_FULL: AnswerRequest = { ...PHOTO_BODY, q: `${PHOTO}, phân tích chi tiết giúp mình` };
 
@@ -247,7 +249,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     ]);
     expect(res.answerMd).toContain(`Nhóm 30.05 gồm sản phẩm "${EN_QUOTE}" [1];`);
     expect(res.answerMd).toContain('cần so thêm nhóm 38.24.');
-    expect(res.candidates).toEqual([{ hs: '30.05', level: 4, title: HEADING_TEXT, evidence: [1] }]);
+    expect(res.candidates).toEqual([{ hs: '30.05', level: 4, title: HEADING_TEXT, evidence: [1], line: null }]);
     expect(res.userCodes[0]).toMatchObject({ code: '3005.10.10', exists: true, inCandidates: true });
     expect(res.citations[0]).toMatchObject({ n: 1, key: 'e:1', kind: 'en', hsHeading: '30.05', quotes: [EN_QUOTE] });
     expect(res).toMatchObject({ calls: 2, cut: 0, depth: 'full', missingFacts: ['công dụng ghi trên nhãn'] });
@@ -445,16 +447,15 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     expect(compose!.prompt.replace(/[.\s]/g, '')).not.toContain('30051010');
   });
 
-  it('R4 in the walkthrough: a heading holding the user\'s own line is looked up for nothing, and a rate line still naming it is dropped whole', async () => {
-    // 30.05 holds the user's own leaf, so none of its lines is looked up: a sibling would put the policy and duty blocks on
-    // a leaf the report never argued for. 38.24's line is clean but its statement names the code, so DÒNG THUẾ never prints.
-    const t = tariffOf([{ ...rate('ACFTA', 'ASEAN–Trung Quốc', 'Theo dòng 10 số: 3005.10.10.10 Miếng dán: 0%'), form: 'E', requiresCo: true }]);
-    const { svc, prompts, tariff } = setup({ plan: PHOTO_PLAN, walks: [PHOTO_WALK], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
+  it('R4 in the walkthrough: nothing is looked up before the model, and the prompt prints no DÒNG THUẾ', async () => {
+    // Review 2026-09-22: DÒNG THUẾ could only hold each heading's first line, and the full report's duty sentence then spoke of
+    // another line than the block under the picked one (R6). The blocks carry their own conditions.
+    const { svc, prompts, tariff } = setup({ plan: PHOTO_PLAN, walks: [PHOTO_WALK], sources: [EN3005], hsRows: HS_ROWS });
     const res = await svc.answer(PHOTO_FULL);
-    const looked = tariff.lookup.mock.calls.map(([hs]) => hs);
-    expect(looked).toEqual(['38249999']); // no leaf of 30.05 at all, the user's own or its siblings'
+    expect(tariff.lookup).not.toHaveBeenCalled();
     const [walk] = prompts(WALKTHROUGH_SYSTEM);
     expect(walk!.prompt).not.toContain('\nDÒNG THUẾ (');
+    expect(walk!.prompt).toContain('Không viết câu nào về thuế');
     expect(userCodesIn([walk!.prompt.split(/\n\n(?=NHÓM )/)[0]!], ['3005.10.10'])).toEqual([]);
     expect(res.tariffRef).toEqual([]);
   });
@@ -463,9 +464,10 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const t = tariffOf([{ ...rate('ACFTA', 'ASEAN–Trung Quốc', '0% nếu có C/O form E hợp lệ'), form: 'E', requiresCo: true }]);
     const walk = { ...PHOTO_WALK, tariff_ref: ['30051010'] };
     const q = 'miếng dán bàn chân ngải cứu thì khai nhóm nào, phân tích chi tiết giúp mình';
-    const { svc, prompts } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
+    const { svc, prompts, tariff } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
     const res = await svc.answer({ q });
-    expect(prompts(WALKTHROUGH_SYSTEM)[0]!.prompt).toContain('\nDÒNG THUẾ (');
+    expect(prompts(WALKTHROUGH_SYSTEM)[0]!.prompt).not.toContain('\nDÒNG THUẾ (');
+    expect(tariff.lookup).not.toHaveBeenCalled();
     expect(res).toMatchObject({ depth: 'full', tariffRef: ['3005.10.10'] });
     // The policy block is code's, in its own section, and a list the corpus has not loaded reads "chưa kiểm tra được",
     // never "Không" (R12, R18). No list in this registry answers for 3005.10.10, so the caveat is all there is to say —
@@ -476,6 +478,57 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     expect(res.answerMd).not.toMatch(/^- Không\b/m);
     expect(res.answerMd).not.toMatch(/\bKhông\b(?![ ]có tên trong danh mục đã nạp)/);
   });
+
+  // Owner 2026-09-22 ("hs code 8 số nhưng nó mới trả lời 4 số"): the brief reply names the 8-digit line under its heading.
+  it('brief: the picked line rides on its candidate with its catalogue wording, and nothing is looked up', async () => {
+    const { svc, tariff } = setup({ plan: PHOTO_PLAN, walks: [{ ...PHOTO_WALK, tariff_ref: ['30059090'] }], sources: [EN3005], hsRows: HS_ROWS });
+    const res = await svc.answer({ q: NO_CODE_Q });
+    expect(res).toMatchObject({ depth: 'brief', tariffRef: [] });
+    expect(res.candidates[0]).toMatchObject({ hs: '30.05', level: 4, line: { code: '3005.90.90', text: 'Loại khác › Loại khác' } });
+    expect(tariff.lookup).not.toHaveBeenCalled();
+    // Code prints the line; the prose never carries it (G5 would cut it) and no policy block comes with it at brief.
+    expect(res.answerMd).not.toContain('3005.90.90');
+    expect(res.answerMd).not.toContain('ứng viên, chưa chốt');
+  });
+
+  it.each([
+    ['two picks under one heading: the facts do not decide the line (R5)', ['30051010', '30059090']],
+    ['a pick in no LINES', ['30059999']],
+    ['a pick under a concluded heading that is no candidate', ['38249999']],
+  ])('no line printed: %s', async (_, tariff_ref) => {
+    const { svc } = setup({ plan: PHOTO_PLAN, walks: [{ ...PHOTO_WALK, tariff_ref }], sources: [EN3005], hsRows: HS_ROWS });
+    const res = await svc.answer({ q: NO_CODE_Q });
+    expect(res.candidates.map((c) => c.hs)).toEqual(['30.05']);
+    expect(res.candidates[0]!.line).toBeNull();
+  });
+
+  it('full: the block is looked up for the picked line, not the heading\'s first, and nothing before the model', async () => {
+    const picked = setup({ plan: PHOTO_PLAN, walks: [{ ...PHOTO_WALK, tariff_ref: ['30059090'] }], sources: [EN3005], hsRows: HS_ROWS });
+    expect(await picked.svc.answer({ q: `${NO_CODE_Q}, phân tích chi tiết giúp mình` })).toMatchObject({ depth: 'full', tariffRef: ['3005.90.90'] });
+    expect(picked.tariff.lookup).not.toHaveBeenCalled();
+  });
+
+  // Review 2026-09-22 (R4, ADR 2026-07-17 point 4): a blind pick under the heading of the user's own code reads as a verdict on
+  // it at 8 digits, confirming or correcting it. That heading shows no line, whether the pick matches theirs or not, and has
+  // none looked up — this turn's premise, of 8 or 6 digits, or a code typed in an earlier turn.
+  it.each([
+    ['its own leaf', PHOTO_FULL, '30051010'],
+    ['a sibling', PHOTO_FULL, '30059090'],
+    ['under a 6-digit premise', { q: 'miếng dán bàn chân ngải cứu, mã 3005.10 có phù hợp không, phân tích chi tiết giúp mình' }, '30051010'],
+    [
+      'a code typed in an earlier turn ("phân tích chi tiết giúp mình" after the premise question)',
+      { q: 'phân tích chi tiết giúp mình', context: { topic: 'tariff', state: {}, turns: [{ role: 'user', body: PHOTO }, { role: 'bot', body: 'Chỉ từ mô tả này thì mình chưa chốt được nhóm.' }] } },
+      '30059090',
+    ],
+  ])('R4: the premise heading shows no picked line and none is looked up — %s', async (_, body, pick) => {
+    const { svc, tariff } = setup({ plan: PHOTO_PLAN, walks: [{ ...PHOTO_WALK, tariff_ref: [pick] }], sources: [EN3005], hsRows: HS_ROWS });
+    const res = await svc.answer(body as AnswerRequest);
+    expect(res.candidates.map((c) => [c.hs, c.line])).toEqual([['30.05', null]]);
+    expect(res.tariffRef).toEqual([]);
+    expect(tariff.lookup).not.toHaveBeenCalled();
+  });
+
+  // Review 2026-09-22: a 6-digit premise's lines are the user's code filled in; the latch every rate line passed holds them out.
 
   it('D3(a): a tariff_ref under a heading the walkthrough did not conclude points at no block', async () => {
     const t = tariffOf([{ ...rate('ACFTA', 'ASEAN–Trung Quốc', '0% nếu có C/O form E hợp lệ'), form: 'E', requiresCo: true }]);
@@ -688,6 +741,9 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
     const res = await svc.answer({ q: 'miếng dán bàn chân ngải cứu thì khai nhóm nào, phân tích chi tiết giúp mình' });
     expect(res).toMatchObject({ depth: 'full', tariffRef: [] });
+    expect(res.candidates.every((c) => c.line == null)).toBe(true);
+    // Review 2026-09-22: the picks still feed the code-built policy section a dropped reply keeps (R12, R18).
+    expect(res.answerMd).toContain(`## ${SECTION_TITLES.policy}`);
     expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
     expect(res.answerMd).not.toContain('## II.');
     expect(res.citations.map((c) => c.n)).toEqual([1]);
