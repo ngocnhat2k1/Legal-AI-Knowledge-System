@@ -20,7 +20,7 @@ export { validateWalkthrough, walkthroughSchema } from './walkthrough.checks';
 
 const WALK = `Một đồng nghiệp hỏi qua Zalo về phân loại hàng hóa. Hãy chỉ cho họ như người đi trước chỉ người mới: trả lời câu hỏi và cho thấy lập luận đi thế nào. Chỉ dựa trên ĐỀ BÀI và bằng chứng bên dưới; người chốt mã là họ.
 
-Mỗi mục dưới đây là một phần tử của sections, gắn đúng key của nó. Viết đủ cả tám mục theo thứ tự này; mục nào chưa có gì để nói thì nói thẳng là chưa có (\"Chưa có nhóm nào phải loại trừ\"), đừng bỏ trống và đừng gộp sang mục khác.
+Mỗi mục dưới đây là một phần tử của sections, gắn đúng key của nó.
 - nature: dữ kiện nào của hàng quyết định; chỉ dùng đặc điểm người hỏi đã viết, thiếu thì nói thiếu; số đo, điện áp, khối lượng do hệ thống in, đừng nhắc lại.
 - candidates, exclusions: nhóm nào hợp hay bị loại, theo câu chữ nhóm và chú giải nào.
 - gir: quy tắc nào đã dùng cho hàng này, dẫn dòng GRI.
@@ -31,11 +31,13 @@ Mỗi mục dưới đây là một phần tử của sections, gắn đúng key
 
 /** Owner decision 4: brief is one Zalo message of paragraphs, full may carry a few headings; neither shows the key list. */
 const DEPTH: Record<ClassifyInput['depth'], string> = {
-  brief: 'Độ sâu brief: tối đa khoảng 170 từ kể cả phần chép nguyên văn, 2–3 đoạn liền, không "## ".',
+  // Owner, 2026-09-22: the default reply. Every section written in full came out as four Zalo messages of filler.
+  brief:
+    'Độ sâu brief: tối đa khoảng 170 từ kể cả phần chép nguyên văn, 2–3 đoạn liền, không "## ". Chỉ viết mục nào có điều cần nói cho câu hỏi này (thường là nature, explanation, conclusion); bỏ mục không có gì, không viết câu kiểu "chưa có nhóm nào phải loại trừ", không nhắc lại mô tả hàng người hỏi đã viết. Mỗi nhóm còn đứng ở conclusion có ít nhất một câu kèm [#id] nói vì sao nó còn đứng.',
   // 300 words asked came back as 526 in 103 s on crimper, 220 words with quotes in 107 s (2026-09-15); the model overshoots
   // word caps by 30–75%, and quotes add length.
   full:
-    'Độ sâu full: viết đủ tám mục, mỗi mục một phần tử riêng của sections, đúng thứ tự nature, candidates, exclusions, gir, levels, explanation, risk, conclusion. Phần thông tin hàng hóa do hệ thống in từ dữ kiện người hỏi đã viết, đừng chép lại. Không gộp mục, không bỏ mục nào, không tự viết dòng "## ": hệ thống in tiêu đề của từng mục. Mỗi mục 2–4 câu, khoảng 40–55 từ; cả bài khoảng 420 từ kể cả phần chép nguyên văn. levels liệt kê chương, nhóm, phân nhóm và mã của nhóm đứng nhất, mỗi cấp một gạch đầu dòng, câu chữ chép từ LINES. Thuế nhiều nhất một câu, chỉ khi có DÒNG THUẾ: loại thuế nào áp khi nào, C/O hay tên biểu chỉ khi dòng đó nêu; không nêu số, số hiệu văn bản hay mã, không đoán xuất xứ.',
+    'Độ sâu full: viết đủ tám mục, mỗi mục một phần tử riêng của sections, đúng thứ tự nature, candidates, exclusions, gir, levels, explanation, risk, conclusion; mục nào chưa có gì để nói thì nói thẳng là chưa có ("Chưa có nhóm nào phải loại trừ"). Phần thông tin hàng hóa do hệ thống in từ dữ kiện người hỏi đã viết, đừng chép lại. Không gộp mục, không bỏ mục nào, không tự viết dòng "## ": hệ thống in tiêu đề của từng mục. Mỗi mục 2–4 câu, khoảng 40–55 từ; cả bài khoảng 420 từ kể cả phần chép nguyên văn. levels liệt kê chương, nhóm, phân nhóm và mã của nhóm đứng nhất, mỗi cấp một gạch đầu dòng, câu chữ chép từ LINES. Thuế nhiều nhất một câu, chỉ khi có DÒNG THUẾ: loại thuế nào áp khi nào, C/O hay tên biểu chỉ khi dòng đó nêu; không nêu số, số hiệu văn bản hay mã, không đoán xuất xứ.',
 };
 
 // Citations are [#id] with a quote in the same sentence: numbering left to the model ran on across sections and its cite_ids

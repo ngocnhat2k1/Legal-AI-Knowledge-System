@@ -26,6 +26,7 @@ import {
   type CodeRole,
   codeRole,
   defaultPlan,
+  fold,
   type Intent,
   INTENTS,
   type LlmError,
@@ -83,10 +84,17 @@ const LEGAL = ['legal', 'status', 'mixed'];
  * Compose budget the walkthrough needs before it may ask for `full`: full's own slowest measured run (107 s; brief 62–83 s)
  * plus a little. It is deliberately NOT the compose cap. The bot spends one /answer call on planning first, so the second
  * call never sees the whole cap — gating on the cap would make full unreachable through the bot, which is how `full` went
- * unused until 2026-09-15. Anything shorter is brief, still the sectioned report (code prints the titles) but pointing at
- * no tariff block (D3(a)).
+ * unused until 2026-09-15. Anything shorter is brief: plain paragraphs pointing at no tariff block (D3(a)).
  */
 const FULL_DEPTH_MS = 110_000;
+/**
+ * Owner, 2026-09-22: the sectioned report came out as four Zalo messages per question. The reply is brief unless the
+ * message asks for the full report: a request verb before the depth word, or "… hơn". Goods names carry the same words
+ * ("bao cao su", "dây dù", "đầy đủ phụ kiện", "máy phân tích kỹ thuật số", "chi tiết máy"). Read on folded text, so an
+ * unaccented "phan tich chi tiet" counts too.
+ */
+const WANTS_FULL =
+  /\b(?:phan tich|giai thich|tra loi|viet|noi|lam ro)(?: (?:giup|cho|minh|em|lai|ro))* (?:chi tiet|ky|day du|cu the)\b(?! thuat)|\b(?:chi tiet|ky|day du|cu the) hon\b|\bbao cao (?:day du|chi tiet|phan loai)\b/;
 
 export interface AnswerRequest {
   q: string;
@@ -573,7 +581,7 @@ export class AnswerService {
 
     // Full measured 82–107 s by its author against this 100 s cap, brief 62–83 s: full runs only with the whole cap, and a
     // run that still overruns falls to the sources (reason 'compose_failed'), which is what the bot prints either way.
-    const depth = o.timeoutMs >= FULL_DEPTH_MS ? 'full' : 'brief';
+    const depth = o.timeoutMs >= FULL_DEPTH_MS && WANTS_FULL.test(fold(o.q)) ? 'full' : 'brief';
     // R4: a premise code is never looked up, and a heading that holds one of the user's own leaves gets no line at all — a
     // sibling would put the policy block and the duty block on a leaf the report never argued for. tariffShown() then prints
     // no DÒNG THUẾ (fail closed), which is what the comment on this block always promised.
@@ -705,7 +713,8 @@ export class AnswerService {
     // "một phần bị lược" note would be false when all of it was. Empty stays empty, so a drop with no goods and no policy
     // still falls through to the bot's NO_PROSE opener.
     const kept = dropped ? flatten([], policy, factsBlock(o.goods)) : '';
-    const answerMd = dropped ? (kept ? `${kept}\n\n${CUT_ALL}` : '') : flatten(checked.sections, policy, factsBlock(o.goods));
+    // Brief is plain paragraphs: no titles, and no restating of the asker's own description (owner, 2026-09-22).
+    const answerMd = dropped ? (kept ? `${kept}\n\n${CUT_ALL}` : '') : depth === 'full' ? flatten(checked.sections, policy, factsBlock(o.goods)) : flatten(checked.sections, policy, '', false);
     const lines = await timed('verify', () => this.hsLines(users.map((u) => digits(u.code))));
     for (const h of headings) lines.set(digits(h.heading), h.headingText);
     return {

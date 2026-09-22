@@ -156,6 +156,8 @@ const photo = () =>
     lines: [{ prefix: '3005', heading: HEADING_TEXT }, { prefix: '30051010', heading: HEADING_TEXT }],
   });
 const PHOTO_BODY: AnswerRequest = { q: PHOTO, context: { topic: 'tariff', state: { tariff: { dotted: '3005.10.10', desc: 'miếng dán' } }, turns: OLD_TURNS } };
+/** The same question asking for the full report: without such a request the walkthrough is brief (owner, 2026-09-22). */
+const PHOTO_FULL: AnswerRequest = { ...PHOTO_BODY, q: `${PHOTO}, phân tích chi tiết giúp mình` };
 
 const rate = (schedule: string, scheduleName: string, statement: string) => ({
   schedule, scheduleName, type: 'ad_valorem', percent: '5', amount: null, currency: null, unit: null, decree: '26/2023/NĐ-CP',
@@ -214,7 +216,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
 
   it('(d) premise hs walks the classification: the ĐỀ BÀI holds no user code or old turn, its heading is pinned unlabelled, the candidate backs the code', async () => {
     const { svc, prompts, legal } = photo();
-    const res = await svc.answer(PHOTO_BODY);
+    const res = await svc.answer(PHOTO_FULL);
     const [plan] = prompts(PLAN_SYSTEM);
     const [walk] = prompts(WALKTHROUGH_SYSTEM);
     expect(prompts(SYSTEM)).toHaveLength(0); // hs never runs the interim compose prompt again
@@ -448,7 +450,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     // a leaf the report never argued for. 38.24's line is clean but its statement names the code, so DÒNG THUẾ never prints.
     const t = tariffOf([{ ...rate('ACFTA', 'ASEAN–Trung Quốc', 'Theo dòng 10 số: 3005.10.10.10 Miếng dán: 0%'), form: 'E', requiresCo: true }]);
     const { svc, prompts, tariff } = setup({ plan: PHOTO_PLAN, walks: [PHOTO_WALK], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
-    const res = await svc.answer(PHOTO_BODY);
+    const res = await svc.answer(PHOTO_FULL);
     const looked = tariff.lookup.mock.calls.map(([hs]) => hs);
     expect(looked).toEqual(['38249999']); // no leaf of 30.05 at all, the user's own or its siblings'
     const [walk] = prompts(WALKTHROUGH_SYSTEM);
@@ -460,7 +462,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
   it('D3(a): with a rate line under every heading the walkthrough may point at one, and the code prints its policy block', async () => {
     const t = tariffOf([{ ...rate('ACFTA', 'ASEAN–Trung Quốc', '0% nếu có C/O form E hợp lệ'), form: 'E', requiresCo: true }]);
     const walk = { ...PHOTO_WALK, tariff_ref: ['30051010'] };
-    const q = 'miếng dán bàn chân ngải cứu thì khai nhóm nào';
+    const q = 'miếng dán bàn chân ngải cứu thì khai nhóm nào, phân tích chi tiết giúp mình';
     const { svc, prompts } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
     const res = await svc.answer({ q });
     expect(prompts(WALKTHROUGH_SYSTEM)[0]!.prompt).toContain('\nDÒNG THUẾ (');
@@ -562,15 +564,22 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
   // gating full on the cap made it unreachable through the bot, which is how full went unused until 2026-09-15. The
   // gate is full's own slowest measured run plus a little, so a turn with room for it gets it.
   it('full needs room for its own slow tail, not the whole compose cap', async () => {
-    const ask = async (left: number) => {
+    const ask = async (left: number, body = PHOTO_FULL) => {
       const { svc, prompts } = setup({ plan: PHOTO_PLAN, walks: [PHOTO_WALK], sources: [EN3005], hsRows: HS_ROWS });
-      await svc.answer({ ...PHOTO_BODY, deadlineAt: Date.now() + left });
+      await svc.answer({ ...body, deadlineAt: Date.now() + left });
       return prompts(WALKTHROUGH_SYSTEM)[0]!.prompt;
     };
-    // A bot turn that spent ~30 s planning still reaches full.
+    // A bot turn that spent ~30 s planning still reaches full, when the asker wants the full report.
     expect(await ask(120_000)).toContain('Độ sâu full');
-    // Below full's measured tail it is brief, which still prints every section title.
+    // Below full's measured tail it is brief.
     expect(await ask(112_000)).toContain('Độ sâu brief');
+    // With all the time in the world, a question that does not ask for the report gets the short answer (owner, 2026-09-22).
+    expect(await ask(120_000, PHOTO_BODY)).toContain('Độ sâu brief');
+    // Goods names that carry the depth words are no request for the report.
+    for (const goods of ['bao cao su latex mã gì', 'dây dù polyester', 'máy khoan kèm đầy đủ phụ kiện', 'máy phân tích kỹ thuật số', 'chi tiết máy bằng thép'])
+      expect(await ask(120_000, { ...PHOTO_BODY, q: goods })).toContain('Độ sâu brief');
+    for (const asked of ['phan tich chi tiet giup minh', 'giải thích kỹ hơn nhé', 'trả lời đầy đủ giúp mình', 'báo cáo đầy đủ'])
+      expect(await ask(120_000, { ...PHOTO_BODY, q: `miếng dán ngải cứu, ${asked}` })).toContain('Độ sâu full');
   });
 
   it('a deadline too short for the full walkthrough asks for brief, looks no rate up, and points at no block', async () => {
@@ -579,7 +588,9 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     expect(prompts(WALKTHROUGH_SYSTEM)[0]!.prompt).toContain('Độ sâu brief');
     expect(tariff.lookup).not.toHaveBeenCalled();
     expect(res).toMatchObject({ depth: 'brief', tariffRef: [] });
-    expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
+    // Brief is plain paragraphs: no section titles, no restating of the goods the asker described.
+    expect(res.answerMd).not.toMatch(/^## /m);
+    expect(res.answerMd).not.toContain('Bạn đã cho biết:');
   });
 
   it('the walkthrough timing out or returning no JSON leaves the sources, never a second compose call', async () => {
@@ -605,7 +616,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
       expect(prompts(undefined)).toHaveLength(0);
       expect(res).toMatchObject({ calls: 2, cut: 1, repaired: false });
       expect(res.answerMd).not.toContain(sentence);
-      expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
+      expect(res.coverage).not.toBe('none');
     }
   });
 
@@ -652,7 +663,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
       [open, ['công dụng ghi trên nhãn']],
       [noConclusion, []],
     ] as Array<[object, string[]]>) {
-      const res = await setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS }).svc.answer(PHOTO_BODY);
+      const res = await setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS }).svc.answer(PHOTO_FULL);
       expect(res).toMatchObject({ candidates: [], missingFacts: missing, coverage: 'partial' });
       expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
     }
@@ -675,7 +686,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
       sections: [{ key: 'nature', markdown: `Thuế nhập khẩu của dòng này là 8%. ${PHOTO_WALK.sections[0]!.markdown}` }, ...PHOTO_WALK.sections.slice(1)],
     };
     const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
-    const res = await svc.answer({ q: 'miếng dán bàn chân ngải cứu thì khai nhóm nào' });
+    const res = await svc.answer({ q: 'miếng dán bàn chân ngải cứu thì khai nhóm nào, phân tích chi tiết giúp mình' });
     expect(res).toMatchObject({ depth: 'full', tariffRef: [] });
     expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
     expect(res.answerMd).not.toContain('## II.');
@@ -683,13 +694,14 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
   });
 
   it('§4.1: the opener is the first section of the reply, not the first the model happened to emit', async () => {
-    // The reply renders in the owner's order, so the sentence §4.1 is about is the FACTS one whatever the model emitted first.
+    // The reply renders in the owner's order, so the sentence §4.1 is about is the first of that order, whatever the model
+    // emitted first: were it the flagged one, the whole reply would drop (coverage 'none').
     const flagged = 'Đây là trường hợp rủi ro thấp cho lô hàng này.';
     const walk = { ...PHOTO_WALK, sections: [{ key: 'conclusion', markdown: flagged }, ...PHOTO_WALK.sections.slice(0, 2)] };
     const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS });
     // 25 s left: the risk-score sentence is cut by code, never repaired.
     const res = await svc.answer({ ...PHOTO_BODY, deadlineAt: Date.now() + 25_000 });
-    expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
+    expect(res.coverage).not.toBe('none');
     expect(res.answerMd).not.toContain(flagged);
   });
 
@@ -721,7 +733,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     };
     const fixed = `Nhóm 30.05 gồm "${EN_QUOTE}" [1] và loại có lớp dính tách riêng.`;
     const { svc, prompts } = setup({ plan: PHOTO_PLAN, walks: [bad], repairs: [{ sentences: [fixed] }], sources: [EN3005], hsRows: HS_ROWS });
-    const res = await svc.answer(PHOTO_BODY);
+    const res = await svc.answer(PHOTO_FULL);
     const [repair] = prompts(undefined);
     expect(repair!.prompt).toContain('thuế nhập khẩu của dòng này là 8%');
     expect(repair!.prompt).toContain(`TRÍCH DẪN: "${EN_QUOTE}"`);
@@ -970,7 +982,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
 
     const ruling = photo();
     ruling.confirmation.matchByProduct.mockRejectedValue(new Error('db down'));
-    const res = await ruling.svc.answer(PHOTO_BODY);
+    const res = await ruling.svc.answer(PHOTO_FULL);
     expect([res.ruling, res.answerMd.startsWith(`## ${SECTION_TITLES.facts}`), res.cut]).toEqual([null, true, 0]);
   });
 

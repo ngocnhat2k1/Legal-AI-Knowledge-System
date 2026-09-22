@@ -75,12 +75,17 @@ và không thêm service có trạng thái nào (postgres-only ADR).
 - `topic` là **cột thật** (queryable) vì nó là thứ quyết định nhánh.
 - `state` là `jsonb` vì hình dạng của nó là việc của bot, không phải của DB: `{tariff:{…}, legal:{…}}`
   — những gì lượt sau được phép trỏ tới.
-- API: `GET /conversation`, `POST /conversation/turn`.
+- API: `GET /conversation`, `GET /conversation/quoted`, `POST /conversation/turn`.
   Quy ước vá: **thiếu trường = giữ nguyên, `null` = xoá** — "tôi đã trả lời, nhưng lượt sau không
   còn gì để trỏ tới" là một kết quả thật và phải nói ra được.
 
 **Phạm vi:** bộ nhớ theo TỪNG NGƯỜI trong thread, không phải theo nhóm. Hai người trong một nhóm Zalo
 giữ hai hội thoại riêng; ngữ cảnh chéo người vẫn đến qua tin được quote như cũ.
+Tin được quote là câu **bot** đáp thì chữ của nó hiếm khi nhắc lại câu hỏi: bot hỏi `GET /conversation/quoted`
+(khớp chữ tin quote với lượt bot trong cả thread, mọi người; tin lỗi của bot giống nhau cho mọi người nên chọn lượt gần
+`quote.ts` nhất) để lấy câu hỏi mà câu đáp đó trả lời, rồi gửi bước
+kế hoạch `"<người hỏi> hỏi: … — bot đáp: …"`. Có từ 2026-09-22: "trả lời lại đi" reply vào tin lỗi dưới câu hỏi
+của đồng nghiệp đã trả lời câu hỏi cũ của chính người reply, vì bộ nhớ riêng của họ là thứ duy nhất bot thấy.
 
 `state.tariff.at` đóng dấu thời điểm tạo ra kết quả thuế, nên "còn hiệu lực" tính theo CHÍNH nó
 (2 giờ) chứ không theo độ tươi của cuộc chat.

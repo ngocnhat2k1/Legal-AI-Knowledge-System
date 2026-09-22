@@ -22,11 +22,11 @@ import { pathToFileURL } from 'node:url';
 import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 
 import { answerByHs, answerImage, codeOffer, handleConfirm, handleCorrection, noCodes } from './answer.mjs';
-import { ackIngestReports, answer, confirmations, ingestReports, legalProvision, lookupFull, requestIngest, verifyDocument } from './api.mjs';
+import { ackIngestReports, answer, confirmations, ingestReports, legalProvision, lookupFull, quotedQuestion, requestIngest, verifyDocument } from './api.mjs';
 import { loadContext, nextState, saveContext, stampTariff } from './conversation.mjs';
-import { fastPath, fold, guardIntent, isBareLookup, isOkay, parseVerifyDocCommand, plainVerdict, readsAsQuestion, unlikeTariffReply } from './dispatch.mjs';
+import { asksSources, onlyAsksSources, fastPath, fold, guardIntent, isBareLookup, isOkay, parseVerifyDocCommand, plainVerdict, readsAsQuestion, unlikeTariffReply } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
-import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatMissingDoc, formatModelDown, formatProvisions, sanitizeLead } from './format.mjs';
+import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatMissingDoc, formatModelDown, formatProvisions, sanitizeLead, sourceLines, sourcesOf } from './format.mjs';
 import { missingKind, parseQuery, stripMentions, todayVN } from './parse.mjs';
 import { L, render, toText } from './render.mjs';
 
@@ -112,6 +112,8 @@ const LEGAL_MODES = ['legal', 'status', 'mixed'];
 /** Owner decision Q1 takes about 40 s of prose above a rate; past this the block goes out alone and the API stops too. */
 const PROSE_BUDGET_MS = 45_000;
 
+const flat = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
+
 /** Plan text as memory may keep it (R4): masked by the API, its [mã n] labels dropped, and the runs that mask misses too (noCodes). */
 const asked = (plan) => noCodes(plan.question);
 
@@ -166,7 +168,7 @@ async function rateWithProse(q, body, showFooter, plan = {}) {
   if (!res?.answerMd?.trim() || !byHs.tariff) return byHs;
   // One formatAnswerMd call: the block's [n] continue after the prose sources, and its scope warning stays with the rates (R10).
   const lookup = { q, tariff: byHs.tariff.snapshot, confirm: byHs.confirm };
-  return { ...byHs, text: formatAnswerMd({ ...res, mode: 'tariff' }, { tariffLines: [lookup], showFooter }) };
+  return { ...byHs, text: formatAnswerMd({ ...res, mode: 'tariff' }, { tariffLines: [lookup], showFooter, sources: asksSources(body.q) }) };
 }
 
 /**
@@ -178,7 +180,6 @@ async function rateWithProse(q, body, showFooter, plan = {}) {
  */
 export async function respond({ text, image, quote, ctx, senderName, threadId, userId, notify, lastReplyElsewhere = false }) {
   const quoteText = String(quote?.msg || '');
-  const quoted = quoteText || null;
   const deadlineAt = new Date(Date.now() + ANSWER_BUDGET_MS).toISOString();
 
   // 0. "xác nhận văn bản <số hiệu>" — người đọc đứng ra bảo đảm cho một văn bản bot tự
@@ -229,6 +230,16 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   // 2. Ảnh: vision nhận diện mặt hàng rồi đi tiếp đường tra thuế tất định.
   if (image) return { ...(await answerImage(image.imageUrls, text)), intent: 'tariff' };
 
+  // "nguồn đâu?" on the last composed reply: its sources from memory, no model call (owner, 2026-09-22: sources only when
+  // asked). The reply they belong to must be the one asked about: the quoted one, or with no quote the bot's last message —
+  // after "Mình chưa tìm thấy căn cứ…" they would be another question's.
+  const last = ctx.state?.answer;
+  const lastBot = [...(ctx.turns ?? [])].reverse().find((t) => t.role === 'bot')?.body;
+  if (onlyAsksSources(text) && last?.sources?.length && last.head && flat(quoteText || lastBot).startsWith(last.head)) {
+    return { text: sourceLines(last.sources), intent: 'general' };
+  }
+  const quoted = quoteText || null;
+
   // 3. Chỉ có mã + xuất xứ + từ tra thuế: tra thẳng, kèm vài câu giải thích soạn song song (Q1), không ack. Câu có nội
   // dung khác ("e tham khảo mã 30051010 không biết được không ạ") hỏi mã có hợp với hàng không: để bước kế hoạch đọc (R4).
   // Lời mời "đúng/sai" ở lượt tra thật đầu tiên (D3b): chưa có kết quả tra nào đang chờ, kể cả ngay sau câu ứng viên.
@@ -247,8 +258,14 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   // POST /answer từ chối câu quá 2.000 ký tự: "thử lại sau" không bao giờ giúp được.
   if (text.length > 2000) return { text: TOO_LONG, intent: 'general' };
 
+  // A quoted bot reply rarely restates what it answered, and in a group that question is often a colleague's, outside this
+  // person's memory: "trả lời lại đi" on the bot's error under Chi's question answered the replier's own older one (2026-09-22).
+  // The bot's error lines read the same for everyone, so the quoted message's time picks which one it was.
+  const prior = quoteText ? await quotedQuestion(threadId, quoteText, quote?.ts) : null;
+  const withAsker = prior?.question ? `${prior.staffName || 'Người trong nhóm'} hỏi: ${prior.question.slice(0, 200)} — bot đáp: ${quoteText}` : quoted;
+
   // 4. Bước kế hoạch trên API: đọc cả hội thoại với mã đã che (R4). Không đọc được thì nói thật — không đoán bằng tra mã.
-  const base = { q: text, quote: quoted, context: { topic: ctx.topic, state: ctx.state, turns: ctx.turns }, deadlineAt };
+  const base = { q: text, quote: withAsker, context: { topic: ctx.topic, state: ctx.state, turns: ctx.turns }, deadlineAt };
   const res = await answer({ ...base, planOnly: true });
   const plan = res?.plan;
   if (!plan) return { text: NOT_READ, intent: 'general' };
@@ -342,7 +359,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     );
     tariffLines = blocks.filter(Boolean);
   }
-  const lines = formatAnswerMd(composed, { tariffLines });
+  const lines = formatAnswerMd(composed, { tariffLines, sources: asksSources(text) });
   // No call ran and nothing came back: retrieval found no source, and "thử lại sau" would never help. A line the code writes (a
   // user code missing from the catalogue) still prints above the honest sentence.
   // ponytail: calls 0 is also the API failing closed (deadline, dropped prompt part); an API `reason` field tells them apart.
@@ -360,7 +377,9 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     mode === 'hs'
       ? { topic: 'tariff', tariff: candidates.length ? stampTariff({ hs: null, candidates, desc: facts.join(', '), keywords }) : null }
       : { topic: 'legal', legal: legalMemory(plan, composed.citations ?? [], composed.asOf) };
-  return { text: lines, ...memory, answer: { mode, question: asked(plan), goods: { facts }, at: new Date().toISOString() }, intent };
+  // `sources` and the reply's opening words (`head`) answer a later "nguồn?", also when it quotes this reply.
+  const answered = { mode, question: asked(plan), goods: { facts }, at: new Date().toISOString(), sources: sourcesOf(composed.citations).slice(0, 8), head: flat(render(lines)[0]?.msg).slice(0, 60) };
+  return { text: lines, ...memory, answer: answered, intent };
 }
 
 // --- Main -------------------------------------------------------------------

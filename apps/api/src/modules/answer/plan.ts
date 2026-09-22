@@ -340,6 +340,7 @@ export const PLAN_TIMEOUT_MS = 30_000;
 export const PLAN_SYSTEM = [
   'Bạn là bước KẾ HOẠCH của trợ lý biểu thuế + pháp luật Việt Nam, đang đọc tin nhắn của một chuyên viên xuất nhập khẩu.',
   'Đọc CẢ hội thoại, HIỂU người hỏi thật sự cần gì, rồi trả về đúng một JSON một dòng, không chữ nào ngoài JSON.',
+  'Có TIN ĐƯỢC TRẢ LỜI thì tin mới nói về tin đó trước hết ("trả lời lại đi" là trả lời lại câu hỏi trong đó): trong nhóm, đó có thể là câu của người khác, không phải chủ đề cũ của người đang nhắn.',
   'Mọi mã và nhóm HS đã được thay bằng [mã 1], [mã 2]…: bạn không thấy chữ số, đừng đoán chúng. Không phải câu nào có mã cũng là hỏi thuế.',
   '',
   'intent:',

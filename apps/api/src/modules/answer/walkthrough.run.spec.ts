@@ -431,6 +431,10 @@ describe('flatten — the sectioned report of the owner sample', () => {
     // md() renders "## ", "- ", "**…**" and nothing else: no table, no HTML, no heading of another depth.
     expect(md).not.toMatch(/^\s*\|.*\|\s*$|<\/?[a-z][^>]*>|^\s*(?:#|#{3,})\s/m);
     expect(flatten([], '')).toBe('');
+    // The brief reply (owner, 2026-09-22): the same sections in the same order, as plain paragraphs.
+    const plain = flatten(out.sections, '', '', false);
+    expect(plain).not.toMatch(/^#/m);
+    expect(plain.split('\n\n')).toEqual(md.split('\n\n').filter((p) => !/^## (?:I\.|CHÍNH)/.test(p)).map((p) => p.replace(/^## .*\n/, '')));
   });
 
   it('the owner section titles are his, key by key (agreed 2026-09-15)', () => {
