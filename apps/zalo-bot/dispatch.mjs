@@ -172,6 +172,14 @@ const GREETINGS = ['hi', 'hello', 'hey', 'alo', 'chao', 'xin chao', 'chao bot', 
 export const isGreeting = (text) => GREETINGS.includes(fold(text).replace(/[.!,?…\s]+$/g, '').trim());
 
 /**
+ * A bare ask for the guide ("help", "hướng dẫn", "cái này dùng sao?"): the usage guide, written by code (owner 2026-09-22).
+ * The whole message must be the ask — "hướng dẫn sử dụng máy ghép đùn" is goods, and "cách dùng của hàng này" a question.
+ */
+const HELP_ASK =
+  /^(?:cai nay |bot |ban |minh )?(?:\/?help|\/?huong dan(?: su dung)?|cach (?:dung|su dung)|(?:dung|su dung|xai) (?:sao|the nao|nhu the nao)|(?:lam|giup) duoc gi|tro giup|menu|hd)(?: (?:a|ay|vay|nhi|nhe|ban|oi|the|di|voi|nay))*$/;
+export const isHelp = (text) => HELP_ASK.test(fold(text).replace(/[.!,?…]+/g, ' ').replace(/\s+/g, ' ').trim());
+
+/**
  * A quoted bot reply that looked a code up: a line only the tariff lead or a verdict reply writes, at the start of a line.
  * Any reply naming a code is not one: "Mã 3005.10.10 bạn tham khảo thuộc nhóm 30.05…" (a code check) quoted with "sai
  * rồi" would record the user's own code as wrong, and model prose may say "MFN" or "Cảm ơn" anywhere.
@@ -272,6 +280,7 @@ export function fastPath({ text, hasImage = false, quoteText = '', topic = null,
   // Only while the thread is still on that document: a later answer asking "hàng có tẩm dược chất không?" gets a "có" too.
   if (pendingIngest && topic === 'legal' && isAcceptIngest(text) && !hasImage) return { action: 'ingest' };
   if (!hasImage && isGreeting(text)) return { action: 'greeting' };
+  if (!hasImage && isHelp(text)) return { action: 'help' };
 
   // The closed grammar (ruling): nothing else reaches handleConfirm or handleCorrection. On a legal thread a verdict word is
   // ordinary agreement and writes nothing to the trail.

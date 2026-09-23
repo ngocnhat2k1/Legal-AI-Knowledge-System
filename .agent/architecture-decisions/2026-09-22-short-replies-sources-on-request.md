@@ -46,6 +46,20 @@ sách nguồn ở cuối").
 - "nguồn?" quote một câu trả lời cũ hơn câu vừa rồi đi bước kế hoạch và soạn lại (bộ nhớ chỉ giữ nguồn của câu cuối).
 - Cần theo dõi trên Zalo: `brief` có còn đủ lập luận cho câu khó không.
 
+## Cập nhật 2026-09-23 (chủ dự án xem câu trả lời thật: "vẫn thấy loãng")
+
+5. **Bản gọn siết thêm**: 130 từ (trước 170), trần ký tự 1.100 (trước 1.500). Prompt: câu đầu nói ngay nhóm nào còn đứng
+   và dữ kiện nào quyết định; không mở bài, không kể lại cách mình tra ("hướng dò đầu tiên", "mình đọc chú giải"); mỗi
+   nhóm nói một lần, lý do không lặp ở đoạn sau. Câu thật ngày 22/09 mở bài bằng mô tả lại hàng rồi nhắc lại lý do của
+   82.08 ở hai đoạn.
+6. **Bỏ dòng "Một phần câu trả lời bị lược vì không dẫn được nguồn."**: người đọc không làm gì được với nó; số câu bị cắt
+   vẫn ở `cut` trong log của API.
+7. **Hướng dẫn sử dụng** (chủ dự án yêu cầu): tin chỉ gồm "help", "hướng dẫn", "cách dùng", "cái này dùng sao", "trợ giúp",
+   "menu"… (`isHelp`, cả message phải là lời hỏi — "hướng dẫn sử dụng máy ghép đùn" là hàng) thì in `HELP` trong
+   `format.mjs`: ba việc bot làm + các lệnh có thật sau câu trả lời ("nguồn", "phân tích chi tiết", "đúng"/"sai"/"HS đúng
+   là …", "nạp", "xác nhận văn bản …") + lưu ý phải tag trong nhóm và mã là ứng viên. Do code viết, không gọi mô hình,
+   một tin.
+
 ## Links
 
 - Code: `apps/api/src/modules/answer/answer.service.ts` (`WANTS_FULL`), `walkthrough.ts` (`DEPTH`), `apps/zalo-bot/format.mjs` (`formatAnswerMd`, `sourceLines`), `apps/zalo-bot/index.mjs`

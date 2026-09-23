@@ -113,7 +113,7 @@ describe('buildWalkthroughPrompt', () => {
 
   it('gives brief and full their own word cap and heading instructions', () => {
     const brief = buildWalkthroughPrompt({ ...input, depth: 'brief' });
-    expect(brief).toContain('Độ sâu brief: tối đa khoảng 170 từ');
+    expect(brief).toContain('Độ sâu brief: tối đa khoảng 130 từ');
     expect(brief).not.toContain('Độ sâu full');
     expect(prompt).toContain('Độ sâu full: viết đủ tám mục');
     expect(prompt).not.toContain('Độ sâu brief');
@@ -134,7 +134,11 @@ describe('buildWalkthroughPrompt', () => {
     expect(prompt).not.toContain('đó không phải dàn bài');
     // brief is the short continuous answer: one message, no headings, no outline, no section written only to say it is empty.
     const brief = buildWalkthroughPrompt({ ...input, depth: 'brief' });
-    expect(brief).toContain('Độ sâu brief: tối đa khoảng 170 từ');
+    expect(brief).toContain('Độ sâu brief: tối đa khoảng 130 từ');
+    // Owner 2026-09-22 ("loãng"): answer first, no narration of the search, each heading said once.
+    expect(brief).toContain('Câu đầu nói ngay nhóm nào còn đứng');
+    expect(brief).toContain('không kể lại cách mình tra');
+    expect(brief).toContain('Mỗi nhóm nói một lần');
     expect(brief).toContain('bỏ mục không có gì');
     expect(brief).not.toContain('viết đủ tám mục');
     // The 8-digit line is a JSON pick the system prints under its heading, never a code in the prose (G5 cuts it there).
@@ -478,8 +482,8 @@ describe('validateWalkthrough', () => {
   it('length and markdown: brief is one message without headings, full shows no template; Zalo renders no tables or emoji', () => {
     const brief = { ...input, depth: 'brief' as const };
     const used = good().sections.reduce((n, s) => n + s.markdown.length, 0);
-    expect(rules(withSection('nature', 'a'.repeat(1501 - used)), brief)).toEqual(['walkthrough-length']);
-    expect(rules(withSection('nature', 'a'.repeat(1500 - used)), brief)).toEqual([]);
+    expect(rules(withSection('nature', 'a'.repeat(1101 - used)), brief)).toEqual(['walkthrough-length']);
+    expect(rules(withSection('nature', 'a'.repeat(1100 - used)), brief)).toEqual([]);
     expect(rules(withSection('nature', 'a'.repeat(4201 - used)))).toEqual(['walkthrough-length']);
     expect(rules(withSection('nature', 'a'.repeat(4200 - used)))).toEqual([]);
     expect(rules(withSection('nature', '## Bản chất\nHàng là miếng dán.'), brief)).toEqual(['walkthrough-brief-headings']);

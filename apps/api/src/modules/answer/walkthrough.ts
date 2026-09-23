@@ -33,7 +33,7 @@ Mỗi mục dưới đây là một phần tử của sections, gắn đúng key
 const DEPTH: Record<ClassifyInput['depth'], string> = {
   // Owner, 2026-09-22: the default reply. Every section written in full came out as four Zalo messages of filler.
   brief:
-    'Độ sâu brief: tối đa khoảng 170 từ kể cả phần chép nguyên văn, 2–3 đoạn liền, không "## ". Chỉ viết mục nào có điều cần nói cho câu hỏi này (thường là nature, explanation, conclusion); bỏ mục không có gì, không viết câu kiểu "chưa có nhóm nào phải loại trừ", không nhắc lại mô tả hàng người hỏi đã viết. Mỗi nhóm còn đứng ở conclusion có ít nhất một câu kèm [#id] nói vì sao nó còn đứng. Nhóm nào có mã ở tariff_ref thì một câu nói dữ kiện nào dẫn tới dòng đó, gọi dòng bằng câu chữ của nó, không viết mã 8 số.',
+    'Độ sâu brief: tối đa khoảng 130 từ kể cả phần chép nguyên văn, 2–3 đoạn liền, không "## ". Câu đầu nói ngay nhóm nào còn đứng và dữ kiện nào quyết định — không mở bài, không kể lại cách mình tra ("hướng dò đầu tiên", "mình đọc chú giải"), không nhắc lại mô tả hàng người hỏi đã viết. Mỗi nhóm nói một lần, ở một chỗ: lý do nhóm còn đứng, nhóm bị loại và dữ kiện còn thiếu không lặp lại ở đoạn sau. Chỉ viết mục nào có điều cần nói (thường là nature, explanation, conclusion); bỏ mục không có gì, không viết câu kiểu "chưa có nhóm nào phải loại trừ". Mỗi nhóm còn đứng ở conclusion có ít nhất một câu kèm [#id] nói vì sao nó còn đứng. Nhóm nào có mã ở tariff_ref thì nói dữ kiện nào dẫn tới dòng đó ngay trong câu ấy, gọi dòng bằng câu chữ của nó, không viết mã 8 số.',
   // 300 words asked came back as 526 in 103 s on crimper, 220 words with quotes in 107 s (2026-09-15); the model overshoots
   // word caps by 30–75%, and quotes add length.
   full:

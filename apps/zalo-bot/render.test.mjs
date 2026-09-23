@@ -10,8 +10,8 @@ import { test } from 'node:test';
 
 import { TextStyle } from 'zca-js';
 
-import { offerReply, tariffReply } from './dispatch.mjs';
-import { formatAnswer, formatAnswerMd, sourceLines, sourcesOf } from './format.mjs';
+import { fastPath, offerReply, tariffReply } from './dispatch.mjs';
+import { formatAnswer, formatAnswerMd, HELP, sourceLines, sourcesOf } from './format.mjs';
 import { L, md, render, ST, toText } from './render.mjs';
 
 const texts = (p, st) => p.styles.filter((s) => s.st === st).map((s) => p.msg.slice(s.start, s.start + s.len));
@@ -168,16 +168,12 @@ const R5 = 'Hàng khó chốt thì có thể đề nghị hải quan xác địn
 /** A line every hs reply used to end with, dropped as boilerplate (owner, 2026-09-22): asserted never to print. */
 const HINT = 'Cần xem thuế của mã nào thì nhắn mã đó kèm xuất xứ.';
 const UNCHECKED = 'Có nguồn trích tự động, chưa có người đối chiếu; nhắn "nguồn" để xem.';
-const CUT = 'Một phần câu trả lời bị lược vì không dẫn được nguồn.';
+/** The bot's own note about trimmed sentences: nothing the asker can act on, dropped 2026-09-22 ("loãng"). */
+const CUT = 'Một phần câu trả lời bị lược';
 
-// coverage 'none' is what the API sets when §4.1 dropped every sentence the model wrote; the prose that is left is the
-// goods section code writes, so "một phần" would be false. `written` used to carry this and stopped when the dropped
-// path began keeping code's sections (2026-09-15).
-test('the trimming note never says "một phần" when none of the prose stood', () => {
-  const some = formatAnswerMd({ ...HS_PHOTO, cut: 2, coverage: 'partial', answerMd: '## I. THÔNG TIN HÀNG HÓA\nBạn đã cho biết:\n- thép' });
-  assert.ok(toText(some).includes(CUT), 'a partly cut answer still says a part was trimmed');
-  const none = formatAnswerMd({ ...HS_PHOTO, cut: 2, coverage: 'none', answerMd: '## I. THÔNG TIN HÀNG HÓA\nBạn đã cho biết:\n- thép' });
-  assert.ok(!toText(none).includes(CUT), toText(none));
+test('không còn dòng "bị lược": câu trả lời chỉ mang những gì đứng được', () => {
+  for (const coverage of ['partial', 'none'])
+    assert.ok(!toText(formatAnswerMd({ ...HS_PHOTO, cut: 2, coverage, answerMd: '## I. THÔNG TIN HÀNG HÓA\nBạn đã cho biết:\n- thép' })).includes(CUT));
 });
 const cite = (n, over) => ({
   n, key: `e:${n}`, kind: 'en', label: '', instrument: 'CV 1810/TCHQ-TXNK', hsHeading: null, quotes: [], authority: 'authoritative',
@@ -570,14 +566,8 @@ test('formatAnswerMd: văn xuôi bị lược hết mà còn nguồn thì mở b
   const res = { ...HS_PHOTO, mode: 'legal', userCodes: [], candidates: [], answerMd: '', cut: 2 };
   const rows = rowsOf(formatAnswerMd(res));
   assert.match(rows[0], /^Mình chưa viết được câu trả lời/);
-  assert.ok(!rows.includes(CUT));
+  assert.ok(!toText(formatAnswerMd(res)).includes(CUT));
   assert.equal(toText(formatAnswerMd({ ...res, citations: [] })).trim(), '', 'bot nói thật thay cho một dòng "bị lược" đứng một mình');
-});
-
-test('formatAnswerMd: cut > 0 thêm đúng một dòng "bị lược"', () => {
-  const count = (res) => rowsOf(formatAnswerMd(res)).filter((l) => l === CUT).length;
-  assert.equal(count(HS_PHOTO), 0);
-  assert.equal(count({ ...HS_PHOTO, cut: 2 }), 1);
 });
 
 test('formatAnswerMd: chú giải chưa có hiệu lực / sắp hết hiệu lực vẫn nói ngày khi ẩn nguồn, và nói trên dòng nguồn khi hỏi (R8, review 2026-09-22)', () => {
@@ -639,4 +629,15 @@ test('formatAnswerMd: dòng 8 số giữ tên của chính nó (phần lá), c�
   assert.equal(row('8471.30.90', `${parent} › Loại khác`), '↳ 8471.30.90 · … › Loại khác');
   // Parents stay while they fit.
   assert.equal(row('8202.99.10', 'Lưỡi cưa khác › Loại khác › Lưỡi cưa thẳng'), '↳ 8202.99.10 · Lưỡi cưa khác › Loại khác › Lưỡi cưa thẳng');
+});
+
+test('HELP: hướng dẫn do code viết, một tin, chỉ nêu những lệnh bot thật sự đọc (owner 2026-09-22)', () => {
+  const parts = render(HELP);
+  assert.equal(parts.length, 1, `${parts.length} tin`);
+  const text = parts[0].msg;
+  for (const s of ['Mình giúp được ba việc:', '"nguồn"', '"phân tích chi tiết"', '"HS đúng là 8208.90.00"', '"nạp"', 'xác nhận văn bản', 'tag @ mình']) assert.ok(text.includes(s), s);
+  // Quoted back with a verdict word the guide rules nothing: it is no lookup, and its example reads as an offer, which never
+  // writes either (R13).
+  assert.equal(tariffReply(text), false);
+  assert.equal(fastPath({ text: 'đúng', quoteText: text, topic: 'tariff', tariffFresh: true, table: { hs: '84818099', origin: null, date: '2026-09-22', open: true } }), null);
 });
