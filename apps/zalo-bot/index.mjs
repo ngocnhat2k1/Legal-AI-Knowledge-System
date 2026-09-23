@@ -26,7 +26,7 @@ import { ackIngestReports, answer, confirmations, ingestReports, legalProvision,
 import { loadContext, nextState, saveContext, stampTariff } from './conversation.mjs';
 import { asksSources, onlyAsksSources, fastPath, fold, guardIntent, isBareLookup, isOkay, parseVerifyDocCommand, plainVerdict, readsAsQuestion, unlikeTariffReply } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
-import { CAPABILITIES, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatMissingDoc, formatModelDown, formatProvisions, sanitizeLead, sourceLines, sourcesOf } from './format.mjs';
+import { CAPABILITIES, HELP, formatAnswerMd, formatGeneral, formatIngestQueued, formatIngestReport, formatMissingDoc, formatModelDown, formatProvisions, sanitizeLead, sourceLines, sourcesOf } from './format.mjs';
 import { missingKind, parseQuery, stripMentions, todayVN } from './parse.mjs';
 import { L, render, toText } from './render.mjs';
 
@@ -222,6 +222,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
     };
   }
   if (fast?.action === 'greeting') return { text: CAPABILITIES, topic: 'general', intent: 'general' };
+  if (fast?.action === 'help') return { text: HELP, topic: 'general', intent: 'general' };
   if (fast?.action === 'confirm') return { ...(await handleConfirm(ctx.tariff, fast.verdict, senderName)), intent: 'confirm' };
   if (fast?.action === 'correction') return { ...(await handleCorrection(ctx.tariff, text, senderName, quote)), intent: 'correction' };
   // Phán quyết trên ảnh (trả lời ảnh, hay chú thích ảnh mới): lời mời nêu kết quả đang nhớ, không ghi, không chạy lại vision (R13).

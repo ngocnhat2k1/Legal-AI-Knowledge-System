@@ -64,6 +64,14 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 
 ---
 
+### 2026-09-23 — Câu trả lời còn loãng; thêm hướng dẫn sử dụng
+
+- Chủ dự án xem câu trả lời thật (lưỡi dao, 22/09 23:33): mã 8 số đã ra đúng chỗ (82.08 → 8208.90.00; 82.02 không có dòng
+  vì mô hình không chọn được — đúng thiết kế), nhưng văn xuôi mở bài kể lại quá trình dò và lặp lý do 82.08.
+- Siết bản gọn: 130 từ, trần 1.100 ký tự, prompt cấm mở bài và cấm lặp; bỏ dòng "Một phần câu trả lời bị lược".
+- Thêm `isHelp` + `HELP`: "help"/"hướng dẫn"/"cách dùng"/"cái này dùng sao" → hướng dẫn một tin do code viết.
+  [ADR cập nhật](../architecture-decisions/2026-09-22-short-replies-sources-on-request.md).
+
 ### 2026-09-22 (tiếp) — "hs code 8 số nhưng nó mới trả lời 4 số"
 
 - **Gốc.** Bản gọn dừng ở nhóm 4 số. Và báo cáo `full` cũng chưa từng ra mã 8 số có lập luận: G5 cắt mọi mã 8 số trong văn

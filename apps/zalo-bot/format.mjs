@@ -476,10 +476,6 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false, sour
           ...(sourcesOf(cites).some((x) => x.auto) ? [L([UNCHECKED_SOURCES], 'note')] : []),
         ]),
   );
-  // All of it cut: the API says so in the answer itself (CUT_ALL) or through NO_PROSE above, and "một phần" would be
-  // false. `written` stopped meaning "some prose stood" when a dropped walkthrough began keeping code's own sections;
-  // coverage 'none' is what the API sets exactly then.
-  if (res.cut > 0 && written && res.coverage !== 'none') lines.push(L(['Một phần câu trả lời bị lược vì không dẫn được nguồn.'], 'note'));
   // Two tariff blocks carry the same scope warning; render would merge it into one orange line saying it twice.
   const seen = new Set();
   return lines.filter((l) => !l.marks?.includes('warn') || (!seen.has(toText([l])) && seen.add(toText([l]))));
@@ -576,6 +572,22 @@ export const CAPABILITIES = [
   L([['Đối chiếu mã HS', 'b'], ' bạn đang tham khảo với mô tả hàng, giải thích chú giải và căn cứ phân loại.'], 'ol'),
   L([['Văn bản pháp luật hải quan', 'b'], ' — hỏi nội dung văn bản mình đang có; chưa có thì mình tìm trên Công báo và nạp về.'], 'ol'),
   L([['Ví dụ: "thuế nhập khẩu 8481.80.99 xuất xứ Trung Quốc"', 'i']]),
+];
+
+/**
+ * The usage guide ("help", "hướng dẫn", "dùng sao"), written here and never by a model (owner request 2026-09-22). Every
+ * word in it is a message the bot really reads: the three jobs, then what to send after an answer.
+ */
+export const HELP = [
+  ...CAPABILITIES,
+  L([]),
+  L(['Sau mỗi câu trả lời, nhắn tiếp:']),
+  L([['"nguồn"', 'b'], ' — xem căn cứ mình đã dùng, kèm link toàn văn nếu có.'], 'ul'),
+  L([['"phân tích chi tiết"', 'b'], ' — báo cáo đầy đủ: bản chất hàng, các nhóm bị loại, quy tắc GIR, chính sách chuyên ngành, khối thuế của dòng đề xuất. Lâu hơn, dài hơn.'], 'ul'),
+  L([['"đúng"', 'b'], ' / ', ['"sai"', 'b'], ' ngay sau một lượt tra thuế, hoặc ', ['"HS đúng là 8208.90.00"', 'b'], ' — ghi lại phán quyết của bạn để lần sau mình ưu tiên mã đó cho hàng tương tự.'], 'ul'),
+  L([['"nạp"', 'b'], ' khi mình báo chưa có văn bản bạn hỏi; ', ['"xác nhận văn bản 36/2025/TT-BKHCN"', 'b'], ' sau khi bạn đã đối chiếu bản gốc.'], 'ul'),
+  L([]),
+  L(['Trong nhóm, tag @ mình thì mình mới đọc. Mã mình đưa là ứng viên kèm căn cứ để chuyên viên chốt, không phải quyết định — hàng khó thì đề nghị hải quan xác định trước mã số.'], 'note'),
 ];
 
 /**

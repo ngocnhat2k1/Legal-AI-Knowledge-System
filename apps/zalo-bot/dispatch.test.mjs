@@ -2005,3 +2005,12 @@ test('câu hs gọn có dòng 8 số dưới nhóm (2026-09-22): không tra /tar
   const agree = await c.say('đúng', fakeApi({ planned: plannedOf(plan08({ intent: 'confirm', verdict: 'correct', goods: { facts: [], missing: [] } }), { codeRole: 'none' }) }));
   assert.equal(agree.confirms.length, 0);
 });
+
+test('isHelp: "help", "hướng dẫn", "cái này dùng sao" bung hướng dẫn; mô tả hàng có chữ "hướng dẫn"/"cách dùng" thì không', () => {
+  for (const t of ['help', '/help', 'hướng dẫn', 'Hướng dẫn sử dụng', 'cách dùng', 'cách sử dụng', 'cái này dùng sao?', 'bot dùng thế nào', 'bot làm được gì', 'trợ giúp', 'menu', 'hd', 'xài sao vậy'])
+    assert.equal(fastPath({ text: t })?.action, 'help', t);
+  for (const t of ['hướng dẫn sử dụng máy ghép đùn mã hs gì', 'cách dùng của hàng này là gì', 'hs code lưỡi dao răng cưa', 'nguồn', 'đúng', 'chào bot'])
+    assert.notEqual(fastPath({ text: t })?.action, 'help', t);
+  // An image with a caption is goods, never the guide.
+  assert.equal(fastPath({ text: 'hướng dẫn', hasImage: true })?.action, undefined);
+});

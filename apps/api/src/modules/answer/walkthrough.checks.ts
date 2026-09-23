@@ -203,7 +203,7 @@ const REASONED = /lập luận|căn cứ (?:vào |theo )?(?:chú giải|quy tắ
 
 /** Characters of markdown (agreed 2026-09-14): 170 and 220 words asked, overshoot 30–75%, ~4.6 characters a word. */
 // full carries nine titled sections with their verbatim quotes, not three merged ones: 2700 cut the report in half.
-const CAP = { brief: 1500, full: 4200 } as const;
+const CAP = { brief: 1100, full: 4200 } as const;
 /** The runner prints the section titles itself (walkthrough.run.ts SECTION_TITLES), so a heading the model writes is a
  * second title over the same text. It used to name its own, capped at three, when it merged the sections. */
 const MAX_FULL_HEADINGS = 0;
