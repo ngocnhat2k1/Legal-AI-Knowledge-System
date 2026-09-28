@@ -386,13 +386,14 @@ export function factsBlock(goods: { facts: string[]; missing: string[] }): strin
  * reasoning is missing. Nothing here is the model's, so it costs no time and cannot be wrong — and it is what R3/R5 want
  * said anyway. Empty when the planner read no goods at all, and then the bot prints its sources as before.
  */
-export const UNFINISHED = 'Mình chưa kịp viết phần lập luận cho câu này. Bạn nhắn lại để mình đọc chú giải kỹ hơn nhé.';
+export const UNFINISHED =
+  'Mình chưa kịp viết phần lập luận cho câu này. Bạn nhắn lại kèm một hai dữ kiện của hàng (chất liệu, công dụng, cách đóng gói) — câu càng rõ mình càng ít nhóm phải cân, trả lời sẽ kịp.';
 /** The model DID write the reasoning here; every sentence of it failed the guards, so the wording differs from UNFINISHED. */
 export const CUT_ALL = 'Phần lập luận mình viết không dẫn đủ nguồn nên đã bị lược hết; ở trên chỉ là dữ kiện bạn nêu. Bạn nhắn lại để mình đọc chú giải kỹ hơn nhé.';
 
-export function unfinished(goods: { facts: string[]; missing: string[] }): string {
+export function unfinished(goods: { facts: string[]; missing: string[] }, titled = true): string {
   const facts = factsBlock(goods);
-  return facts ? `${flatten([], '', facts)}\n\n${UNFINISHED}` : '';
+  return facts ? `${flatten([], '', facts, titled)}\n\n${UNFINISHED}` : '';
 }
 
 /**
