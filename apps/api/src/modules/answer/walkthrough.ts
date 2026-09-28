@@ -62,9 +62,9 @@ JSON:
 - candidates: mỗi NHÓM in bên dưới đúng một mục, không bỏ nhóm nào. phu_hop: dữ kiện đã có khớp câu chữ nhóm và chú giải; co_the_neu: khớp nếu một dữ kiện chưa rõ đúng; loai: Chú giải hoặc Chú giải chi tiết đã dẫn loại nhóm (có cite_ids); chua_du_du_kien: dữ kiện đã có chưa đủ để xét. cite_ids của nhóm: id của Chú giải, GIR, dòng in dưới nhóm đó hoặc dòng có nêu nhóm đó.
 - conclusion: headings tối đa 3 nhóm còn đứng, không nhóm nào đứng thì []; needs_advance_ruling true khi ≥2 nhóm cùng phu_hop hoặc thiếu dữ kiện quyết định.
 - deciding_facts ≤3, missing_facts ≤3, mỗi mục ≤12 từ.
-- tariff_ref: mỗi nhóm ở conclusion nhiều nhất một mã, là dòng trong LINES của nhóm đó mà dữ kiện người hỏi đã viết dẫn tới; dữ kiện chưa đủ để chọn một dòng thì không ghi mã nào cho nhóm đó. Hệ thống in mã và câu chữ của dòng dưới nhóm; trong sections không viết mã 8 số, gọi dòng bằng câu chữ của nó trong LINES.
+- tariff_ref: dòng 8 số trong LINES cho mỗi nhóm ở conclusion, {"code": "0000.00.00", "when": "…"}. Dữ kiện đã quyết thì một dòng, when rỗng. Chưa quyết thì ghi CẢ HAI dòng khả dĩ, mỗi dòng một when ≤ 10 từ nói dữ kiện phân định ("nếu có chất tạo màu", "nếu chỉ dưỡng ẩm"); đừng bỏ trống, người hỏi cần thấy mã đủ số. Nhiều hơn hai dòng một nhóm thì chọn hai dòng sát nhất. Hệ thống in mã, câu chữ của dòng và when dưới nhóm; trong sections không viết mã 8 số, gọi dòng bằng câu chữ của nó trong LINES.
 Chỉ trả một dòng JSON; cite_ids là số nguyên, deciding_facts và missing_facts là mảng; xuống dòng trong markdown viết \\n:
-{"sections":[{"key":"nature|candidates|exclusions|gir|levels|explanation|risk|conclusion","markdown":"…"}],"candidates":[{"heading":"00.00","assessment":"phu_hop|co_the_neu|loai|chua_du_du_kien","deciding_facts":["…"],"cite_ids":[0]}],"conclusion":{"headings":["00.00"],"needs_advance_ruling":false,"missing_facts":["…"]},"tariff_ref":["0000.00.00"]}`;
+{"sections":[{"key":"nature|candidates|exclusions|gir|levels|explanation|risk|conclusion","markdown":"…"}],"candidates":[{"heading":"00.00","assessment":"phu_hop|co_the_neu|loai|chua_du_du_kien","deciding_facts":["…"],"cite_ids":[0]}],"conclusion":{"headings":["00.00"],"needs_advance_ruling":false,"missing_facts":["…"]},"tariff_ref":[{"code":"0000.00.00","when":""}]}`;
 
 const STANDING: Record<Authority, string> = {
   binding: 'ràng buộc',
@@ -180,7 +180,7 @@ const lead = (m: string): string => /^[ \t]*/.exec(m)![0];
  * quotes: []. Drift read as meant: [# id]; lists; an old-style [n] as the section's own cite_ids (or cites) [n-1], one out of
  * range dropped; a bare [id] only where its sentence quotes that row, since a per-section [1] may be a small GRI id; a
  * section's quotes map {"id": [...]} under the same body check. tariff_ref is the given LINES codes it names, dotted and
- * deduped; candidates keep only given cite_ids.
+ * deduped, each with the condition the model gave it; candidates keep only given cite_ids.
  */
 export function normalizeWalkthrough(draft: unknown, input: ClassifyInput): WalkthroughOutput {
   const o = asObj(coerce(asObj(draft), SCHEMA));
@@ -281,9 +281,15 @@ export function normalizeWalkthrough(draft: unknown, input: ClassifyInput): Walk
   const candidates = asList(o.candidates).map((c) =>
     c !== null && typeof c === 'object' && !Array.isArray(c) ? { ...c, cite_ids: [...new Set(intList((c as Obj).cite_ids).filter((id) => typeof id === 'number' && rows.has(id)))] } : c,
   );
-  // Owner 2026-09-22 ("hs code 8 số"): tariff_ref is the model's pick among LINES; the runner keeps one per standing candidate.
-  // A code outside LINES (a masked user code guessed) goes.
+  // Owner 2026-09-22 ("hs code 8 số"): tariff_ref is the model's pick among LINES, with the fact that decides it when the
+  // facts leave two open (owner 2026-09-28, "son dưỡng môi": both readings were hidden). A bare string is read as a pick with
+  // no condition; a code outside LINES (a masked user code guessed) goes; the same code twice keeps its first condition.
   const lines = new Set(input.candidates.flatMap((c) => c.lines.map((l) => digits(l.code))));
-  const tariff_ref = [...new Set(asList(o.tariff_ref).map((c) => digits(String(c))))].filter((d) => lines.has(d)).map(dotted);
+  const seen = new Set<string>();
+  const tariff_ref = asList(o.tariff_ref)
+    .map((x) => (x !== null && typeof x === 'object' && !Array.isArray(x) ? (x as Obj) : { code: x }))
+    .map((x) => ({ code: digits(String(x.code ?? '')), when: String(x.when ?? '').replace(/\s+/g, ' ').trim().slice(0, 80) }))
+    .filter((x) => lines.has(x.code) && !seen.has(x.code) && Boolean(seen.add(x.code)))
+    .map((x) => ({ code: dotted(x.code), when: x.when }));
   return { sections, candidates, conclusion: o.conclusion, tariff_ref } as WalkthroughOutput;
 }

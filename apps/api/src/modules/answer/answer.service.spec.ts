@@ -249,7 +249,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     ]);
     expect(res.answerMd).toContain(`Nhóm 30.05 gồm sản phẩm "${EN_QUOTE}" [1];`);
     expect(res.answerMd).toContain('cần so thêm nhóm 38.24.');
-    expect(res.candidates).toEqual([{ hs: '30.05', level: 4, title: HEADING_TEXT, evidence: [1], line: null }]);
+    expect(res.candidates).toEqual([{ hs: '30.05', level: 4, title: HEADING_TEXT, evidence: [1], lines: [] }]);
     expect(res.userCodes[0]).toMatchObject({ code: '3005.10.10', exists: true, inCandidates: true });
     expect(res.citations[0]).toMatchObject({ n: 1, key: 'e:1', kind: 'en', hsHeading: '30.05', quotes: [EN_QUOTE] });
     expect(res).toMatchObject({ calls: 2, cut: 0, depth: 'full', missingFacts: ['công dụng ghi trên nhãn'] });
@@ -484,7 +484,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const { svc, tariff } = setup({ plan: PHOTO_PLAN, walks: [{ ...PHOTO_WALK, tariff_ref: ['30059090'] }], sources: [EN3005], hsRows: HS_ROWS });
     const res = await svc.answer({ q: NO_CODE_Q });
     expect(res).toMatchObject({ depth: 'brief', tariffRef: [] });
-    expect(res.candidates[0]).toMatchObject({ hs: '30.05', level: 4, line: { code: '3005.90.90', text: 'Loại khác › Loại khác' } });
+    expect(res.candidates[0]).toMatchObject({ hs: '30.05', level: 4, lines: [{ code: '3005.90.90', text: 'Loại khác › Loại khác', when: '' }] });
     expect(tariff.lookup).not.toHaveBeenCalled();
     // Code prints the line; the prose never carries it (G5 would cut it) and no policy block comes with it at brief.
     expect(res.answerMd).not.toContain('3005.90.90');
@@ -492,14 +492,38 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
   });
 
   it.each([
-    ['two picks under one heading: the facts do not decide the line (R5)', ['30051010', '30059090']],
+    ['two picks with nothing to choose between them', ['30051010', '30059090']],
     ['a pick in no LINES', ['30059999']],
     ['a pick under a concluded heading that is no candidate', ['38249999']],
   ])('no line printed: %s', async (_, tariff_ref) => {
     const { svc } = setup({ plan: PHOTO_PLAN, walks: [{ ...PHOTO_WALK, tariff_ref }], sources: [EN3005], hsRows: HS_ROWS });
     const res = await svc.answer({ q: NO_CODE_Q });
     expect(res.candidates.map((c) => c.hs)).toEqual(['30.05']);
-    expect(res.candidates[0]!.line).toBeNull();
+    expect(res.candidates[0]!.lines).toEqual([]);
+  });
+
+  // Owner 2026-09-28 ("son dưỡng môi"): the facts left both readings open and neither printed. Two lines print when each
+  // says what decides it, and at full both are looked up.
+  it('two readings of one heading print together, each with the fact that decides it', async () => {
+    const tariff_ref = [
+      { code: '30051010', when: 'nếu có tráng phủ dược chất' },
+      { code: '30059090', when: 'nếu chỉ là gạc thường' },
+    ];
+    const { svc } = setup({ plan: PHOTO_PLAN, walks: [{ ...PHOTO_WALK, tariff_ref }], sources: [EN3005], hsRows: HS_ROWS });
+    const res = await svc.answer({ q: NO_CODE_Q });
+    expect(res.candidates[0]!.lines).toEqual([
+      { code: '3005.10.10', text: 'Băng dán › Đã tráng phủ', when: 'nếu có tráng phủ dược chất' },
+      { code: '3005.90.90', text: 'Loại khác › Loại khác', when: 'nếu chỉ là gạc thường' },
+    ]);
+    const full = setup({ plan: PHOTO_PLAN, walks: [{ ...PHOTO_WALK, tariff_ref }], sources: [EN3005], hsRows: HS_ROWS });
+    expect(await full.svc.answer({ q: `${NO_CODE_Q}, phân tích chi tiết giúp mình` })).toMatchObject({ tariffRef: ['3005.10.10', '3005.90.90'] });
+  });
+
+  it('a condition that states a rate or a figure nobody wrote is dropped, and its line still prints (R1, R3)', async () => {
+    const tariff_ref = [{ code: '30051010', when: 'nếu thuế suất 5% được áp dụng' }];
+    const { svc } = setup({ plan: PHOTO_PLAN, walks: [{ ...PHOTO_WALK, tariff_ref }], sources: [EN3005], hsRows: HS_ROWS });
+    const res = await svc.answer({ q: NO_CODE_Q });
+    expect(res.candidates[0]!.lines).toEqual([{ code: '3005.10.10', text: 'Băng dán › Đã tráng phủ', when: '' }]);
   });
 
   it('full: the block is looked up for the picked line, not the heading\'s first, and nothing before the model', async () => {
@@ -523,7 +547,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
   ])('R4: the premise heading shows no picked line and none is looked up — %s', async (_, body, pick) => {
     const { svc, tariff } = setup({ plan: PHOTO_PLAN, walks: [{ ...PHOTO_WALK, tariff_ref: [pick] }], sources: [EN3005], hsRows: HS_ROWS });
     const res = await svc.answer(body as AnswerRequest);
-    expect(res.candidates.map((c) => [c.hs, c.line])).toEqual([['30.05', null]]);
+    expect(res.candidates.map((c) => [c.hs, c.lines])).toEqual([['30.05', []]]);
     expect(res.tariffRef).toEqual([]);
     expect(tariff.lookup).not.toHaveBeenCalled();
   });
@@ -741,7 +765,7 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     const { svc } = setup({ plan: PHOTO_PLAN, walks: [walk], sources: [EN3005], hsRows: HS_ROWS, tariff: t });
     const res = await svc.answer({ q: 'miếng dán bàn chân ngải cứu thì khai nhóm nào, phân tích chi tiết giúp mình' });
     expect(res).toMatchObject({ depth: 'full', tariffRef: [] });
-    expect(res.candidates.every((c) => c.line == null)).toBe(true);
+    expect(res.candidates.every((c) => !c.lines?.length)).toBe(true);
     // Review 2026-09-22: the picks still feed the code-built policy section a dropped reply keeps (R12, R18).
     expect(res.answerMd).toContain(`## ${SECTION_TITLES.policy}`);
     expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);

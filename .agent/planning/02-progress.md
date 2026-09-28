@@ -74,6 +74,15 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 - Link TVPL chỉ được lưu, không tải ([R11](../business-rules.md)). Muốn mức `administrative` thì lấy toàn văn + đọc kép.
 - URL sheet chỉ ở `.agent/local/ptpl-digest.md` (repo công khai).
 
+### 2026-09-28 — "Trả lời mới 4 số… dừng lại giữa chừng"
+
+- Câu "son dưỡng môi": mô hình chọn hai dòng 8 số (có tạo màu / chỉ dưỡng ẩm), quy tắc "hai lựa chọn thì không in" giấu
+  cả hai nên bot chỉ ra 33.04. Nay `tariff_ref` = `[{code, when}]`: một dòng khi dữ kiện đã quyết, hai dòng kèm điều
+  kiện khi chưa; bot in `↳ mã · câu chữ — điều kiện`.
+  [ADR cập nhật](../architecture-decisions/2026-09-22-hs-line-under-candidate.md).
+- **Còn hở:** câu chỉ có MỘT nhóm đứng vẫn đi đường compose (không có LINES) nên vẫn dừng ở 4 số. Chưa gặp trên Zalo;
+  gặp thì mở walkthrough cho một nhóm, hoặc đưa LINES vào compose.
+
 ### 2026-09-23 — Câu trả lời còn loãng; thêm hướng dẫn sử dụng
 
 - Chủ dự án xem câu trả lời thật (lưỡi dao, 22/09 23:33): mã 8 số đã ra đúng chỗ (82.08 → 8208.90.00; 82.02 không có dòng

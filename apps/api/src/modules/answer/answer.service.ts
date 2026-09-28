@@ -144,10 +144,11 @@ export interface AnswerResponse {
     title: string | null;
     evidence: number[];
     /**
-     * The one 8-digit line the walkthrough picked under this heading, with its hs_description wording; printed under the
-     * heading for the specialist to decide (R2), never a rate. Null when the facts do not pick one.
+     * The 8-digit lines the walkthrough picked under this heading, with their hs_description wording: one when the goods
+     * facts decide it, two when they leave both open, and then each carries the `when` that decides between them. Printed
+     * under the heading for the specialist to decide (R2), never a rate. Empty when the facts pick none.
      */
-    line?: { code: string; text: string } | null;
+    lines?: Array<{ code: string; text: string; when: string }>;
   }>;
   /** A code a person confirmed for similar goods under a candidate heading (G11): printed by the bot, never prompted. */
   ruling: { dotted: string; staffName: string; note: string | null } | null;
@@ -684,16 +685,27 @@ export class AnswerService {
     // candidate with its catalogue wording; never in prose (G5 cuts it there). Two picks mean the facts do not decide the
     // line, so none (R5). walkthrough-tariff-ref names a pick outside the concluded headings but carries no sentence, so
     // only this filter keeps it out.
+    // R1, R4: a missing fact or a pick's condition stating a rate or filling in a masked code must not reach the bot this
+    // way; one that merely runs past 12 words is still a true missing fact and stays (R3, R5).
+    const badFacts = new Set(after.flatMap((v) => (v.sentence && v.rule !== 'walkthrough-item-length' ? [v.sentence.normalize('NFC')] : [])));
     // R4 (ADR 2026-07-17 point 4): under a heading holding a code the user typed — this turn as a premise, or an earlier
     // turn — a blind pick reads as a verdict on their code at 8 digits, confirming or correcting it, and its lines are their
     // code filled in. That heading shows no line and has none looked up, whether the pick matches theirs or not: hiding only
     // a match would tell them the comparison.
     const typed = new Set([...(role === 'premise' ? keys : []), ...o.earlier].filter((u) => u.level >= 4).map((u) => digits(u.code).slice(0, 4)));
-    const lineOf = (h: string): { code: string; text: string } | null => {
-      if (typed.has(digits(h))) return null;
-      const picks = (output.tariff_ref ?? []).filter((c) => digits(c).startsWith(digits(h)));
-      const l = picks.length === 1 ? known.get(h)!.lines.find((x) => digits(x.code) === digits(picks[0]!)) : undefined;
-      return l ? { code: dotted(l.code), text: lineText(l.path, known.get(h)!.headingText) } : null;
+    // Owner 2026-09-28 ("son dưỡng môi", two readings and neither printed): a heading carries the one line its facts decide,
+    // or the two they leave open, and then each says what decides between them. More than two, or two unlabelled, is a list
+    // nobody can choose from, so none prints. A condition that failed a check (a rate, a figure nobody wrote) is dropped, and
+    // so is one carrying a code: the line's own digits are the only ones here.
+    const linesOf = (h: string): Array<{ code: string; text: string; when: string }> => {
+      if (typed.has(digits(h))) return [];
+      const picks = (output.tariff_ref ?? []).filter((t) => digits(t.code).startsWith(digits(h)));
+      if (picks.length > 2 || (picks.length === 2 && !picks.every((t) => t.when.trim()))) return [];
+      return picks.flatMap((t) => {
+        const l = known.get(h)!.lines.find((x) => digits(x.code) === digits(t.code));
+        const when = badFacts.has(t.when.normalize('NFC')) || /\d{4}/.test(t.when) ? '' : t.when;
+        return l ? [{ code: dotted(l.code), text: lineText(l.path, known.get(h)!.headingText), when }] : [];
+      });
     };
     // R2: the headings the walkthrough left standing, each with the evidence a quote still holds; a picked line rides under
     // its heading, never replaces it.
@@ -703,7 +715,7 @@ export class AnswerService {
         hs: h,
         level: 4,
         title: known.get(h)!.headingText,
-        line: lineOf(h),
+        lines: linesOf(h),
         evidence: [...new Set((assessed.get(h)?.cite_ids ?? []).flatMap((id) => (backs(h, id) && at.has(id) ? [at.get(id)!] : [])))],
       }))
       .filter((c) => c.evidence.length)
@@ -712,11 +724,8 @@ export class AnswerService {
     // dropped reply, whose code-built sections stand. Never a line the rate latch drops: a premise's whole heading, a key's
     // own code (R4, ADR hs-candidates: a user's code is no lookup key; a 6-digit premise's lines are that code filled in).
     const keyable = (code: string): boolean => !assertNoUserCodes([{ name: 'walkTariff', text: code }], keys, role).leakDrops.length;
-    const tariffRef = depth === 'full' ? candidates.flatMap((c) => (c.line && keyable(c.line.code) ? [c.line.code] : [])).slice(0, 2) : [];
+    const tariffRef = depth === 'full' ? candidates.flatMap((c) => c.lines.filter((l) => keyable(l.code)).map((l) => l.code)).slice(0, 2) : [];
     const cited = checked.citations.map((c) => sources[c.source]!);
-    // R1, R4: a missing fact stating a rate or filling in a masked code must not reach the bot this way; one that merely
-    // runs past 12 words is still a true missing fact and stays (R3, R5).
-    const badFacts = new Set(after.flatMap((v) => (v.sentence && v.rule !== 'walkthrough-item-length' ? [v.sentence.normalize('NFC')] : [])));
     // §4.1 doubts the MODEL's prose; the facts and policy sections are code's and stand either way, so a dropped answer
     // still opens with the goods and what is still open instead of a bare source list.
     const policy = policyBlock(POLICY_LISTS, rows, tariffRef, asOf);
@@ -734,7 +743,7 @@ export class AnswerService {
         answerMd,
         citations: checked.citations.map((c) => citationOf(c.n, sources[c.source]!, c.quotes)),
         // A dropped reply's picks came with the prose §4.1 doubts: no line prints under its candidates.
-        candidates: dropped ? candidates.map((c) => ({ ...c, line: null })) : candidates,
+        candidates: dropped ? candidates.map((c) => ({ ...c, lines: [] })) : candidates,
         ruling: await timed('verify', () => this.rulingFor(o.goods.facts, candidates).catch(() => null)),
         missingFacts: conclusion.missing_facts.filter((f) => !badFacts.has(f.normalize('NFC'))),
         // How much of the question the answer actually reasons about, so it reads the MODEL's prose standing, not

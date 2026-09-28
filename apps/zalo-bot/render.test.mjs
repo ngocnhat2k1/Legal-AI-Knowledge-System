@@ -319,7 +319,7 @@ test('formatAnswerMd bất biến R13: không tin nào của câu soạn khớp 
     const variants = {
       full: formatAnswerMd({ ...HS_PHOTO, answerMd, depth: 'full' }, { tariffLines }),
       // Owner 2026-09-22: a brief reply names each candidate's picked 8-digit line under it.
-      briefLine: formatAnswerMd({ ...HS_PHOTO, answerMd, candidates: HS_PHOTO.candidates.map((c, i) => ({ ...c, line: { code: ['3005.90.90', '3824.99.99'][i], text: 'Loại khác › Loại khác' } })) }),
+      briefLine: formatAnswerMd({ ...HS_PHOTO, answerMd, candidates: HS_PHOTO.candidates.map((c, i) => ({ ...c, lines: [{ code: ['3005.90.90', '3824.99.99'][i], text: 'Loại khác › Loại khác', when: '' }] })) }),
       // The walkthrough's own titles split a long reply at different places: sweep them too.
       walk: formatAnswerMd({ ...HS_PHOTO, answerMd: `${WALK_MD}\n\n${pad}`, depth: 'full' }, { tariffLines }),
       mixed: formatAnswerMd({ ...HS_PHOTO, answerMd, mode: 'mixed', userCodes: [], candidates: [] }, { tariffLines: tariffLines.slice(0, 1) }),
@@ -583,7 +583,7 @@ test('formatAnswerMd: chú giải chưa có hiệu lực / sắp hết hiệu l�
 // --- Owner 2026-09-22: "hs code 8 số nhưng nó mới trả lời 4 số" ------------------------------------------------------------
 
 test('formatAnswerMd: dòng 8 số mô hình chọn nằm ngay dưới nhóm của nó, mã in đậm, không thuế suất, vẫn một tin', () => {
-  const res = { ...HS_PHOTO, candidates: [{ ...HS_PHOTO.candidates[0], line: { code: '3005.90.90', text: 'Loại khác › Loại khác' } }, HS_PHOTO.candidates[1]] };
+  const res = { ...HS_PHOTO, candidates: [{ ...HS_PHOTO.candidates[0], lines: [{ code: '3005.90.90', text: 'Loại khác › Loại khác', when: '' }] }, HS_PHOTO.candidates[1]] };
   const lines = formatAnswerMd(res);
   const rows = rowsOf(lines);
   const at = rows.findIndex((l) => l.startsWith('30.05 · '));
@@ -610,8 +610,8 @@ test('formatAnswerMd: câu lưỡi dao răng cưa (2026-09-22) — hai đoạn g
     ...HS_PHOTO, userCodes: [], answerMd,
     citations: [cite(1, { label: 'Chú giải chi tiết HS 2022 · Chương 82 · nhóm 82.08', hsHeading: '82.08' }), cite(2, { label: 'Chú giải chi tiết HS 2022 · Chương 82 · nhóm 82.02', hsHeading: '82.02' })],
     candidates: [
-      { hs: '82.08', level: 4, title: 'Dao và lưỡi cắt, dùng cho máy hoặc dụng cụ cơ khí', evidence: [1], line: { code: '8208.90.00', text: 'Loại khác' } },
-      { hs: '82.02', level: 4, title: 'Cưa tay; lưỡi cưa các loại (kể cả các loại lưỡi rạch, lưỡi khía răng cưa hoặc lưỡi cưa không răng)', evidence: [2], line: { code: '8202.99.10', text: 'Lưỡi cưa khác › Loại khác › Lưỡi cưa thẳng' } },
+      { hs: '82.08', level: 4, title: 'Dao và lưỡi cắt, dùng cho máy hoặc dụng cụ cơ khí', evidence: [1], lines: [{ code: '8208.90.00', text: 'Loại khác', when: '' }] },
+      { hs: '82.02', level: 4, title: 'Cưa tay; lưỡi cưa các loại (kể cả các loại lưỡi rạch, lưỡi khía răng cưa hoặc lưỡi cưa không răng)', evidence: [2], lines: [{ code: '8202.99.10', text: 'Lưỡi cưa khác › Loại khác › Lưỡi cưa thẳng', when: '' }] },
     ],
   };
   const parts = render(formatAnswerMd(res));
@@ -624,7 +624,7 @@ test('formatAnswerMd: câu lưỡi dao răng cưa (2026-09-22) — hai đoạn g
 test('formatAnswerMd: dòng 8 số giữ tên của chính nó (phần lá), cắt các cấp cha từ bên trái (review 2026-09-22)', () => {
   // Real catalogue paths: cut from the right, both printed "Máy xử lý dữ liệu tự động loại xách tay, có khối lượng…".
   const parent = 'Máy xử lý dữ liệu tự động loại xách tay, có khối lượng không quá 10 kg, gồm ít nhất một đơn vị xử lý dữ liệu trung tâm, một bàn phím và một màn hình';
-  const row = (code, text) => rowsOf(formatAnswerMd({ ...HS_PHOTO, candidates: [{ ...HS_PHOTO.candidates[0], line: { code, text } }] })).find((l) => l.startsWith('↳ '));
+  const row = (code, text) => rowsOf(formatAnswerMd({ ...HS_PHOTO, candidates: [{ ...HS_PHOTO.candidates[0], lines: [{ code, text, when: '' }] }] })).find((l) => l.startsWith('↳ '));
   assert.equal(row('8471.30.20', `${parent} › Máy tính xách tay kể cả notebook và subnotebook`), '↳ 8471.30.20 · … › Máy tính xách tay kể cả notebook và subnotebook');
   assert.equal(row('8471.30.90', `${parent} › Loại khác`), '↳ 8471.30.90 · … › Loại khác');
   // Parents stay while they fit.
@@ -640,4 +640,23 @@ test('HELP: hướng dẫn do code viết, một tin, chỉ nêu những lệnh 
   // writes either (R13).
   assert.equal(tariffReply(text), false);
   assert.equal(fastPath({ text: 'đúng', quoteText: text, topic: 'tariff', tariffFresh: true, table: { hs: '84818099', origin: null, date: '2026-09-22', open: true } }), null);
+});
+
+test('formatAnswerMd: hai dòng 8 số của cùng một nhóm in kèm điều kiện phân định (son dưỡng môi, 2026-09-28)', () => {
+  const lines = [
+    { code: '3304.10.00', text: 'Chế phẩm trang điểm môi', when: 'nếu có chất tạo màu' },
+    { code: '3304.99.90', text: 'Chế phẩm dưỡng da › Loại khác › Loại khác', when: 'nếu chỉ dưỡng ẩm' },
+  ];
+  const res = {
+    ...HS_PHOTO, userCodes: [], answerMd: 'Nhóm còn đứng là 33.04. Cái quyết định là son có tạo màu trang điểm hay chỉ dưỡng [1].',
+    candidates: [{ hs: '33.04', level: 4, title: 'Mỹ phẩm hoặc các chế phẩm để trang điểm và các chế phẩm dưỡng da', evidence: [1], lines }],
+  };
+  const rows = rowsOf(formatAnswerMd(res));
+  const at = rows.findIndex((l) => l.startsWith('33.04 · '));
+  assert.equal(rows[at + 1], '↳ 3304.10.00 · Chế phẩm trang điểm môi — nếu có chất tạo màu');
+  assert.equal(rows[at + 2], '↳ 3304.99.90 · Chế phẩm dưỡng da › Loại khác › Loại khác — nếu chỉ dưỡng ẩm');
+  assert.equal(render(formatAnswerMd(res)).length, 1);
+  // A condition the API dropped leaves the line alone.
+  const bare = rowsOf(formatAnswerMd({ ...res, candidates: [{ ...res.candidates[0], lines: [{ ...lines[0], when: '' }] }] }));
+  assert.equal(bare[bare.findIndex((l) => l.startsWith('33.04 · ')) + 1], '↳ 3304.10.00 · Chế phẩm trang điểm môi');
 });

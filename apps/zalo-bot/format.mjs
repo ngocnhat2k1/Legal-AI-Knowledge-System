@@ -429,12 +429,13 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false, sour
     lines.push(
       L(['Ứng viên để chuyên viên chốt:']),
       // 49 leaves room for the ellipsis: a heading of at most 50 characters.
-      // Under a heading, the 8-digit line the walkthrough picked for the goods (owner 2026-09-22, "hs code 8 số"): the API
-      // checks it is a line of that heading and writes its wording from hs_description. It never leads (R2), carries no rate
-      // (D3(a)), and opens with "↳", never a tariff-reply opener (R13).
+      // Under a heading, the 8-digit lines the walkthrough picked for the goods (owner 2026-09-22, "hs code 8 số"): the API
+      // checks each is a line of that heading and writes its wording from hs_description. Two of them are the readings the
+      // facts leave open, each with what decides it (owner 2026-09-28). They never lead (R2), carry no rate (D3(a)), and open
+      // with "↳", never a tariff-reply opener (R13).
       ...cands.flatMap((c) => [
         L([[c.hs, 'b'], ` · ${cleanGazetteTitle('', c.title, 49)}${cited ? ` · ${c.evidence.map((n) => `[${n}]`).join(' ')}` : ''}`], 'ul'),
-        ...(c.line ? [L(['↳ ', [c.line.code, 'b'], ' · ', [pathTail(c.line.text), 'i']])] : []),
+        ...(c.lines ?? []).map((l) => L(['↳ ', [l.code, 'b'], ' · ', [pathTail(l.text), 'i'], ...(l.when ? [` — ${l.when}`] : [])])),
       ]),
       ...(res.ruling ? [rulingLine(res.ruling)] : []),
     );
