@@ -74,6 +74,19 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 - Link TVPL chỉ được lưu, không tải ([R11](../business-rules.md)). Muốn mức `administrative` thì lấy toàn văn + đọc kép.
 - URL sheet chỉ ở `.agent/local/ptpl-digest.md` (repo công khai).
 
+### 2026-09-29 — "Mình chưa kịp viết phần lập luận": compose hết 125 s
+
+- Chủ dự án hỏi "dưỡng môi nhập khẩu mã HS gì" (00:07) và nhận đường dự phòng. Log API nói thẳng:
+  `[claude] timed out after 125000 ms`, `compose: 125013 ms`, `reason: "compose_failed"`, `sources: 11`. Không phải AI
+  báo lỗi, không phải phân loại sai — hết giờ và mất sạch phần đã viết.
+- **Gốc.** Câu mơ hồ → `candidateHeadings` lấy tới **6 nhóm**, mỗi nhóm kèm toàn bộ LINES và bằng chứng riêng; thân
+  nguồn không bị cắt ở bất kỳ đâu trong đường này. Prompt phình, chạy ở `effort: 'high'`, opus.
+- **Sửa.** Bản gọn: tối đa 4 nhóm (báo cáo đầy đủ giữ 6) và `effort: 'medium'` (đầy đủ giữ 'high'). Log thêm
+  `[walkthrough] depth= headings= sources= prompt=… chars` để lần sau biết prompt to cỡ nào. Đường hết giờ ở bản gọn
+  không còn in tiêu đề "I. THÔNG TIN HÀNG HÓA", và câu nhắc lại nói rõ: thêm dữ kiện thì ít nhóm phải cân hơn.
+- **Cần theo dõi:** `effort: 'medium'` là đánh đổi chất lượng lập luận lấy tốc độ — nếu lập luận yếu đi thì trả lại
+  'high' và cắt nhóm/nguồn sâu hơn thay vì hạ effort.
+
 ### 2026-09-28 (b) — Mã đứng trước, giải thích đứng sau
 
 - Chủ dự án muốn chốt mã trước rồi giải thích. Đảo thứ tự khối mã lên trên văn xuôi; giữ nhãn "Ứng viên để chuyên viên

@@ -588,32 +588,39 @@ export class AnswerService {
     const pool = [...new Set([...(o.pins.headings ?? []), ...sources.flatMap((s) => (s.hs.heading ? [s.hs.heading] : []))])];
     const heads = pool.length ? await timed('retrieve', () => this.headingLines(pool)) : [];
     const known = new Map(heads.map((h) => [h.heading, h] as const));
-    const chosen = candidateHeadings(o.pins.headings ?? [], sources, new Set(known.keys()));
+    // Full measured 82–107 s by its author against this 100 s cap, brief 62–83 s: full runs only with the whole cap, and a
+    // run that still overruns falls to the sources (reason 'compose_failed'), which is what the bot prints either way.
+    const depth = o.timeoutMs >= FULL_DEPTH_MS && WANTS_FULL.test(fold(o.q)) ? 'full' : 'brief';
+    // A vague question ("dưỡng môi nhập khẩu mã HS gì") reaches six headings, each with its whole LINES list and its own
+    // evidence, and the brief run timed out at 125 s with all of it lost (2026-09-29). The reply carries three candidates
+    // at most (R2), so the short answer weighs four headings; the full report keeps six.
+    const chosen = candidateHeadings(o.pins.headings ?? [], sources, new Set(known.keys()), depth === 'full' ? 6 : 4);
     // One heading is no walkthrough: there is nothing to weigh it against (R2), and the prompt's whole shape is comparison.
     if (chosen.length < 2 || !o.question) return null;
     const headings = chosen.map((h) => known.get(h)!);
 
-    // Full measured 82–107 s by its author against this 100 s cap, brief 62–83 s: full runs only with the whole cap, and a
-    // run that still overruns falls to the sources (reason 'compose_failed'), which is what the bot prints either way.
-    const depth = o.timeoutMs >= FULL_DEPTH_MS && WANTS_FULL.test(fold(o.q)) ? 'full' : 'brief';
     // No DÒNG THUẾ (review 2026-09-22): it could only hold each heading's first line, looked up before the model picks one,
     // and the full report's duty sentence then spoke of another line than the block under it (R6). The blocks the bot prints
     // under the picked lines carry their own conditions.
     const input = classifyInput({ question: o.question, goodsFacts: o.goodsFacts, depth, asOf, headings, sources, tariffLines: [] });
     o.bump();
+    const prompt = buildWalkthroughPrompt(input);
+    // What a slow turn is made of, so the next one is diagnosable: the 125 s timeout above showed only its own duration.
+    this.log.log(`[walkthrough] depth=${depth} headings=${headings.length} sources=${sources.length} prompt=${prompt.length} chars`);
     const reply = await timed('compose', () =>
-      this.run(buildWalkthroughPrompt(input), {
+      this.run(prompt, {
         timeoutMs: o.timeoutMs,
         systemPrompt: WALKTHROUGH_SYSTEM,
         model: process.env.ANSWER_COMPOSE_MODEL || 'opus',
-        effort: (process.env.ANSWER_COMPOSE_EFFORT as Effort | undefined) || 'high',
+        // Brief is 130 words over the evidence; the thinking budget 'high' buys is what the full report needs (2026-09-29).
+        effort: (process.env.ANSWER_COMPOSE_EFFORT as Effort | undefined) || (depth === 'full' ? 'high' : 'medium'),
       }),
     );
     const parsed = reply && !reply.isError ? looseJson(reply.text) : null;
     // The walkthrough never came back (timeout, unreadable JSON). The asker still gets what code knows without it: what
     // they told us and what is still open (R3/R5). A bare source list is what a slow run used to return, and it is
     // useless to read (owner decision 2026-09-15).
-    if (!parsed) return { part: { ...o.sourcesOnly, reason: 'compose_failed', answerMd: unfinished(o.goods) } };
+    if (!parsed) return { part: { ...o.sourcesOnly, reason: 'compose_failed', answerMd: unfinished(o.goods, depth === 'full') } };
 
     const guardSources = sources.map(guardSource);
     const rows = sources.map((s, i) => evidenceRow(s, i, asOf));
@@ -661,7 +668,7 @@ export class AnswerService {
     checked = await timed('verify', async () => verifySections(output, guardSources, ctx));
     // Nothing of the model's prose stood: the sources alone, as compose falls back, so the bot still prints them and their
     // end-of-force lines instead of "thử lại sau ít phút".
-    if (!checked.sections.length) return { part: { ...o.sourcesOnly, reason: 'compose_failed', answerMd: unfinished(o.goods) } };
+    if (!checked.sections.length) return { part: { ...o.sourcesOnly, reason: 'compose_failed', answerMd: unfinished(o.goods, depth === 'full') } };
 
     // §4.1, as compose: the answer's own first sentence cut, or more than a third of what it wrote.
     const cut = said - checked.said + checked.cut;
@@ -732,7 +739,7 @@ export class AnswerService {
     // A dropped reply keeps code's sections, so it reads as a finished report unless it says otherwise — and the bot's own
     // "một phần bị lược" note would be false when all of it was. Empty stays empty, so a drop with no goods and no policy
     // still falls through to the bot's NO_PROSE opener.
-    const kept = dropped ? flatten([], policy, factsBlock(o.goods)) : '';
+    const kept = dropped ? flatten([], policy, factsBlock(o.goods), depth === 'full') : '';
     // Brief is plain paragraphs: no titles, and no restating of the asker's own description (owner, 2026-09-22).
     const answerMd = dropped ? (kept ? `${kept}\n\n${CUT_ALL}` : '') : depth === 'full' ? flatten(checked.sections, policy, factsBlock(o.goods)) : flatten(checked.sections, policy, '', false);
     const lines = await timed('verify', () => this.hsLines(users.map((u) => digits(u.code))));

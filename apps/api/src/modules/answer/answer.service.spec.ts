@@ -631,7 +631,9 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
     // The model gave nothing usable, so nothing of its prose may appear — but the asker still gets what code knows:
     // the goods they described and what is still open (owner decision 2026-09-15).
     expect(res).toMatchObject({ mode: 'hs', reason: 'compose_failed' });
-    expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
+    // Brief keeps the goods as plain lines: a failed short answer is not the sectioned report (owner, 2026-09-29).
+    expect(res.answerMd).toContain('Bạn đã cho biết:');
+    expect(res.answerMd).not.toContain('## ');
     expect(res.answerMd).toContain('Mình chưa kịp viết phần lập luận');
     expect(res.answerMd).not.toContain('## II.');
     expect(res.citations.map((c) => c.n)).toEqual([1]);
@@ -717,8 +719,8 @@ describe('AnswerService — POST /answer (plan 08 Việc 10)', () => {
       expect(prompts(undefined)).toHaveLength(0);
       expect(res).toMatchObject({ mode: 'hs', coverage: 'none', tariffRef: [] });
       // §4.1 doubts the model's prose, not the sections code writes from the planner's own reading.
-      expect(res.answerMd).toContain(`## ${SECTION_TITLES.facts}`);
-      expect(res.answerMd).not.toContain('## II.');
+      expect(res.answerMd).toContain('Bạn đã cho biết:');
+      expect(res.answerMd).not.toContain('## ');
       // And it says the reasoning is gone: without this the reply reads as a finished report with no reasoning in it.
       expect(res.answerMd).toContain(CUT_ALL);
     }
