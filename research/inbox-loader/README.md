@@ -129,6 +129,19 @@ python3 -m unittest research/inbox-loader/test_check_cases.py
 - `xac_minh.verification` giữ `auto_unverified`, `verified_by` null cho tới khi **một người có tên** thẩm
   tra ([R18](../../.agent/business-rules.md)).
 
+#### Bảng tổng hợp PTPL của bên thứ ba: `classification-digest.ndjson`
+
+Bảng tóm tắt (mã HS, tên thương mại, mô tả, đặc tính quyết định, số hiệu, link) — **không phải toàn văn**. Mỗi dòng thành
+một mục `ruling` mức `reference`, tiêu đề và dòng đầu ghi rõ là bản tóm tắt; văn bản đã có toàn văn trong
+`classification-rulings.ndjson` thì bỏ qua. URL sheet nằm ở `.agent/local/ptpl-digest.md` (repo công khai).
+
+```
+.venv/bin/python ptpl_digest.py "<URL Google Sheet | file.xlsx>"   # ghi đè toàn bộ file; báo mã không còn trong AHTN 2022
+```
+
+Rồi deploy và chạy `seed-evidence`: chỉ dòng mới được nhúng. Muốn thăng lên mức `administrative` thì lấy toàn văn và đi
+qua đọc kép ở trên.
+
 ### 5. Tài liệu chỉ vào notebook (lớp B, C, D)
 
 Thêm mục vào `ENTRIES` trong `collect_notebook_only.py`, với câu `status` sẽ in ở đầu tài liệu:

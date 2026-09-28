@@ -417,7 +417,48 @@ function rulings(dir: string): EvidenceRow[] {
       },
     });
   });
-  return [...full, ...cases.map(caseSection)];
+  return [...full, ...cases.map(caseSection), ...digest(dir, new Set(full.map((r) => r.instrument)))];
+}
+
+/** A row of the owner's PTPL digest sheet (research/inbox-loader/ptpl_digest.py): a third party's summary, not the text. */
+interface DigestRow {
+  stt: number; nam: number; chuong: string; nhom_hang: string; ma_hs: string; ten_thuong_mai: string; mo_ta_ma_hs: string;
+  mo_ta_hang: string; dac_tinh: string; so_hieu: string; co_quan: string; lien_ket: string; ma_trong_ahtn_2022: boolean;
+}
+
+/**
+ * One `reference` ruling row per digest entry, skipping rulings whose full text is loaded. The body is the sheet's own
+ * cells under fixed labels, so the model can quote it, and its first line says it is a summary (R2, R10).
+ */
+function digest(dir: string, loaded: Set<string>): EvidenceRow[] {
+  return readNdjson<DigestRow>(dir, 'classification-digest.ndjson')
+    .filter((d) => !loaded.has(d.so_hieu))
+    .map((d) => {
+      const code = dotted(d.ma_hs);
+      return row({
+        kind: 'ruling', instrument: d.so_hieu, authority: 'reference',
+        hsHeading: dotted(d.ma_hs.slice(0, 4)), hsChapter: Number(d.ma_hs.slice(0, 2)),
+        hsCodes: [code, dotted(d.ma_hs.slice(0, 6)), dotted(d.ma_hs.slice(0, 4))],
+        title: `Tóm tắt PTPL · ${d.so_hieu} (${d.nam}) · ${code} — ${oneLine(d.ten_thuong_mai)} — bảng tổng hợp, không phải toàn văn` +
+          (d.ma_trong_ahtn_2022 ? '' : ` — ⚠️ mã không còn trong AHTN 2022: ${code}`),
+        body: [
+          'Tóm tắt từ bảng tổng hợp văn bản phân tích phân loại mã HS (2023–2026) của bên thứ ba — không phải lời văn của văn bản; đối chiếu toàn văn trước khi dựa vào.',
+          `Văn bản: ${d.so_hieu} · ${d.co_quan} · năm ${d.nam}`,
+          `Tên thương mại: ${oneLine(d.ten_thuong_mai)}`,
+          `Mô tả hàng hóa: ${oneLine(d.mo_ta_hang)}`,
+          `Đặc tính quyết định phân loại: ${oneLine(d.dac_tinh)}`,
+          `Mã HS kết luận: ${code} — ${oneLine(d.mo_ta_ma_hs)}`,
+          `Nhóm hàng: ${oneLine(d.nhom_hang)} (chương ${d.chuong})`,
+          `Toàn văn: ${d.lien_ket}`,
+        ].join('\n'),
+        sourceRef: `classification-digest.ndjson#${d.stt}`,
+        meta: {
+          digest: true, url: d.lien_ket, ma_trong_ahtn_2022: d.ma_trong_ahtn_2022,
+          // A TB xác định trước binds only its applicant; the slug of the link is the only place the sheet says which.
+          ...(/xac-dinh-truoc/i.test(d.lien_ket) ? { rang_buoc: 'chi_nguoi_de_nghi' } : {}),
+        },
+      });
+    });
 }
 
 // --- Annex tables --------------------------------------------------------------------------------

@@ -64,6 +64,16 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 
 ---
 
+### 2026-09-28 — 116 văn bản PTPL từ bảng tổng hợp của chủ dự án
+
+- Chủ dự án gửi Google Sheet "Tuyển tập văn bản PTPL mã HS 2023–2026" (116 dòng: mã 8 số, tên thương mại, mô tả, đặc tính
+  quyết định, số hiệu, link). Sheet chia sẻ bằng link nên tải thẳng `/export?format=xlsx`, không cần Drive connector.
+- Đây là **tóm tắt của bên thứ ba**, không phải toàn văn → `classification-digest.ndjson` (script `ptpl_digest.py`), mỗi
+  dòng một mục `ruling` mức `reference`, tiêu đề + dòng đầu ghi "không phải toàn văn"; `meta.digest`, không có `case_id`
+  nên `caseSections` không kéo nó như một case. 115 mục (14074/TB-CHQ đã có toàn văn, bỏ). Cả 116 mã còn trong AHTN 2022.
+- Link TVPL chỉ được lưu, không tải ([R11](../business-rules.md)). Muốn mức `administrative` thì lấy toàn văn + đọc kép.
+- URL sheet chỉ ở `.agent/local/ptpl-digest.md` (repo công khai).
+
 ### 2026-09-23 — Câu trả lời còn loãng; thêm hướng dẫn sử dụng
 
 - Chủ dự án xem câu trả lời thật (lưỡi dao, 22/09 23:33): mã 8 số đã ra đúng chỗ (82.08 → 8208.90.00; 82.02 không có dòng

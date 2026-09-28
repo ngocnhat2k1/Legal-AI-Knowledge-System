@@ -30,6 +30,7 @@ const keyOf = (r: EvidenceRow, ref = r.sourceRef) => `${r.kind}|${r.instrument}|
 const sections = rows.filter((r) => r.meta.part == null);
 const windows = rows.filter((r) => r.meta.part != null);
 const cases = sections.filter((r) => r.meta.case_id != null);
+const fullText = (r: EvidenceRow) => r.kind === 'ruling' && r.meta.case_id == null && r.meta.digest == null;
 
 function statusOf(instrument: string) {
   const found = rows.filter((r) => r.kind === 'status' && r.instrument === instrument);
@@ -41,16 +42,16 @@ describe('evidence builders on the committed extracts', () => {
   it('produce one row per citable unit, each key unique', () => {
     const counts: Record<string, number> = {};
     for (const r of rows) counts[r.kind] = (counts[r.kind] ?? 0) + 1;
-    // en: 1,324 headings + 445 windows; sen: one per note; ruling: 29 full texts + 36 cases + 16 windows.
+    // en: 1,324 headings + 445 windows; sen: one per note; ruling: 29 full texts + 36 cases + 16 windows + 115 digest rows.
     expect(counts).toEqual({
-      hs_note: 134, gri: 18, en: 1769, sen: 425, ruling: 81, annex_table: 148,
+      hs_note: 134, gri: 18, en: 1769, sen: 425, ruling: 196, annex_table: 148,
       status: 57, local_doc: 6, guidance: 2, draft: 20, internal: 149, note: 73,
     });
     const win: Record<string, number> = {};
     for (const r of windows) win[r.kind] = (win[r.kind] ?? 0) + 1;
     expect(win).toEqual({ en: 445, ruling: 16 });
     expect(cases).toHaveLength(36);
-    expect(sections.filter((r) => r.kind === 'ruling' && r.meta.case_id == null)).toHaveLength(29);
+    expect(sections.filter(fullText)).toHaveLength(29);
     expect(new Set(rows.map((r) => keyOf(r))).size).toBe(rows.length);
   });
 
@@ -237,7 +238,7 @@ describe('classification cases', () => {
   });
 
   it('a full-text ruling with cases carries their binding scope and highest reasoning level', () => {
-    const full = (n: string) => sections.find((r) => r.kind === 'ruling' && r.meta.case_id == null && r.instrument === n)!;
+    const full = (n: string) => sections.find((r) => fullText(r) && r.instrument === n)!;
     expect(full('3831/TCHQ-TXNK').meta).toMatchObject({ rang_buoc: 'huong_dan_noi_bo_hq', muc_lap_luan: 'L4' });
     expect(full('1483/TCHQ-GSQL').meta).toMatchObject({ muc_lap_luan: 'L1' });
     expect(full('3270/TCHQ-TXNK').meta).not.toHaveProperty('muc_lap_luan'); // concludes no code: no case
@@ -248,7 +249,7 @@ describe('classification cases', () => {
     for (const c of source) {
       const r = texts.filter((x) => x.source_dir === c.source_dir);
       expect([c.case_id, r.length, r[0]?.so_hieu ?? r[0]?.source_dir]).toEqual([c.case_id, 1, c.so_hieu]);
-      expect(sections.some((x) => x.kind === 'ruling' && x.meta.case_id == null && x.instrument === c.so_hieu)).toBe(true);
+      expect(sections.some((x) => fullText(x) && x.instrument === c.so_hieu)).toBe(true);
       expect(source.filter((x) => x.source_dir === c.source_dir).map((x) => x.pham_vi.rang_buoc)).toEqual(
         source.filter((x) => x.source_dir === c.source_dir).map(() => c.pham_vi.rang_buoc),
       );
@@ -256,7 +257,7 @@ describe('classification cases', () => {
   });
 
   it('a full-text ruling naming a code gone from AHTN 2022 warns in its title, and so does every window of it', () => {
-    const full = rows.filter((r) => r.kind === 'ruling' && r.meta.case_id == null);
+    const full = rows.filter(fullText);
     const hs2022 = (r: EvidenceRow) =>
       (full.find((p) => p.meta.part == null && p.sourceRef === (r.meta.parent ?? r.sourceRef))!.meta.hs2022 ?? {}) as Record<string, string>;
     const stale = full.filter((r) => Object.values(hs2022(r)).some((s) => !s.startsWith('hien_hanh')));
@@ -330,10 +331,33 @@ describe('hs_codes: structured sources at their own length, free text 8-digit on
   });
 
   it('every other row (EN, HS notes, status, notebook, notes, full-text rulings) gets 8-digit codes only', () => {
-    const structured = (r: EvidenceRow) => r.kind === 'annex_table' || r.kind === 'sen' || r.meta.case_id != null;
+    const structured = (r: EvidenceRow) => r.kind === 'annex_table' || r.kind === 'sen' || r.meta.case_id != null || r.meta.digest != null;
     const off = rows.filter((r) => !structured(r)).flatMap((r) => r.hsCodes.filter((c) => !/^\d{4}\.\d{2}\.\d{2}$/.test(c)).map((c) => `${r.sourceRef} ${c}`));
     expect(off).toEqual([]);
     expect(rows.some((r) => r.kind === 'en' && r.hsCodes.length)).toBe(true);
+  });
+});
+
+describe('classification digest (owner sheet, third-party summary)', () => {
+  const source = ndjson('classification-digest.ndjson');
+  const digest = rows.filter((r) => r.meta.digest != null);
+
+  it('one reference ruling per sheet row, minus rulings whose full text is loaded; the sheet cells verbatim, labelled a summary', () => {
+    const loaded = new Set(rows.filter(fullText).map((r) => r.instrument));
+    const kept = source.filter((d) => !loaded.has(d.so_hieu));
+    expect([source.length, kept.length]).toEqual([116, 115]); // 14074/TB-CHQ is in classification-rulings.ndjson
+    expect(digest.map((r) => r.sourceRef)).toEqual(kept.map((d) => `classification-digest.ndjson#${d.stt}`));
+    for (const [i, r] of digest.entries()) {
+      const d = kept[i];
+      expect(r).toMatchObject({
+        kind: 'ruling', authority: 'reference', instrument: d.so_hieu, effectiveFrom: null, hsChapter: Number(d.chuong),
+        hsHeading: dotted(d.ma_hs.slice(0, 4)), hsCodes: [dotted(d.ma_hs), dotted(d.ma_hs.slice(0, 6)), dotted(d.ma_hs.slice(0, 4))],
+      });
+      expect(r.title).toContain('không phải toàn văn');
+      expect(r.body).toMatch(/^Tóm tắt từ bảng tổng hợp .* không phải lời văn của văn bản/);
+      for (const cell of [d.ten_thuong_mai, d.mo_ta_hang, d.dac_tinh, d.mo_ta_ma_hs, d.lien_ket]) expect(r.body).toContain(cell.split(/\s+/).join(' '));
+    }
+    expect(digest.filter((r) => r.meta.rang_buoc === 'chi_nguoi_de_nghi').length).toBeGreaterThan(0);
   });
 });
 

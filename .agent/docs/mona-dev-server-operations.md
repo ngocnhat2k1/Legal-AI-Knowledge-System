@@ -404,7 +404,7 @@ Vector không commit: seed nhúng lại bằng embedder, model nằm sẵn trong
 |---|---|---|---|
 | `seed` (biểu thuế) | `hs-descriptions.ndjson`, `nd26-muc1.ndjson`, `nd26-chapter98.ndjson`, `nd26-annex-iv.json`, `fta-*.ndjson`; vài dòng thuế viết thẳng trong `db/seed/index.ts` | không | ~30 giây |
 | `seed-legal` | `legal/documents`, `provisions`, `chunks.ndjson` (2026-09-15: 23 văn bản, 7.598 điều khoản, 3.196 chunk) | chunk | ~20 phút |
-| `seed-evidence` | `legal/hs-notes`, `hs-gri`, `hs-explanatory-notes`, `hs-sen`, `classification-rulings`, `classification-cases`, `annex-tables`, `documents` + `relations`, `notebook-only`, `repo-notes`; mục nghị định đọc từ bảng biểu thuế vừa seed | mọi mục | ≈ 114 phút (ước lượng) |
+| `seed-evidence` | `legal/hs-notes`, `hs-gri`, `hs-explanatory-notes`, `hs-sen`, `classification-rulings`, `classification-cases`, `classification-digest`, `annex-tables`, `documents` + `relations`, `notebook-only`, `repo-notes`; mục nghị định đọc từ bảng biểu thuế vừa seed | mọi mục | ≈ 114 phút (ước lượng) |
 
 `legal/policy-lists.json` (sổ danh mục khoá theo mã HS) và `fta-members.json` (thành viên FTA) không qua seed: API đọc thẳng file trong image lúc chạy.
 
