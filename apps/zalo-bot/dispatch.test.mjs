@@ -735,7 +735,8 @@ const fakeApi = ({ planned = null, composed = null, provision = null, noRate = [
 
 /** One conversation: each `say` runs respond() against `api`, then saves memory as index.mjs does. */
 function conversation() {
-  const memo = { topic: null, state: {}, turns: [] };
+  // As GET /conversation answers: `idleSeconds` and a timestamp per turn (conversation.mjs cuts the transcript at a long pause).
+  const memo = { topic: null, state: {}, turns: [], idleSeconds: 0 };
   const say = async (text, api, quote = null, image = null) => {
     const calls = [];
     const notices = [];
@@ -752,7 +753,8 @@ function conversation() {
       const r = await respond({ text, image, quote: quote && { msg: quote }, ctx, senderName: 'Chuyên Viên A', threadId: 't1', userId: 'u1', notify: async (m) => notices.push(m) });
       memo.topic = r.topic ?? memo.topic;
       memo.state = nextState(memo.state, r);
-      memo.turns = [...memo.turns, { role: 'user', body: text }, { role: 'bot', body: render(r.text).map((p) => p.msg).join('\n\n') }];
+      const at = new Date().toISOString();
+      memo.turns = [...memo.turns, { role: 'user', body: text, at }, { role: 'bot', body: render(r.text).map((p) => p.msg).join('\n\n'), at }];
       const bodies = (path) => calls.filter((x) => x.path === path).map((x) => x.body);
       return { r, text: toText(r.text), calls, notices, answers: bodies('/answer'), confirms: bodies('/tariff/confirm') };
     } finally {
@@ -1674,7 +1676,7 @@ let listenerThreads = 0;
 async function onThread(api, run, { group = false, saveFails = () => false } = {}) {
   const threadId = `listener-${++listenerThreads}`;
   const memos = new Map();
-  const memo = (id) => memos.get(id) ?? memos.set(id, { topic: null, state: {}, turns: [] }).get(id);
+  const memo = (id) => memos.get(id) ?? memos.set(id, { topic: null, state: {}, turns: [], idleSeconds: 0 }).get(id);
   const sent = [];
   const confirms = [];
   const real = globalThis.fetch;

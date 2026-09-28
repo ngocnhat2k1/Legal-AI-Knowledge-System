@@ -50,7 +50,8 @@ export function createMemory() {
     },
     save: (payload) => {
       const t = of(payload.threadId);
-      t.turns = [...t.turns, ...(payload.turns ?? [])].slice(-20);
+      const at = new Date().toISOString();
+      t.turns = [...t.turns, ...(payload.turns ?? []).map((turn) => ({ ...turn, at }))].slice(-20);
       if ('topic' in payload) t.topic = payload.topic;
       if ('state' in payload) t.state = payload.state;
     },

@@ -1,7 +1,7 @@
 ---
 type: doc
 status: active
-updated: 2026-09-15
+updated: 2026-09-23
 related:
   - zalo-bot-image-and-quote-context.md
   - ../architecture-decisions/2026-07-17-no-llm-on-tariff-numbers.md
@@ -88,7 +88,30 @@ kế hoạch `"<người hỏi> hỏi: … — bot đáp: …"`. Có từ 2026-0
 của đồng nghiệp đã trả lời câu hỏi cũ của chính người reply, vì bộ nhớ riêng của họ là thứ duy nhất bot thấy.
 
 `state.tariff.at` đóng dấu thời điểm tạo ra kết quả thuế, nên "còn hiệu lực" tính theo CHÍNH nó
-(2 giờ) chứ không theo độ tươi của cuộc chat.
+(2 giờ) chứ không theo độ tươi của cuộc chat. Độ tươi của cuộc chat quyết định một việc khác, rộng hơn: hội thoại
+còn là hội thoại nào (ngay dưới).
+
+## Hội thoại nguội thì bắt đầu lại (2026-09-23)
+
+Bước kế hoạch đọc các lượt gần nhất dưới tiêu đề "HỘI THOẠI GẦN ĐÂY", và **không gì trong đó cho biết chúng cũ
+bao nhiêu**: câu hỏi sáng hôm sau vẫn được đọc chung luồng với hôm qua, một "cái đó" vẫn trỏ về đấy. Nay
+`loadContext` có `CONTEXT_TTL_MS` = **6 giờ**:
+
+- Cả luồng im quá ngưỡng → tin mới mở hội thoại mới: bỏ `topic`, `state` và bản ghi lượt. Lượt ấy ghi đè cả hai
+  trường xuống DB, nên ngữ cảnh cũ không sống lại ở lượt sau.
+- Nghỉ quá ngưỡng **giữa hai lượt** → bản ghi cắt tại chỗ nghỉ. Không có vế này thì ngưỡng trên chỉ chặn được tin
+  ĐẦU sau khi nghỉ: lượt kế tiếp có `idleSeconds` nhỏ, mà 8 lượt nạp về vẫn còn đuôi hôm qua.
+- Khe đo **giữa hai lượt** (`at` mang offset, hiệu của hai cái triệt tiêu nó), độ nguội của cả luồng lấy
+  `idleSeconds` do Postgres tính. Đồng hồ máy chạy bot không quyết định gì.
+- `idleSeconds` không phải số (thiếu trường, `null`) tính là **nguội**: quên tốn một lượt hỏi lại, nhớ nhầm luồng
+  tốn một câu trả lời sai. Không dùng `Number()` ở chỗ này — `Number(null)` là 0, tức "vừa nhắn xong".
+- Rộng hơn `TARIFF_TTL_MS` (2 giờ), thứ chặn cái hẹp hơn: một lượt tra còn nhận được phán quyết.
+
+Stub `/conversation` trong test phải trả `idleSeconds` và `at` từng lượt **y như API thật**; thiếu thì cổng này
+coi mọi hội thoại là nguội và 20 ca của dispatch.test.mjs đỏ cùng lúc.
+
+Cái ngưỡng này **không** đụng tới tin được quote: quote là ý định tường minh trỏ về một tin cũ, và
+`GET /conversation/quoted` vẫn tra ngược được trong suốt 30 ngày lưu trữ.
 
 ## Có mã HS trong câu chưa chắc là hỏi thuế (2026-09-14)
 
@@ -275,8 +298,8 @@ Cả hai luật đều **cải thiện** văn bản cũ: 46/VBHN-BTC giữ nguy�
 
 ## Kế hoạch kiểm chứng
 
-- `yarn test:bot` — 20 ca thuần cho dispatch + guard lời dẫn + đọc số hiệu văn bản, gồm **đúng ca
-  hội thoại trong ảnh chụp**.
+- `yarn test:bot` — các ca thuần cho dispatch + guard lời dẫn + đọc số hiệu văn bản + ngưỡng bộ nhớ, gồm
+  **đúng ca hội thoại trong ảnh chụp**.
 - `yarn test` (cần `DATABASE_URL` + `EMBEDDER_URL`) — golden retrieval + 3 ca mới cho scope theo
   văn bản/điều.
 - Trên VPS: diễn lại hội thoại trong ảnh; hồi quy `8481.80.99 TQ`, "đúng"/"sai", ảnh sản phẩm,

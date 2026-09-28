@@ -16,9 +16,49 @@ import { loadConversation, recordTurns } from './api.mjs';
  */
 export const TARIFF_TTL_MS = 2 * 60 * 60 * 1000;
 
-/** Read the conversation and work out what the new message may refer to. */
-export async function loadContext(threadId, userId) {
-  const view = await loadConversation(threadId, userId);
+/**
+ * How long a pause keeps a conversation the SAME conversation. The plan step reads the recent turns as
+ * "HỘI THOẠI GẦN ĐÂY" and nothing in them says how old they are, so a question asked the next morning was being
+ * read against yesterday's thread — and a "cái đó" resolved against it. Wider than TARIFF_TTL_MS, which bounds
+ * the narrower thing: a lookup a verdict may still be written against.
+ */
+export const CONTEXT_TTL_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * The turns of the conversation still running: everything after the last pause longer than CONTEXT_TTL_MS.
+ * A gap is measured BETWEEN two turns, never against this machine's clock — `at` carries its UTC offset, and a
+ * difference of two of them cancels it either way. How cold the whole thread is comes from `idleSeconds`, which
+ * Postgres computed, for the same reason.
+ */
+function sinceLastPause(turns) {
+  let start = 0;
+  for (let i = 1; i < turns.length; i += 1) {
+    if (Date.parse(turns[i].at) - Date.parse(turns[i - 1].at) > CONTEXT_TTL_MS) start = i;
+  }
+  return turns.slice(start);
+}
+
+/** Nothing before this message is referable: no conversation yet, or the last one went cold. */
+const freshStart = () => ({
+  topic: null,
+  state: {},
+  turns: [],
+  tariffFresh: false,
+  candidatesFresh: false,
+  tariff: null,
+  legal: null,
+});
+
+/**
+ * What the new message may refer to. A thread idle past CONTEXT_TTL_MS starts over: topic, state and transcript
+ * all go, since the next message points at none of them. An unreadable `idleSeconds` counts as cold — forgetting
+ * costs one restated question, answering against the wrong thread costs a wrong answer.
+ */
+export function contextFrom(view) {
+  // Not Number(): it reads null and '' as 0, i.e. as a message sent this second — the one reading that must not fail open.
+  const idleMs = typeof view?.idleSeconds === 'number' ? view.idleSeconds * 1000 : NaN;
+  if (!Number.isFinite(idleMs) || idleMs > CONTEXT_TTL_MS) return freshStart();
+
   const tariff = view.state?.tariff ?? null;
   const at = tariff?.at ? Date.parse(tariff.at) : NaN;
   const fresh = Number.isFinite(at) && Date.now() - at <= TARIFF_TTL_MS;
@@ -29,12 +69,17 @@ export async function loadContext(threadId, userId) {
   return {
     topic: view.topic ?? null,
     state: view.state ?? {},
-    turns: view.turns ?? [],
+    turns: sinceLastPause(view.turns ?? []),
     tariffFresh,
     candidatesFresh,
     tariff: tariffFresh || candidatesFresh ? tariff : null,
     legal: view.state?.legal ?? null,
   };
+}
+
+/** Read the conversation and work out what the new message may refer to. */
+export async function loadContext(threadId, userId) {
+  return contextFrom(await loadConversation(threadId, userId));
 }
 
 /**
