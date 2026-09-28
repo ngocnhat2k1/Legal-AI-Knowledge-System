@@ -247,7 +247,9 @@ test('formatAnswerMd câu ảnh (hs): không câu mẫu cũ, một câu so mã, 
   const unbroken = rowsOf(formatAnswerMd({ ...HS_PHOTO, candidates: [{ ...HS_PHOTO.candidates[0], title: 'Bông-gạc-băng-'.repeat(6) }] }));
   assert.match(unbroken[unbroken.indexOf('Ứng viên để chuyên viên chốt:') + 1], /^30\.05 · .{1,50}$/, 'đầu mục ≤ 50 ký tự kể cả dấu …');
   assert.ok(!/\[\d+\]/.test(toText(lines)) && !rows.includes('Nguồn:'), toText(lines));
-  assert.equal(rows[head + 3], R5);
+  // Owner 2026-09-28: the codes lead, the reasoning follows, and the R5 line closes under it.
+  assert.ok(rows.indexOf(R5) > rows.indexOf('Ứng viên để chuyên viên chốt:'), rows.join('\n'));
+  assert.ok(rows.indexOf('Ứng viên để chuyên viên chốt:') < rows.findIndex((l) => l.startsWith('Chỉ từ')), 'khối mã đứng trên phần giải thích');
   assert.ok(!rows.includes(HINT));
   // The evidence rows here are machine-extracted: with their source lines hidden, one line still says so (R18).
   assert.equal(rows.filter((l) => l === UNCHECKED).length, 1);
@@ -410,7 +412,7 @@ test('formatAnswerMd: có ruling thì thêm một dòng dưới các ứng viên
   const rows = rowsOf(formatAnswerMd({ ...HS_PHOTO, ruling }));
   const head = rows.indexOf('Ứng viên để chuyên viên chốt:');
   assert.equal(rows[head + 3], 'Mã 3005.10.90 đã được Chuyên Viên A xác nhận cho hàng tương tự (miếng dán hạ sốt có tẩm dược chất) — mình ưu tiên mã này, bạn vẫn đối chiếu căn cứ.');
-  assert.equal(rows[head + 4], R5);
+  assert.ok(rows.indexOf(R5) > head + 3);
 });
 
 test('formatAnswerMd: câu so mã do code viết từ userCodes, kể cả khi mã lệch nhóm hoặc không có trong Danh mục', () => {

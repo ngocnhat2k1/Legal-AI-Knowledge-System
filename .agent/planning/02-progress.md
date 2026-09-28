@@ -74,6 +74,13 @@ dự định, chỉ cái này cho bạn biết địa hình thực sự đã là
 - Link TVPL chỉ được lưu, không tải ([R11](../business-rules.md)). Muốn mức `administrative` thì lấy toàn văn + đọc kép.
 - URL sheet chỉ ở `.agent/local/ptpl-digest.md` (repo công khai).
 
+### 2026-09-28 (b) — Mã đứng trước, giải thích đứng sau
+
+- Chủ dự án muốn chốt mã trước rồi giải thích. Đảo thứ tự khối mã lên trên văn xuôi; giữ nhãn "Ứng viên để chuyên viên
+  chốt:" và điều kiện trên từng dòng (R2/R3 — không biến thành mã chốt). Prompt bỏ câu mở liệt kê lại nhóm.
+- Test bắt được một lỗi R4 do đảo thứ tự: `state.answer.head` lấy 60 ký tự đầu của tin, mà dòng đầu nay có mã người
+  hỏi → che mã ở cả hai phía khi so.
+
 ### 2026-09-28 — "Trả lời mới 4 số… dừng lại giữa chừng"
 
 - Câu "son dưỡng môi": mô hình chọn hai dòng 8 số (có tạo màu / chỉ dưỡng ẩm), quy tắc "hai lựa chọn thì không in" giấu

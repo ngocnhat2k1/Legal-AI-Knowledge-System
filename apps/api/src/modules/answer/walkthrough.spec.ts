@@ -136,7 +136,7 @@ describe('buildWalkthroughPrompt', () => {
     const brief = buildWalkthroughPrompt({ ...input, depth: 'brief' });
     expect(brief).toContain('Độ sâu brief: tối đa khoảng 130 từ');
     // Owner 2026-09-22 ("loãng"): answer first, no narration of the search, each heading said once.
-    expect(brief).toContain('Câu đầu nói ngay nhóm nào còn đứng');
+    expect(brief).toContain('câu đầu đừng liệt kê lại nhóm');
     expect(brief).toContain('không kể lại cách mình tra');
     expect(brief).toContain('Mỗi nhóm nói một lần');
     expect(brief).toContain('bỏ mục không có gì');
