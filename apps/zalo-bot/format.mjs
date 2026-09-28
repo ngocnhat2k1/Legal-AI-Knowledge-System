@@ -408,8 +408,11 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false, sour
   const cited = sources || !written;
   const maxN = Math.max(0, ...cites.map((c, i) => c.n ?? i + 1));
   const prose = written ? md(cited ? res.answerMd : unmarked(res.answerMd, maxN)).map(unlike) : cites.length ? [L([NO_PROSE])] : [];
-  const lines = [...prose, L([])];
 
+  // Owner 2026-09-28: the codes lead, the reasoning follows. What the asker came for is the first thing on screen, and the
+  // marker a quoted reply is read by ("Ứng viên…", R13) always lands in message 1 however long the prose runs. They stay
+  // candidates with their conditions, never a settled code on its own (R2, R3): the label says so and the prose says why.
+  const lines = [];
   // Never orange: the user's code outside the candidates is a comparison, not a finding (R4). Only the two sentences
   // pointing at "the groups below" need the list; a code missing from the catalogue is said either way.
   for (const u of hs ? (res.userCodes ?? []) : []) {
@@ -431,17 +434,19 @@ export function formatAnswerMd(res, { tariffLines = [], showFooter = false, sour
       // 49 leaves room for the ellipsis: a heading of at most 50 characters.
       // Under a heading, the 8-digit lines the walkthrough picked for the goods (owner 2026-09-22, "hs code 8 số"): the API
       // checks each is a line of that heading and writes its wording from hs_description. Two of them are the readings the
-      // facts leave open, each with what decides it (owner 2026-09-28). They never lead (R2), carry no rate (D3(a)), and open
-      // with "↳", never a tariff-reply opener (R13).
+      // facts leave open, each with what decides it (owner 2026-09-28). They never lead alone (R2), carry no rate (D3(a)),
+      // and open with "↳", never a tariff-reply opener (R13).
       ...cands.flatMap((c) => [
         L([[c.hs, 'b'], ` · ${cleanGazetteTitle('', c.title, 49)}${cited ? ` · ${c.evidence.map((n) => `[${n}]`).join(' ')}` : ''}`], 'ul'),
         ...(c.lines ?? []).map((l) => L(['↳ ', [l.code, 'b'], ' · ', [pathTail(l.text), 'i'], ...(l.when ? [` — ${l.when}`] : [])])),
       ]),
       ...(res.ruling ? [rulingLine(res.ruling)] : []),
     );
-    // R5: routing to an advance ruling is a feature; said once, and not when the prose already says it.
-    if (cands.length >= 2 && !/xác định trước/i.test(toText(prose))) lines.push(L([ADVANCE_RULING], 'note'));
   }
+  // A blank line only where something stands above: a legal answer still opens with its own first sentence.
+  lines.push(...(lines.length ? [L([])] : []), ...prose);
+  // R5: routing to an advance ruling is a feature; said once, under the reasoning, and not when the prose already says it.
+  if (hs && cands.length >= 2 && !/xác định trước/i.test(toText(prose))) lines.push(L([]), L([ADVANCE_RULING], 'note'));
 
   // D3(a): a candidate's rates only under a full walkthrough, for at most two codes, never green (R2). A rate question
   // (owner decision Q1) prints its own lookup under the prose.

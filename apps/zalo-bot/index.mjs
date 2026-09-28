@@ -113,6 +113,12 @@ const LEGAL_MODES = ['legal', 'status', 'mixed'];
 const PROSE_BUDGET_MS = 45_000;
 
 const flat = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
+/**
+ * A reply's opening words as memory may keep them (R4): every code masked the same way on both sides, so a quote still
+ * matches the head it was written from while no code of the user's enters `state` — since 2026-09-28 the reply can open with
+ * the sentence comparing their own code.
+ */
+const headOf = (s) => flat(s).replace(/\d{4}(?:[.\s]?\d{2}){0,3}/g, '#');
 
 /** Plan text as memory may keep it (R4): masked by the API, its [mã n] labels dropped, and the runs that mask misses too (noCodes). */
 const asked = (plan) => noCodes(plan.question);
@@ -236,7 +242,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
   // after "Mình chưa tìm thấy căn cứ…" they would be another question's.
   const last = ctx.state?.answer;
   const lastBot = [...(ctx.turns ?? [])].reverse().find((t) => t.role === 'bot')?.body;
-  if (onlyAsksSources(text) && last?.sources?.length && last.head && flat(quoteText || lastBot).startsWith(last.head)) {
+  if (onlyAsksSources(text) && last?.sources?.length && last.head && headOf(quoteText || lastBot).startsWith(last.head)) {
     return { text: sourceLines(last.sources), intent: 'general' };
   }
   const quoted = quoteText || null;
@@ -379,7 +385,7 @@ export async function respond({ text, image, quote, ctx, senderName, threadId, u
       ? { topic: 'tariff', tariff: candidates.length ? stampTariff({ hs: null, candidates, desc: facts.join(', '), keywords }) : null }
       : { topic: 'legal', legal: legalMemory(plan, composed.citations ?? [], composed.asOf) };
   // `sources` and the reply's opening words (`head`) answer a later "nguồn?", also when it quotes this reply.
-  const answered = { mode, question: asked(plan), goods: { facts }, at: new Date().toISOString(), sources: sourcesOf(composed.citations).slice(0, 8), head: flat(render(lines)[0]?.msg).slice(0, 60) };
+  const answered = { mode, question: asked(plan), goods: { facts }, at: new Date().toISOString(), sources: sourcesOf(composed.citations).slice(0, 8), head: headOf(render(lines)[0]?.msg).slice(0, 60) };
   return { text: lines, ...memory, answer: answered, intent };
 }
 

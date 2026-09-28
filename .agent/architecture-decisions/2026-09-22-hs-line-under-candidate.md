@@ -60,6 +60,22 @@ Mô hình nêu cả hai dòng trong văn xuôi ("Chế phẩm trang điểm môi
   người hỏi không viết, không điền mã đã che); vi phạm thì bỏ `when`, dòng vẫn in. Có chuỗi 4 chữ số thì cũng bỏ.
 - Ở `full`, cả hai dòng đều được tra thuế (trần 2 khối như cũ).
 
+## Cập nhật 2026-09-28 (b) — mã đứng trước, giải thích đứng sau
+
+Chủ dự án: "chốt trước mã hs code, sau đó giải thích tại sao lại chọn cái đó". Thứ tự mới của câu hs:
+câu so mã người hỏi (nếu có) → khối "Ứng viên để chuyên viên chốt:" kèm các dòng ↳ → văn xuôi giải thích →
+dòng R5 → khối thuế (ở `full`) → cảnh báo, nguồn.
+
+- **Vẫn là ứng viên, không phải mã chốt.** Nhãn khối giữ nguyên (chủ dự án chọn), điều kiện đi ngay trên dòng của
+  từng mã. Đây là chỗ không nhượng: R2/ADR 2026-07-17 dựng trên chênh lệch 47% (một mã top-1) so với 93,9%
+  (top-3 kèm căn cứ cho người chốt), và R3 nói mã sai trông y hệt mã đúng.
+- Lợi thêm: dấu hiệu nhận tin của bot (`Ứng viên để chuyên viên chốt:`, R13) luôn nằm ở tin thứ nhất, kể cả khi văn
+  dài — trước đây văn dài có thể đẩy nó sang tin thứ hai.
+- Prompt đổi theo: code đã in danh sách nhóm ngay trên bài, nên câu đầu của mô hình không liệt kê lại nhóm mà nói
+  ngay dữ kiện quyết định. Không đổi prompt thì câu trả lời lặp nguyên phần đã in.
+- `state.answer.head` (60 ký tự đầu, để nhận ra tin khi người dùng quote) nay che mọi mã ở cả hai phía khi so: dòng
+  đầu có thể là câu so mã của người hỏi, mà mã của họ thì không được vào `state` (R4).
+
 ## Hệ quả
 
 - Lựa chọn của mô hình vẫn có thể "Error but Valid" (R3), nhất là dòng "Loại khác". Nó nằm dưới "Ứng viên để chuyên viên
