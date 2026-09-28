@@ -141,8 +141,9 @@ describe('buildWalkthroughPrompt', () => {
     expect(brief).toContain('Mỗi nhóm nói một lần');
     expect(brief).toContain('bỏ mục không có gì');
     expect(brief).not.toContain('viết đủ tám mục');
-    // The 8-digit line is a JSON pick the system prints under its heading, never a code in the prose (G5 cuts it there).
-    expect(brief).toContain('tariff_ref: mỗi nhóm ở conclusion nhiều nhất một mã');
+    // The 8-digit line is a JSON pick the system prints under its heading, never a code in the prose (G5 cuts it there);
+    // two of them when the facts leave both readings open, each with what decides it (owner 2026-09-28).
+    expect(brief).toContain('Chưa quyết thì ghi CẢ HAI dòng khả dĩ');
     expect(brief).toContain('không viết mã 8 số');
     expect(prompt).not.toContain('và mã của nhóm đứng nhất');
     expect(buildWalkthroughPrompt({ ...input, depth: 'brief', tariffLines: [] })).toContain('- 3005.10.10 · Băng dán › Đã tráng phủ');
@@ -195,7 +196,9 @@ describe('walkthroughSchema — the output contract, for the prompt and for the 
           required: Object.keys(conclusion),
           properties: { headings: { maxItems: 3, items: { pattern: '^\\d{2}\\.\\d{2}$' } }, missing_facts: { maxItems: 3 } },
         },
-        tariff_ref: { items: { pattern: '^\\d{4}\\.?\\d{2}\\.?\\d{2}$' } },
+        // A pick is {code, when} and the normaliser also reads a bare code string, so the item shape is open here and the
+        // tariff-ref rule judges the codes.
+        tariff_ref: { items: {} },
       },
     });
     // Abstaining is a success (R5): no concluded heading is allowed.
@@ -218,7 +221,7 @@ const good = (): WalkthroughOutput => ({
     { heading: '38.24', assessment: 'chua_du_du_kien', deciding_facts: ['thành phần của lớp ngải cứu'], cite_ids: [21, 1] },
   ],
   conclusion: { headings: ['30.05', '38.24'], needs_advance_ruling: false, missing_facts: ['Công dụng ghi trên nhãn'] },
-  tariff_ref: ['3005.10.10'],
+  tariff_ref: [{ code: '3005.10.10', when: '' }],
 });
 
 const edit = (change: (o: WalkthroughOutput) => void): WalkthroughOutput => {
@@ -262,7 +265,7 @@ describe('validateWalkthrough', () => {
       x.conclusion.headings = ['30.05', '38.24', '3005', '39.26'];
       x.sections[0]!.markdown = '  ';
       (x.sections[1] as { key: string }).key = 'intro';
-      x.tariff_ref = ['3005.10'];
+      x.tariff_ref = [{ code: '3005.10', when: '' }];
       (x as unknown as Record<string, unknown>).confidence = 0.9;
     });
     const details = validateWalkthrough(o, input)
@@ -275,13 +278,13 @@ describe('validateWalkthrough', () => {
         expect.stringContaining('"intro" is not one of'),
         'output.conclusion.headings: allows at most 3 items',
         expect.stringContaining('"3005" does not match'),
-        expect.stringContaining('"3005.10" does not match'),
       ]),
     );
     expect(() => validateWalkthrough({ sections: 'x' } as unknown as WalkthroughOutput, input)).not.toThrow();
     expect(new Set(rules({ sections: 'x' } as unknown as WalkthroughOutput))).toEqual(new Set(['walkthrough-shape']));
-    // hs_description stores lines undotted; the tariff block keys on digits.
-    expect(rules(edit((x) => (x.tariff_ref = ['30051010'])))).toEqual([]);
+    // hs_description stores lines undotted; the tariff block keys on digits. A pick outside LINES is the tariff-ref rule's.
+    expect(rules(edit((x) => (x.tariff_ref = [{ code: '30051010', when: '' }])))).toEqual([]);
+    expect(rules(edit((x) => (x.tariff_ref = [{ code: '3005.10', when: '' }])))).toEqual(['walkthrough-tariff-ref']);
   });
 
   it('shape: a type slip or a missing array is reported and filled, so the rules behind it still reach the repair pass', () => {
@@ -394,12 +397,18 @@ describe('validateWalkthrough', () => {
     ]);
     expect(rules(withSection('risk', 'Thuế nhập khẩu ưu đãi thông thường khác nhau giữa các nhóm này.'))).toEqual(['walkthrough-rate']);
     // A pick is a line of the concluded heading's LINES, whether or not DÒNG THUẾ printed it (owner 2026-09-22).
-    expect(rules(edit((o) => (o.tariff_ref = ['3824.99.99'])))).toEqual([]);
-    expect(rules(edit((o) => (o.tariff_ref = ['3005.99.99'])))).toEqual(['walkthrough-tariff-ref']);
-    expect(rules(edit((o) => (o.tariff_ref = ['3824.99.99'])), bothLines)).toEqual([]);
-    expect(rules(edit((o) => Object.assign(o, { tariff_ref: ['3824.99.99'], conclusion: { ...o.conclusion, headings: ['30.05'] } })), bothLines)).toEqual([
+    const ref = (...codes: Array<[string, string]>) => codes.map(([code, when]) => ({ code, when }));
+    expect(rules(edit((o) => (o.tariff_ref = ref(['3824.99.99', '']))))).toEqual([]);
+    expect(rules(edit((o) => (o.tariff_ref = ref(['3005.99.99', '']))))).toEqual(['walkthrough-tariff-ref']);
+    expect(rules(edit((o) => Object.assign(o, { tariff_ref: ref(['3824.99.99', '']), conclusion: { ...o.conclusion, headings: ['30.05'] } })))).toEqual([
       'walkthrough-tariff-ref',
     ]);
+    // Owner 2026-09-28: two lines of one heading are the readings the facts leave open, and each says what decides it.
+    expect(rules(edit((o) => (o.tariff_ref = ref(['3005.10.10', 'nếu có tráng phủ dược chất'], ['3005.90.90', 'nếu chỉ là gạc thường']))))).toEqual([]);
+    expect(rules(edit((o) => (o.tariff_ref = ref(['3005.10.10', ''], ['3005.90.90', '']))))).toEqual(['walkthrough-tariff-ref']);
+    expect(rules(edit((o) => (o.tariff_ref = ref(['3005.10.10', 'a'], ['3005.90.90', 'b'], ['3824.99.99', 'c']))))).toEqual([]);
+    // A condition is read like a deciding fact: no rate in it (R1).
+    expect(rules(edit((o) => (o.tariff_ref = ref(['3005.10.10', 'nếu thuế suất 5% áp dụng'], ['3005.90.90', 'nếu không']))))).toEqual(['walkthrough-rate']);
   });
 
   it('facts: no figure with a unit that neither the user nor a cited row wrote, wherever the goods are restated; masks stay masked', () => {
@@ -635,7 +644,7 @@ describe('normalizeWalkthrough', () => {
     // 3919.90.99 is in no LINES: a masked user code guessed goes (R4).
     const tariff_ref = ['3005.10.10', '30051010', '3919.90.99', '3824.99.99'];
     for (const i of [input, bothLines, { ...input, tariffLines: [] }])
-      expect(normalizeWalkthrough(draft([], { tariff_ref }), i).tariff_ref).toEqual(['3005.10.10', '3824.99.99']);
+      expect(normalizeWalkthrough(draft([], { tariff_ref }), i).tariff_ref).toEqual([{ code: '3005.10.10', when: '' }, { code: '3824.99.99', when: '' }]);
   });
 
   it("dots codes with guards' dotted: 8 digits as before; a 4- or 6-digit code, which DB checks keep out of LINES and DÒNG THUẾ, now dots as verify's anchors do", () => {
@@ -648,8 +657,8 @@ describe('normalizeWalkthrough', () => {
     const p = buildWalkthroughPrompt(short);
     for (const l of ['- 30.05 · a', '- 3005.10 · b', '- 3005.10.10 · c', '- 3005.10: x']) expect(p).toContain(l);
     const out = normalizeWalkthrough(draft([], { tariff_ref: ['3005.10', '300510', '3005.10.10'] }), short);
-    expect(out.tariff_ref).toEqual(['3005.10', '3005.10.10']);
-    expect(normalizeWalkthrough(out, short).tariff_ref).toEqual(['3005.10', '3005.10.10']);
+    expect(out.tariff_ref).toEqual([{ code: '3005.10', when: '' }, { code: '3005.10.10', when: '' }]);
+    expect(normalizeWalkthrough(out, short).tariff_ref).toEqual([{ code: '3005.10', when: '' }, { code: '3005.10.10', when: '' }]);
   });
 
   it('keeps candidates to given ids, deduped in order, drops empty sections, leaves the draft alone and reads its own output back unchanged', () => {
@@ -667,7 +676,7 @@ describe('normalizeWalkthrough', () => {
       sections: [{ key: 'exclusions', markdown: `Chương 30 không gồm "${Q10}" [1] [2].`, cites: [{ id: 10, quotes: [Q10] }, { id: 11, quotes: [Q11] }] }],
       candidates: [{ heading: '30.05', assessment: 'co_the_neu', deciding_facts: ['dược chất'], cite_ids: [21, 1, 30] }],
       conclusion: good().conclusion,
-      tariff_ref: ['3005.10.10'],
+      tariff_ref: [{ code: '3005.10.10', when: '' }],
     });
     expect(normalizeWalkthrough(once, input)).toEqual(once);
     expect(normalizeWalkthrough(JSON.parse(JSON.stringify(once)), input)).toEqual(once);

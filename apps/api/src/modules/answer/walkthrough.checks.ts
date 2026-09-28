@@ -15,7 +15,7 @@
  *  deciding-facts, item-length   name the deciding goods fact (unless a cited note excludes outright), in ≤ 12 words.
  *  conclusion-heading, conclusion-open   R2, R5: an open conclusion names the missing facts or the advance ruling.
  *  rate                  a rate in deciding or missing facts (verify() reads only prose), or rates compared in words (R1).
- *  tariff-ref            a LINES line under a concluded heading.
+ *  tariff-ref            a LINES line under a concluded heading; one per heading, or two that say what decides between them.
  *  fact-number, mask-expanded   a figure with a unit comes from the user or the cited rows (R3); "[mã n]" stays masked (R4).
  *  exclusion-support, named-source, gir-rule, gir-order, sen-tier   the source named is the source cited, applied in order
  *                        and at its tier (R2, R10).
@@ -58,8 +58,9 @@ export const SCHEMA: Schema = {
     candidates: list(obj({ heading, assessment: { type: 'string', enum: ASSESSMENTS }, deciding_facts: list(text, { maxItems: 3 }), cite_ids: ids }), { minItems: 1 }),
     // No minItems: abstaining is a success (R5); conclusion-open asks for the missing facts or the advance ruling instead.
     conclusion: obj({ headings: list(heading, { maxItems: 3 }), needs_advance_ruling: { type: 'boolean' }, missing_facts: list(text, { maxItems: 3 }) }),
-    // The tariff block keys on the digits, so an undotted line (as hs_description stores it) costs no repair.
-    tariff_ref: list({ type: 'string', pattern: '^\\d{4}\\.?\\d{2}\\.?\\d{2}$' }),
+    // A pick is {code, when}; the normaliser also reads a bare code string, so the item shape is left open here and the
+    // tariff-ref rule below judges the codes.
+    tariff_ref: list({}),
   }),
 };
 
@@ -238,6 +239,9 @@ export function validateWalkthrough(raw: WalkthroughOutput, input: ClassifyInput
   const items: Unit[] = [
     ...output.candidates.flatMap((c) => c.deciding_facts.map((s) => ({ where: `deciding_facts of ${c.heading}`, s: nfc(s), p: nfc(s), rows: [], para: [] }))),
     ...missing_facts.map((s) => ({ where: 'missing_facts', s: nfc(s), p: nfc(s), rows: [], para: [] })),
+    // A pick's condition is printed by code beside its line, so it is read like a deciding fact: ≤ 12 words, no rate, no
+    // figure the asker did not write, no filled-in mask.
+    ...output.tariff_ref.filter((t) => t.when.trim()).map((t) => ({ where: `"when" của dòng ${t.code}`, s: nfc(t.when), p: nfc(t.when), rows: [], para: [] })),
   ];
   const units: Unit[] = [
     ...output.sections.flatMap((sec) =>
@@ -311,7 +315,14 @@ export function validateWalkthrough(raw: WalkthroughOutput, input: ClassifyInput
   for (const u of units)
     if ((!u.key && ratesInProse(u.s).length) || RATE_COMPARE.test(u.s))
       add('rate', `${u.where} states or compares a rate or amount; say which duty applies when and leave the figures to the tariff block`, u.s);
-  for (const code of output.tariff_ref) if (!concludedLines.has(digits(code))) add('tariff-ref', `tariff_ref ${code} must be a line in LINES of a concluded heading`);
+  for (const { code } of output.tariff_ref) if (!concludedLines.has(digits(code))) add('tariff-ref', `tariff_ref ${code} must be a line in LINES of a concluded heading`);
+  // Two lines under one heading are the two readings the facts leave open (R5): each says which fact decides it. Three is a
+  // list, not a reading, and an unlabelled pair would print two codes with nothing to choose between them.
+  for (const h of headings) {
+    const picks = output.tariff_ref.filter((t) => digits(t.code).startsWith(digits(h)));
+    if (picks.length > 2) add('tariff-ref', `${h} has ${picks.length} lines in tariff_ref: keep the one the facts lead to, or the two they leave open`);
+    else if (picks.length === 2 && !picks.every((t) => t.when.trim())) add('tariff-ref', `${h} has two lines: give each a "when" naming the fact that decides it`);
+  }
 
   // Goods figures come from the user or the rows the paragraph cites, wherever the goods are restated; masks stay masks.
   const userHay = squeeze(inputText);

@@ -86,10 +86,11 @@ export interface WalkthroughOutput {
    */
   conclusion: { headings: string[]; needs_advance_ruling: boolean; missing_facts: string[] };
   /**
-   * At most one LINES line per concluded heading, the one the goods facts lead to; code prints it under that candidate and,
-   * at full, looks it up for a block. Never a number in prose, never a rate.
+   * The LINES lines of the concluded headings the goods facts lead to, at most two per heading: one when the facts decide it,
+   * two when they leave both open, and then each carries the `when` that decides between them. Code prints them under that
+   * candidate and, at full, looks them up for a block. Never a number in prose, never a rate.
    */
-  tariff_ref: string[];
+  tariff_ref: Array<{ code: string; when: string }>;
 }
 
 export interface Violation {

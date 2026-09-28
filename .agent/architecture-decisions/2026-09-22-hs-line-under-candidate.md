@@ -46,6 +46,20 @@ kèm, không có bằng chứng riêng, giống khối thuế D3(a). Không bao 
 - Kèm mức MFN trên dòng: chưa làm — chủ dự án hỏi mã, không hỏi thuế; thêm khoảng 350 ký tự. Làm khi chủ dự án hỏi.
 - Đổi `candidates[].hs` thành mã 8 số: bác — R2.
 
+## Cập nhật 2026-09-28 (chủ dự án: "bot trả lời mới 4 số… không phải dừng lại giữa chừng")
+
+Câu "son dưỡng môi nhập khẩu mã HS gì": nhóm 33.04 còn đứng, nhưng dòng 8 số phụ thuộc son có chất tạo màu hay không.
+Mô hình nêu cả hai dòng trong văn xuôi ("Chế phẩm trang điểm môi" / "Loại khác › Loại khác › Loại khác"), còn quy tắc
+"hai lựa chọn thì không in" giấu sạch cả hai — người hỏi chỉ thấy 33.04.
+
+- `tariff_ref` nay là `[{code, when}]`. Dữ kiện đã quyết: một dòng, `when` rỗng. Chưa quyết: **hai** dòng, mỗi dòng một
+  `when` ≤ 10 từ nói dữ kiện phân định. Ba dòng trở lên, hoặc hai dòng không có `when`, thì không in dòng nào — đó là
+  danh sách chứ không phải hai cách đọc.
+- Bot in: `↳ **3304.10.00** · _Chế phẩm trang điểm môi_ — nếu có chất tạo màu`.
+- `when` là chữ của mô hình do code in, nên đi qua đúng các kiểm của deciding_facts (≤ 12 từ, không thuế suất, không số
+  người hỏi không viết, không điền mã đã che); vi phạm thì bỏ `when`, dòng vẫn in. Có chuỗi 4 chữ số thì cũng bỏ.
+- Ở `full`, cả hai dòng đều được tra thuế (trần 2 khối như cũ).
+
 ## Hệ quả
 
 - Lựa chọn của mô hình vẫn có thể "Error but Valid" (R3), nhất là dòng "Loại khác". Nó nằm dưới "Ứng viên để chuyên viên

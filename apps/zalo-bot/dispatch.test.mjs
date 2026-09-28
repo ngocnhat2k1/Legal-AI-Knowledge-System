@@ -1997,7 +1997,7 @@ test('câu hỏi kèm "căn cứ" thì câu soạn in nguồn ngắn ngay bên d
 });
 
 test('câu hs gọn có dòng 8 số dưới nhóm (2026-09-22): không tra /tariff, bộ nhớ chỉ giữ nhóm 4 số, "đúng" sau đó không ghi gì (R2, R13)', async () => {
-  const withLine = { ...composedHs, candidates: composedHs.candidates.map((c, i) => ({ ...c, line: i ? null : { code: '3005.90.90', text: 'Loại khác › Loại khác' } })) };
+  const withLine = { ...composedHs, candidates: composedHs.candidates.map((c, i) => ({ ...c, lines: i ? [] : [{ code: '3005.90.90', text: 'Loại khác › Loại khác', when: '' }] })) };
   const c = conversation();
   const run = await c.say(PHOTO_Q, fakeApi({ planned: plannedOf(plan08()), composed: withLine }));
   assert.ok(run.text.includes('↳ 3005.90.90 · Loại khác › Loại khác'), run.text);
