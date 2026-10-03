@@ -94,6 +94,25 @@ export function quotedQuestion(threadId, text, ts) {
   return getJson(`/conversation/quoted?${qs}`, 3_000);
 }
 
+// --- Health -----------------------------------------------------------------
+
+/**
+ * `llmDeep` của GET /health?llm=deep — probe này hỏi Claude một câu thật, nên nó thấy được
+ * cả token bị thu hồi lẫn tài khoản hết hạn mức. Trả null khi không gọi được api.
+ *
+ * Đọc body kể cả khi 503: /health trả 503 khi DATABASE hỏng, lúc đó verdict của mô hình vẫn
+ * nằm trong body — dùng getJson sẽ nuốt mất nó. Probe phía api có ngân sách 30 s.
+ */
+export async function llmDeepStatus(timeoutMs = 45_000) {
+  try {
+    const res = await fetch(`${API}/health?llm=deep`, { signal: AbortSignal.timeout(timeoutMs) });
+    const body = await res.json().catch(() => null);
+    return body?.llmDeep ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // --- On-request corpus growth ----------------------------------------------
 
 export const requestIngest = (payload) => postJson('/ingest/request', payload);

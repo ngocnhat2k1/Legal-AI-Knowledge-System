@@ -22,7 +22,8 @@ import { pathToFileURL } from 'node:url';
 import { LoginQRCallbackEventType, ThreadType, Zalo } from 'zca-js';
 
 import { answerByHs, answerImage, codeOffer, handleConfirm, handleCorrection, noCodes } from './answer.mjs';
-import { ackIngestReports, answer, confirmations, ingestReports, legalProvision, lookupFull, quotedQuestion, requestIngest, verifyDocument } from './api.mjs';
+import { llmAlert } from './alert.mjs';
+import { ackIngestReports, answer, confirmations, ingestReports, legalProvision, llmDeepStatus, lookupFull, quotedQuestion, requestIngest, verifyDocument } from './api.mjs';
 import { loadContext, nextState, saveContext, stampTariff } from './conversation.mjs';
 import { asksSources, onlyAsksSources, fastPath, fold, guardIntent, isBareLookup, isOkay, parseVerifyDocCommand, plainVerdict, readsAsQuestion, unlikeTariffReply } from './dispatch.mjs';
 import { extractImage } from './images.mjs';
@@ -33,6 +34,9 @@ import { L, render, toText } from './render.mjs';
 const API = process.env.API_URL || 'http://api:3000';
 const SESSION = process.env.ZALO_SESSION_PATH || '/session/zalo-session.json';
 const ALLOWED = (process.env.ALLOWED_THREADS || '').split(',').map((s) => s.trim()).filter(Boolean);
+/** Nơi nhận cảnh báo mô hình. Chưa đặt thì báo vào nhóm đầu tiên trong allowlist — đặt thành
+ *  thread 1-1 của chủ bot nếu muốn biết trước nhóm. */
+const ALERT_THREAD = (process.env.ALERT_THREAD || '').trim() || ALLOWED[0] || '';
 const USER_AGENT =
   process.env.ZALO_USER_AGENT ||
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
@@ -558,6 +562,32 @@ async function main() {
       console.warn('[zalo] lỗi vòng báo cáo nạp:', e?.message);
     }
   }, 30_000).unref?.();
+
+  // Canh lớp mô hình. Tra thuế không cần mô hình nên một token chết KHÔNG làm bot im — nó chỉ
+  // làm mọi câu hỏi pháp luật trả về lời xin lỗi, và chủ bot là người biết sau cùng. Probe mỗi
+  // giờ, và chỉ nói khi trạng thái đổi (alert.mjs).
+  let llmState;
+  const watchLlm = async () => {
+    try {
+      const now = await llmDeepStatus();
+      const msg = llmAlert(llmState, now);
+      llmState = now ?? llmState;
+      if (!msg || !ALERT_THREAD) return;
+      // Giống vòng báo cáo nạp: hàng đợi không ghi thread là nhóm hay 1-1, nên thử cả hai.
+      for (const type of [ThreadType.Group, ThreadType.User]) {
+        try {
+          for (const p of render(msg)) await api.sendMessage(wire(p), ALERT_THREAD, type);
+          break;
+        } catch {
+          /* thử loại thread còn lại */
+        }
+      }
+    } catch (e) {
+      console.warn('[zalo] lỗi vòng canh mô hình:', e?.message);
+    }
+  };
+  setTimeout(watchLlm, 60_000).unref?.(); // api vừa khởi động cùng bot, cho nó một phút
+  setInterval(watchLlm, 60 * 60_000).unref?.();
 
   api.listener.on('error', (e) => console.error('[zalo] listener error:', e?.message));
   api.listener.start();
