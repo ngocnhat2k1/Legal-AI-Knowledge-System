@@ -570,6 +570,11 @@ async function main() {
   const watchLlm = async () => {
     try {
       const now = await llmDeepStatus();
+      // Mỗi nhịp một dòng, kể cả khi mọi thứ bình thường. Không có dòng này thì im lặng có hai
+      // nghĩa — mô hình vẫn tốt, hoặc vòng canh đã chết — và 21/10 đúng lúc cần thì không phân
+      // biệt được: api chỉ ghi log khi probe KHÁC `up`, nên chuỗi ngày im lặng không chứng minh
+      // được gì. Một dòng mỗi giờ trong log container là cái giá rẻ cho việc kiểm lại được.
+      console.log(`[zalo] canh mô hình: ${now ?? 'không gọi được /health'}`);
       const msg = llmAlert(llmState, now);
       llmState = now ?? llmState;
       if (!msg || !ALERT_THREAD) return;
